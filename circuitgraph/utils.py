@@ -67,11 +67,11 @@ def verilog_to_gates(verilog, module):
 
     # get outputs
     out_regex = "output\s(.+?);"
+    outputs = set()
     for net_str in re.findall(out_regex,verilog,re.DOTALL):
         nets = net_str.replace(" ","").replace("\n","").replace("\t","").split(",")
-        for net in nets:
-            G.add_edge(net,f'{net}_out')
-            G.nodes[f'{net}_out']['gate'] = 'output'
-
+        outputs |= set(nets) 
+    
+    # replace buses with underscores
     G = nx.relabel_nodes(G, lambda n: n.replace('[','_').replace(']','_'))
-    return G
+    return G, outputs
