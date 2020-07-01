@@ -8,7 +8,7 @@ def verilog_to_graph(verilog, module):
     G = nx.DiGraph(name=module)
 
     # handle gates
-    regex = r"(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);"
+    regex = r"(or|nor|and|nand|not|xor|xnor|buf)\s+\S+\s*\((.+?)\);"
     for gate, net_str in re.findall(regex, verilog, re.DOTALL):
 
         # parse all nets
