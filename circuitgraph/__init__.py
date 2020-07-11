@@ -4,36 +4,19 @@ for the generation, manipulation, and evaluation of
 Boolean circuits. The circuits are represented in a graph
 format based on the `networkx` package.
 """
-import re
+
 import code
-import tempfile
 import networkx as nx
-from pysat.formula import CNF,IDPool
-from pysat.solvers import Cadical
-from subprocess import PIPE,Popen
 
 class Circuit:
-	"""
-	Class for representing circuits
+	"""Class for representing circuits"""
 
-	Attributes
-	----------
-	name : str
-		Name of circuit.
-	graph : networkx.DiGraph
-		Graph data structure.
-	"""
-
-	def __init__(self,verilog=None,path=None,name=None,graph=None):
+	def __init__(self,graph=None,name=None):
 		"""
 		Parameters
 		----------
-		verilog : str
-			Verilog string to be parsed.
-		path : str
-			Path to verilog file to be parsed.
 		name : str
-			Name of circuit, must match verilog module name.
+			Name of circuit.
 		graph : networkx.DiGraph
 			Graph data structure to be used in new instance.
 
@@ -41,14 +24,10 @@ class Circuit:
 
 		if name:
 			self.name = name
-		elif path:
-			self.name = path.split('/')[-1].replace('.v','')
 		else:
 			self.name = 'circuit'
 
-		if verilog or path:
-			self.graph = self.parseModule(verilog,path)
-		elif graph:
+		if graph:
 			self.graph = graph
 		else:
 			self.graph = nx.DiGraph()
@@ -112,23 +91,6 @@ class Circuit:
 		"""
 		return self.graph.edges
 
-	def relabel(self,mapping):
-		"""
-		Returns renamed copy of circuit.
-
-		Parameters
-		----------
-		mapping : dict of str:str
-			mapping of old to new names
-
-		Returns
-		-------
-		Circuit
-			Relabeled circuit.
-
-		"""
-		return Circuit(graph=nx.relabel_nodes(self.graph,mapping),name=name)
-
 	def add(self,n,type,fanin=None,fanout=None):
 		"""
 		Adds a new node to the circuit, optionally connecting it
@@ -161,6 +123,22 @@ class Circuit:
 			Other circuit
 		"""
 		self.graph.update(c.graph)
+
+	def connect(self,us,vs):
+		"""
+		Adds connections to the graph
+
+		Parameters
+		----------
+		us : str or iterable of str
+			Head node(s)
+		vs : str or iterable of str
+			Tail node(s)
+
+		"""
+		if isinstance(us,str): us = [us]
+		if isinstance(vs,str): vs = [vs]
+		self.graph.add_edges_from((u,v) for u in us for v in vs)
 
 	def transitiveFanout(self,ns,stopat=['d'],gates=None):
 		"""
@@ -391,451 +369,30 @@ class Circuit:
 		else:
 			return set(n for n in self.graph if self.type(n) in ['d','output'])
 
-	def seqGraph(self):
-		"""
-		Creates a graph of the circuit's sequential elements
 
-		Returns
-		-------
-		networkx.DiGraph
-			Sequential graph.
-
-		"""
-		graph = nx.DiGraph()
-
-		# add nodes
-		for n in self.io()|self.seq():
-			graph.add_node(n,gate=self.type(n))
-
-		# add edges
-		for n in graph.nodes:
-			graph.add_edges_from((s,n) for s in self.startpoints(n))
-
-		return graph
-
-	def sat(self,true=None,false=None):
-		"""
-		Trys to find satisfying assignment, with optional assumptions
-
-		Parameters
-		----------
-		true : iterable of str
-			Nodes to assume True.
-		false : iterable of str
-			Nodes to assume False.
-
-		Returns
-		-------
-		False or dict of str:bool
-			Result.
-		"""
-		solver,clauses,variables = self.solver(true,false)
-		if solver.solve():
-			model = solver.get_model()
-			return {n:model[variables.id(n)-1]>0 for n in self.nodes()}
-		else:
-			return False
-
-	def solver(self,true=None,false=None):
-		"""
-		Trys to find satisfying assignment, with optional assumptions
-
-		Parameters
-		----------
-		true : iterable of str
-			Nodes to assume True.
-		false : iterable of str
-			Nodes to assume False.
-
-		Returns
-		-------
-		False or dict of str:bool
-			Result.
-		"""
-		if true is None: true = set()
-		if false is None: false = set()
-		clauses,variables = self.cnf()
-		for n in true: clauses.append([variables.id(n)])
-		for n in false: clauses.append([-variables.id(n)])
-		solver = Cadical(bootstrap_with=clauses)
-		return solver,clauses,variables
-
-	def cnf(self):
-		variables = IDPool()
-		clauses = CNF()
-
-		for n in self.nodes():
-			variables.id(n)
-			if self.type(n) == 'and':
-				for f in self.fanin(n):
-					clauses.append([-variables.id(n),variables.id(f)])
-				clauses.append([variables.id(n)] + [-variables.id(f) for f in self.fanin(n)])
-			elif self.type(n) == 'nand':
-				for f in self.fanin(n):
-					clauses.append([variables.id(n),variables.id(f)])
-				clauses.append([-variables.id(n)] + [-variables.id(f) for f in self.fanin(n)])
-			elif self.type(n) == 'or':
-				for f in self.fanin(n):
-					clauses.append([variables.id(n),-variables.id(f)])
-				clauses.append([-variables.id(n)] + [variables.id(f) for f in self.fanin(n)])
-			elif self.type(n) == 'nor':
-				for f in self.fanin(n):
-					clauses.append([-variables.id(n),-variables.id(f)])
-				clauses.append([variables.id(n)] + [variables.id(f) for f in self.fanin(n)])
-			elif self.type(n) == 'not':
-				f = self.fanin(n).pop()
-				clauses.append([variables.id(n),variables.id(f)])
-				clauses.append([-variables.id(n),-variables.id(f)])
-			elif self.type(n) in ['output','d','r','buf','clk']:
-				f = self.fanin(n).pop()
-				clauses.append([variables.id(n),-variables.id(f)])
-				clauses.append([-variables.id(n),variables.id(f)])
-			elif self.type(n) in ['xor','xnor']:
-				# break into heirarchical xors
-				nets = list(self.fanin(n))
-
-				# xor gen
-				def xorClauses(a,b,c):
-					clauses.append([-variables.id(c),-variables.id(b),-variables.id(a)])
-					clauses.append([-variables.id(c),variables.id(b),variables.id(a)])
-					clauses.append([variables.id(c),-variables.id(b),variables.id(a)])
-					clauses.append([variables.id(c),variables.id(b),-variables.id(a)])
-
-				while len(nets)>2:
-					#create new net
-					new_net = 'xor_'+nets[-2]+'_'+nets[-1]
-					variables.id(new_net)
-
-					# add sub xors
-					xorClauses(nets[-2],nets[-1],new_net)
-
-					# remove last 2 nets
-					nets = nets[:-2]
-
-					# insert before out
-					nets.insert(0,new_net)
-
-				# add final xor
-				if self.type(n) == 'xor':
-					xorClauses(nets[-2],nets[-1],n)
-				else:
-					# invert xor
-					variables.id(f'xor_inv_{n}')
-					xorClauses(nets[-2],nets[-1],f'xor_inv_{n}')
-					clauses.append([variables.id(n),variables.id(f'xor_inv_{n}')])
-					clauses.append([-variables.id(n),-variables.id(f'xor_inv_{n}')])
-			elif self.type(n) == '0':
-				clauses.append([-variables.id(n)])
-			elif self.type(n) == '1':
-				clauses.append([variables.id(n)])
-			elif self.type(n) in ['ff','lat','input']:
-				pass
-			else:
-				print(f"unknown gate type: {self.type(n)}")
-				code.interact(local=dict(globals(), **locals()))
-
-		return clauses,variables
-
-	def verilog(self):
-		inputs = []
-		outputs = []
-		insts = []
-		wires = []
-
-		for n in self.nodes():
-			if c.type(n) in ['xor','xnor','buf','not','nor','or','and','nand']:
-				fanin = ','.join(p for p in c.fanin(n))
-				insts.append(f"{c.type(n)} g_{n} ({n},{fanin})")
-				wires.append(n)
-			elif c.type(n) in ['0','1']:
-				insts.append(f"assign {n} = 1'b{c.type()}")
-			elif c.type(n) in ['input']:
-				inputs.append(n)
-				wires.append(n)
-			elif c.type(n) in ['output']:
-				outputs.append(n.replace('output[','')[:-1])
-			elif c.type(n) in ['ff']:
-				d = c.fanin(f'd[{n}]').pop()
-				clk = c.fanin(f'clk[{n}]').pop()
-				insts.append(f"fflopd g_{n} (.CK({clk}),.D({d}),.Q({n}))")
-			elif c.type(n) in ['lat']:
-				d = c.fanin(f'd[{n}]').pop()
-				clk = c.fanin(f'clk[{n}]').pop()
-				r = c.fanin(f'r[{n}]').pop()
-				insts.append(f"latchdrs g_{n} (.ENA({clk}),.D({d}),.R({r}),.S(1'b1),.Q({n}))")
-			elif c.type(n) in ['clk','d','r']:
-				pass
-			else:
-				print(f"unknown gate type: {c.type(n)}")
-				return
-
-		verilog = f"module {c.name} ("+','.join(inputs+outputs)+');\n'
-		verilog += ''.join(f'input {inp};\n' for inp in inputs)
-		verilog += ''.join(f'output {out};\n' for out in outputs)
-		verilog += ''.join(f'wire {wire};\n' for wire in wires)
-		verilog += ''.join(f'{inst};\n' for inst in insts)
-		verilog += 'endmodule\n'
-
-		return verilog
-
-	def syn(self,printOutput=False):
-		verilog = self.verilog()
-
-		with tempfile.NamedTemporaryFile() as tmp:
-			cmd = ['genus','-execute',f"""set_db / .library $env(GENUS_DIR)/share/synth/tutorials/tech/tutorial.lib;
-					read_hdl -sv {tmp.name};
-					elaborate;
-					set_db syn_generic_effort high
-					syn_generic;
-					syn_map;
-					syn_opt;
-					write_hdl -generic;
-					exit;"""]
-			tmp.write(bytes(verilog,'ascii'))
-			tmp.flush()
-			#code.interact(local=dict(globals(), **locals()))
-
-			process = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
-			output = ''
-			while True:
-				line = process.stdout.readline()
-				if line == '' and process.poll() is not None:
-					break
-				if line:
-					if printOutput:
-						print(line.strip())
-					output += line
-
-		regex = "(module.*endmodule)"
-		m = re.search(regex,output,re.DOTALL)
-		syn_verilog = m.group(1)
-
-		c = Circuit(verilog=syn_verilog,name=self.name)
-		c.name = f'{self.name}_syn'
-		return c
-
-	def two_input(self):
-		two_inp_c = nx.DiGraph()
-
-		# create nodes
-		for n in self.nodes():
-			two_inp_c.add_node(n)
-			for a,v in c.nodes[n].items():
-				two_inp_c.nodes[n][a] = v
-
-		# connect nodes
-		for n in self.nodes():
-			# handle fanin
-			pred = list(c.predecessors(n))
-
-			# select new gate type
-			if c.nodes[n]['type'] in ['and','nand']:
-				t = 'and'
-			elif c.nodes[n]['type'] in ['or','nor']:
-				t = 'or'
-			elif c.nodes[n]['type'] in ['xor','xnor']:
-				t = 'xor'
-
-			while len(pred)>2:
-				# create new, connect
-				two_inp_c.add_node(f'{n}_add_{len(pred)}',output=False,gate=t)
-				two_inp_c.add_edges_from((p,f'{n}_add_{len(pred)}') for p in pred[0:2])
-
-				# update list
-				pred.append(f'{n}_add_{len(pred)}')
-				pred = pred[2:]
-
-			# add final input connections
-			two_inp_c.add_edges_from((p,n) for p in pred)
-
-			# ensure all are two inputs
-			for n in two_inp_c.nodes():
-				if two_inp_c.in_degree(n)>2:
-					print(f"gate with more than 2 inputs")
-					code.interact(local=dict(globals(), **locals()))
-
-		return two_inp_c
-
-	def ternary(self):
-		d = deepcopy(c)
-
-		# add dual nodes
-		for n in c:
-			if c.nodes[n]['type'] in ['and','nand']:
-				d.add_node(f'{n}_x',gate='and',output=c.nodes[n]['output'])
-				d.add_node(f'{n}_x_in_fi',gate='or',output=False)
-				d.add_node(f'{n}_0_not_in_fi',gate='nor',output=False)
-				d.add_edges_from([(f'{n}_x_in_fi',f'{n}_x'),(f'{n}_0_not_in_fi',f'{n}_x')])
-				d.add_edges_from((f'{p}_x',f'{n}_x_in_fi') for p in c.predecessors(n))
-				for p in c.predecessors(n):
-					d.add_node(f'{p}_is_0',gate='nor',output=False)
-					d.add_edge(f'{p}_is_0',f'{n}_0_not_in_fi')
-					d.add_edge(f'{p}_x',f'{p}_is_0')
-					d.add_edge(p,f'{p}_is_0')
-
-			elif c.nodes[n]['type'] in ['or','nor']:
-				d.add_node(f'{n}_x',gate='and',output=c.nodes[n]['output'])
-				d.add_node(f'{n}_x_in_fi',gate='or',output=False)
-				d.add_node(f'{n}_1_not_in_fi',gate='nor',output=False)
-				d.add_edges_from([(f'{n}_x_in_fi',f'{n}_x'),(f'{n}_1_not_in_fi',f'{n}_x')])
-				d.add_edges_from((f'{p}_x',f'{n}_x_in_fi') for p in c.predecessors(n))
-				for p in c.predecessors(n):
-					d.add_node(f'{p}_is_1',gate='and',output=False)
-					d.add_edge(f'{p}_is_1',f'{n}_1_not_in_fi')
-					d.add_node(f'{p}_not_x',gate='not',output=False)
-					d.add_edge(f'{p}_x',f'{p}_not_x')
-					d.add_edge(f'{p}_not_x',f'{p}_is_1')
-					d.add_edge(p,f'{p}_is_1')
-
-			elif c.nodes[n]['type'] in ['buf','not']:
-				d.add_node(f'{n}_x',gate='buf',output=c.nodes[n]['output'])
-				p = list(c.predecessors(n))[0]
-				d.add_edge(f'{p}_x',f'{n}_x')
-
-			elif c.nodes[n]['type'] in ['xor','xnor']:
-				d.add_node(f'{n}_x',gate='or',output=c.nodes[n]['output'])
-				d.add_edges_from((f'{p}_x',f'{n}_x') for p in c.predecessors(n))
-
-			elif c.nodes[n]['type'] in ['0','1']:
-				d.add_node(f'{n}_x',gate='0',output=c.nodes[n]['output'])
-
-			elif c.nodes[n]['type'] in ['input']:
-				d.add_node(f'{n}_x',gate='input',output=c.nodes[n]['output'])
-
-			elif c.nodes[n]['type'] in ['dff']:
-				d.add_node(f'{n}_x',gate='dff',output=c.nodes[n]['output'],clk=c.nodes[n]['clk'])
-				p = list(c.predecessors(n))[0]
-				d.add_edge(f'{p}_x',f'{n}_x')
-
-			elif c.nodes[n]['type'] in ['lat']:
-				d.add_node(f'{n}_x',gate='lat',output=c.nodes[n]['output'],clk=c.nodes[n]['clk'],rst=c.nodes[n]['rst'])
-				p = list(c.predecessors(n))[0]
-				d.add_edge(f'{p}_x',f'{n}_x')
-
-			else:
-				print(f"unknown gate type: {c.nodes[n]['type']}")
-				code.interact(local=locals())
-
-		for n in d:
-			if 'type' not in d.nodes[n]:
-				print(f"empty gate type: {n}")
-				code.interact(local=locals())
-
-		return d
-
-	def parseModule(self,verilog,path):
-		# read verilog
-		if path:
-			with open(path, 'r') as f:
-				verilog = f.read()
-
-		# find module
-		regex = f"module\s+{self.name}\s*\(.*?\);(.*?)endmodule"
-		m = re.search(regex,verilog,re.DOTALL)
-		module =  m.group(1)
-
-		# create graph
-		G = nx.DiGraph()
-
-		# handle gates
-		regex = "(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);"
-		for gate, net_str in re.findall(regex,module,re.DOTALL):
-
-			# parse all nets
-			nets = net_str.replace(" ","").replace("\n","").replace("\t","").split(",")
-			output = nets[0]
-			inputs = nets[1:]
-
-			# add to graph
-			G.add_edges_from((net,output) for net in inputs)
-			G.nodes[output]['type'] = gate
-
-		# handle ffs
-		regex = "fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\);"
-		for clk,d,q in re.findall(regex,module,re.DOTALL):
-
-			# add to graph
-			G.add_node(q,type='ff')
-
-			G.add_edge(d,f'd[{q}]')
-			G.nodes[f'd[{q}]']['type'] = 'd'
-			G.add_edge(f'd[{q}]',q)
-
-			G.add_edge(clk,f'clk[{q}]')
-			G.nodes[f'clk[{q}]']['type'] = 'clk'
-			G.add_edge(f'clk[{q}]',q)
-
-		# handle lats
-		regex = "latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);"
-		for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
-
-			# add to graph
-			G.add_node(q,type='lat')
-
-			G.add_edge(d,f'd[{q}]')
-			G.nodes[f'd[{q}]']['type'] = 'd'
-			G.add_edge(f'd[{q}]',q)
-
-			G.add_edge(clk,f'clk[{q}]')
-			G.nodes[f'clk[{q}]']['type'] = 'clk'
-			G.add_edge(f'clk[{q}]',q)
-
-			G.add_edge(d,f'r[{q}]')
-			G.nodes[f'r[{q}]']['type'] = 'r'
-			G.add_edge(f'r[{q}]',q)
-
-		# handle assigns
-		assign_regex = "assign\s+(.+?)\s*=\s*(.+?);"
-		for n0, n1 in re.findall(assign_regex,module):
-			output = n0.replace(' ','')
-			inpt = n1.replace(' ','')
-			G.add_edge(inpt,output)
-			G.nodes[output]['type'] = 'buf'
-
-		for n in G.nodes():
-			if 'type' not in G.nodes[n]:
-				if n == "1'b0":
-					G.nodes[n]['type'] = '0'
-				elif n == "1'b1":
-					G.nodes[n]['type'] = '1'
-				else:
-					G.nodes[n]['type'] = 'input'
-
-		# get outputs
-		out_regex = "output\s(.+?);"
-		for net_str in re.findall(out_regex,module,re.DOTALL):
-			nets = net_str.replace(" ","").replace("\n","").replace("\t","").split(",")
-			for net in nets:
-				G.add_edge(net,f'output[{net}]')
-				G.nodes[f'output[{net}]']['type'] = 'output'
-
-		return G
-
-	def miter(self,c=None,inputs=None,outputs=None):
-		if not c:
-			c = self
-		if not inputs:
-			inputs = self.startpoints()
-		if not outputs:
-			outputs = self.endpoints()
-
-		# get inputs to be used in miter
-		common_inputs = self.startpoints()&inputs
-		common_outputs = self.endpoints()&outputs
-
-		# create miter
-		m = c.relabel({n:f'c0_{n}' for n in c.nodes()-common_inputs})
-		m.extend(self.relabel({n:f'c1_{n}' for n in c.nodes()-common_inputs}))
-
-		# compare outputs
-		m.add('sat','or')
-		for o in common_outputs:
-			m.add(f'miter_{o}','xor',fanin=[f'c0_{o}',f'c1_{o}'],fanout=['sat'])
-
-		return m
-
-	def unroll(self,cycles):
-		pass
+def from_file(path,name=None):
+	"""Creates a new CircuitGraph from a verilog file.
+	If the name of the module to create a graph from is different than the
+	file name, specify it using the `name` argument"""
+	if name is None:
+		name = file_path.split('/')[-1].replace('.v', '')
+	with open(path, 'r') as f:
+		data = f.read()
+		regex = rf"module\s+{top}\s*\(.*?\);(.*?)endmodule"
+		m = re.search(regex, data, re.DOTALL)
+	return Circuit(verilog_to_graph(m.group(1), name))
+
+def from_verilog(verilog,name=None):
+	"""Creates a new CircuitGraph from a verilog string.
+	If the name of the module to create a graph from is different than the
+	file name, specify it using the `name` argument"""
+	if name is None:
+		name = 'circuit'
+	return Circuit(verilog_to_graph(verilog, name))
+
+def to_verilog(circuit):
+	"""Converts a CircuitGraph to a string of verilog code"""
+	return graph_to_verilog(circuit.graph)
 
 
 if __name__=='__main__':
