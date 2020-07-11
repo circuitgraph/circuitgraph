@@ -262,6 +262,15 @@ class Circuit:
 		set of str
 			Nodes in fanin.
 
+		Example
+		-------
+		>>> c.fanout('n_20')
+		{'G17'}
+		>>> c.fanout('n_11')
+		{'n_12'}
+		>>> c.fanout(['n_11','n_20'])
+		{'n_12', 'G17'}
+
 		"""
 
 		gates = set()

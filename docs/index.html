@@ -296,6 +296,15 @@ class Circuit:
                 set of str
                         Nodes in fanin.
 
+                Example
+                -------
+                &gt;&gt;&gt; c.fanout(&#39;n_20&#39;)
+                {&#39;G17&#39;}
+                &gt;&gt;&gt; c.fanout(&#39;n_11&#39;)
+                {&#39;n_12&#39;}
+                &gt;&gt;&gt; c.fanout([&#39;n_11&#39;,&#39;n_20&#39;])
+                {&#39;n_12&#39;, &#39;G17&#39;}
+
                 &#34;&#34;&#34;
 
                 gates = set()
@@ -1240,6 +1249,15 @@ endmodule
                 set of str
                         Nodes in fanin.
 
+                Example
+                -------
+                &gt;&gt;&gt; c.fanout(&#39;n_20&#39;)
+                {&#39;G17&#39;}
+                &gt;&gt;&gt; c.fanout(&#39;n_11&#39;)
+                {&#39;n_12&#39;}
+                &gt;&gt;&gt; c.fanout([&#39;n_11&#39;,&#39;n_20&#39;])
+                {&#39;n_12&#39;, &#39;G17&#39;}
+
                 &#34;&#34;&#34;
 
                 gates = set()
@@ -2046,7 +2064,15 @@ endmodule
 <dl>
 <dt><code>set</code> of <code>str</code></dt>
 <dd>Nodes in fanin.</dd>
-</dl></div>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code class="python">&gt;&gt;&gt; c.fanout('n_20')
+{'G17'}
+&gt;&gt;&gt; c.fanout('n_11')
+{'n_12'}
+&gt;&gt;&gt; c.fanout(['n_11','n_20'])
+{'n_12', 'G17'}
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -2066,6 +2092,15 @@ endmodule
         -------
         set of str
                 Nodes in fanin.
+
+        Example
+        -------
+        &gt;&gt;&gt; c.fanout(&#39;n_20&#39;)
+        {&#39;G17&#39;}
+        &gt;&gt;&gt; c.fanout(&#39;n_11&#39;)
+        {&#39;n_12&#39;}
+        &gt;&gt;&gt; c.fanout([&#39;n_11&#39;,&#39;n_20&#39;])
+        {&#39;n_12&#39;, &#39;G17&#39;}
 
         &#34;&#34;&#34;
 
