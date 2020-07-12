@@ -1,93 +1,79 @@
 """Functions for reading/writing CircuitGraphs"""
+
 import networkx as nx
 import re
+from circuitgraph import Circuit
 
-def verilog_to_graph(verilog, module):
-	# create graph
-	G = nx.DiGraph()
+def from_file(path,name=None):
+	"""Creates a new CircuitGraph from a verilog file.
+	If the name of the module to create a graph from is different than the
+	file name, specify it using the `name` argument"""
+	if name is None:
+		name = file_path.split('/')[-1].replace('.v', '')
+	with open(path, 'r') as f:
+		verilog = f.read()
+	return verilog_to_circuit(verilog,name)
+
+
+def verilog_to_circuit(verilog, name):
+	"""Creates a new Circuit from a verilog string."""
+
+	# extract module
+	regex = rf"module\s+{name}\s*\(.*?\);(.*?)endmodule"
+	m = re.search(regex,verilog,re.DOTALL)
+	module = m.group(1)
+
+	# create circuit
+	c = Circuit(name=name)
 
 	# handle gates
 	regex = "(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);"
 	for gate, net_str in re.findall(regex,module,re.DOTALL):
-
 		# parse all nets
 		nets = net_str.replace(" ","").replace("\n","").replace("\t","").split(",")
-		output = nets[0]
-		inputs = nets[1:]
-
-		# add to graph
-		G.add_edges_from((net,output) for net in inputs)
-		G.nodes[output]['type'] = gate
+		c.add(nets[0],gate,fanin=nets[1:])
 
 	# handle ffs
 	regex = "fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\);"
 	for clk,d,q in re.findall(regex,module,re.DOTALL):
-
-		# add to graph
-		G.add_node(q,type='ff')
-
-		G.add_edge(d,f'd[{q}]')
-		G.nodes[f'd[{q}]']['type'] = 'd'
-		G.add_edge(f'd[{q}]',q)
-
-		G.add_edge(clk,f'clk[{q}]')
-		G.nodes[f'clk[{q}]']['type'] = 'clk'
-		G.add_edge(f'clk[{q}]',q)
+		c.add(q,'ff',fanin=d,clk=clk)
 
 	# handle lats
 	regex = "latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);"
 	for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
-
-		# add to graph
-		G.add_node(q,type='lat')
-
-		G.add_edge(d,f'd[{q}]')
-		G.nodes[f'd[{q}]']['type'] = 'd'
-		G.add_edge(f'd[{q}]',q)
-
-		G.add_edge(clk,f'clk[{q}]')
-		G.nodes[f'clk[{q}]']['type'] = 'clk'
-		G.add_edge(f'clk[{q}]',q)
-
-		G.add_edge(d,f'r[{q}]')
-		G.nodes[f'r[{q}]']['type'] = 'r'
-		G.add_edge(f'r[{q}]',q)
+		c.add(q,'lat',fanin=d,clk=clk,r=r)
 
 	# handle assigns
 	assign_regex = "assign\s+(.+?)\s*=\s*(.+?);"
 	for n0, n1 in re.findall(assign_regex,module):
-		output = n0.replace(' ','')
-		inpt = n1.replace(' ','')
-		G.add_edge(inpt,output)
-		G.nodes[output]['type'] = 'buf'
+		c.add(n0.replace(' ',''),'buf',fanin=n1.replace(' ',''))
 
-	for n in G.nodes():
-		if 'type' not in G.nodes[n]:
+	for n in c:
+		if 'type' not in c.graph.nodes[n]:
 			if n == "1'b0":
-				G.nodes[n]['type'] = '0'
+				c.add(n,'0')
 			elif n == "1'b1":
-				G.nodes[n]['type'] = '1'
+				c.add(n,'1')
 			else:
-				G.nodes[n]['type'] = 'input'
+				c.add(n,'input')
 
 	# get outputs
 	out_regex = "output\s(.+?);"
 	for net_str in re.findall(out_regex,module,re.DOTALL):
 		nets = net_str.replace(" ","").replace("\n","").replace("\t","").split(",")
-		for net in nets:
-			G.add_edge(net,f'output[{net}]')
-			G.nodes[f'output[{net}]']['type'] = 'output'
+		for n in nets:
+			c.add(n,'output',fanin=n)
 
-	return G
+	return c
 
 
-def graph_to_verilog(graph):
+def circuit_to_verilog(c):
 	inputs = []
 	outputs = []
 	insts = []
 	wires = []
 
-	for n in self.nodes():
+	for n in c.nodes():
 		if c.type(n) in ['xor','xnor','buf','not','nor','or','and','nand']:
 			fanin = ','.join(p for p in c.fanin(n))
 			insts.append(f"{c.type(n)} g_{n} ({n},{fanin})")

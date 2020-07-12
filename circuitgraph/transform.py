@@ -1,29 +1,12 @@
 """Functions for transforming circuits"""
 
-import re
+from circuitgraph import Circuit
+from circuitgraph.io import verilog_to_circuit
 from subprocess import PIPE,Popen
 from tempfile import NamedTemporaryFile
 
-def relabel(c,mapping):
-	"""
-	Returns renamed copy of circuit.
 
-	Parameters
-	----------
-	c : Circuit
-		Circuit to relabel.
-	mapping : dict of str:str
-		mapping of old to new names
-
-	Returns
-	-------
-	Circuit
-		Relabeled circuit.
-
-	"""
-	return Circuit(graph=nx.relabel_nodes(c.graph,mapping),name=name)
-
-def syn(c,printOutput=False):
+def syn(c,engine='Genus',printOutput=False):
 	"""
 	Synthesizes the circuit using Genus.
 
@@ -31,6 +14,8 @@ def syn(c,printOutput=False):
 	----------
 	c : Circuit
 		Circuit to synthesize.
+	engine : string
+		Synthesis tool to use ('Genus' or 'Yosys')
 	printOutput : bool
 		Option to print synthesis log
 
@@ -42,19 +27,22 @@ def syn(c,printOutput=False):
 	"""
 	verilog = c.verilog()
 
+	# probably should write output to the tmp file
 	with NamedTemporaryFile() as tmp:
-		cmd = ['genus','-execute',f"""set_db / .library $env(GENUS_DIR)/share/synth/tutorials/tech/tutorial.lib;
-				read_hdl -sv {tmp.name};
-				elaborate;
-				set_db syn_generic_effort high
-				syn_generic;
-				syn_map;
-				syn_opt;
-				write_hdl -generic;
-				exit;"""]
+		if engine=='Genus':
+			cmd = ['genus','-execute',f"""set_db / .library $env(GENUS_DIR)/share/synth/tutorials/tech/tutorial.lib;
+					read_hdl -sv {tmp.name};
+					elaborate;
+					set_db syn_generic_effort high
+					syn_generic;
+					syn_map;
+					syn_opt;
+					write_hdl -generic;
+					exit;"""]
+		else:
+			print('not implemented')
 		tmp.write(bytes(verilog,'ascii'))
 		tmp.flush()
-		#code.interact(local=dict(globals(), **locals()))
 
 		process = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
 		output = ''
@@ -67,124 +55,110 @@ def syn(c,printOutput=False):
 					print(line.strip())
 				output += line
 
-	regex = "(module.*endmodule)"
-	m = re.search(regex,output,re.DOTALL)
-	syn_verilog = m.group(1)
-
-	c = Circuit(verilog=syn_verilog,name=c.name)
-	c.name = f'{c.name}_syn'
-	return c
-
-def two_input(c):
-	two_inp_c = nx.DiGraph()
-
-	# create nodes
-	for n in c.nodes():
-		two_inp_c.add_node(n)
-		for a,v in c.nodes[n].items():
-			two_inp_c.nodes[n][a] = v
-
-	# connect nodes
-	for n in c.nodes():
-		# handle fanin
-		pred = list(c.predecessors(n))
-
-		# select new gate type
-		if c.nodes[n]['type'] in ['and','nand']:
-			t = 'and'
-		elif c.nodes[n]['type'] in ['or','nor']:
-			t = 'or'
-		elif c.nodes[n]['type'] in ['xor','xnor']:
-			t = 'xor'
-
-		while len(pred)>2:
-			# create new, connect
-			two_inp_c.add_node(f'{n}_add_{len(pred)}',output=False,gate=t)
-			two_inp_c.add_edges_from((p,f'{n}_add_{len(pred)}') for p in pred[0:2])
-
-			# update list
-			pred.append(f'{n}_add_{len(pred)}')
-			pred = pred[2:]
-
-		# add final input connections
-		two_inp_c.add_edges_from((p,n) for p in pred)
-
-		# ensure all are two inputs
-		for n in two_inp_c.nodes():
-			if two_inp_c.in_degree(n)>2:
-				print(f"gate with more than 2 inputs")
-				code.interact(local=dict(globals(), **locals()))
-
-	return two_inp_c
+	return verilog_to_circuit(output,name)
 
 def ternary(c):
-	d = deepcopy(c)
+	"""
+	Encodes the circuit with ternary values
+
+	Parameters
+	----------
+	c : Circuit
+		Circuit to encode.
+
+	Returns
+	-------
+	Circuit
+		Encoded circuit.
+
+	"""
+	t = copy(c)
 
 	# add dual nodes
 	for n in c:
-		if c.nodes[n]['type'] in ['and','nand']:
-			d.add_node(f'{n}_x',gate='and',output=c.nodes[n]['output'])
-			d.add_node(f'{n}_x_in_fi',gate='or',output=False)
-			d.add_node(f'{n}_0_not_in_fi',gate='nor',output=False)
-			d.add_edges_from([(f'{n}_x_in_fi',f'{n}_x'),(f'{n}_0_not_in_fi',f'{n}_x')])
-			d.add_edges_from((f'{p}_x',f'{n}_x_in_fi') for p in c.predecessors(n))
+		if c.type(n) in ['and','nand']:
+			t.add_node(f'{n}_x',gate='and',output=c.nodes[n]['output'])
+			t.add_node(f'{n}_x_in_fi',gate='or',output=False)
+			t.add_node(f'{n}_0_not_in_fi',gate='nor',output=False)
+			t.add_edges_from([(f'{n}_x_in_fi',f'{n}_x'),(f'{n}_0_not_in_fi',f'{n}_x')])
+			t.add_edges_from((f'{p}_x',f'{n}_x_in_fi') for p in c.predecessors(n))
 			for p in c.predecessors(n):
-				d.add_node(f'{p}_is_0',gate='nor',output=False)
-				d.add_edge(f'{p}_is_0',f'{n}_0_not_in_fi')
-				d.add_edge(f'{p}_x',f'{p}_is_0')
-				d.add_edge(p,f'{p}_is_0')
+				t.add_node(f'{p}_is_0',gate='nor',output=False)
+				t.add_edge(f'{p}_is_0',f'{n}_0_not_in_fi')
+				t.add_edge(f'{p}_x',f'{p}_is_0')
+				t.add_edge(p,f'{p}_is_0')
 
-		elif c.nodes[n]['type'] in ['or','nor']:
-			d.add_node(f'{n}_x',gate='and',output=c.nodes[n]['output'])
-			d.add_node(f'{n}_x_in_fi',gate='or',output=False)
-			d.add_node(f'{n}_1_not_in_fi',gate='nor',output=False)
-			d.add_edges_from([(f'{n}_x_in_fi',f'{n}_x'),(f'{n}_1_not_in_fi',f'{n}_x')])
-			d.add_edges_from((f'{p}_x',f'{n}_x_in_fi') for p in c.predecessors(n))
+		elif c.type(n) in ['or','nor']:
+			t.add_node(f'{n}_x',gate='and',output=c.nodes[n]['output'])
+			t.add_node(f'{n}_x_in_fi',gate='or',output=False)
+			t.add_node(f'{n}_1_not_in_fi',gate='nor',output=False)
+			t.add_edges_from([(f'{n}_x_in_fi',f'{n}_x'),(f'{n}_1_not_in_fi',f'{n}_x')])
+			t.add_edges_from((f'{p}_x',f'{n}_x_in_fi') for p in c.predecessors(n))
 			for p in c.predecessors(n):
-				d.add_node(f'{p}_is_1',gate='and',output=False)
-				d.add_edge(f'{p}_is_1',f'{n}_1_not_in_fi')
-				d.add_node(f'{p}_not_x',gate='not',output=False)
-				d.add_edge(f'{p}_x',f'{p}_not_x')
-				d.add_edge(f'{p}_not_x',f'{p}_is_1')
-				d.add_edge(p,f'{p}_is_1')
+				t.add_node(f'{p}_is_1',gate='and',output=False)
+				t.add_edge(f'{p}_is_1',f'{n}_1_not_in_fi')
+				t.add_node(f'{p}_not_x',gate='not',output=False)
+				t.add_edge(f'{p}_x',f'{p}_not_x')
+				t.add_edge(f'{p}_not_x',f'{p}_is_1')
+				t.add_edge(p,f'{p}_is_1')
 
-		elif c.nodes[n]['type'] in ['buf','not']:
-			d.add_node(f'{n}_x',gate='buf',output=c.nodes[n]['output'])
+		elif c.type(n) in ['buf','not']:
+			t.add_node(f'{n}_x',gate='buf',output=c.nodes[n]['output'])
+			p = list(c.predecessors(n))[0]
+			t.add_edge(f'{p}_x',f'{n}_x')
+
+		elif c.type(n) in ['xor','xnor']:
+			t.add_node(f'{n}_x',gate='or',output=c.nodes[n]['output'])
+			t.add_edges_from((f'{p}_x',f'{n}_x') for p in c.predecessors(n))
+
+		elif c.type(n) in ['0','1']:
+			t.add_node(f'{n}_x',gate='0',output=c.nodes[n]['output'])
+
+		elif c.type(n) in ['input']:
+			t.add_node(f'{n}_x',gate='input',output=c.nodes[n]['output'])
+
+		elif c.type(n) in ['dff']:
+			t.add_node(f'{n}_x',gate='dff',output=c.nodes[n]['output'],clk=c.nodes[n]['clk'])
 			p = list(c.predecessors(n))[0]
 			d.add_edge(f'{p}_x',f'{n}_x')
 
-		elif c.nodes[n]['type'] in ['xor','xnor']:
-			d.add_node(f'{n}_x',gate='or',output=c.nodes[n]['output'])
-			d.add_edges_from((f'{p}_x',f'{n}_x') for p in c.predecessors(n))
-
-		elif c.nodes[n]['type'] in ['0','1']:
-			d.add_node(f'{n}_x',gate='0',output=c.nodes[n]['output'])
-
-		elif c.nodes[n]['type'] in ['input']:
-			d.add_node(f'{n}_x',gate='input',output=c.nodes[n]['output'])
-
-		elif c.nodes[n]['type'] in ['dff']:
-			d.add_node(f'{n}_x',gate='dff',output=c.nodes[n]['output'],clk=c.nodes[n]['clk'])
+		elif c.type(n) in ['lat']:
+			t.add_node(f'{n}_x',gate='lat',output=c.nodes[n]['output'],clk=c.nodes[n]['clk'],rst=c.nodes[n]['rst'])
 			p = list(c.predecessors(n))[0]
-			d.add_edge(f'{p}_x',f'{n}_x')
-
-		elif c.nodes[n]['type'] in ['lat']:
-			d.add_node(f'{n}_x',gate='lat',output=c.nodes[n]['output'],clk=c.nodes[n]['clk'],rst=c.nodes[n]['rst'])
-			p = list(c.predecessors(n))[0]
-			d.add_edge(f'{p}_x',f'{n}_x')
+			t.add_edge(f'{p}_x',f'{n}_x')
 
 		else:
 			print(f"unknown gate type: {c.nodes[n]['type']}")
 			code.interact(local=locals())
 
-	for n in d:
-		if 'type' not in d.nodes[n]:
+	for n in t:
+		if 'type' not in t.nodes[n]:
 			print(f"empty gate type: {n}")
 			code.interact(local=locals())
 
-	return d
+	return t
 
 def miter(c0,c1=None,startpoints=None,endpoints=None):
+	"""
+	Creates a miter circuit
+
+	Parameters
+	----------
+	c0 : Circuit
+		First circuit.
+	c1 : Circuit
+		Optional second circuit, if None c0 is mitered with itself.
+	startpoints : iterable of str
+		Nodes to be tied together, must exist in both circuits.
+	endpoints : iterable of str
+		Nodes to be compared, must exist in both circuits.
+
+	Returns
+	-------
+	Circuit
+		Miter circuit.
+
+	"""
 	if not c1:
 		c1 = c0
 	if not startpoints:
@@ -204,33 +178,90 @@ def miter(c0,c1=None,startpoints=None,endpoints=None):
 	return m
 
 def unroll(c,cycles):
-	pass
-
-def sensitivity(c,endpoint):
-	pass
-
-def sensitize(c,ns):
-	pass
-
-def seqGraph(c):
 	"""
-	Creates a graph of the circuit's sequential elements
+	Creates combinational unrolling of the circuit.
+
+	Parameters
+	----------
+	c : Circuit
+		Sequential circuit to unroll.
+	cycles : int
+		Number of cycles to unroll
 
 	Returns
 	-------
-	networkx.DiGraph
-		Sequential graph.
+	Circuit
+		Unrolled circuit.
 
 	"""
-	graph = nx.DiGraph()
+	pass
 
-	# add nodes
-	for n in c.io()|c.seq():
-		graph.add_node(n,gate=c.type(n))
+def sensitivity(c,endpoint):
+	"""
+	Creates a circuit to compute sensitivity.
 
-	# add edges
-	for n in graph.nodes:
-		graph.add_edges_from((s,n) for s in c.startpoints(n))
+	Parameters
+	----------
+	c : Circuit
+		Sequential circuit to unroll.
+	endpoint : str
+		Node to compute sensitivity at.
 
-	return graph
+	Returns
+	-------
+	Circuit
+		Sensitivity circuit.
+
+	"""
+	pass
+
+def sensitize(c,n):
+	"""
+	Creates a circuit to sensitize a node to an endpoint.
+
+	Parameters
+	----------
+	c : Circuit
+		Input circuit.
+	n : str
+		Node to sensitize.
+
+	Returns
+	-------
+	Circuit
+		Output circuit.
+
+	"""
+	pass
+
+def mphf(c,n):
+	"""
+	Creates a circuit to sensitize a node to an endpoint.
+
+	Parameters
+	----------
+	c : Circuit
+		Input circuit.
+	n : str
+		Node to sensitize.
+
+	Returns
+	-------
+	Circuit
+		Output circuit.
+
+	"""
+	pass
+	#def runXorTreeSat(w,x):
+	#	o = max(1,math.ceil(math.log2(w)))
+	#	print(o)
+
+	#	xors = '&'.join(
+	#			'('+'|'.join(
+	#				'('+'^'.join(
+	#					f'in[{j}]' for j in random.sample(set(range(w+1)),2)
+	#				)+')' for k in range(o)
+	#			)+')' for i in range(x)
+	#		)
+
 

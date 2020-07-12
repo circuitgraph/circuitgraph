@@ -12,3 +12,4 @@ output G16,G17;
   nand NAND2_5(G17,G12,G15);
 
 endmodule
+
