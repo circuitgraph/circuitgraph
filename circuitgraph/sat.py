@@ -166,6 +166,17 @@ def sat(c,true=None,false=None,timeout=None):
 	-------
 	False or dict of str:bool
 		Result.
+
+	Example
+	-------
+	>>> import circuitgraph as cg
+	>>> c = cg.from_file('rtl/s27.v')
+	>>> cg.sat(c)
+	{'G17': True, 'n_20': False, 'n_12': True, 'n_11': False, 'G0': True, 'n_9': True, 'n_10': True, 'n_7': False, 'n_8': False, 'n_1': False, 'G7': True, 'n_4': True, 'n_5': True, 'n_6': True, 'G2': False, 'n_3': False, 'n_2': False, 'G6': True, 'G3': True, 'n_0': False, 'G1': True, 'G5': True, 'n_21': False, 'd[G5]': True, 'r[G5]': True, 'clk[G5]': True, 'clk': True, 'd[G6]': False, 'r[G6]': True, 'clk[G6]': True, 'd[G7]': True, 'r[G7]': True, 'clk[G7]': True, 'output[G17]':
+			True}
+	>>> cg.sat(c,true=['G17','n_20'],false=['G6'])
+	False
+
 	"""
 	solver,variables = construct_solver(c,true,false)
 	with Timeout(seconds=timeout):

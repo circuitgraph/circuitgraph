@@ -30,8 +30,8 @@ class Circuit:
 	def __contains__(self,n):
 		return self.graph.__contains__(n)
 
-	def __copy__(self):
-		return Circuit(graph=self.graph.copy(),name=self.name.copy())
+	def copy(self):
+		return Circuit(graph=self.graph.copy(),name=self.name)
 
 	def __len__(self):
 		return self.graph.__len__()
@@ -109,6 +109,18 @@ class Circuit:
 		str
 			New node name.
 
+		Example
+		-------
+		Quickly generate an and tree
+		>>> import circuitgraph as cg
+		>>> c = Circuit()
+		>>> c = cg.Circuit()
+		>>> c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
+		'g'
+		>>> c.fanin('g')
+		{'in_1', 'in_0', 'in_3', 'in_2'}
+
+
 		"""
 		# clean arguments
 		if fanin is None: fanin=[]
@@ -181,7 +193,7 @@ class Circuit:
 			Relabeled circuit.
 
 		"""
-		return Circuit(graph=nx.relabel_nodes(c.graph,mapping),name=self.name.copy())
+		return Circuit(graph=nx.relabel_nodes(self.graph,mapping),name=self.name)
 
 	def transitiveFanout(self,ns,stopatTypes=['d'],stopatNodes=[],gates=None):
 		"""

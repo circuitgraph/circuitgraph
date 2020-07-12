@@ -195,6 +195,17 @@ def sat(c,true=None,false=None,timeout=None):
         -------
         False or dict of str:bool
                 Result.
+
+        Example
+        -------
+        &gt;&gt;&gt; import circuitgraph as cg
+        &gt;&gt;&gt; c = cg.from_file(&#39;rtl/s27.v&#39;)
+        &gt;&gt;&gt; cg.sat(c)
+        {&#39;G17&#39;: True, &#39;n_20&#39;: False, &#39;n_12&#39;: True, &#39;n_11&#39;: False, &#39;G0&#39;: True, &#39;n_9&#39;: True, &#39;n_10&#39;: True, &#39;n_7&#39;: False, &#39;n_8&#39;: False, &#39;n_1&#39;: False, &#39;G7&#39;: True, &#39;n_4&#39;: True, &#39;n_5&#39;: True, &#39;n_6&#39;: True, &#39;G2&#39;: False, &#39;n_3&#39;: False, &#39;n_2&#39;: False, &#39;G6&#39;: True, &#39;G3&#39;: True, &#39;n_0&#39;: False, &#39;G1&#39;: True, &#39;G5&#39;: True, &#39;n_21&#39;: False, &#39;d[G5]&#39;: True, &#39;r[G5]&#39;: True, &#39;clk[G5]&#39;: True, &#39;clk&#39;: True, &#39;d[G6]&#39;: False, &#39;r[G6]&#39;: True, &#39;clk[G6]&#39;: True, &#39;d[G7]&#39;: True, &#39;r[G7]&#39;: True, &#39;clk[G7]&#39;: True, &#39;output[G17]&#39;:
+                        True}
+        &gt;&gt;&gt; cg.sat(c,true=[&#39;G17&#39;,&#39;n_20&#39;],false=[&#39;G6&#39;])
+        False
+
         &#34;&#34;&#34;
         solver,variables = construct_solver(c,true,false)
         with Timeout(seconds=timeout):
@@ -630,7 +641,16 @@ def modelCount(c,true=None,false=None,timeout=None):
 <dl>
 <dt><code>False</code> or <code>dict</code> of <code>str:bool</code></dt>
 <dd>Result.</dd>
-</dl></div>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = cg.from_file('rtl/s27.v')
+&gt;&gt;&gt; cg.sat(c)
+{'G17': True, 'n_20': False, 'n_12': True, 'n_11': False, 'G0': True, 'n_9': True, 'n_10': True, 'n_7': False, 'n_8': False, 'n_1': False, 'G7': True, 'n_4': True, 'n_5': True, 'n_6': True, 'G2': False, 'n_3': False, 'n_2': False, 'G6': True, 'G3': True, 'n_0': False, 'G1': True, 'G5': True, 'n_21': False, 'd[G5]': True, 'r[G5]': True, 'clk[G5]': True, 'clk': True, 'd[G6]': False, 'r[G6]': True, 'clk[G6]': True, 'd[G7]': True, 'r[G7]': True, 'clk[G7]': True, 'output[G17]':
+                True}
+&gt;&gt;&gt; cg.sat(c,true=['G17','n_20'],false=['G6'])
+False
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -654,6 +674,17 @@ def modelCount(c,true=None,false=None,timeout=None):
         -------
         False or dict of str:bool
                 Result.
+
+        Example
+        -------
+        &gt;&gt;&gt; import circuitgraph as cg
+        &gt;&gt;&gt; c = cg.from_file(&#39;rtl/s27.v&#39;)
+        &gt;&gt;&gt; cg.sat(c)
+        {&#39;G17&#39;: True, &#39;n_20&#39;: False, &#39;n_12&#39;: True, &#39;n_11&#39;: False, &#39;G0&#39;: True, &#39;n_9&#39;: True, &#39;n_10&#39;: True, &#39;n_7&#39;: False, &#39;n_8&#39;: False, &#39;n_1&#39;: False, &#39;G7&#39;: True, &#39;n_4&#39;: True, &#39;n_5&#39;: True, &#39;n_6&#39;: True, &#39;G2&#39;: False, &#39;n_3&#39;: False, &#39;n_2&#39;: False, &#39;G6&#39;: True, &#39;G3&#39;: True, &#39;n_0&#39;: False, &#39;G1&#39;: True, &#39;G5&#39;: True, &#39;n_21&#39;: False, &#39;d[G5]&#39;: True, &#39;r[G5]&#39;: True, &#39;clk[G5]&#39;: True, &#39;clk&#39;: True, &#39;d[G6]&#39;: False, &#39;r[G6]&#39;: True, &#39;clk[G6]&#39;: True, &#39;d[G7]&#39;: True, &#39;r[G7]&#39;: True, &#39;clk[G7]&#39;: True, &#39;output[G17]&#39;:
+                        True}
+        &gt;&gt;&gt; cg.sat(c,true=[&#39;G17&#39;,&#39;n_20&#39;],false=[&#39;G6&#39;])
+        False
+
         &#34;&#34;&#34;
         solver,variables = construct_solver(c,true,false)
         with Timeout(seconds=timeout):

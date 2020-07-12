@@ -59,8 +59,8 @@ class Circuit:
         def __contains__(self,n):
                 return self.graph.__contains__(n)
 
-        def __copy__(self):
-                return Circuit(graph=self.graph.copy(),name=self.name.copy())
+        def copy(self):
+                return Circuit(graph=self.graph.copy(),name=self.name)
 
         def __len__(self):
                 return self.graph.__len__()
@@ -138,6 +138,18 @@ class Circuit:
                 str
                         New node name.
 
+                Example
+                -------
+                Quickly generate an and tree
+                &gt;&gt;&gt; import circuitgraph as cg
+                &gt;&gt;&gt; c = Circuit()
+                &gt;&gt;&gt; c = cg.Circuit()
+                &gt;&gt;&gt; c.add(&#39;g&#39;,&#39;and&#39;,fanin=[c.add(f&#39;in_{i}&#39;,&#39;input&#39;) for i in range(4)])
+                &#39;g&#39;
+                &gt;&gt;&gt; c.fanin(&#39;g&#39;)
+                {&#39;in_1&#39;, &#39;in_0&#39;, &#39;in_3&#39;, &#39;in_2&#39;}
+
+
                 &#34;&#34;&#34;
                 # clean arguments
                 if fanin is None: fanin=[]
@@ -210,7 +222,7 @@ class Circuit:
                         Relabeled circuit.
 
                 &#34;&#34;&#34;
-                return Circuit(graph=nx.relabel_nodes(c.graph,mapping),name=self.name.copy())
+                return Circuit(graph=nx.relabel_nodes(self.graph,mapping),name=self.name)
 
         def transitiveFanout(self,ns,stopatTypes=[&#39;d&#39;],stopatNodes=[],gates=None):
                 &#34;&#34;&#34;
@@ -521,8 +533,8 @@ class Circuit:
         def __contains__(self,n):
                 return self.graph.__contains__(n)
 
-        def __copy__(self):
-                return Circuit(graph=self.graph.copy(),name=self.name.copy())
+        def copy(self):
+                return Circuit(graph=self.graph.copy(),name=self.name)
 
         def __len__(self):
                 return self.graph.__len__()
@@ -600,6 +612,18 @@ class Circuit:
                 str
                         New node name.
 
+                Example
+                -------
+                Quickly generate an and tree
+                &gt;&gt;&gt; import circuitgraph as cg
+                &gt;&gt;&gt; c = Circuit()
+                &gt;&gt;&gt; c = cg.Circuit()
+                &gt;&gt;&gt; c.add(&#39;g&#39;,&#39;and&#39;,fanin=[c.add(f&#39;in_{i}&#39;,&#39;input&#39;) for i in range(4)])
+                &#39;g&#39;
+                &gt;&gt;&gt; c.fanin(&#39;g&#39;)
+                {&#39;in_1&#39;, &#39;in_0&#39;, &#39;in_3&#39;, &#39;in_2&#39;}
+
+
                 &#34;&#34;&#34;
                 # clean arguments
                 if fanin is None: fanin=[]
@@ -672,7 +696,7 @@ class Circuit:
                         Relabeled circuit.
 
                 &#34;&#34;&#34;
-                return Circuit(graph=nx.relabel_nodes(c.graph,mapping),name=self.name.copy())
+                return Circuit(graph=nx.relabel_nodes(self.graph,mapping),name=self.name)
 
         def transitiveFanout(self,ns,stopatTypes=[&#39;d&#39;],stopatNodes=[],gates=None):
                 &#34;&#34;&#34;
@@ -951,7 +975,17 @@ class Circuit:
 <dl>
 <dt><code>str</code></dt>
 <dd>New node name.</dd>
-</dl></div>
+</dl>
+<h2 id="example">Example</h2>
+<p>Quickly generate an and tree</p>
+<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = Circuit()
+&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
+'g'
+&gt;&gt;&gt; c.fanin('g')
+{'in_1', 'in_0', 'in_3', 'in_2'}
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -975,6 +1009,18 @@ class Circuit:
         -------
         str
                 New node name.
+
+        Example
+        -------
+        Quickly generate an and tree
+        &gt;&gt;&gt; import circuitgraph as cg
+        &gt;&gt;&gt; c = Circuit()
+        &gt;&gt;&gt; c = cg.Circuit()
+        &gt;&gt;&gt; c.add(&#39;g&#39;,&#39;and&#39;,fanin=[c.add(f&#39;in_{i}&#39;,&#39;input&#39;) for i in range(4)])
+        &#39;g&#39;
+        &gt;&gt;&gt; c.fanin(&#39;g&#39;)
+        {&#39;in_1&#39;, &#39;in_0&#39;, &#39;in_3&#39;, &#39;in_2&#39;}
+
 
         &#34;&#34;&#34;
         # clean arguments
@@ -1038,6 +1084,19 @@ class Circuit:
         if isinstance(us,str): us = [us]
         if isinstance(vs,str): vs = [vs]
         self.graph.add_edges_from((u,v) for u in us for v in vs)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.copy"><code class="name flex">
+<span>def <span class="ident">copy</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def copy(self):
+        return Circuit(graph=self.graph.copy(),name=self.name)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.edges"><code class="name flex">
@@ -1452,7 +1511,7 @@ class Circuit:
                 Relabeled circuit.
 
         &#34;&#34;&#34;
-        return Circuit(graph=nx.relabel_nodes(c.graph,mapping),name=self.name.copy())</code></pre>
+        return Circuit(graph=nx.relabel_nodes(self.graph,mapping),name=self.name)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.seq"><code class="name flex">
@@ -1738,6 +1797,7 @@ class Circuit:
 <ul class="two-column">
 <li><code><a title="circuitgraph.circuit.Circuit.add" href="#circuitgraph.circuit.Circuit.add">add</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.connect" href="#circuitgraph.circuit.Circuit.connect">connect</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.copy" href="#circuitgraph.circuit.Circuit.copy">copy</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.edges" href="#circuitgraph.circuit.Circuit.edges">edges</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.endpoints" href="#circuitgraph.circuit.Circuit.endpoints">endpoints</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.extend" href="#circuitgraph.circuit.Circuit.extend">extend</a></code></li>

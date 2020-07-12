@@ -38,7 +38,7 @@ def from_file(path,name=None):
         If the name of the module to create a graph from is different than the
         file name, specify it using the `name` argument&#34;&#34;&#34;
         if name is None:
-                name = file_path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;, &#39;&#39;)
+                name = path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;, &#39;&#39;)
         with open(path, &#39;r&#39;) as f:
                 verilog = f.read()
         return verilog_to_circuit(verilog,name)
@@ -214,7 +214,7 @@ file name, specify it using the <code>name</code> argument</p></div>
         If the name of the module to create a graph from is different than the
         file name, specify it using the `name` argument&#34;&#34;&#34;
         if name is None:
-                name = file_path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;, &#39;&#39;)
+                name = path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;, &#39;&#39;)
         with open(path, &#39;r&#39;) as f:
                 verilog = f.read()
         return verilog_to_circuit(verilog,name)</code></pre>

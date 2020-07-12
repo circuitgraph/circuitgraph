@@ -9,7 +9,7 @@ def from_file(path,name=None):
 	If the name of the module to create a graph from is different than the
 	file name, specify it using the `name` argument"""
 	if name is None:
-		name = file_path.split('/')[-1].replace('.v', '')
+		name = path.split('/')[-1].replace('.v', '')
 	with open(path, 'r') as f:
 		verilog = f.read()
 	return verilog_to_circuit(verilog,name)

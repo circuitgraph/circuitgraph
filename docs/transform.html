@@ -57,7 +57,7 @@ def syn(c,engine=&#39;Genus&#39;,printOutput=False):
                 Synthesized circuit.
 
         &#34;&#34;&#34;
-        verilog = c.verilog()
+        verilog = circuit_to_verilog(c)
 
         # probably should write output to the tmp file
         with NamedTemporaryFile() as tmp:
@@ -87,7 +87,7 @@ def syn(c,engine=&#39;Genus&#39;,printOutput=False):
                                         print(line.strip())
                                 output += line
 
-        return verilog_to_circuit(output,name)
+        return verilog_to_circuit(output,c.name)
 
 def ternary(c):
         &#34;&#34;&#34;
@@ -104,7 +104,7 @@ def ternary(c):
                 Encoded circuit.
 
         &#34;&#34;&#34;
-        t = copy(c)
+        t = c.copy()
 
         # add dual nodes
         for n in c:
@@ -204,7 +204,7 @@ def miter(c0,c1=None,startpoints=None,endpoints=None):
 
         # compare outputs
         m.add(&#39;sat&#39;,&#39;or&#39;)
-        for o in common_outputs:
+        for o in endpoints:
                 m.add(f&#39;miter_{o}&#39;,&#39;xor&#39;,fanin=[f&#39;c0_{o}&#39;,f&#39;c1_{o}&#39;],fanout=[&#39;sat&#39;])
 
         return m
@@ -224,7 +224,7 @@ def comb(c):
                 Combinational circuit.
 
         &#34;&#34;&#34;
-        c_comb = copy(c)
+        c_comb = c.copy()
         lat_model = gen_lat_model()
         ff_model = gen_ff_model()
 
@@ -454,7 +454,7 @@ def mphf(w=30,n=800):
                 Combinational circuit.
 
         &#34;&#34;&#34;
-        c_comb = copy(c)
+        c_comb = c.copy()
         lat_model = gen_lat_model()
         ff_model = gen_ff_model()
 
@@ -612,7 +612,7 @@ def mphf(w=30,n=800):
 
         # compare outputs
         m.add(&#39;sat&#39;,&#39;or&#39;)
-        for o in common_outputs:
+        for o in endpoints:
                 m.add(f&#39;miter_{o}&#39;,&#39;xor&#39;,fanin=[f&#39;c0_{o}&#39;,f&#39;c1_{o}&#39;],fanout=[&#39;sat&#39;])
 
         return m</code></pre>
@@ -797,7 +797,7 @@ def mphf(w=30,n=800):
                 Synthesized circuit.
 
         &#34;&#34;&#34;
-        verilog = c.verilog()
+        verilog = circuit_to_verilog(c)
 
         # probably should write output to the tmp file
         with NamedTemporaryFile() as tmp:
@@ -827,7 +827,7 @@ def mphf(w=30,n=800):
                                         print(line.strip())
                                 output += line
 
-        return verilog_to_circuit(output,name)</code></pre>
+        return verilog_to_circuit(output,c.name)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.ternary"><code class="name flex">
@@ -864,7 +864,7 @@ def mphf(w=30,n=800):
                 Encoded circuit.
 
         &#34;&#34;&#34;
-        t = copy(c)
+        t = c.copy()
 
         # add dual nodes
         for n in c:

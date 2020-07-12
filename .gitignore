@@ -27,3 +27,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Genus
+*.log*
+*.cmd*
+fv/

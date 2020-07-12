@@ -28,7 +28,7 @@ def syn(c,engine='Genus',printOutput=False):
 		Synthesized circuit.
 
 	"""
-	verilog = c.verilog()
+	verilog = circuit_to_verilog(c)
 
 	# probably should write output to the tmp file
 	with NamedTemporaryFile() as tmp:
@@ -58,7 +58,7 @@ def syn(c,engine='Genus',printOutput=False):
 					print(line.strip())
 				output += line
 
-	return verilog_to_circuit(output,name)
+	return verilog_to_circuit(output,c.name)
 
 def ternary(c):
 	"""
@@ -75,7 +75,7 @@ def ternary(c):
 		Encoded circuit.
 
 	"""
-	t = copy(c)
+	t = c.copy()
 
 	# add dual nodes
 	for n in c:
@@ -175,7 +175,7 @@ def miter(c0,c1=None,startpoints=None,endpoints=None):
 
 	# compare outputs
 	m.add('sat','or')
-	for o in common_outputs:
+	for o in endpoints:
 		m.add(f'miter_{o}','xor',fanin=[f'c0_{o}',f'c1_{o}'],fanout=['sat'])
 
 	return m
@@ -195,7 +195,7 @@ def comb(c):
 		Combinational circuit.
 
 	"""
-	c_comb = copy(c)
+	c_comb = c.copy()
 	lat_model = gen_lat_model()
 	ff_model = gen_ff_model()
 
