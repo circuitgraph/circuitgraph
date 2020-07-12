@@ -1,0 +1,1770 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.8.3" />
+<title>circuitgraph.circuit API documentation</title>
+<meta name="description" content="Circuit class" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js" integrity="sha256-eOgo0OtLL4cdq7RdwRUiGKLX9XsIJ7nGhWEKbohmVAQ=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>circuitgraph.circuit</code></h1>
+</header>
+<section id="section-intro">
+<p>Circuit class</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;Circuit class&#34;&#34;&#34;
+
+import re
+import networkx as nx
+
+class Circuit:
+        &#34;&#34;&#34;Class for representing circuits&#34;&#34;&#34;
+
+        def __init__(self,graph=None,name=None):
+                &#34;&#34;&#34;
+                Parameters
+                ----------
+                name : str
+                        Name of circuit.
+                graph : networkx.DiGraph
+                        Graph data structure to be used in new instance.
+
+                &#34;&#34;&#34;
+
+                if name:
+                        self.name = name
+                else:
+                        self.name = &#39;circuit&#39;
+
+                if graph:
+                        self.graph = graph
+                else:
+                        self.graph = nx.DiGraph()
+
+        def __contains__(self,n):
+                return self.graph.__contains__(n)
+
+        def __copy__(self):
+                return Circuit(graph=self.graph.copy(),name=self.name.copy())
+
+        def __len__(self):
+                return self.graph.__len__()
+
+        def __iter__(self):
+                return self.graph.__iter__()
+
+        def type(self,n):
+                &#34;&#34;&#34;
+                Returns node type
+
+                Parameters
+                ----------
+                n : str
+                        Node.
+
+                Returns
+                -------
+                str
+                        Type of node.
+
+                &#34;&#34;&#34;
+                return self.graph.nodes[n][&#39;type&#39;]
+
+        def nodes(self,types=None):
+                &#34;&#34;&#34;
+                Returns circuit nodes, optionally filtering by type
+
+                Parameters
+                ----------
+                types : str or iterable of str
+                        Type(s) to filter in.
+
+                Returns
+                -------
+                set of str
+                        Nodes
+
+                &#34;&#34;&#34;
+                if types is None:
+                        return self.graph.nodes
+                else:
+                        if isinstance(types,str): types = [types]
+                        return set(n for n in self.nodes() if self.type(n) in types)
+
+        def edges(self):
+                &#34;&#34;&#34;
+                Returns circuit edges
+
+                Returns
+                -------
+                networkx.EdgeView
+                        Edges in circuit
+
+                &#34;&#34;&#34;
+                return self.graph.edges
+
+        def add(self,n,type,fanin=None,fanout=None,clk=None,r=None):
+                &#34;&#34;&#34;
+                Adds a new node to the circuit, optionally connecting it
+
+                Parameters
+                ----------
+                n : str
+                        New node name
+                type : str
+                        New node type
+                fanin : iterable of str
+                        Nodes to add to new node&#39;s fanin
+                fanout : iterable of str
+                        Nodes to add to new node&#39;s fanout
+
+                Returns
+                -------
+                str
+                        New node name.
+
+                &#34;&#34;&#34;
+                # clean arguments
+                if fanin is None: fanin=[]
+                elif isinstance(fanin,str): fanin=[fanin]
+                if fanout is None: fanout=[]
+                elif isinstance(fanout,str): fanout=[fanout]
+
+                if type in [&#39;ff&#39;,&#39;lat&#39;]:
+                        # add auxillary nodes for sequential element
+                        self.graph.add_node(n,type=type)
+                        self.graph.add_node(f&#39;d[{n}]&#39;,type=&#39;d&#39;)
+                        self.graph.add_node(f&#39;r[{n}]&#39;,type=&#39;r&#39;)
+                        self.graph.add_node(f&#39;clk[{n}]&#39;,type=&#39;clk&#39;)
+
+                        # connect
+                        self.graph.add_edges_from((n,f) for f in fanout)
+                        self.graph.add_edges_from([(f&#39;d[{n}]&#39;,n),(f&#39;clk[{n}]&#39;,n),(f&#39;r[{n}]&#39;,n)])
+                        self.graph.add_edges_from((f,f&#39;d[{n}]&#39;) for f in fanin)
+                        if r: self.graph.add_edge(r,f&#39;r[{n}]&#39;)
+                        if clk: self.graph.add_edge(clk,f&#39;clk[{n}]&#39;)
+                elif type == &#39;output&#39;:
+                        self.graph.add_node(f&#39;output[{n}]&#39;,type=&#39;output&#39;)
+                        self.graph.add_edges_from((f,f&#39;output[{n}]&#39;) for f in fanin)
+                else:
+                        self.graph.add_node(n,type=type)
+                        self.graph.add_edges_from((n,f) for f in fanout)
+                        self.graph.add_edges_from((f,n) for f in fanin)
+
+                return n
+
+        def extend(self,c):
+                &#34;&#34;&#34;
+                Adds nodes from another circuit
+
+                Parameters
+                ----------
+                c : Circuit
+                        Other circuit
+                &#34;&#34;&#34;
+                self.graph.update(c.graph)
+
+        def connect(self,us,vs):
+                &#34;&#34;&#34;
+                Adds connections to the graph
+
+                Parameters
+                ----------
+                us : str or iterable of str
+                        Head node(s)
+                vs : str or iterable of str
+                        Tail node(s)
+
+                &#34;&#34;&#34;
+                if isinstance(us,str): us = [us]
+                if isinstance(vs,str): vs = [vs]
+                self.graph.add_edges_from((u,v) for u in us for v in vs)
+
+        def relabel(self,mapping):
+                &#34;&#34;&#34;
+                Returns renamed copy of circuit.
+
+                Parameters
+                ----------
+                mapping : dict of str:str
+                        mapping of old to new names
+
+                Returns
+                -------
+                Circuit
+                        Relabeled circuit.
+
+                &#34;&#34;&#34;
+                return Circuit(graph=nx.relabel_nodes(c.graph,mapping),name=self.name.copy())
+
+        def transitiveFanout(self,ns,stopatTypes=[&#39;d&#39;],stopatNodes=[],gates=None):
+                &#34;&#34;&#34;
+                Computes the transitive fanout of a node.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute transitive fanout for.
+                stopatTypes : iterable of str
+                        Node types to stop recursion at.
+                stopatNodes : iterable of str
+                        Nodes to stop recursion at.
+                gates : set of str
+                        Visited nodes.
+
+                Returns
+                -------
+                set of str
+                        Nodes in transitive fanout.
+
+                &#34;&#34;&#34;
+
+                if gates is None: gates=set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        for s in self.graph.successors(n):
+                                if s not in gates:
+                                        gates.add(s)
+                                        if self.type(s) not in stopatTypes and s not in stopatNodes:
+                                                self.transitiveFanout(s,stopatTypes,stopatNodes,gates)
+                return gates
+
+        def transitiveFanin(self,ns,stopatTypes=[&#39;ff&#39;,&#39;lat&#39;],stopatNodes=[],gates=None):
+                &#34;&#34;&#34;
+                Computes the transitive fanin of a node.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute transitive fanin for.
+                stopatTypes : iterable of str
+                        Node types to stop recursion at.
+                stopatNodes : iterable of str
+                        Nodes to stop recursion at.
+                gates : set of str
+                        Visited nodes.
+
+                Returns
+                -------
+                set of str
+                        Nodes in transitive fanin.
+
+                &#34;&#34;&#34;
+
+                if gates is None: gates=set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        for p in self.graph.predecessors(n):
+                                if p not in gates:
+                                        gates.add(p)
+                                        if self.type(p) not in stopatTypes and p not in stopatNodes:
+                                                self.transitiveFanin(p,stopatTypes,stopatNodes,gates)
+                return gates
+
+        def fanout(self,ns):
+                &#34;&#34;&#34;
+                Computes the fanout of a node.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute fanout for.
+                gates : set of str
+                        Visited nodes.
+
+                Returns
+                -------
+                set of str
+                        Nodes in fanout.
+
+                &#34;&#34;&#34;
+
+                gates = set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        gates |= set(self.graph.successors(n))
+                return gates
+
+        def fanin(self,ns):
+                &#34;&#34;&#34;
+                Computes the fanin of a node.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute fanin for.
+                gates : set of str
+                        Visited nodes.
+
+                Returns
+                -------
+                set of str
+                        Nodes in fanin.
+
+                Example
+                -------
+                &gt;&gt;&gt; c.fanout(&#39;n_20&#39;)
+                {&#39;G17&#39;}
+                &gt;&gt;&gt; c.fanout(&#39;n_11&#39;)
+                {&#39;n_12&#39;}
+                &gt;&gt;&gt; c.fanout([&#39;n_11&#39;,&#39;n_20&#39;])
+                {&#39;n_12&#39;, &#39;G17&#39;}
+
+                &#34;&#34;&#34;
+
+                gates = set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        gates |= set(self.graph.predecessors(n))
+                return gates
+
+        def lats(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s latches
+
+                Returns
+                -------
+                set of str
+                        Latch nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes(&#39;lat&#39;)
+
+        def ffs(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s flip-flops
+
+                Returns
+                -------
+                set of str
+                        Flip-flop nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes(&#39;ff&#39;)
+
+        def seq(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s sequential nodes
+
+                Returns
+                -------
+                set of str
+                        Sequential nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes([&#39;ff&#39;,&#39;lat&#39;])
+
+        def inputs(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s inputs
+
+                Returns
+                -------
+                set of str
+                        Input nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes(&#39;input&#39;)
+
+        def outputs(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s outputs
+
+                Returns
+                -------
+                set of str
+                        Output nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes(&#39;output&#39;)
+
+        def io(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s io
+
+                Returns
+                -------
+                set of str
+                        Output and input nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes([&#39;output&#39;,&#39;input&#39;])
+
+        def startpoints(self,ns=None):
+                &#34;&#34;&#34;
+                Computes the startpoints of a node, nodes, or circuit.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute startpoints for.
+
+                Returns
+                -------
+                set of str
+                        Startpoints of ns.
+
+                &#34;&#34;&#34;
+                if ns:
+                        return set(n for n in self.transitiveFanin(ns) if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+                else:
+                        return set(n for n in self.graph if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+
+        def endpoints(self,ns=None):
+                &#34;&#34;&#34;
+                Computes the endpoints of a node, nodes, or circuit.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute endpoints for.
+
+                Returns
+                -------
+                set of str
+                        Endpoints of ns.
+
+                &#34;&#34;&#34;
+                if ns:
+                        return set(n for n in self.transitiveFanout(ns) if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+                else:
+                        return set(n for n in self.graph if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+
+        def seqGraph(self):
+                &#34;&#34;&#34;
+                Creates a graph of the circuit&#39;s sequential elements
+
+                Returns
+                -------
+                networkx.DiGraph
+                        Sequential graph.
+
+                &#34;&#34;&#34;
+                graph = nx.DiGraph()
+
+                # add nodes
+                for n in self.io()|self.seq():
+                        graph.add_node(n,gate=self.type(n))
+
+                # add edges
+                for n in graph.nodes:
+                        graph.add_edges_from((s,n) for s in self.startpoints(n))
+
+                return graph</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="circuitgraph.circuit.Circuit"><code class="flex name class">
+<span>class <span class="ident">Circuit</span></span>
+<span>(</span><span>graph=None, name=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Class for representing circuits</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of circuit.</dd>
+<dt><strong><code>graph</code></strong> :&ensp;<code>networkx.DiGraph</code></dt>
+<dd>Graph data structure to be used in new instance.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Circuit:
+        &#34;&#34;&#34;Class for representing circuits&#34;&#34;&#34;
+
+        def __init__(self,graph=None,name=None):
+                &#34;&#34;&#34;
+                Parameters
+                ----------
+                name : str
+                        Name of circuit.
+                graph : networkx.DiGraph
+                        Graph data structure to be used in new instance.
+
+                &#34;&#34;&#34;
+
+                if name:
+                        self.name = name
+                else:
+                        self.name = &#39;circuit&#39;
+
+                if graph:
+                        self.graph = graph
+                else:
+                        self.graph = nx.DiGraph()
+
+        def __contains__(self,n):
+                return self.graph.__contains__(n)
+
+        def __copy__(self):
+                return Circuit(graph=self.graph.copy(),name=self.name.copy())
+
+        def __len__(self):
+                return self.graph.__len__()
+
+        def __iter__(self):
+                return self.graph.__iter__()
+
+        def type(self,n):
+                &#34;&#34;&#34;
+                Returns node type
+
+                Parameters
+                ----------
+                n : str
+                        Node.
+
+                Returns
+                -------
+                str
+                        Type of node.
+
+                &#34;&#34;&#34;
+                return self.graph.nodes[n][&#39;type&#39;]
+
+        def nodes(self,types=None):
+                &#34;&#34;&#34;
+                Returns circuit nodes, optionally filtering by type
+
+                Parameters
+                ----------
+                types : str or iterable of str
+                        Type(s) to filter in.
+
+                Returns
+                -------
+                set of str
+                        Nodes
+
+                &#34;&#34;&#34;
+                if types is None:
+                        return self.graph.nodes
+                else:
+                        if isinstance(types,str): types = [types]
+                        return set(n for n in self.nodes() if self.type(n) in types)
+
+        def edges(self):
+                &#34;&#34;&#34;
+                Returns circuit edges
+
+                Returns
+                -------
+                networkx.EdgeView
+                        Edges in circuit
+
+                &#34;&#34;&#34;
+                return self.graph.edges
+
+        def add(self,n,type,fanin=None,fanout=None,clk=None,r=None):
+                &#34;&#34;&#34;
+                Adds a new node to the circuit, optionally connecting it
+
+                Parameters
+                ----------
+                n : str
+                        New node name
+                type : str
+                        New node type
+                fanin : iterable of str
+                        Nodes to add to new node&#39;s fanin
+                fanout : iterable of str
+                        Nodes to add to new node&#39;s fanout
+
+                Returns
+                -------
+                str
+                        New node name.
+
+                &#34;&#34;&#34;
+                # clean arguments
+                if fanin is None: fanin=[]
+                elif isinstance(fanin,str): fanin=[fanin]
+                if fanout is None: fanout=[]
+                elif isinstance(fanout,str): fanout=[fanout]
+
+                if type in [&#39;ff&#39;,&#39;lat&#39;]:
+                        # add auxillary nodes for sequential element
+                        self.graph.add_node(n,type=type)
+                        self.graph.add_node(f&#39;d[{n}]&#39;,type=&#39;d&#39;)
+                        self.graph.add_node(f&#39;r[{n}]&#39;,type=&#39;r&#39;)
+                        self.graph.add_node(f&#39;clk[{n}]&#39;,type=&#39;clk&#39;)
+
+                        # connect
+                        self.graph.add_edges_from((n,f) for f in fanout)
+                        self.graph.add_edges_from([(f&#39;d[{n}]&#39;,n),(f&#39;clk[{n}]&#39;,n),(f&#39;r[{n}]&#39;,n)])
+                        self.graph.add_edges_from((f,f&#39;d[{n}]&#39;) for f in fanin)
+                        if r: self.graph.add_edge(r,f&#39;r[{n}]&#39;)
+                        if clk: self.graph.add_edge(clk,f&#39;clk[{n}]&#39;)
+                elif type == &#39;output&#39;:
+                        self.graph.add_node(f&#39;output[{n}]&#39;,type=&#39;output&#39;)
+                        self.graph.add_edges_from((f,f&#39;output[{n}]&#39;) for f in fanin)
+                else:
+                        self.graph.add_node(n,type=type)
+                        self.graph.add_edges_from((n,f) for f in fanout)
+                        self.graph.add_edges_from((f,n) for f in fanin)
+
+                return n
+
+        def extend(self,c):
+                &#34;&#34;&#34;
+                Adds nodes from another circuit
+
+                Parameters
+                ----------
+                c : Circuit
+                        Other circuit
+                &#34;&#34;&#34;
+                self.graph.update(c.graph)
+
+        def connect(self,us,vs):
+                &#34;&#34;&#34;
+                Adds connections to the graph
+
+                Parameters
+                ----------
+                us : str or iterable of str
+                        Head node(s)
+                vs : str or iterable of str
+                        Tail node(s)
+
+                &#34;&#34;&#34;
+                if isinstance(us,str): us = [us]
+                if isinstance(vs,str): vs = [vs]
+                self.graph.add_edges_from((u,v) for u in us for v in vs)
+
+        def relabel(self,mapping):
+                &#34;&#34;&#34;
+                Returns renamed copy of circuit.
+
+                Parameters
+                ----------
+                mapping : dict of str:str
+                        mapping of old to new names
+
+                Returns
+                -------
+                Circuit
+                        Relabeled circuit.
+
+                &#34;&#34;&#34;
+                return Circuit(graph=nx.relabel_nodes(c.graph,mapping),name=self.name.copy())
+
+        def transitiveFanout(self,ns,stopatTypes=[&#39;d&#39;],stopatNodes=[],gates=None):
+                &#34;&#34;&#34;
+                Computes the transitive fanout of a node.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute transitive fanout for.
+                stopatTypes : iterable of str
+                        Node types to stop recursion at.
+                stopatNodes : iterable of str
+                        Nodes to stop recursion at.
+                gates : set of str
+                        Visited nodes.
+
+                Returns
+                -------
+                set of str
+                        Nodes in transitive fanout.
+
+                &#34;&#34;&#34;
+
+                if gates is None: gates=set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        for s in self.graph.successors(n):
+                                if s not in gates:
+                                        gates.add(s)
+                                        if self.type(s) not in stopatTypes and s not in stopatNodes:
+                                                self.transitiveFanout(s,stopatTypes,stopatNodes,gates)
+                return gates
+
+        def transitiveFanin(self,ns,stopatTypes=[&#39;ff&#39;,&#39;lat&#39;],stopatNodes=[],gates=None):
+                &#34;&#34;&#34;
+                Computes the transitive fanin of a node.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute transitive fanin for.
+                stopatTypes : iterable of str
+                        Node types to stop recursion at.
+                stopatNodes : iterable of str
+                        Nodes to stop recursion at.
+                gates : set of str
+                        Visited nodes.
+
+                Returns
+                -------
+                set of str
+                        Nodes in transitive fanin.
+
+                &#34;&#34;&#34;
+
+                if gates is None: gates=set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        for p in self.graph.predecessors(n):
+                                if p not in gates:
+                                        gates.add(p)
+                                        if self.type(p) not in stopatTypes and p not in stopatNodes:
+                                                self.transitiveFanin(p,stopatTypes,stopatNodes,gates)
+                return gates
+
+        def fanout(self,ns):
+                &#34;&#34;&#34;
+                Computes the fanout of a node.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute fanout for.
+                gates : set of str
+                        Visited nodes.
+
+                Returns
+                -------
+                set of str
+                        Nodes in fanout.
+
+                &#34;&#34;&#34;
+
+                gates = set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        gates |= set(self.graph.successors(n))
+                return gates
+
+        def fanin(self,ns):
+                &#34;&#34;&#34;
+                Computes the fanin of a node.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute fanin for.
+                gates : set of str
+                        Visited nodes.
+
+                Returns
+                -------
+                set of str
+                        Nodes in fanin.
+
+                Example
+                -------
+                &gt;&gt;&gt; c.fanout(&#39;n_20&#39;)
+                {&#39;G17&#39;}
+                &gt;&gt;&gt; c.fanout(&#39;n_11&#39;)
+                {&#39;n_12&#39;}
+                &gt;&gt;&gt; c.fanout([&#39;n_11&#39;,&#39;n_20&#39;])
+                {&#39;n_12&#39;, &#39;G17&#39;}
+
+                &#34;&#34;&#34;
+
+                gates = set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        gates |= set(self.graph.predecessors(n))
+                return gates
+
+        def lats(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s latches
+
+                Returns
+                -------
+                set of str
+                        Latch nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes(&#39;lat&#39;)
+
+        def ffs(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s flip-flops
+
+                Returns
+                -------
+                set of str
+                        Flip-flop nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes(&#39;ff&#39;)
+
+        def seq(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s sequential nodes
+
+                Returns
+                -------
+                set of str
+                        Sequential nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes([&#39;ff&#39;,&#39;lat&#39;])
+
+        def inputs(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s inputs
+
+                Returns
+                -------
+                set of str
+                        Input nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes(&#39;input&#39;)
+
+        def outputs(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s outputs
+
+                Returns
+                -------
+                set of str
+                        Output nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes(&#39;output&#39;)
+
+        def io(self):
+                &#34;&#34;&#34;
+                Returns the circuit&#39;s io
+
+                Returns
+                -------
+                set of str
+                        Output and input nodes in circuit.
+
+                &#34;&#34;&#34;
+                return self.nodes([&#39;output&#39;,&#39;input&#39;])
+
+        def startpoints(self,ns=None):
+                &#34;&#34;&#34;
+                Computes the startpoints of a node, nodes, or circuit.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute startpoints for.
+
+                Returns
+                -------
+                set of str
+                        Startpoints of ns.
+
+                &#34;&#34;&#34;
+                if ns:
+                        return set(n for n in self.transitiveFanin(ns) if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+                else:
+                        return set(n for n in self.graph if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+
+        def endpoints(self,ns=None):
+                &#34;&#34;&#34;
+                Computes the endpoints of a node, nodes, or circuit.
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to compute endpoints for.
+
+                Returns
+                -------
+                set of str
+                        Endpoints of ns.
+
+                &#34;&#34;&#34;
+                if ns:
+                        return set(n for n in self.transitiveFanout(ns) if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+                else:
+                        return set(n for n in self.graph if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+
+        def seqGraph(self):
+                &#34;&#34;&#34;
+                Creates a graph of the circuit&#39;s sequential elements
+
+                Returns
+                -------
+                networkx.DiGraph
+                        Sequential graph.
+
+                &#34;&#34;&#34;
+                graph = nx.DiGraph()
+
+                # add nodes
+                for n in self.io()|self.seq():
+                        graph.add_node(n,gate=self.type(n))
+
+                # add edges
+                for n in graph.nodes:
+                        graph.add_edges_from((s,n) for s in self.startpoints(n))
+
+                return graph</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="circuitgraph.circuit.Circuit.add"><code class="name flex">
+<span>def <span class="ident">add</span></span>(<span>self, n, type, fanin=None, fanout=None, clk=None, r=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Adds a new node to the circuit, optionally connecting it</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>New node name</dd>
+<dt><strong><code>type</code></strong> :&ensp;<code>str</code></dt>
+<dd>New node type</dd>
+<dt><strong><code>fanin</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
+<dd>Nodes to add to new node's fanin</dd>
+<dt><strong><code>fanout</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
+<dd>Nodes to add to new node's fanout</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code></dt>
+<dd>New node name.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add(self,n,type,fanin=None,fanout=None,clk=None,r=None):
+        &#34;&#34;&#34;
+        Adds a new node to the circuit, optionally connecting it
+
+        Parameters
+        ----------
+        n : str
+                New node name
+        type : str
+                New node type
+        fanin : iterable of str
+                Nodes to add to new node&#39;s fanin
+        fanout : iterable of str
+                Nodes to add to new node&#39;s fanout
+
+        Returns
+        -------
+        str
+                New node name.
+
+        &#34;&#34;&#34;
+        # clean arguments
+        if fanin is None: fanin=[]
+        elif isinstance(fanin,str): fanin=[fanin]
+        if fanout is None: fanout=[]
+        elif isinstance(fanout,str): fanout=[fanout]
+
+        if type in [&#39;ff&#39;,&#39;lat&#39;]:
+                # add auxillary nodes for sequential element
+                self.graph.add_node(n,type=type)
+                self.graph.add_node(f&#39;d[{n}]&#39;,type=&#39;d&#39;)
+                self.graph.add_node(f&#39;r[{n}]&#39;,type=&#39;r&#39;)
+                self.graph.add_node(f&#39;clk[{n}]&#39;,type=&#39;clk&#39;)
+
+                # connect
+                self.graph.add_edges_from((n,f) for f in fanout)
+                self.graph.add_edges_from([(f&#39;d[{n}]&#39;,n),(f&#39;clk[{n}]&#39;,n),(f&#39;r[{n}]&#39;,n)])
+                self.graph.add_edges_from((f,f&#39;d[{n}]&#39;) for f in fanin)
+                if r: self.graph.add_edge(r,f&#39;r[{n}]&#39;)
+                if clk: self.graph.add_edge(clk,f&#39;clk[{n}]&#39;)
+        elif type == &#39;output&#39;:
+                self.graph.add_node(f&#39;output[{n}]&#39;,type=&#39;output&#39;)
+                self.graph.add_edges_from((f,f&#39;output[{n}]&#39;) for f in fanin)
+        else:
+                self.graph.add_node(n,type=type)
+                self.graph.add_edges_from((n,f) for f in fanout)
+                self.graph.add_edges_from((f,n) for f in fanin)
+
+        return n</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.connect"><code class="name flex">
+<span>def <span class="ident">connect</span></span>(<span>self, us, vs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Adds connections to the graph</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>us</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Head node(s)</dd>
+<dt><strong><code>vs</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Tail node(s)</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def connect(self,us,vs):
+        &#34;&#34;&#34;
+        Adds connections to the graph
+
+        Parameters
+        ----------
+        us : str or iterable of str
+                Head node(s)
+        vs : str or iterable of str
+                Tail node(s)
+
+        &#34;&#34;&#34;
+        if isinstance(us,str): us = [us]
+        if isinstance(vs,str): vs = [vs]
+        self.graph.add_edges_from((u,v) for u in us for v in vs)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.edges"><code class="name flex">
+<span>def <span class="ident">edges</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns circuit edges</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>networkx.EdgeView</code></dt>
+<dd>Edges in circuit</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def edges(self):
+        &#34;&#34;&#34;
+        Returns circuit edges
+
+        Returns
+        -------
+        networkx.EdgeView
+                Edges in circuit
+
+        &#34;&#34;&#34;
+        return self.graph.edges</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.endpoints"><code class="name flex">
+<span>def <span class="ident">endpoints</span></span>(<span>self, ns=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the endpoints of a node, nodes, or circuit.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ns</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Node(s) to compute endpoints for.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Endpoints of ns.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def endpoints(self,ns=None):
+        &#34;&#34;&#34;
+        Computes the endpoints of a node, nodes, or circuit.
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to compute endpoints for.
+
+        Returns
+        -------
+        set of str
+                Endpoints of ns.
+
+        &#34;&#34;&#34;
+        if ns:
+                return set(n for n in self.transitiveFanout(ns) if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+        else:
+                return set(n for n in self.graph if self.type(n) in [&#39;d&#39;,&#39;output&#39;])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.extend"><code class="name flex">
+<span>def <span class="ident">extend</span></span>(<span>self, c)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Adds nodes from another circuit</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></dt>
+<dd>Other circuit</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def extend(self,c):
+        &#34;&#34;&#34;
+        Adds nodes from another circuit
+
+        Parameters
+        ----------
+        c : Circuit
+                Other circuit
+        &#34;&#34;&#34;
+        self.graph.update(c.graph)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.fanin"><code class="name flex">
+<span>def <span class="ident">fanin</span></span>(<span>self, ns)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the fanin of a node.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ns</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Node(s) to compute fanin for.</dd>
+<dt><strong><code>gates</code></strong> :&ensp;<code>set</code> of <code>str</code></dt>
+<dd>Visited nodes.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Nodes in fanin.</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code class="python">&gt;&gt;&gt; c.fanout('n_20')
+{'G17'}
+&gt;&gt;&gt; c.fanout('n_11')
+{'n_12'}
+&gt;&gt;&gt; c.fanout(['n_11','n_20'])
+{'n_12', 'G17'}
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def fanin(self,ns):
+        &#34;&#34;&#34;
+        Computes the fanin of a node.
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to compute fanin for.
+        gates : set of str
+                Visited nodes.
+
+        Returns
+        -------
+        set of str
+                Nodes in fanin.
+
+        Example
+        -------
+        &gt;&gt;&gt; c.fanout(&#39;n_20&#39;)
+        {&#39;G17&#39;}
+        &gt;&gt;&gt; c.fanout(&#39;n_11&#39;)
+        {&#39;n_12&#39;}
+        &gt;&gt;&gt; c.fanout([&#39;n_11&#39;,&#39;n_20&#39;])
+        {&#39;n_12&#39;, &#39;G17&#39;}
+
+        &#34;&#34;&#34;
+
+        gates = set()
+        if isinstance(ns,str): ns = [ns]
+        for n in ns:
+                gates |= set(self.graph.predecessors(n))
+        return gates</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.fanout"><code class="name flex">
+<span>def <span class="ident">fanout</span></span>(<span>self, ns)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the fanout of a node.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ns</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Node(s) to compute fanout for.</dd>
+<dt><strong><code>gates</code></strong> :&ensp;<code>set</code> of <code>str</code></dt>
+<dd>Visited nodes.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Nodes in fanout.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def fanout(self,ns):
+        &#34;&#34;&#34;
+        Computes the fanout of a node.
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to compute fanout for.
+        gates : set of str
+                Visited nodes.
+
+        Returns
+        -------
+        set of str
+                Nodes in fanout.
+
+        &#34;&#34;&#34;
+
+        gates = set()
+        if isinstance(ns,str): ns = [ns]
+        for n in ns:
+                gates |= set(self.graph.successors(n))
+        return gates</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.ffs"><code class="name flex">
+<span>def <span class="ident">ffs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the circuit's flip-flops</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Flip-flop nodes in circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ffs(self):
+        &#34;&#34;&#34;
+        Returns the circuit&#39;s flip-flops
+
+        Returns
+        -------
+        set of str
+                Flip-flop nodes in circuit.
+
+        &#34;&#34;&#34;
+        return self.nodes(&#39;ff&#39;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.inputs"><code class="name flex">
+<span>def <span class="ident">inputs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the circuit's inputs</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Input nodes in circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def inputs(self):
+        &#34;&#34;&#34;
+        Returns the circuit&#39;s inputs
+
+        Returns
+        -------
+        set of str
+                Input nodes in circuit.
+
+        &#34;&#34;&#34;
+        return self.nodes(&#39;input&#39;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.io"><code class="name flex">
+<span>def <span class="ident">io</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the circuit's io</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Output and input nodes in circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def io(self):
+        &#34;&#34;&#34;
+        Returns the circuit&#39;s io
+
+        Returns
+        -------
+        set of str
+                Output and input nodes in circuit.
+
+        &#34;&#34;&#34;
+        return self.nodes([&#39;output&#39;,&#39;input&#39;])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.lats"><code class="name flex">
+<span>def <span class="ident">lats</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the circuit's latches</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Latch nodes in circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lats(self):
+        &#34;&#34;&#34;
+        Returns the circuit&#39;s latches
+
+        Returns
+        -------
+        set of str
+                Latch nodes in circuit.
+
+        &#34;&#34;&#34;
+        return self.nodes(&#39;lat&#39;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.nodes"><code class="name flex">
+<span>def <span class="ident">nodes</span></span>(<span>self, types=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns circuit nodes, optionally filtering by type</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>types</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Type(s) to filter in.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Nodes</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def nodes(self,types=None):
+        &#34;&#34;&#34;
+        Returns circuit nodes, optionally filtering by type
+
+        Parameters
+        ----------
+        types : str or iterable of str
+                Type(s) to filter in.
+
+        Returns
+        -------
+        set of str
+                Nodes
+
+        &#34;&#34;&#34;
+        if types is None:
+                return self.graph.nodes
+        else:
+                if isinstance(types,str): types = [types]
+                return set(n for n in self.nodes() if self.type(n) in types)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.outputs"><code class="name flex">
+<span>def <span class="ident">outputs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the circuit's outputs</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Output nodes in circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def outputs(self):
+        &#34;&#34;&#34;
+        Returns the circuit&#39;s outputs
+
+        Returns
+        -------
+        set of str
+                Output nodes in circuit.
+
+        &#34;&#34;&#34;
+        return self.nodes(&#39;output&#39;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.relabel"><code class="name flex">
+<span>def <span class="ident">relabel</span></span>(<span>self, mapping)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns renamed copy of circuit.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>mapping</code></strong> :&ensp;<code>dict</code> of <code>str:str</code></dt>
+<dd>mapping of old to new names</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></dt>
+<dd>Relabeled circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def relabel(self,mapping):
+        &#34;&#34;&#34;
+        Returns renamed copy of circuit.
+
+        Parameters
+        ----------
+        mapping : dict of str:str
+                mapping of old to new names
+
+        Returns
+        -------
+        Circuit
+                Relabeled circuit.
+
+        &#34;&#34;&#34;
+        return Circuit(graph=nx.relabel_nodes(c.graph,mapping),name=self.name.copy())</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.seq"><code class="name flex">
+<span>def <span class="ident">seq</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the circuit's sequential nodes</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Sequential nodes in circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def seq(self):
+        &#34;&#34;&#34;
+        Returns the circuit&#39;s sequential nodes
+
+        Returns
+        -------
+        set of str
+                Sequential nodes in circuit.
+
+        &#34;&#34;&#34;
+        return self.nodes([&#39;ff&#39;,&#39;lat&#39;])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.seqGraph"><code class="name flex">
+<span>def <span class="ident">seqGraph</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a graph of the circuit's sequential elements</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>networkx.DiGraph</code></dt>
+<dd>Sequential graph.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def seqGraph(self):
+        &#34;&#34;&#34;
+        Creates a graph of the circuit&#39;s sequential elements
+
+        Returns
+        -------
+        networkx.DiGraph
+                Sequential graph.
+
+        &#34;&#34;&#34;
+        graph = nx.DiGraph()
+
+        # add nodes
+        for n in self.io()|self.seq():
+                graph.add_node(n,gate=self.type(n))
+
+        # add edges
+        for n in graph.nodes:
+                graph.add_edges_from((s,n) for s in self.startpoints(n))
+
+        return graph</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.startpoints"><code class="name flex">
+<span>def <span class="ident">startpoints</span></span>(<span>self, ns=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the startpoints of a node, nodes, or circuit.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ns</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Node(s) to compute startpoints for.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Startpoints of ns.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def startpoints(self,ns=None):
+        &#34;&#34;&#34;
+        Computes the startpoints of a node, nodes, or circuit.
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to compute startpoints for.
+
+        Returns
+        -------
+        set of str
+                Startpoints of ns.
+
+        &#34;&#34;&#34;
+        if ns:
+                return set(n for n in self.transitiveFanin(ns) if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+        else:
+                return set(n for n in self.graph if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.transitiveFanin"><code class="name flex">
+<span>def <span class="ident">transitiveFanin</span></span>(<span>self, ns, stopatTypes=['ff', 'lat'], stopatNodes=[], gates=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the transitive fanin of a node.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ns</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Node(s) to compute transitive fanin for.</dd>
+<dt><strong><code>stopatTypes</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
+<dd>Node types to stop recursion at.</dd>
+<dt><strong><code>stopatNodes</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
+<dd>Nodes to stop recursion at.</dd>
+<dt><strong><code>gates</code></strong> :&ensp;<code>set</code> of <code>str</code></dt>
+<dd>Visited nodes.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Nodes in transitive fanin.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def transitiveFanin(self,ns,stopatTypes=[&#39;ff&#39;,&#39;lat&#39;],stopatNodes=[],gates=None):
+        &#34;&#34;&#34;
+        Computes the transitive fanin of a node.
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to compute transitive fanin for.
+        stopatTypes : iterable of str
+                Node types to stop recursion at.
+        stopatNodes : iterable of str
+                Nodes to stop recursion at.
+        gates : set of str
+                Visited nodes.
+
+        Returns
+        -------
+        set of str
+                Nodes in transitive fanin.
+
+        &#34;&#34;&#34;
+
+        if gates is None: gates=set()
+        if isinstance(ns,str): ns = [ns]
+        for n in ns:
+                for p in self.graph.predecessors(n):
+                        if p not in gates:
+                                gates.add(p)
+                                if self.type(p) not in stopatTypes and p not in stopatNodes:
+                                        self.transitiveFanin(p,stopatTypes,stopatNodes,gates)
+        return gates</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.transitiveFanout"><code class="name flex">
+<span>def <span class="ident">transitiveFanout</span></span>(<span>self, ns, stopatTypes=['d'], stopatNodes=[], gates=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the transitive fanout of a node.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ns</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Node(s) to compute transitive fanout for.</dd>
+<dt><strong><code>stopatTypes</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
+<dd>Node types to stop recursion at.</dd>
+<dt><strong><code>stopatNodes</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
+<dd>Nodes to stop recursion at.</dd>
+<dt><strong><code>gates</code></strong> :&ensp;<code>set</code> of <code>str</code></dt>
+<dd>Visited nodes.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Nodes in transitive fanout.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def transitiveFanout(self,ns,stopatTypes=[&#39;d&#39;],stopatNodes=[],gates=None):
+        &#34;&#34;&#34;
+        Computes the transitive fanout of a node.
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to compute transitive fanout for.
+        stopatTypes : iterable of str
+                Node types to stop recursion at.
+        stopatNodes : iterable of str
+                Nodes to stop recursion at.
+        gates : set of str
+                Visited nodes.
+
+        Returns
+        -------
+        set of str
+                Nodes in transitive fanout.
+
+        &#34;&#34;&#34;
+
+        if gates is None: gates=set()
+        if isinstance(ns,str): ns = [ns]
+        for n in ns:
+                for s in self.graph.successors(n):
+                        if s not in gates:
+                                gates.add(s)
+                                if self.type(s) not in stopatTypes and s not in stopatNodes:
+                                        self.transitiveFanout(s,stopatTypes,stopatNodes,gates)
+        return gates</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.type"><code class="name flex">
+<span>def <span class="ident">type</span></span>(<span>self, n)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns node type</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>Node.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code></dt>
+<dd>Type of node.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def type(self,n):
+        &#34;&#34;&#34;
+        Returns node type
+
+        Parameters
+        ----------
+        n : str
+                Node.
+
+        Returns
+        -------
+        str
+                Type of node.
+
+        &#34;&#34;&#34;
+        return self.graph.nodes[n][&#39;type&#39;]</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<header>
+<img src="circuitgraph.png" alt="">
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="circuitgraph" href="index.html">circuitgraph</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></h4>
+<ul class="two-column">
+<li><code><a title="circuitgraph.circuit.Circuit.add" href="#circuitgraph.circuit.Circuit.add">add</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.connect" href="#circuitgraph.circuit.Circuit.connect">connect</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.edges" href="#circuitgraph.circuit.Circuit.edges">edges</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.endpoints" href="#circuitgraph.circuit.Circuit.endpoints">endpoints</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.extend" href="#circuitgraph.circuit.Circuit.extend">extend</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.fanin" href="#circuitgraph.circuit.Circuit.fanin">fanin</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.fanout" href="#circuitgraph.circuit.Circuit.fanout">fanout</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.ffs" href="#circuitgraph.circuit.Circuit.ffs">ffs</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.inputs" href="#circuitgraph.circuit.Circuit.inputs">inputs</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.io" href="#circuitgraph.circuit.Circuit.io">io</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.lats" href="#circuitgraph.circuit.Circuit.lats">lats</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.nodes" href="#circuitgraph.circuit.Circuit.nodes">nodes</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.outputs" href="#circuitgraph.circuit.Circuit.outputs">outputs</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.relabel" href="#circuitgraph.circuit.Circuit.relabel">relabel</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.seq" href="#circuitgraph.circuit.Circuit.seq">seq</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.seqGraph" href="#circuitgraph.circuit.Circuit.seqGraph">seqGraph</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.startpoints" href="#circuitgraph.circuit.Circuit.startpoints">startpoints</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.transitiveFanin" href="#circuitgraph.circuit.Circuit.transitiveFanin">transitiveFanin</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.transitiveFanout" href="#circuitgraph.circuit.Circuit.transitiveFanout">transitiveFanout</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.type" href="#circuitgraph.circuit.Circuit.type">type</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+</footer>
+</body>
+</html>

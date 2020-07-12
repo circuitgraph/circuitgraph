@@ -2,8 +2,6 @@ import unittest
 import os
 
 import circuitgraph as cg
-import code
-
 
 class TestCircuit(unittest.TestCase):
 

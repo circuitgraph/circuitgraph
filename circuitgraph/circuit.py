@@ -1,6 +1,5 @@
 """Circuit class"""
 
-import code
 import re
 import networkx as nx
 
@@ -105,6 +104,11 @@ class Circuit:
 		fanout : iterable of str
 			Nodes to add to new node's fanout
 
+		Returns
+		-------
+		str
+			New node name.
+
 		"""
 		# clean arguments
 		if fanin is None: fanin=[]
@@ -132,6 +136,8 @@ class Circuit:
 			self.graph.add_node(n,type=type)
 			self.graph.add_edges_from((n,f) for f in fanout)
 			self.graph.add_edges_from((f,n) for f in fanin)
+
+		return n
 
 	def extend(self,c):
 		"""

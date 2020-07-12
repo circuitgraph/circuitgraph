@@ -28,121 +28,115 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;Functions for reading/writing CircuitGraphs&#34;&#34;&#34;
+
 import networkx as nx
-
 import re
+from circuitgraph import Circuit
+
+def from_file(path,name=None):
+        &#34;&#34;&#34;Creates a new CircuitGraph from a verilog file.
+        If the name of the module to create a graph from is different than the
+        file name, specify it using the `name` argument&#34;&#34;&#34;
+        if name is None:
+                name = file_path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;, &#39;&#39;)
+        with open(path, &#39;r&#39;) as f:
+                verilog = f.read()
+        return verilog_to_circuit(verilog,name)
 
 
-def verilog_to_graph(verilog, module):
-    G = nx.DiGraph(name=module)
+def verilog_to_circuit(verilog, name):
+        &#34;&#34;&#34;Creates a new Circuit from a verilog string.&#34;&#34;&#34;
 
-    # handle gates
-    regex = r&#34;(or|nor|and|nand|not|xor|xnor|buf)\s+\S+\s*\((.+?)\);&#34;
-    for gate, net_str in re.findall(regex, verilog, re.DOTALL):
+        # extract module
+        regex = rf&#34;module\s+{name}\s*\(.*?\);(.*?)endmodule&#34;
+        m = re.search(regex,verilog,re.DOTALL)
+        module = m.group(1)
 
-        # parse all nets
-        net_str = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;)
-        nets = net_str.split(&#34;,&#34;)
-        output = nets[0]
-        inputs = nets[1:]
-        # add to graph
-        G.add_edges_from((net, output) for net in inputs)
-        G.nodes[output][&#39;gate&#39;] = gate
+        # create circuit
+        c = Circuit(name=name)
 
-    # handle ffs
-    regex = r&#34;fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.&#34;
-    regex += r&#34;+?)\)\);&#34;
-    for clk, d, q in re.findall(regex, verilog, re.DOTALL):
+        # handle gates
+        regex = &#34;(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);&#34;
+        for gate, net_str in re.findall(regex,module,re.DOTALL):
+                # parse all nets
+                nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                c.add(nets[0],gate,fanin=nets[1:])
 
-        # add to graph
-        G.add_edge(d, q)
-        G.nodes[q][&#39;gate&#39;] = &#39;ff&#39;
-        G.nodes[q][&#39;clk&#39;] = clk
+        # handle ffs
+        regex = &#34;fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\);&#34;
+        for clk,d,q in re.findall(regex,module,re.DOTALL):
+                c.add(q,&#39;ff&#39;,fanin=d,clk=clk)
 
-    # handle lats
-    regex = r&#34;latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.&#34;
-    regex += r&#34;ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);&#34;
-    for r, s, c, d, q in re.findall(regex, verilog, re.DOTALL):
+        # handle lats
+        regex = &#34;latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);&#34;
+        for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
+                c.add(q,&#39;lat&#39;,fanin=d,clk=clk,r=r)
 
-        # add to graph
-        G.add_edge(d, q)
-        G.nodes[q][&#39;gate&#39;] = &#39;lat&#39;
-        G.nodes[q][&#39;clk&#39;] = c
-        G.nodes[q][&#39;rst&#39;] = r
+        # handle assigns
+        assign_regex = &#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
+        for n0, n1 in re.findall(assign_regex,module):
+                c.add(n0.replace(&#39; &#39;,&#39;&#39;),&#39;buf&#39;,fanin=n1.replace(&#39; &#39;,&#39;&#39;))
 
-    # handle assigns
-    assign_regex = r&#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
-    for n0, n1 in re.findall(assign_regex, verilog):
-        output = n0.replace(&#39; &#39;, &#39;&#39;)
-        inpt = n1.replace(&#39; &#39;, &#39;&#39;)
-        G.add_edge(inpt, output)
-        G.nodes[output][&#39;gate&#39;] = &#39;buf&#39;
+        for n in c:
+                if &#39;type&#39; not in c.graph.nodes[n]:
+                        if n == &#34;1&#39;b0&#34;:
+                                c.add(n,&#39;0&#39;)
+                        elif n == &#34;1&#39;b1&#34;:
+                                c.add(n,&#39;1&#39;)
+                        else:
+                                c.add(n,&#39;input&#39;)
 
-    for n in G.nodes():
-        if &#39;gate&#39; not in G.nodes[n]:
-            if n == &#34;1&#39;b0&#34;:
-                G.nodes[n][&#39;gate&#39;] = &#39;0&#39;
-            elif n == &#34;1&#39;b1&#34;:
-                G.nodes[n][&#39;gate&#39;] = &#39;1&#39;
-            else:
-                G.nodes[n][&#39;gate&#39;] = &#39;input&#39;
+        # get outputs
+        out_regex = &#34;output\s(.+?);&#34;
+        for net_str in re.findall(out_regex,module,re.DOTALL):
+                nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                for n in nets:
+                        c.add(n,&#39;output&#39;,fanin=n)
 
-    # get outputs
-    out_regex = r&#34;output\s(.+?);&#34;
-    for net_str in re.findall(out_regex, verilog, re.DOTALL):
-        net_str = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;)
-        nets = net_str.split(&#34;,&#34;)
-        for net in nets:
-            G.add_edge(net, f&#39;{net}_out&#39;)
-            G.nodes[f&#39;{net}_out&#39;][&#39;gate&#39;] = &#39;output&#39;
-
-    # replace buses with underscores
-    G = nx.relabel_nodes(G, lambda n: n.replace(&#39;[&#39;, &#39;_&#39;).replace(&#39;]&#39;, &#39;_&#39;))
-    return G
+        return c
 
 
-def graph_to_verilog(graph):
-    inputs = []
-    outputs = []
-    insts = []
-    wires = []
+def circuit_to_verilog(c):
+        inputs = []
+        outputs = []
+        insts = []
+        wires = []
 
-    for n in graph.nodes:
-        if graph.nodes[n][&#39;gate&#39;] not in [&#39;ff&#39;, &#39;lat&#39;, &#39;0&#39;, &#39;1&#39;, &#39;input&#39;]:
-            fanin = &#39;,&#39;.join(p for p in graph.predecessors(n))
-            insts.append(f&#34;{graph.nodes[n][&#39;gate&#39;]} g_{n} ({n},{fanin})&#34;)
-            wires.append(n)
-            if graph.nodes[n][&#39;gate&#39;] == &#39;output&#39;:
-                outputs.append(n)
-        elif graph.nodes[n][&#39;gate&#39;] in [&#39;0&#39;, &#39;1&#39;]:
-            # insts.append(f&#34;assign {n} = 1&#39;b{c.nodes[n][&#39;gate&#39;]};&#34;)
-            pass
-        elif graph.nodes[n][&#39;gate&#39;] in [&#39;input&#39;]:
-            inputs.append(n)
-            wires.append(n)
-        elif graph.nodes[n][&#39;gate&#39;] in [&#39;ff&#39;]:
-            d = list(graph.predecessors(n))[0]
-            clk = graph.nodes[n][&#39;clk&#39;]
-            insts.append(f&#34;fflopd g_{n} (.CK({clk}),.D({d}),.Q({n}))&#34;)
-        elif graph.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;]:
-            d = list(graph.predecessors(n))[0]
-            r = graph.nodes[n][&#39;rst&#39;]
-            clk = graph.nodes[n][&#39;clk&#39;]
-            insts.append(
-                f&#34;latchdrs g_{n} (.ENA({clk}),.D({d}),.R({r}),.S(1&#39;b1),&#34;
-                &#34;.Q({n}))&#34;)
-        else:
-            print(f&#34;unknown gate type: {graph.nodes[n][&#39;gate&#39;]}&#34;)
-            return
+        for n in c.nodes():
+                if c.type(n) in [&#39;xor&#39;,&#39;xnor&#39;,&#39;buf&#39;,&#39;not&#39;,&#39;nor&#39;,&#39;or&#39;,&#39;and&#39;,&#39;nand&#39;]:
+                        fanin = &#39;,&#39;.join(p for p in c.fanin(n))
+                        insts.append(f&#34;{c.type(n)} g_{n} ({n},{fanin})&#34;)
+                        wires.append(n)
+                elif c.type(n) in [&#39;0&#39;,&#39;1&#39;]:
+                        insts.append(f&#34;assign {n} = 1&#39;b{c.type()}&#34;)
+                elif c.type(n) in [&#39;input&#39;]:
+                        inputs.append(n)
+                        wires.append(n)
+                elif c.type(n) in [&#39;output&#39;]:
+                        outputs.append(n.replace(&#39;output[&#39;,&#39;&#39;)[:-1])
+                elif c.type(n) in [&#39;ff&#39;]:
+                        d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                        clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                        insts.append(f&#34;fflopd g_{n} (.CK({clk}),.D({d}),.Q({n}))&#34;)
+                elif c.type(n) in [&#39;lat&#39;]:
+                        d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                        clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                        r = c.fanin(f&#39;r[{n}]&#39;).pop()
+                        insts.append(f&#34;latchdrs g_{n} (.ENA({clk}),.D({d}),.R({r}),.S(1&#39;b1),.Q({n}))&#34;)
+                elif c.type(n) in [&#39;clk&#39;,&#39;d&#39;,&#39;r&#39;]:
+                        pass
+                else:
+                        print(f&#34;unknown gate type: {c.type(n)}&#34;)
+                        return
 
-    verilog = f&#34;module {graph.graph[&#39;name&#39;]} (&#34;+&#39;,&#39;.join(inputs+outputs)+&#39;);\n&#39;
-    verilog += &#39;&#39;.join(f&#39;input {inp};\n&#39; for inp in inputs)
-    verilog += &#39;&#39;.join(f&#39;output {out};\n&#39; for out in outputs)
-    verilog += &#39;&#39;.join(f&#39;wire {wire};\n&#39; for wire in wires)
-    verilog += &#39;&#39;.join(f&#39;{inst};\n&#39; for inst in insts)
-    verilog += &#39;endmodule\n&#39;
+        verilog = f&#34;module {c.name} (&#34;+&#39;,&#39;.join(inputs+outputs)+&#39;);\n&#39;
+        verilog += &#39;&#39;.join(f&#39;input {inp};\n&#39; for inp in inputs)
+        verilog += &#39;&#39;.join(f&#39;output {out};\n&#39; for out in outputs)
+        verilog += &#39;&#39;.join(f&#39;wire {wire};\n&#39; for wire in wires)
+        verilog += &#39;&#39;.join(f&#39;{inst};\n&#39; for inst in insts)
+        verilog += &#39;endmodule\n&#39;
 
-    return verilog</code></pre>
+        return verilog</code></pre>
 </details>
 </section>
 <section>
@@ -152,8 +146,8 @@ def graph_to_verilog(graph):
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="circuitgraph.io.graph_to_verilog"><code class="name flex">
-<span>def <span class="ident">graph_to_verilog</span></span>(<span>graph)</span>
+<dt id="circuitgraph.io.circuit_to_verilog"><code class="name flex">
+<span>def <span class="ident">circuit_to_verilog</span></span>(<span>c)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -161,125 +155,130 @@ def graph_to_verilog(graph):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def graph_to_verilog(graph):
-    inputs = []
-    outputs = []
-    insts = []
-    wires = []
+<pre><code class="python">def circuit_to_verilog(c):
+        inputs = []
+        outputs = []
+        insts = []
+        wires = []
 
-    for n in graph.nodes:
-        if graph.nodes[n][&#39;gate&#39;] not in [&#39;ff&#39;, &#39;lat&#39;, &#39;0&#39;, &#39;1&#39;, &#39;input&#39;]:
-            fanin = &#39;,&#39;.join(p for p in graph.predecessors(n))
-            insts.append(f&#34;{graph.nodes[n][&#39;gate&#39;]} g_{n} ({n},{fanin})&#34;)
-            wires.append(n)
-            if graph.nodes[n][&#39;gate&#39;] == &#39;output&#39;:
-                outputs.append(n)
-        elif graph.nodes[n][&#39;gate&#39;] in [&#39;0&#39;, &#39;1&#39;]:
-            # insts.append(f&#34;assign {n} = 1&#39;b{c.nodes[n][&#39;gate&#39;]};&#34;)
-            pass
-        elif graph.nodes[n][&#39;gate&#39;] in [&#39;input&#39;]:
-            inputs.append(n)
-            wires.append(n)
-        elif graph.nodes[n][&#39;gate&#39;] in [&#39;ff&#39;]:
-            d = list(graph.predecessors(n))[0]
-            clk = graph.nodes[n][&#39;clk&#39;]
-            insts.append(f&#34;fflopd g_{n} (.CK({clk}),.D({d}),.Q({n}))&#34;)
-        elif graph.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;]:
-            d = list(graph.predecessors(n))[0]
-            r = graph.nodes[n][&#39;rst&#39;]
-            clk = graph.nodes[n][&#39;clk&#39;]
-            insts.append(
-                f&#34;latchdrs g_{n} (.ENA({clk}),.D({d}),.R({r}),.S(1&#39;b1),&#34;
-                &#34;.Q({n}))&#34;)
-        else:
-            print(f&#34;unknown gate type: {graph.nodes[n][&#39;gate&#39;]}&#34;)
-            return
+        for n in c.nodes():
+                if c.type(n) in [&#39;xor&#39;,&#39;xnor&#39;,&#39;buf&#39;,&#39;not&#39;,&#39;nor&#39;,&#39;or&#39;,&#39;and&#39;,&#39;nand&#39;]:
+                        fanin = &#39;,&#39;.join(p for p in c.fanin(n))
+                        insts.append(f&#34;{c.type(n)} g_{n} ({n},{fanin})&#34;)
+                        wires.append(n)
+                elif c.type(n) in [&#39;0&#39;,&#39;1&#39;]:
+                        insts.append(f&#34;assign {n} = 1&#39;b{c.type()}&#34;)
+                elif c.type(n) in [&#39;input&#39;]:
+                        inputs.append(n)
+                        wires.append(n)
+                elif c.type(n) in [&#39;output&#39;]:
+                        outputs.append(n.replace(&#39;output[&#39;,&#39;&#39;)[:-1])
+                elif c.type(n) in [&#39;ff&#39;]:
+                        d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                        clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                        insts.append(f&#34;fflopd g_{n} (.CK({clk}),.D({d}),.Q({n}))&#34;)
+                elif c.type(n) in [&#39;lat&#39;]:
+                        d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                        clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                        r = c.fanin(f&#39;r[{n}]&#39;).pop()
+                        insts.append(f&#34;latchdrs g_{n} (.ENA({clk}),.D({d}),.R({r}),.S(1&#39;b1),.Q({n}))&#34;)
+                elif c.type(n) in [&#39;clk&#39;,&#39;d&#39;,&#39;r&#39;]:
+                        pass
+                else:
+                        print(f&#34;unknown gate type: {c.type(n)}&#34;)
+                        return
 
-    verilog = f&#34;module {graph.graph[&#39;name&#39;]} (&#34;+&#39;,&#39;.join(inputs+outputs)+&#39;);\n&#39;
-    verilog += &#39;&#39;.join(f&#39;input {inp};\n&#39; for inp in inputs)
-    verilog += &#39;&#39;.join(f&#39;output {out};\n&#39; for out in outputs)
-    verilog += &#39;&#39;.join(f&#39;wire {wire};\n&#39; for wire in wires)
-    verilog += &#39;&#39;.join(f&#39;{inst};\n&#39; for inst in insts)
-    verilog += &#39;endmodule\n&#39;
+        verilog = f&#34;module {c.name} (&#34;+&#39;,&#39;.join(inputs+outputs)+&#39;);\n&#39;
+        verilog += &#39;&#39;.join(f&#39;input {inp};\n&#39; for inp in inputs)
+        verilog += &#39;&#39;.join(f&#39;output {out};\n&#39; for out in outputs)
+        verilog += &#39;&#39;.join(f&#39;wire {wire};\n&#39; for wire in wires)
+        verilog += &#39;&#39;.join(f&#39;{inst};\n&#39; for inst in insts)
+        verilog += &#39;endmodule\n&#39;
 
-    return verilog</code></pre>
+        return verilog</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.io.verilog_to_graph"><code class="name flex">
-<span>def <span class="ident">verilog_to_graph</span></span>(<span>verilog, module)</span>
+<dt id="circuitgraph.io.from_file"><code class="name flex">
+<span>def <span class="ident">from_file</span></span>(<span>path, name=None)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Creates a new CircuitGraph from a verilog file.
+If the name of the module to create a graph from is different than the
+file name, specify it using the <code>name</code> argument</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def verilog_to_graph(verilog, module):
-    G = nx.DiGraph(name=module)
+<pre><code class="python">def from_file(path,name=None):
+        &#34;&#34;&#34;Creates a new CircuitGraph from a verilog file.
+        If the name of the module to create a graph from is different than the
+        file name, specify it using the `name` argument&#34;&#34;&#34;
+        if name is None:
+                name = file_path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;, &#39;&#39;)
+        with open(path, &#39;r&#39;) as f:
+                verilog = f.read()
+        return verilog_to_circuit(verilog,name)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.io.verilog_to_circuit"><code class="name flex">
+<span>def <span class="ident">verilog_to_circuit</span></span>(<span>verilog, name)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a new Circuit from a verilog string.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def verilog_to_circuit(verilog, name):
+        &#34;&#34;&#34;Creates a new Circuit from a verilog string.&#34;&#34;&#34;
 
-    # handle gates
-    regex = r&#34;(or|nor|and|nand|not|xor|xnor|buf)\s+\S+\s*\((.+?)\);&#34;
-    for gate, net_str in re.findall(regex, verilog, re.DOTALL):
+        # extract module
+        regex = rf&#34;module\s+{name}\s*\(.*?\);(.*?)endmodule&#34;
+        m = re.search(regex,verilog,re.DOTALL)
+        module = m.group(1)
 
-        # parse all nets
-        net_str = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;)
-        nets = net_str.split(&#34;,&#34;)
-        output = nets[0]
-        inputs = nets[1:]
-        # add to graph
-        G.add_edges_from((net, output) for net in inputs)
-        G.nodes[output][&#39;gate&#39;] = gate
+        # create circuit
+        c = Circuit(name=name)
 
-    # handle ffs
-    regex = r&#34;fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.&#34;
-    regex += r&#34;+?)\)\);&#34;
-    for clk, d, q in re.findall(regex, verilog, re.DOTALL):
+        # handle gates
+        regex = &#34;(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);&#34;
+        for gate, net_str in re.findall(regex,module,re.DOTALL):
+                # parse all nets
+                nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                c.add(nets[0],gate,fanin=nets[1:])
 
-        # add to graph
-        G.add_edge(d, q)
-        G.nodes[q][&#39;gate&#39;] = &#39;ff&#39;
-        G.nodes[q][&#39;clk&#39;] = clk
+        # handle ffs
+        regex = &#34;fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\);&#34;
+        for clk,d,q in re.findall(regex,module,re.DOTALL):
+                c.add(q,&#39;ff&#39;,fanin=d,clk=clk)
 
-    # handle lats
-    regex = r&#34;latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.&#34;
-    regex += r&#34;ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);&#34;
-    for r, s, c, d, q in re.findall(regex, verilog, re.DOTALL):
+        # handle lats
+        regex = &#34;latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);&#34;
+        for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
+                c.add(q,&#39;lat&#39;,fanin=d,clk=clk,r=r)
 
-        # add to graph
-        G.add_edge(d, q)
-        G.nodes[q][&#39;gate&#39;] = &#39;lat&#39;
-        G.nodes[q][&#39;clk&#39;] = c
-        G.nodes[q][&#39;rst&#39;] = r
+        # handle assigns
+        assign_regex = &#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
+        for n0, n1 in re.findall(assign_regex,module):
+                c.add(n0.replace(&#39; &#39;,&#39;&#39;),&#39;buf&#39;,fanin=n1.replace(&#39; &#39;,&#39;&#39;))
 
-    # handle assigns
-    assign_regex = r&#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
-    for n0, n1 in re.findall(assign_regex, verilog):
-        output = n0.replace(&#39; &#39;, &#39;&#39;)
-        inpt = n1.replace(&#39; &#39;, &#39;&#39;)
-        G.add_edge(inpt, output)
-        G.nodes[output][&#39;gate&#39;] = &#39;buf&#39;
+        for n in c:
+                if &#39;type&#39; not in c.graph.nodes[n]:
+                        if n == &#34;1&#39;b0&#34;:
+                                c.add(n,&#39;0&#39;)
+                        elif n == &#34;1&#39;b1&#34;:
+                                c.add(n,&#39;1&#39;)
+                        else:
+                                c.add(n,&#39;input&#39;)
 
-    for n in G.nodes():
-        if &#39;gate&#39; not in G.nodes[n]:
-            if n == &#34;1&#39;b0&#34;:
-                G.nodes[n][&#39;gate&#39;] = &#39;0&#39;
-            elif n == &#34;1&#39;b1&#34;:
-                G.nodes[n][&#39;gate&#39;] = &#39;1&#39;
-            else:
-                G.nodes[n][&#39;gate&#39;] = &#39;input&#39;
+        # get outputs
+        out_regex = &#34;output\s(.+?);&#34;
+        for net_str in re.findall(out_regex,module,re.DOTALL):
+                nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                for n in nets:
+                        c.add(n,&#39;output&#39;,fanin=n)
 
-    # get outputs
-    out_regex = r&#34;output\s(.+?);&#34;
-    for net_str in re.findall(out_regex, verilog, re.DOTALL):
-        net_str = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;)
-        nets = net_str.split(&#34;,&#34;)
-        for net in nets:
-            G.add_edge(net, f&#39;{net}_out&#39;)
-            G.nodes[f&#39;{net}_out&#39;][&#39;gate&#39;] = &#39;output&#39;
-
-    # replace buses with underscores
-    G = nx.relabel_nodes(G, lambda n: n.replace(&#39;[&#39;, &#39;_&#39;).replace(&#39;]&#39;, &#39;_&#39;))
-    return G</code></pre>
+        return c</code></pre>
 </details>
 </dd>
 </dl>
@@ -288,6 +287,9 @@ def graph_to_verilog(graph):
 </section>
 </article>
 <nav id="sidebar">
+<header>
+<img src="circuitgraph.png" alt="">
+</header>
 <h1>Index</h1>
 <div class="toc">
 <ul></ul>
@@ -300,8 +302,9 @@ def graph_to_verilog(graph):
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="circuitgraph.io.graph_to_verilog" href="#circuitgraph.io.graph_to_verilog">graph_to_verilog</a></code></li>
-<li><code><a title="circuitgraph.io.verilog_to_graph" href="#circuitgraph.io.verilog_to_graph">verilog_to_graph</a></code></li>
+<li><code><a title="circuitgraph.io.circuit_to_verilog" href="#circuitgraph.io.circuit_to_verilog">circuit_to_verilog</a></code></li>
+<li><code><a title="circuitgraph.io.from_file" href="#circuitgraph.io.from_file">from_file</a></code></li>
+<li><code><a title="circuitgraph.io.verilog_to_circuit" href="#circuitgraph.io.verilog_to_circuit">verilog_to_circuit</a></code></li>
 </ul>
 </li>
 </ul>

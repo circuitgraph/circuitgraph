@@ -1,9 +1,12 @@
 """Functions for transforming circuits"""
+# TODO: this file name could change
 
+import math
 from circuitgraph import Circuit
-from circuitgraph.io import verilog_to_circuit
+from circuitgraph.io import verilog_to_circuit,circuit_to_verilog
 from subprocess import PIPE,Popen
 from tempfile import NamedTemporaryFile
+from random import sample
 
 
 def syn(c,engine='Genus',printOutput=False):
@@ -177,6 +180,99 @@ def miter(c0,c1=None,startpoints=None,endpoints=None):
 
 	return m
 
+def comb(c):
+	"""
+	Creates combinational version of the circuit.
+
+	Parameters
+	----------
+	c : Circuit
+		Sequential circuit to unroll.
+
+	Returns
+	-------
+	Circuit
+		Combinational circuit.
+
+	"""
+	c_comb = copy(c)
+	lat_model = gen_lat_model()
+	ff_model = gen_ff_model()
+
+	for lat in c.lats():
+		relabeled_model = nx.relabel_nodes(lat_model,{n:f'{lat}_{n}' for n in lat_model})
+		c_comb.update(relabeled_model)
+		c_comb.add_edges_from((f'{lat}_q',s) for s in c_comb.successors(lat))
+		c_comb.add_edges_from((p,f'{lat}_d') for p in c_comb.predecessors(lat))
+		c_comb.add_edge(c.nodes[lat]['clk'],f'{lat}_clk')
+		c_comb.add_edge(c.nodes[lat]['rst'],f'{lat}_rst')
+		c_comb.remove_node(lat)
+
+	for ff in c.ffs():
+		relabeled_model = nx.relabel_nodes(ff_model,{n:f'{ff}_{n}' for n in ff_model})
+		c_comb.update(relabeled_model)
+		c_comb.add_edges_from((f'{ff}_q',s) for s in c_comb.successors(ff))
+		c_comb.add_edges_from((p,f'{ff}_d') for p in c_comb.predecessors(ff))
+		c_comb.add_edge(c.nodes[ff]['clk'],f'{ff}_clk')
+		c_comb.remove_node(ff)
+
+def gen_lat_model():
+	lm = nx.DiGraph()
+	# inputs
+	lm.add_node('si',gate='buf',output=False)
+	lm.add_node('d',gate='buf',output=False)
+	lm.add_node('clk',gate='buf',output=False)
+	lm.add_node('rst',gate='buf',output=False)
+	lm.add_node('mux_out',gate='or',output=False)
+	lm.add_node('mux_a0',gate='and',output=False)
+	lm.add_node('mux_a1',gate='and',output=False)
+	lm.add_node('clk_b',gate='not',output=False)
+
+	# outputs
+	lm.add_node('q',gate='and',output=False)
+	lm.add_node('so',gate='buf',output=False)
+
+	#cons
+	lm.add_edge('q','so')
+	lm.add_edge('rst','q')
+	lm.add_edge('mux_out','q')
+	lm.add_edge('mux_out','q')
+	lm.add_edge('mux_a0','mux_out')
+	lm.add_edge('mux_a1','mux_out')
+	lm.add_edge('clk','clk_b')
+	lm.add_edge('clk_b','mux_a0')
+	lm.add_edge('clk','mux_a1')
+	lm.add_edge('d','mux_a0')
+	lm.add_edge('si','mux_a1')
+
+	return lm
+
+def gen_ff_model():
+	fm = nx.DiGraph()
+	# inputs
+	fm.add_node('si',gate='buf',output=False)
+	fm.add_node('d',gate='buf',output=False)
+	fm.add_node('clk',gate='buf',output=False)
+	fm.add_node('mux_a0',gate='and',output=False)
+	fm.add_node('mux_a1',gate='and',output=False)
+	fm.add_node('clk_b',gate='not',output=False)
+
+	# outputs
+	fm.add_node('q',gate='and',output=False)
+	fm.add_node('so',gate='or',output=False)
+
+	#cons
+	fm.add_edge('si','q')
+	fm.add_edge('mux_a0','so')
+	fm.add_edge('mux_a1','so')
+	fm.add_edge('clk','clk_b')
+	fm.add_edge('clk_b','mux_a0')
+	fm.add_edge('clk','mux_a1')
+	fm.add_edge('d','mux_a0')
+	fm.add_edge('si','mux_a1')
+
+	return fm
+
 def unroll(c,cycles):
 	"""
 	Creates combinational unrolling of the circuit.
@@ -194,7 +290,27 @@ def unroll(c,cycles):
 		Unrolled circuit.
 
 	"""
-	pass
+
+	u = nx.DiGraph()
+	for i in range(cycles):
+		c_comb_i = nx.relabel_nodes(c_comb,{n:f'{n}_{i}' for n in c_comb})
+		u.update(c_comb_i)
+		if i==0:
+			# convert si to inputs
+			for n in c:
+				if c.nodes[n]['gate'] in ['lat','dff']:
+					u.nodes[f'{n}_si_{i}']['gate'] = 'input'
+
+		else:
+			# connect prev si
+			for n in c:
+				if c.nodes[n]['gate'] in ['lat','dff']:
+					u.add_edge(f'{n}_si_{i-1}',f'{n}_si_{i}')
+		for n in u:
+			if 'gate' not in u.nodes[n]:
+				print(n)
+
+	return u
 
 def sensitivity(c,endpoint):
 	"""
@@ -234,16 +350,16 @@ def sensitize(c,n):
 	"""
 	pass
 
-def mphf(c,n):
+def mphf(w=30,n=800):
 	"""
-	Creates a circuit to sensitize a node to an endpoint.
+	Creates a SAT-hard circuit based on the structure of minimum perfect hash functions.
 
 	Parameters
 	----------
-	c : Circuit
-		Input circuit.
-	n : str
-		Node to sensitize.
+	w : int
+		Input width.
+	n : int
+		Number of constraints.
 
 	Returns
 	-------
@@ -251,17 +367,19 @@ def mphf(c,n):
 		Output circuit.
 
 	"""
-	pass
-	#def runXorTreeSat(w,x):
-	#	o = max(1,math.ceil(math.log2(w)))
-	#	print(o)
+	o = max(1,math.ceil(math.log2(w)))
+	c = Circuit()
 
-	#	xors = '&'.join(
-	#			'('+'|'.join(
-	#				'('+'^'.join(
-	#					f'in[{j}]' for j in random.sample(set(range(w+1)),2)
-	#				)+')' for k in range(o)
-	#			)+')' for i in range(x)
-	#		)
+	# add inputs
+	inputs = [c.add(f'in_{i}','input') for i in range(w)]
 
+	# add constraints
+	ors = []
+	for ni in range(n):
+		xors = [c.add(f'xor_{ni}_{oi}','xor',fanin=sample(inputs,2)) for oi in range(o)]
+		ors.append(c.add(f'or_{ni}','or',fanin=xors))
+	c.add(f'sat','and',fanin=ors)
+	c.add(f'sat','output',fanin='sat')
+
+	return c
 

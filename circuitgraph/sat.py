@@ -3,6 +3,7 @@
 import signal
 import tempfile
 import re
+from circuitgraph import Circuit
 from subprocess import PIPE,run
 from pysat.formula import CNF,IDPool
 from pysat.solvers import Cadical
@@ -22,11 +23,11 @@ class Timeout:
 		if self.seconds:
 			signal.alarm(0)
 
-def add_assumptions(clauses,true=None,false=None):
+def add_assumptions(formula,variables,true=None,false=None):
 	if true is None: true = set()
 	if false is None: false = set()
-	for n in true: clauses.append([variables.id(n)])
-	for n in false: clauses.append([-variables.id(n)])
+	for n in true: formula.append([variables.id(n)])
+	for n in false: formula.append([-variables.id(n)])
 
 def construct_solver(c,true=None,false=None):
 	"""
@@ -48,9 +49,9 @@ def construct_solver(c,true=None,false=None):
 	variables : pysat.IDPool
 		solver variable mapping
 	"""
-	clauses,variables = cnf(c)
-	add_assumptions(clauses,true,false)
-	solver = Cadical(bootstrap_with=clauses)
+	formula,variables = cnf(c)
+	add_assumptions(formula,variables,true,false)
+	solver = Cadical(bootstrap_with=formula)
 	return solver,variables
 
 def cnf(c):
@@ -66,50 +67,50 @@ def cnf(c):
 	-------
 	variables : pysat.IDPool
 		formula variable mapping
-	clauses : pysat.CNF
+	formula : pysat.CNF
 		CNF formula
 	"""
 	variables = IDPool()
-	clauses = CNF()
+	formula = CNF()
 
 	for n in c.nodes():
 		variables.id(n)
 		if c.type(n) == 'and':
 			for f in c.fanin(n):
-				clauses.append([-variables.id(n),variables.id(f)])
-			clauses.append([variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
+				formula.append([-variables.id(n),variables.id(f)])
+			formula.append([variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
 		elif c.type(n) == 'nand':
 			for f in c.fanin(n):
-				clauses.append([variables.id(n),variables.id(f)])
-			clauses.append([-variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
+				formula.append([variables.id(n),variables.id(f)])
+			formula.append([-variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
 		elif c.type(n) == 'or':
 			for f in c.fanin(n):
-				clauses.append([variables.id(n),-variables.id(f)])
-			clauses.append([-variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
+				formula.append([variables.id(n),-variables.id(f)])
+			formula.append([-variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
 		elif c.type(n) == 'nor':
 			for f in c.fanin(n):
-				clauses.append([-variables.id(n),-variables.id(f)])
-			clauses.append([variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
+				formula.append([-variables.id(n),-variables.id(f)])
+			formula.append([variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
 		elif c.type(n) == 'not':
 			if c.fanin(n):
 				f = c.fanin(n).pop()
-				clauses.append([variables.id(n),variables.id(f)])
-				clauses.append([-variables.id(n),-variables.id(f)])
+				formula.append([variables.id(n),variables.id(f)])
+				formula.append([-variables.id(n),-variables.id(f)])
 		elif c.type(n) in ['output','d','r','buf','clk']:
 			if c.fanin(n):
 				f = c.fanin(n).pop()
-				clauses.append([variables.id(n),-variables.id(f)])
-				clauses.append([-variables.id(n),variables.id(f)])
+				formula.append([variables.id(n),-variables.id(f)])
+				formula.append([-variables.id(n),variables.id(f)])
 		elif c.type(n) in ['xor','xnor']:
 			# break into heirarchical xors
 			nets = list(c.fanin(n))
 
 			# xor gen
 			def xorClauses(a,b,c):
-				clauses.append([-variables.id(c),-variables.id(b),-variables.id(a)])
-				clauses.append([-variables.id(c),variables.id(b),variables.id(a)])
-				clauses.append([variables.id(c),-variables.id(b),variables.id(a)])
-				clauses.append([variables.id(c),variables.id(b),-variables.id(a)])
+				formula.append([-variables.id(c),-variables.id(b),-variables.id(a)])
+				formula.append([-variables.id(c),variables.id(b),variables.id(a)])
+				formula.append([variables.id(c),-variables.id(b),variables.id(a)])
+				formula.append([variables.id(c),variables.id(b),-variables.id(a)])
 
 			while len(nets)>2:
 				#create new net
@@ -132,19 +133,19 @@ def cnf(c):
 				# invert xor
 				variables.id(f'xor_inv_{n}')
 				xorClauses(nets[-2],nets[-1],f'xor_inv_{n}')
-				clauses.append([variables.id(n),variables.id(f'xor_inv_{n}')])
-				clauses.append([-variables.id(n),-variables.id(f'xor_inv_{n}')])
+				formula.append([variables.id(n),variables.id(f'xor_inv_{n}')])
+				formula.append([-variables.id(n),-variables.id(f'xor_inv_{n}')])
 		elif c.type(n) == '0':
-			clauses.append([-variables.id(n)])
+			formula.append([-variables.id(n)])
 		elif c.type(n) == '1':
-			clauses.append([variables.id(n)])
+			formula.append([variables.id(n)])
 		elif c.type(n) in ['ff','lat','input']:
 			pass
 		else:
 			print(f"unknown gate type: {c.type(n)}")
 			code.interact(local=dict(globals(), **locals()))
 
-	return clauses,variables
+	return formula,variables
 
 def sat(c,true=None,false=None,timeout=None):
 	"""
@@ -199,27 +200,27 @@ def approxModelCount(c,true=None,false=None,e=0.9,d=0.1,timeout=None):
 		Estimate.
 	"""
 
-	solver,variables = cnf(c)
-	add_assumptions(clauses,true,false)
+	formula,variables = cnf(c)
+	add_assumptions(formula,variables,true,false)
 
 	# specify sampling set
 	enc_inps = ' '.join([str(variables.id(n)) for n in c.startpoints()])
 
 	# write dimacs to tmp
 	with tempfile.NamedTemporaryFile() as tmp:
-		clause_str = '\n'.join(' '.join(str(v) for v in c)+' 0' for c in clauses)
-		dimacs = f'c ind {enc_inps} 0\np cnf {len(variables)} {len(clauses)}\n{clause_str}\n'
+		clause_str = '\n'.join(' '.join(str(v) for v in c)+' 0' for c in formula.clauses)
+		dimacs = f'c ind {enc_inps} 0\np cnf {formula.nv} {len(formula.clauses)}\n{clause_str}\n'
 		tmp.write(bytes(dimacs,'ascii'))
 		tmp.flush()
 
 		# run approxmc
-		cmd = f'./bin/approxmc --epsilon={e} --delta={d} {tmp.name}'.split()
+		cmd = f'approxmc --epsilon={e} --delta={d} {tmp.name}'.split()
 		with Timeout(seconds=timeout):
 			result = run(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
 
 	# parse results
 	m = re.search('Number of solutions is: (\d+) x 2\^(\d+)',result.stdout)
-	estimate = int(m.group(1))*(2**int(m.group(2)))/(2**len(c_ins))
+	estimate = int(m.group(1))*(2**int(m.group(2)))
 	return estimate
 
 def modelCount(c,true=None,false=None,timeout=None):

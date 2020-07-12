@@ -2,8 +2,8 @@ import unittest
 import os
 
 import circuitgraph as cg
-from circuitgraph.sat import sat
-import code
+from circuitgraph.sat import *
+from circuitgraph.transform import mphf
 
 
 class TestSat(unittest.TestCase):
@@ -26,19 +26,33 @@ class TestSat(unittest.TestCase):
 		self.assertFalse(sat(self.c17,true=['G17'],false=['G1','G2','G3','G4','G5']))
 		self.assertTrue(sat(self.c17,false=['G16','G17','G1','G2','G3','G4','G5']))
 
-		# TODO: timeout test
-		#try:
-		#except TimeoutError:
+		# timeout test
+		c = mphf()
+		with self.assertRaises(TimeoutError):
+			print(sat(c,true=['sat'],timeout=1))
 
 	def test_modelCount(self):
 		# allow 3 inputs free
 		startpoints = self.s27.startpoints()
 		startpoints.pop()
+		self.assertEqual(modelCount(self.s27,true=startpoints),2)
 		startpoints.pop()
+		self.assertEqual(modelCount(self.s27,true=startpoints),4)
 		startpoints.pop()
-
 		self.assertEqual(modelCount(self.s27,true=startpoints),8)
+		startpoints.pop()
+		self.assertEqual(modelCount(self.s27,true=startpoints),16)
 
 
 	def test_approxModelCount(self):
-		pass
+		# approxmc seems to be accurate in this range
+		startpoints = self.s27.startpoints()
+		startpoints.pop()
+		self.assertEqual(approxModelCount(self.s27,true=startpoints),2)
+		startpoints.pop()
+		self.assertEqual(approxModelCount(self.s27,true=startpoints),4)
+		startpoints.pop()
+		self.assertEqual(approxModelCount(self.s27,true=startpoints),8)
+		startpoints.pop()
+		self.assertEqual(approxModelCount(self.s27,true=startpoints),16)
+
