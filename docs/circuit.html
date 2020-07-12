@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.8.3" />
 <title>circuitgraph.circuit API documentation</title>
-<meta name="description" content="Circuit class" />
+<meta name="description" content="Class for circuit graphs …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
@@ -22,12 +22,27 @@
 <h1 class="title">Module <code>circuitgraph.circuit</code></h1>
 </header>
 <section id="section-intro">
-<p>Circuit class</p>
+<p>Class for circuit graphs</p>
+<p>The Circuit class can be constructed from a generic verilog file or existing graph.
+Each node in the graph represents a logic gate and has an associated name and gate type. The supported types are:
+- Standard input-order-independent gates: ['and','nand','or','nor','not','buf','xor','xnor']
+- Inputs and Outputs: ['input','output']
+- Constant values: ['1','0']
+- Sequential elements and supporting types: ['ff','lat'] and ['d','r','s','clk']</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">&#34;&#34;&#34;Circuit class&#34;&#34;&#34;
+<pre><code class="python">&#34;&#34;&#34;Class for circuit graphs
+
+The Circuit class can be constructed from a generic verilog file or existing graph.
+Each node in the graph represents a logic gate and has an associated name and gate type. The supported types are:
+        - Standard input-order-independent gates: [&#39;and&#39;,&#39;nand&#39;,&#39;or&#39;,&#39;nor&#39;,&#39;not&#39;,&#39;buf&#39;,&#39;xor&#39;,&#39;xnor&#39;]
+        - Inputs and Outputs: [&#39;input&#39;,&#39;output&#39;]
+        - Constant values: [&#39;1&#39;,&#39;0&#39;]
+        - Sequential elements and supporting types: [&#39;ff&#39;,&#39;lat&#39;] and [&#39;d&#39;,&#39;r&#39;,&#39;s&#39;,&#39;clk&#39;]
+
+&#34;&#34;&#34;
 
 import re
 import networkx as nx
@@ -43,6 +58,26 @@ class Circuit:
                         Name of circuit.
                 graph : networkx.DiGraph
                         Graph data structure to be used in new instance.
+
+                Examples
+                --------
+                Create an empty circuit.
+
+                &gt;&gt;&gt; import circuitgraph as cg
+                &gt;&gt;&gt; c = cg.Circuit()
+
+                Add an AND gate named &#39;x&#39;.
+
+                &gt;&gt;&gt; c.add(&#39;x&#39;,&#39;and&#39;)
+
+                Add an additional nodes and connect them.
+
+                &gt;&gt;&gt; c.add(&#39;y&#39;,&#39;or&#39;,fanout=&#39;x&#39;)
+                &gt;&gt;&gt; c.add(&#39;z&#39;,&#39;xor&#39;,fanin=[&#39;x&#39;,&#39;y&#39;])
+
+                Another way to create the circuit is through a file.
+
+                &gt;&gt;&gt; c = cg.from_file(&#39;path/circuit.v&#39;)
 
                 &#34;&#34;&#34;
 
@@ -98,6 +133,23 @@ class Circuit:
                 -------
                 set of str
                         Nodes
+
+                Examples
+                --------
+                Create a with several gate types.
+
+                &gt;&gt;&gt; c = cg.Circuit()
+                &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;,g)
+
+                Calling `nodes` with no argument returns all nodes in the circuit
+
+                &gt;&gt;&gt; c.nodes()
+                NodeView((&#39;g0&#39;, &#39;g1&#39;, &#39;g2&#39;, &#39;g3&#39;, &#39;d[g3]&#39;, &#39;r[g3]&#39;, &#39;clk[g3]&#39;))
+
+                Passing a node type, we can selectively return nodes.
+
+                &gt;&gt;&gt; c.nodes(&#39;xor&#39;)
+                {&#39;g2&#39;, &#39;g0&#39;}
 
                 &#34;&#34;&#34;
                 if types is None:
@@ -501,7 +553,22 @@ class Circuit:
 <dd>Name of circuit.</dd>
 <dt><strong><code>graph</code></strong> :&ensp;<code>networkx.DiGraph</code></dt>
 <dd>Graph data structure to be used in new instance.</dd>
-</dl></div>
+</dl>
+<h2 id="examples">Examples</h2>
+<p>Create an empty circuit.</p>
+<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = cg.Circuit()
+</code></pre>
+<p>Add an AND gate named 'x'.</p>
+<pre><code class="python">&gt;&gt;&gt; c.add('x','and')
+</code></pre>
+<p>Add an additional nodes and connect them.</p>
+<pre><code class="python">&gt;&gt;&gt; c.add('y','or',fanout='x')
+&gt;&gt;&gt; c.add('z','xor',fanin=['x','y'])
+</code></pre>
+<p>Another way to create the circuit is through a file.</p>
+<pre><code class="python">&gt;&gt;&gt; c = cg.from_file('path/circuit.v')
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -517,6 +584,26 @@ class Circuit:
                         Name of circuit.
                 graph : networkx.DiGraph
                         Graph data structure to be used in new instance.
+
+                Examples
+                --------
+                Create an empty circuit.
+
+                &gt;&gt;&gt; import circuitgraph as cg
+                &gt;&gt;&gt; c = cg.Circuit()
+
+                Add an AND gate named &#39;x&#39;.
+
+                &gt;&gt;&gt; c.add(&#39;x&#39;,&#39;and&#39;)
+
+                Add an additional nodes and connect them.
+
+                &gt;&gt;&gt; c.add(&#39;y&#39;,&#39;or&#39;,fanout=&#39;x&#39;)
+                &gt;&gt;&gt; c.add(&#39;z&#39;,&#39;xor&#39;,fanin=[&#39;x&#39;,&#39;y&#39;])
+
+                Another way to create the circuit is through a file.
+
+                &gt;&gt;&gt; c = cg.from_file(&#39;path/circuit.v&#39;)
 
                 &#34;&#34;&#34;
 
@@ -572,6 +659,23 @@ class Circuit:
                 -------
                 set of str
                         Nodes
+
+                Examples
+                --------
+                Create a with several gate types.
+
+                &gt;&gt;&gt; c = cg.Circuit()
+                &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;,g)
+
+                Calling `nodes` with no argument returns all nodes in the circuit
+
+                &gt;&gt;&gt; c.nodes()
+                NodeView((&#39;g0&#39;, &#39;g1&#39;, &#39;g2&#39;, &#39;g3&#39;, &#39;d[g3]&#39;, &#39;r[g3]&#39;, &#39;clk[g3]&#39;))
+
+                Passing a node type, we can selectively return nodes.
+
+                &gt;&gt;&gt; c.nodes(&#39;xor&#39;)
+                {&#39;g2&#39;, &#39;g0&#39;}
 
                 &#34;&#34;&#34;
                 if types is None:
@@ -1423,7 +1527,20 @@ class Circuit:
 <dl>
 <dt><code>set</code> of <code>str</code></dt>
 <dd>Nodes</dd>
-</dl></div>
+</dl>
+<h2 id="examples">Examples</h2>
+<p>Create a with several gate types.</p>
+<pre><code class="python">&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}',g)
+</code></pre>
+<p>Calling <code>nodes</code> with no argument returns all nodes in the circuit</p>
+<pre><code class="python">&gt;&gt;&gt; c.nodes()
+NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
+</code></pre>
+<p>Passing a node type, we can selectively return nodes.</p>
+<pre><code class="python">&gt;&gt;&gt; c.nodes('xor')
+{'g2', 'g0'}
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -1441,6 +1558,23 @@ class Circuit:
         -------
         set of str
                 Nodes
+
+        Examples
+        --------
+        Create a with several gate types.
+
+        &gt;&gt;&gt; c = cg.Circuit()
+        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;,g)
+
+        Calling `nodes` with no argument returns all nodes in the circuit
+
+        &gt;&gt;&gt; c.nodes()
+        NodeView((&#39;g0&#39;, &#39;g1&#39;, &#39;g2&#39;, &#39;g3&#39;, &#39;d[g3]&#39;, &#39;r[g3]&#39;, &#39;clk[g3]&#39;))
+
+        Passing a node type, we can selectively return nodes.
+
+        &gt;&gt;&gt; c.nodes(&#39;xor&#39;)
+        {&#39;g2&#39;, &#39;g0&#39;}
 
         &#34;&#34;&#34;
         if types is None:

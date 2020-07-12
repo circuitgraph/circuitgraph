@@ -28,6 +28,12 @@ Boolean circuits. The circuits are …" />
 for the generation, manipulation, and evaluation of
 Boolean circuits. The circuits are represented in a graph
 format based on the <code>networkx</code> package.</p>
+<p>Features include:
+- parsing of generic verilog modules
+- easy circuit composition
+- synthesis interface to Genus and Yosys
+- SAT,#SAT, and approx-#SAT solver integration via <code>pysat</code> and <code>approxmc</code>
+- implementations of common circuit transformations</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -37,6 +43,14 @@ Python package `circuitgraph` provides a data structure
 for the generation, manipulation, and evaluation of
 Boolean circuits. The circuits are represented in a graph
 format based on the `networkx` package.
+
+Features include:
+        - parsing of generic verilog modules
+        - easy circuit composition
+        - synthesis interface to Genus and Yosys
+        - SAT,#SAT, and approx-#SAT solver integration via `pysat` and `approxmc`
+        - implementations of common circuit transformations
+
 &#34;&#34;&#34;
 
 from circuitgraph.circuit import Circuit
@@ -50,7 +64,7 @@ from circuitgraph.transform import *</code></pre>
 <dl>
 <dt><code class="name"><a title="circuitgraph.circuit" href="circuit.html">circuitgraph.circuit</a></code></dt>
 <dd>
-<div class="desc"><p>Circuit class</p></div>
+<div class="desc"><p>Class for circuit graphs …</p></div>
 </dd>
 <dt><code class="name"><a title="circuitgraph.io" href="io.html">circuitgraph.io</a></code></dt>
 <dd>

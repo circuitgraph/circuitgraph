@@ -1,4 +1,13 @@
-"""Circuit class"""
+"""Class for circuit graphs
+
+The Circuit class can be constructed from a generic verilog file or existing graph.
+Each node in the graph represents a logic gate and has an associated name and gate type. The supported types are:
+	- Standard input-order-independent gates: ['and','nand','or','nor','not','buf','xor','xnor']
+	- Inputs and Outputs: ['input','output']
+	- Constant values: ['1','0']
+	- Sequential elements and supporting types: ['ff','lat'] and ['d','r','s','clk']
+
+"""
 
 import re
 import networkx as nx
@@ -14,6 +23,26 @@ class Circuit:
 			Name of circuit.
 		graph : networkx.DiGraph
 			Graph data structure to be used in new instance.
+
+		Examples
+		--------
+		Create an empty circuit.
+
+		>>> import circuitgraph as cg
+		>>> c = cg.Circuit()
+
+		Add an AND gate named 'x'.
+
+		>>> c.add('x','and')
+
+		Add an additional nodes and connect them.
+
+		>>> c.add('y','or',fanout='x')
+		>>> c.add('z','xor',fanin=['x','y'])
+
+		Another way to create the circuit is through a file.
+
+		>>> c = cg.from_file('path/circuit.v')
 
 		"""
 
@@ -69,6 +98,23 @@ class Circuit:
 		-------
 		set of str
 			Nodes
+
+		Examples
+		--------
+		Create a with several gate types.
+
+		>>> c = cg.Circuit()
+		>>> for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}',g)
+
+		Calling `nodes` with no argument returns all nodes in the circuit
+
+		>>> c.nodes()
+		NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
+
+		Passing a node type, we can selectively return nodes.
+
+		>>> c.nodes('xor')
+		{'g2', 'g0'}
 
 		"""
 		if types is None:
