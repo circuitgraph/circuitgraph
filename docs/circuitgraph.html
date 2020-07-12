@@ -1,0 +1,2018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.8.3" />
+<title>circuitgraph.circuitgraph API documentation</title>
+<meta name="description" content="Holds a graphical representation of a circuit" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js" integrity="sha256-eOgo0OtLL4cdq7RdwRUiGKLX9XsIJ7nGhWEKbohmVAQ=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>circuitgraph.circuitgraph</code></h1>
+</header>
+<section id="section-intro">
+<p>Holds a graphical representation of a circuit</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;Holds a graphical representation of a circuit&#34;&#34;&#34;
+import re
+import code
+import tempfile
+import networkx as nx
+from pysat.formula import CNF,IDPool
+from pysat.solvers import Cadical
+from subprocess import PIPE,Popen
+
+class Circuit:
+
+        def __init__(self,verilog=None,path=None,name=None,graph=None):
+                &#34;&#34;&#34;Create a new Circuit&#34;&#34;&#34;
+                if name:
+                        self.name = name
+                elif path:
+                        self.name = path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;,&#39;&#39;)
+                else:
+                        self.name = &#39;circuit&#39;
+
+                if verilog or path:
+                        self.graph = self.parseModule(verilog,path)
+                elif graph:
+                        self.graph = graph
+                else:
+                        self.graph = nx.DiGraph()
+
+        def __contains__(self,n):
+                return self.graph.__contains__(n)
+
+        def __len__(self):
+                return self.graph.__len__()
+
+        def __iter__(self):
+                return self.graph.__iter__()
+
+        def type(self,n):
+                return self.graph.nodes[n][&#39;type&#39;]
+
+        def nodes(self,types=None):
+                if types is None:
+                        return self.graph.nodes
+                else:
+                        if isinstance(types,str): types = [types]
+                        return set(n for n in self.nodes() if self.type(n) in types)
+
+        def edges(self):
+                return self.graph.edges
+
+        def relabel(self,mapping,name=None):
+                return Circuit(graph=nx.relabel_nodes(self.graph,mapping),name=name)
+
+        def add(self,n,type,fanin=None,fanout=None):
+                if fanin is None: fanin=[]
+                if fanout is None: fanout=[]
+                self.graph.add_node(n,type=type)
+                self.graph.add_edges_from((f,n) for f in fanin)
+                self.graph.add_edges_from((n,f) for f in fanout)
+
+        def extend(self,c):
+                self.graph.update(c.graph)
+
+        def transitiveFanout(self,ns,stopat=[&#39;d&#39;],gates=None):
+                if gates is None: gates=set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        for s in self.graph.successors(n):
+                                if s not in gates:
+                                        gates.add(s)
+                                        if self.type(s) not in stopat:
+                                                self.transitiveFanout(s,stopat,gates)
+                return gates
+
+        def transitiveFanin(self,ns,stopat=[&#39;ff&#39;,&#39;lat&#39;],gates=None):
+                if gates is None: gates=set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        for p in self.graph.predecessors(n):
+                                if p not in gates:
+                                        gates.add(p)
+                                        if self.type(p) not in stopat:
+                                                self.transitiveFanin(p,stopat,gates)
+                return gates
+
+        def fanout(self,ns):
+                gates = set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        gates |= set(self.graph.successors(n))
+                return gates
+
+        def fanin(self,ns):
+                gates = set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        gates |= set(self.graph.predecessors(n))
+                return gates
+
+        def lats(self): return self.nodes(&#39;lat&#39;)
+        def ffs(self): return self.nodes(&#39;ff&#39;)
+        def seq(self): return self.nodes([&#39;ff&#39;,&#39;lat&#39;])
+        def inputs(self): return self.nodes(&#39;input&#39;)
+        def outputs(self): return self.nodes(&#39;input&#39;)
+        def io(self): return self.nodes([&#39;output&#39;,&#39;input&#39;])
+
+        def startpoints(self,ns=None):
+                if ns:
+                        return set(n for n in self.transitiveFanin(ns) if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+                else:
+                        return set(n for n in self.graph if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+
+        def endpoints(self,ns=None):
+                if ns:
+                        return set(n for n in self.transitiveFanout(ns) if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+                else:
+                        return set(n for n in self.graph if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+
+        def seqGraph(self):
+                graph = nx.DiGraph()
+
+                # add nodes
+                for n in self.io()|self.seq():
+                        graph.add_node(n,gate=self.type(n))
+
+                # add edges
+                for n in graph.nodes:
+                        graph.add_edges_from((s,n) for s in self.startpoints(n))
+
+                return graph
+
+        def sat(self,true=None,false=None):
+                solver,clauses,variables = self.solver(true,false)
+                if solver.solve():
+                        model = solver.get_model()
+                        return {n:model[variables.id(n)-1]&gt;0 for n in self.nodes()}
+                else:
+                        return False
+
+        def solver(self,true=None,false=None):
+                if true is None: true = set()
+                if false is None: false = set()
+                clauses,variables = self.cnf()
+                for n in true: clauses.append([variables.id(n)])
+                for n in false: clauses.append([-variables.id(n)])
+                solver = Cadical(bootstrap_with=clauses)
+                return solver,clauses,variables
+
+        def cnf(self):
+                variables = IDPool()
+                clauses = CNF()
+
+                for n in self.nodes():
+                        variables.id(n)
+                        if self.type(n) == &#39;and&#39;:
+                                for f in self.fanin(n):
+                                        clauses.append([-variables.id(n),variables.id(f)])
+                                clauses.append([variables.id(n)] + [-variables.id(f) for f in self.fanin(n)])
+                        elif self.type(n) == &#39;nand&#39;:
+                                for f in self.fanin(n):
+                                        clauses.append([variables.id(n),variables.id(f)])
+                                clauses.append([-variables.id(n)] + [-variables.id(f) for f in self.fanin(n)])
+                        elif self.type(n) == &#39;or&#39;:
+                                for f in self.fanin(n):
+                                        clauses.append([variables.id(n),-variables.id(f)])
+                                clauses.append([-variables.id(n)] + [variables.id(f) for f in self.fanin(n)])
+                        elif self.type(n) == &#39;nor&#39;:
+                                for f in self.fanin(n):
+                                        clauses.append([-variables.id(n),-variables.id(f)])
+                                clauses.append([variables.id(n)] + [variables.id(f) for f in self.fanin(n)])
+                        elif self.type(n) == &#39;not&#39;:
+                                f = self.fanin(n).pop()
+                                clauses.append([variables.id(n),variables.id(f)])
+                                clauses.append([-variables.id(n),-variables.id(f)])
+                        elif self.type(n) in [&#39;output&#39;,&#39;d&#39;,&#39;r&#39;,&#39;buf&#39;,&#39;clk&#39;]:
+                                f = self.fanin(n).pop()
+                                clauses.append([variables.id(n),-variables.id(f)])
+                                clauses.append([-variables.id(n),variables.id(f)])
+                        elif self.type(n) in [&#39;xor&#39;,&#39;xnor&#39;]:
+                                # break into heirarchical xors
+                                nets = list(self.fanin(n))
+
+                                # xor gen
+                                def xorClauses(a,b,c):
+                                        clauses.append([-variables.id(c),-variables.id(b),-variables.id(a)])
+                                        clauses.append([-variables.id(c),variables.id(b),variables.id(a)])
+                                        clauses.append([variables.id(c),-variables.id(b),variables.id(a)])
+                                        clauses.append([variables.id(c),variables.id(b),-variables.id(a)])
+
+                                while len(nets)&gt;2:
+                                        #create new net
+                                        new_net = &#39;xor_&#39;+nets[-2]+&#39;_&#39;+nets[-1]
+                                        variables.id(new_net)
+
+                                        # add sub xors
+                                        xorClauses(nets[-2],nets[-1],new_net)
+
+                                        # remove last 2 nets
+                                        nets = nets[:-2]
+
+                                        # insert before out
+                                        nets.insert(0,new_net)
+
+                                # add final xor
+                                if self.type(n) == &#39;xor&#39;:
+                                        xorClauses(nets[-2],nets[-1],n)
+                                else:
+                                        # invert xor
+                                        variables.id(f&#39;xor_inv_{n}&#39;)
+                                        xorClauses(nets[-2],nets[-1],f&#39;xor_inv_{n}&#39;)
+                                        clauses.append([variables.id(n),variables.id(f&#39;xor_inv_{n}&#39;)])
+                                        clauses.append([-variables.id(n),-variables.id(f&#39;xor_inv_{n}&#39;)])
+                        elif self.type(n) == &#39;0&#39;:
+                                clauses.append([-variables.id(n)])
+                        elif self.type(n) == &#39;1&#39;:
+                                clauses.append([variables.id(n)])
+                        elif self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;]:
+                                pass
+                        else:
+                                print(f&#34;unknown gate type: {self.type(n)}&#34;)
+                                code.interact(local=dict(globals(), **locals()))
+
+                return clauses,variables
+
+        def verilog(self):
+                inputs = []
+                outputs = []
+                insts = []
+                wires = []
+
+                for n in self.nodes():
+                        if c.type(n) in [&#39;xor&#39;,&#39;xnor&#39;,&#39;buf&#39;,&#39;not&#39;,&#39;nor&#39;,&#39;or&#39;,&#39;and&#39;,&#39;nand&#39;]:
+                                fanin = &#39;,&#39;.join(p for p in c.fanin(n))
+                                insts.append(f&#34;{c.type(n)} g_{n} ({n},{fanin})&#34;)
+                                wires.append(n)
+                        elif c.type(n) in [&#39;0&#39;,&#39;1&#39;]:
+                                insts.append(f&#34;assign {n} = 1&#39;b{c.type()}&#34;)
+                        elif c.type(n) in [&#39;input&#39;]:
+                                inputs.append(n)
+                                wires.append(n)
+                        elif c.type(n) in [&#39;output&#39;]:
+                                outputs.append(n.replace(&#39;output[&#39;,&#39;&#39;)[:-1])
+                        elif c.type(n) in [&#39;ff&#39;]:
+                                d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                                clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                                insts.append(f&#34;fflopd g_{n} (.CK({clk}),.D({d}),.Q({n}))&#34;)
+                        elif c.type(n) in [&#39;lat&#39;]:
+                                d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                                clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                                r = c.fanin(f&#39;r[{n}]&#39;).pop()
+                                insts.append(f&#34;latchdrs g_{n} (.ENA({clk}),.D({d}),.R({r}),.S(1&#39;b1),.Q({n}))&#34;)
+                        elif c.type(n) in [&#39;clk&#39;,&#39;d&#39;,&#39;r&#39;]:
+                                pass
+                        else:
+                                print(f&#34;unknown gate type: {c.type(n)}&#34;)
+                                return
+
+                verilog = f&#34;module {c.name} (&#34;+&#39;,&#39;.join(inputs+outputs)+&#39;);\n&#39;
+                verilog += &#39;&#39;.join(f&#39;input {inp};\n&#39; for inp in inputs)
+                verilog += &#39;&#39;.join(f&#39;output {out};\n&#39; for out in outputs)
+                verilog += &#39;&#39;.join(f&#39;wire {wire};\n&#39; for wire in wires)
+                verilog += &#39;&#39;.join(f&#39;{inst};\n&#39; for inst in insts)
+                verilog += &#39;endmodule\n&#39;
+
+                return verilog
+
+        def syn(self,printOutput=False):
+                verilog = self.verilog()
+
+                with tempfile.NamedTemporaryFile() as tmp:
+                        cmd = [&#39;genus&#39;,&#39;-execute&#39;,f&#34;&#34;&#34;set_db / .library $env(GENUS_DIR)/share/synth/tutorials/tech/tutorial.lib;
+                                        read_hdl -sv {tmp.name};
+                                        elaborate;
+                                        set_db syn_generic_effort high
+                                        syn_generic;
+                                        syn_map;
+                                        syn_opt;
+                                        write_hdl -generic;
+                                        exit;&#34;&#34;&#34;]
+                        tmp.write(bytes(verilog,&#39;ascii&#39;))
+                        tmp.flush()
+                        #code.interact(local=dict(globals(), **locals()))
+
+                        process = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+                        output = &#39;&#39;
+                        while True:
+                                line = process.stdout.readline()
+                                if line == &#39;&#39; and process.poll() is not None:
+                                        break
+                                if line:
+                                        if printOutput:
+                                                print(line.strip())
+                                        output += line
+
+                regex = &#34;(module.*endmodule)&#34;
+                m = re.search(regex,output,re.DOTALL)
+                syn_verilog = m.group(1)
+
+                c = Circuit(verilog=syn_verilog,name=self.name)
+                c.name = f&#39;{self.name}_syn&#39;
+                return c
+
+        def two_input(self):
+                two_inp_c = nx.DiGraph()
+
+                # create nodes
+                for n in self.nodes():
+                        two_inp_c.add_node(n)
+                        for a,v in c.nodes[n].items():
+                                two_inp_c.nodes[n][a] = v
+
+                # connect nodes
+                for n in self.nodes():
+                        # handle fanin
+                        pred = list(c.predecessors(n))
+
+                        # select new gate type
+                        if c.nodes[n][&#39;type&#39;] in [&#39;and&#39;,&#39;nand&#39;]:
+                                t = &#39;and&#39;
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;or&#39;,&#39;nor&#39;]:
+                                t = &#39;or&#39;
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;xor&#39;,&#39;xnor&#39;]:
+                                t = &#39;xor&#39;
+
+                        while len(pred)&gt;2:
+                                # create new, connect
+                                two_inp_c.add_node(f&#39;{n}_add_{len(pred)}&#39;,output=False,gate=t)
+                                two_inp_c.add_edges_from((p,f&#39;{n}_add_{len(pred)}&#39;) for p in pred[0:2])
+
+                                # update list
+                                pred.append(f&#39;{n}_add_{len(pred)}&#39;)
+                                pred = pred[2:]
+
+                        # add final input connections
+                        two_inp_c.add_edges_from((p,n) for p in pred)
+
+                        # ensure all are two inputs
+                        for n in two_inp_c.nodes():
+                                if two_inp_c.in_degree(n)&gt;2:
+                                        print(f&#34;gate with more than 2 inputs&#34;)
+                                        code.interact(local=dict(globals(), **locals()))
+
+                return two_inp_c
+
+        def dual_rail_ternary_encoding(self):
+                d = deepcopy(c)
+
+                # add dual nodes
+                for n in c:
+                        if c.nodes[n][&#39;type&#39;] in [&#39;and&#39;,&#39;nand&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
+                                d.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
+                                d.add_node(f&#39;{n}_0_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
+                                d.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_0_not_in_fi&#39;,f&#39;{n}_x&#39;)])
+                                d.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
+                                for p in c.predecessors(n):
+                                        d.add_node(f&#39;{p}_is_0&#39;,gate=&#39;nor&#39;,output=False)
+                                        d.add_edge(f&#39;{p}_is_0&#39;,f&#39;{n}_0_not_in_fi&#39;)
+                                        d.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_is_0&#39;)
+                                        d.add_edge(p,f&#39;{p}_is_0&#39;)
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;or&#39;,&#39;nor&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
+                                d.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
+                                d.add_node(f&#39;{n}_1_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
+                                d.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_1_not_in_fi&#39;,f&#39;{n}_x&#39;)])
+                                d.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
+                                for p in c.predecessors(n):
+                                        d.add_node(f&#39;{p}_is_1&#39;,gate=&#39;and&#39;,output=False)
+                                        d.add_edge(f&#39;{p}_is_1&#39;,f&#39;{n}_1_not_in_fi&#39;)
+                                        d.add_node(f&#39;{p}_not_x&#39;,gate=&#39;not&#39;,output=False)
+                                        d.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_not_x&#39;)
+                                        d.add_edge(f&#39;{p}_not_x&#39;,f&#39;{p}_is_1&#39;)
+                                        d.add_edge(p,f&#39;{p}_is_1&#39;)
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;buf&#39;,&#39;not&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;buf&#39;,output=c.nodes[n][&#39;output&#39;])
+                                p = list(c.predecessors(n))[0]
+                                d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;xor&#39;,&#39;xnor&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;or&#39;,output=c.nodes[n][&#39;output&#39;])
+                                d.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x&#39;) for p in c.predecessors(n))
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;0&#39;,&#39;1&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;0&#39;,output=c.nodes[n][&#39;output&#39;])
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;input&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;input&#39;,output=c.nodes[n][&#39;output&#39;])
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;dff&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;dff&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;])
+                                p = list(c.predecessors(n))[0]
+                                d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;lat&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;lat&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;],rst=c.nodes[n][&#39;rst&#39;])
+                                p = list(c.predecessors(n))[0]
+                                d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+
+                        else:
+                                print(f&#34;unknown gate type: {c.nodes[n][&#39;type&#39;]}&#34;)
+                                code.interact(local=locals())
+
+                for n in d:
+                        if &#39;type&#39; not in d.nodes[n]:
+                                print(f&#34;empty gate type: {n}&#34;)
+                                code.interact(local=locals())
+
+                return d
+
+        def parseModule(self,verilog,path):
+                # read verilog
+                if path:
+                        with open(path, &#39;r&#39;) as f:
+                                verilog = f.read()
+
+                # find module
+                regex = f&#34;module\s+{self.name}\s*\(.*?\);(.*?)endmodule&#34;
+                m = re.search(regex,verilog,re.DOTALL)
+                module =  m.group(1)
+
+                # create graph
+                G = nx.DiGraph()
+
+                # handle gates
+                regex = &#34;(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);&#34;
+                for gate, net_str in re.findall(regex,module,re.DOTALL):
+
+                        # parse all nets
+                        nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                        output = nets[0]
+                        inputs = nets[1:]
+
+                        # add to graph
+                        G.add_edges_from((net,output) for net in inputs)
+                        G.nodes[output][&#39;type&#39;] = gate
+
+                # handle ffs
+                regex = &#34;fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\);&#34;
+                for clk,d,q in re.findall(regex,module,re.DOTALL):
+
+                        # add to graph
+                        G.add_node(q,type=&#39;ff&#39;)
+
+                        G.add_edge(d,f&#39;d[{q}]&#39;)
+                        G.nodes[f&#39;d[{q}]&#39;][&#39;type&#39;] = &#39;d&#39;
+                        G.add_edge(f&#39;d[{q}]&#39;,q)
+
+                        G.add_edge(clk,f&#39;clk[{q}]&#39;)
+                        G.nodes[f&#39;clk[{q}]&#39;][&#39;type&#39;] = &#39;clk&#39;
+                        G.add_edge(f&#39;clk[{q}]&#39;,q)
+
+                # handle lats
+                regex = &#34;latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);&#34;
+                for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
+
+                        # add to graph
+                        G.add_node(q,type=&#39;lat&#39;)
+
+                        G.add_edge(d,f&#39;d[{q}]&#39;)
+                        G.nodes[f&#39;d[{q}]&#39;][&#39;type&#39;] = &#39;d&#39;
+                        G.add_edge(f&#39;d[{q}]&#39;,q)
+
+                        G.add_edge(clk,f&#39;clk[{q}]&#39;)
+                        G.nodes[f&#39;clk[{q}]&#39;][&#39;type&#39;] = &#39;clk&#39;
+                        G.add_edge(f&#39;clk[{q}]&#39;,q)
+
+                        G.add_edge(d,f&#39;r[{q}]&#39;)
+                        G.nodes[f&#39;r[{q}]&#39;][&#39;type&#39;] = &#39;r&#39;
+                        G.add_edge(f&#39;r[{q}]&#39;,q)
+
+                # handle assigns
+                assign_regex = &#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
+                for n0, n1 in re.findall(assign_regex,module):
+                        output = n0.replace(&#39; &#39;,&#39;&#39;)
+                        inpt = n1.replace(&#39; &#39;,&#39;&#39;)
+                        G.add_edge(inpt,output)
+                        G.nodes[output][&#39;type&#39;] = &#39;buf&#39;
+
+                for n in G.nodes():
+                        if &#39;type&#39; not in G.nodes[n]:
+                                if n == &#34;1&#39;b0&#34;:
+                                        G.nodes[n][&#39;type&#39;] = &#39;0&#39;
+                                elif n == &#34;1&#39;b1&#34;:
+                                        G.nodes[n][&#39;type&#39;] = &#39;1&#39;
+                                else:
+                                        G.nodes[n][&#39;type&#39;] = &#39;input&#39;
+
+                # get outputs
+                out_regex = &#34;output\s(.+?);&#34;
+                for net_str in re.findall(out_regex,module,re.DOTALL):
+                        nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                        for net in nets:
+                                G.add_edge(net,f&#39;output[{net}]&#39;)
+                                G.nodes[f&#39;output[{net}]&#39;][&#39;type&#39;] = &#39;output&#39;
+
+                return G
+
+        def miter(self,c=None,inputs=None,outputs=None):
+                if not c:
+                        c = self
+                if not inputs:
+                        inputs = self.startpoints()
+                if not outputs:
+                        outputs = self.endpoints()
+
+                # get inputs to be used in miter
+                common_inputs = self.startpoints()&amp;inputs
+                common_outputs = self.endpoints()&amp;outputs
+
+                # create miter
+                m = c.relabel({n:f&#39;c0_{n}&#39; for n in c.nodes()-common_inputs})
+                m.extend(self.relabel({n:f&#39;c1_{n}&#39; for n in c.nodes()-common_inputs}))
+
+                # compare outputs
+                m.add(&#39;sat&#39;,&#39;or&#39;)
+                for o in common_outputs:
+                        m.add(f&#39;miter_{o}&#39;,&#39;xor&#39;,fanin=[f&#39;c0_{o}&#39;,f&#39;c1_{o}&#39;],fanout=[&#39;sat&#39;])
+
+                return m
+
+        def unroll(self,cycles):
+                pass
+
+
+if __name__==&#39;__main__&#39;:
+        # test class
+
+        verilog = &#34;&#34;&#34;
+// Generated by Cadence Genus(TM) Synthesis Solution 16.22-s033_1
+// Generated on: Jun 19 2020 15:25:45 EDT (Jun 19 2020 19:25:45 UTC)
+
+// Verification Directory fv/s27
+
+module s27(clk, G0, G1, G17, G2, G3);
+  input clk, G0, G1, G2, G3;
+  output G17;
+  wire clk, G0, G1, G2, G3;
+  wire G17;
+  wire G5, G6, G7, n_0, n_1, n_2, n_3, n_4;
+  wire n_5, n_6, n_7, n_8, n_9, n_10, n_11, n_12;
+  wire n_20, n_21;
+  fflopd DFF_0_Q_reg(.CK (clk), .D (n_12), .Q (G5));
+  fflopd DFF_1_Q_reg(.CK (clk), .D (n_21), .Q (G6));
+  not g543 (G17, n_20);
+  not g545 (n_12, n_11);
+  nand g546__7837 (n_11, G0, n_9);
+  nor g548__7557 (n_10, n_7, n_8);
+  nand g549__7654 (n_9, n_1, n_8);
+  fflopd DFF_2_Q_reg(.CK (clk), .D (n_6), .Q (G7));
+  nor g551__8867 (n_8, G7, n_4);
+  not g553 (n_7, n_5);
+  nor g550__1377 (n_6, G2, n_3);
+  nand g554__3717 (n_5, n_2, G6);
+  nand g552__4599 (n_4, G3, n_0);
+  nor g555__3779 (n_3, G1, G7);
+  not g557 (n_2, G0);
+  not g556 (n_1, G5);
+  not g558 (n_0, G1);
+  nor g562__2007 (n_20, G5, n_10);
+  nor g544_dup__1237 (n_21, G5, n_10);
+endmodule
+
+
+module fflopd(CK, D, Q);
+  input CK, D;
+  output Q;
+  wire CK, D;
+  wire Q;
+  wire next_state;
+  reg  qi;
+  assign #1 Q = qi;
+  assign next_state = D;
+  always
+    @(posedge CK)
+      qi &lt;= next_state;
+  initial
+    qi &lt;= 1&#39;b0;
+endmodule
+
+&#34;&#34;&#34;
+
+        # parse circuit
+        c = Circuit(verilog=verilog,name=&#39;s27&#39;)
+        print(f&#39;parsed: {c.name}&#39;)
+        print(f&#39;nodes: {c.nodes()}&#39;)
+        print(f&#39;edges: {c.edges()}&#39;)
+        for n in c: print(f&#39;type of {n}: {c.type(n)}&#39;)
+        print(f&#39;len: {len(c)}&#39;)
+        print(f&#34;contains: {&#39;G1&#39; in c}&#34;)
+
+        # check self equivalence
+        m = c.miter()
+        live = m.sat()
+        print(f&#39;self live: {live}&#39;)
+        equiv = m.sat(true=[&#39;sat&#39;])
+        print(f&#39;self equiv: {not equiv}&#39;)
+        #code.interact(local=dict(globals(), **locals()))
+
+        # synthesize and check equiv
+        s = c.syn(True)
+        m = c.miter(s)
+        live = m.sat()
+        print(f&#39;syn live: {live}&#39;)
+        equiv = m.sat(true=[&#39;sat&#39;])
+        print(f&#39;syn equiv: {not equiv}&#39;)</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="circuitgraph.circuitgraph.Circuit"><code class="flex name class">
+<span>class <span class="ident">Circuit</span></span>
+<span>(</span><span>verilog=None, path=None, name=None, graph=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Create a new Circuit</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Circuit:
+
+        def __init__(self,verilog=None,path=None,name=None,graph=None):
+                &#34;&#34;&#34;Create a new Circuit&#34;&#34;&#34;
+                if name:
+                        self.name = name
+                elif path:
+                        self.name = path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;,&#39;&#39;)
+                else:
+                        self.name = &#39;circuit&#39;
+
+                if verilog or path:
+                        self.graph = self.parseModule(verilog,path)
+                elif graph:
+                        self.graph = graph
+                else:
+                        self.graph = nx.DiGraph()
+
+        def __contains__(self,n):
+                return self.graph.__contains__(n)
+
+        def __len__(self):
+                return self.graph.__len__()
+
+        def __iter__(self):
+                return self.graph.__iter__()
+
+        def type(self,n):
+                return self.graph.nodes[n][&#39;type&#39;]
+
+        def nodes(self,types=None):
+                if types is None:
+                        return self.graph.nodes
+                else:
+                        if isinstance(types,str): types = [types]
+                        return set(n for n in self.nodes() if self.type(n) in types)
+
+        def edges(self):
+                return self.graph.edges
+
+        def relabel(self,mapping,name=None):
+                return Circuit(graph=nx.relabel_nodes(self.graph,mapping),name=name)
+
+        def add(self,n,type,fanin=None,fanout=None):
+                if fanin is None: fanin=[]
+                if fanout is None: fanout=[]
+                self.graph.add_node(n,type=type)
+                self.graph.add_edges_from((f,n) for f in fanin)
+                self.graph.add_edges_from((n,f) for f in fanout)
+
+        def extend(self,c):
+                self.graph.update(c.graph)
+
+        def transitiveFanout(self,ns,stopat=[&#39;d&#39;],gates=None):
+                if gates is None: gates=set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        for s in self.graph.successors(n):
+                                if s not in gates:
+                                        gates.add(s)
+                                        if self.type(s) not in stopat:
+                                                self.transitiveFanout(s,stopat,gates)
+                return gates
+
+        def transitiveFanin(self,ns,stopat=[&#39;ff&#39;,&#39;lat&#39;],gates=None):
+                if gates is None: gates=set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        for p in self.graph.predecessors(n):
+                                if p not in gates:
+                                        gates.add(p)
+                                        if self.type(p) not in stopat:
+                                                self.transitiveFanin(p,stopat,gates)
+                return gates
+
+        def fanout(self,ns):
+                gates = set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        gates |= set(self.graph.successors(n))
+                return gates
+
+        def fanin(self,ns):
+                gates = set()
+                if isinstance(ns,str): ns = [ns]
+                for n in ns:
+                        gates |= set(self.graph.predecessors(n))
+                return gates
+
+        def lats(self): return self.nodes(&#39;lat&#39;)
+        def ffs(self): return self.nodes(&#39;ff&#39;)
+        def seq(self): return self.nodes([&#39;ff&#39;,&#39;lat&#39;])
+        def inputs(self): return self.nodes(&#39;input&#39;)
+        def outputs(self): return self.nodes(&#39;input&#39;)
+        def io(self): return self.nodes([&#39;output&#39;,&#39;input&#39;])
+
+        def startpoints(self,ns=None):
+                if ns:
+                        return set(n for n in self.transitiveFanin(ns) if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+                else:
+                        return set(n for n in self.graph if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+
+        def endpoints(self,ns=None):
+                if ns:
+                        return set(n for n in self.transitiveFanout(ns) if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+                else:
+                        return set(n for n in self.graph if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+
+        def seqGraph(self):
+                graph = nx.DiGraph()
+
+                # add nodes
+                for n in self.io()|self.seq():
+                        graph.add_node(n,gate=self.type(n))
+
+                # add edges
+                for n in graph.nodes:
+                        graph.add_edges_from((s,n) for s in self.startpoints(n))
+
+                return graph
+
+        def sat(self,true=None,false=None):
+                solver,clauses,variables = self.solver(true,false)
+                if solver.solve():
+                        model = solver.get_model()
+                        return {n:model[variables.id(n)-1]&gt;0 for n in self.nodes()}
+                else:
+                        return False
+
+        def solver(self,true=None,false=None):
+                if true is None: true = set()
+                if false is None: false = set()
+                clauses,variables = self.cnf()
+                for n in true: clauses.append([variables.id(n)])
+                for n in false: clauses.append([-variables.id(n)])
+                solver = Cadical(bootstrap_with=clauses)
+                return solver,clauses,variables
+
+        def cnf(self):
+                variables = IDPool()
+                clauses = CNF()
+
+                for n in self.nodes():
+                        variables.id(n)
+                        if self.type(n) == &#39;and&#39;:
+                                for f in self.fanin(n):
+                                        clauses.append([-variables.id(n),variables.id(f)])
+                                clauses.append([variables.id(n)] + [-variables.id(f) for f in self.fanin(n)])
+                        elif self.type(n) == &#39;nand&#39;:
+                                for f in self.fanin(n):
+                                        clauses.append([variables.id(n),variables.id(f)])
+                                clauses.append([-variables.id(n)] + [-variables.id(f) for f in self.fanin(n)])
+                        elif self.type(n) == &#39;or&#39;:
+                                for f in self.fanin(n):
+                                        clauses.append([variables.id(n),-variables.id(f)])
+                                clauses.append([-variables.id(n)] + [variables.id(f) for f in self.fanin(n)])
+                        elif self.type(n) == &#39;nor&#39;:
+                                for f in self.fanin(n):
+                                        clauses.append([-variables.id(n),-variables.id(f)])
+                                clauses.append([variables.id(n)] + [variables.id(f) for f in self.fanin(n)])
+                        elif self.type(n) == &#39;not&#39;:
+                                f = self.fanin(n).pop()
+                                clauses.append([variables.id(n),variables.id(f)])
+                                clauses.append([-variables.id(n),-variables.id(f)])
+                        elif self.type(n) in [&#39;output&#39;,&#39;d&#39;,&#39;r&#39;,&#39;buf&#39;,&#39;clk&#39;]:
+                                f = self.fanin(n).pop()
+                                clauses.append([variables.id(n),-variables.id(f)])
+                                clauses.append([-variables.id(n),variables.id(f)])
+                        elif self.type(n) in [&#39;xor&#39;,&#39;xnor&#39;]:
+                                # break into heirarchical xors
+                                nets = list(self.fanin(n))
+
+                                # xor gen
+                                def xorClauses(a,b,c):
+                                        clauses.append([-variables.id(c),-variables.id(b),-variables.id(a)])
+                                        clauses.append([-variables.id(c),variables.id(b),variables.id(a)])
+                                        clauses.append([variables.id(c),-variables.id(b),variables.id(a)])
+                                        clauses.append([variables.id(c),variables.id(b),-variables.id(a)])
+
+                                while len(nets)&gt;2:
+                                        #create new net
+                                        new_net = &#39;xor_&#39;+nets[-2]+&#39;_&#39;+nets[-1]
+                                        variables.id(new_net)
+
+                                        # add sub xors
+                                        xorClauses(nets[-2],nets[-1],new_net)
+
+                                        # remove last 2 nets
+                                        nets = nets[:-2]
+
+                                        # insert before out
+                                        nets.insert(0,new_net)
+
+                                # add final xor
+                                if self.type(n) == &#39;xor&#39;:
+                                        xorClauses(nets[-2],nets[-1],n)
+                                else:
+                                        # invert xor
+                                        variables.id(f&#39;xor_inv_{n}&#39;)
+                                        xorClauses(nets[-2],nets[-1],f&#39;xor_inv_{n}&#39;)
+                                        clauses.append([variables.id(n),variables.id(f&#39;xor_inv_{n}&#39;)])
+                                        clauses.append([-variables.id(n),-variables.id(f&#39;xor_inv_{n}&#39;)])
+                        elif self.type(n) == &#39;0&#39;:
+                                clauses.append([-variables.id(n)])
+                        elif self.type(n) == &#39;1&#39;:
+                                clauses.append([variables.id(n)])
+                        elif self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;]:
+                                pass
+                        else:
+                                print(f&#34;unknown gate type: {self.type(n)}&#34;)
+                                code.interact(local=dict(globals(), **locals()))
+
+                return clauses,variables
+
+        def verilog(self):
+                inputs = []
+                outputs = []
+                insts = []
+                wires = []
+
+                for n in self.nodes():
+                        if c.type(n) in [&#39;xor&#39;,&#39;xnor&#39;,&#39;buf&#39;,&#39;not&#39;,&#39;nor&#39;,&#39;or&#39;,&#39;and&#39;,&#39;nand&#39;]:
+                                fanin = &#39;,&#39;.join(p for p in c.fanin(n))
+                                insts.append(f&#34;{c.type(n)} g_{n} ({n},{fanin})&#34;)
+                                wires.append(n)
+                        elif c.type(n) in [&#39;0&#39;,&#39;1&#39;]:
+                                insts.append(f&#34;assign {n} = 1&#39;b{c.type()}&#34;)
+                        elif c.type(n) in [&#39;input&#39;]:
+                                inputs.append(n)
+                                wires.append(n)
+                        elif c.type(n) in [&#39;output&#39;]:
+                                outputs.append(n.replace(&#39;output[&#39;,&#39;&#39;)[:-1])
+                        elif c.type(n) in [&#39;ff&#39;]:
+                                d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                                clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                                insts.append(f&#34;fflopd g_{n} (.CK({clk}),.D({d}),.Q({n}))&#34;)
+                        elif c.type(n) in [&#39;lat&#39;]:
+                                d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                                clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                                r = c.fanin(f&#39;r[{n}]&#39;).pop()
+                                insts.append(f&#34;latchdrs g_{n} (.ENA({clk}),.D({d}),.R({r}),.S(1&#39;b1),.Q({n}))&#34;)
+                        elif c.type(n) in [&#39;clk&#39;,&#39;d&#39;,&#39;r&#39;]:
+                                pass
+                        else:
+                                print(f&#34;unknown gate type: {c.type(n)}&#34;)
+                                return
+
+                verilog = f&#34;module {c.name} (&#34;+&#39;,&#39;.join(inputs+outputs)+&#39;);\n&#39;
+                verilog += &#39;&#39;.join(f&#39;input {inp};\n&#39; for inp in inputs)
+                verilog += &#39;&#39;.join(f&#39;output {out};\n&#39; for out in outputs)
+                verilog += &#39;&#39;.join(f&#39;wire {wire};\n&#39; for wire in wires)
+                verilog += &#39;&#39;.join(f&#39;{inst};\n&#39; for inst in insts)
+                verilog += &#39;endmodule\n&#39;
+
+                return verilog
+
+        def syn(self,printOutput=False):
+                verilog = self.verilog()
+
+                with tempfile.NamedTemporaryFile() as tmp:
+                        cmd = [&#39;genus&#39;,&#39;-execute&#39;,f&#34;&#34;&#34;set_db / .library $env(GENUS_DIR)/share/synth/tutorials/tech/tutorial.lib;
+                                        read_hdl -sv {tmp.name};
+                                        elaborate;
+                                        set_db syn_generic_effort high
+                                        syn_generic;
+                                        syn_map;
+                                        syn_opt;
+                                        write_hdl -generic;
+                                        exit;&#34;&#34;&#34;]
+                        tmp.write(bytes(verilog,&#39;ascii&#39;))
+                        tmp.flush()
+                        #code.interact(local=dict(globals(), **locals()))
+
+                        process = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+                        output = &#39;&#39;
+                        while True:
+                                line = process.stdout.readline()
+                                if line == &#39;&#39; and process.poll() is not None:
+                                        break
+                                if line:
+                                        if printOutput:
+                                                print(line.strip())
+                                        output += line
+
+                regex = &#34;(module.*endmodule)&#34;
+                m = re.search(regex,output,re.DOTALL)
+                syn_verilog = m.group(1)
+
+                c = Circuit(verilog=syn_verilog,name=self.name)
+                c.name = f&#39;{self.name}_syn&#39;
+                return c
+
+        def two_input(self):
+                two_inp_c = nx.DiGraph()
+
+                # create nodes
+                for n in self.nodes():
+                        two_inp_c.add_node(n)
+                        for a,v in c.nodes[n].items():
+                                two_inp_c.nodes[n][a] = v
+
+                # connect nodes
+                for n in self.nodes():
+                        # handle fanin
+                        pred = list(c.predecessors(n))
+
+                        # select new gate type
+                        if c.nodes[n][&#39;type&#39;] in [&#39;and&#39;,&#39;nand&#39;]:
+                                t = &#39;and&#39;
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;or&#39;,&#39;nor&#39;]:
+                                t = &#39;or&#39;
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;xor&#39;,&#39;xnor&#39;]:
+                                t = &#39;xor&#39;
+
+                        while len(pred)&gt;2:
+                                # create new, connect
+                                two_inp_c.add_node(f&#39;{n}_add_{len(pred)}&#39;,output=False,gate=t)
+                                two_inp_c.add_edges_from((p,f&#39;{n}_add_{len(pred)}&#39;) for p in pred[0:2])
+
+                                # update list
+                                pred.append(f&#39;{n}_add_{len(pred)}&#39;)
+                                pred = pred[2:]
+
+                        # add final input connections
+                        two_inp_c.add_edges_from((p,n) for p in pred)
+
+                        # ensure all are two inputs
+                        for n in two_inp_c.nodes():
+                                if two_inp_c.in_degree(n)&gt;2:
+                                        print(f&#34;gate with more than 2 inputs&#34;)
+                                        code.interact(local=dict(globals(), **locals()))
+
+                return two_inp_c
+
+        def dual_rail_ternary_encoding(self):
+                d = deepcopy(c)
+
+                # add dual nodes
+                for n in c:
+                        if c.nodes[n][&#39;type&#39;] in [&#39;and&#39;,&#39;nand&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
+                                d.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
+                                d.add_node(f&#39;{n}_0_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
+                                d.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_0_not_in_fi&#39;,f&#39;{n}_x&#39;)])
+                                d.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
+                                for p in c.predecessors(n):
+                                        d.add_node(f&#39;{p}_is_0&#39;,gate=&#39;nor&#39;,output=False)
+                                        d.add_edge(f&#39;{p}_is_0&#39;,f&#39;{n}_0_not_in_fi&#39;)
+                                        d.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_is_0&#39;)
+                                        d.add_edge(p,f&#39;{p}_is_0&#39;)
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;or&#39;,&#39;nor&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
+                                d.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
+                                d.add_node(f&#39;{n}_1_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
+                                d.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_1_not_in_fi&#39;,f&#39;{n}_x&#39;)])
+                                d.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
+                                for p in c.predecessors(n):
+                                        d.add_node(f&#39;{p}_is_1&#39;,gate=&#39;and&#39;,output=False)
+                                        d.add_edge(f&#39;{p}_is_1&#39;,f&#39;{n}_1_not_in_fi&#39;)
+                                        d.add_node(f&#39;{p}_not_x&#39;,gate=&#39;not&#39;,output=False)
+                                        d.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_not_x&#39;)
+                                        d.add_edge(f&#39;{p}_not_x&#39;,f&#39;{p}_is_1&#39;)
+                                        d.add_edge(p,f&#39;{p}_is_1&#39;)
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;buf&#39;,&#39;not&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;buf&#39;,output=c.nodes[n][&#39;output&#39;])
+                                p = list(c.predecessors(n))[0]
+                                d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;xor&#39;,&#39;xnor&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;or&#39;,output=c.nodes[n][&#39;output&#39;])
+                                d.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x&#39;) for p in c.predecessors(n))
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;0&#39;,&#39;1&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;0&#39;,output=c.nodes[n][&#39;output&#39;])
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;input&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;input&#39;,output=c.nodes[n][&#39;output&#39;])
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;dff&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;dff&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;])
+                                p = list(c.predecessors(n))[0]
+                                d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+
+                        elif c.nodes[n][&#39;type&#39;] in [&#39;lat&#39;]:
+                                d.add_node(f&#39;{n}_x&#39;,gate=&#39;lat&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;],rst=c.nodes[n][&#39;rst&#39;])
+                                p = list(c.predecessors(n))[0]
+                                d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+
+                        else:
+                                print(f&#34;unknown gate type: {c.nodes[n][&#39;type&#39;]}&#34;)
+                                code.interact(local=locals())
+
+                for n in d:
+                        if &#39;type&#39; not in d.nodes[n]:
+                                print(f&#34;empty gate type: {n}&#34;)
+                                code.interact(local=locals())
+
+                return d
+
+        def parseModule(self,verilog,path):
+                # read verilog
+                if path:
+                        with open(path, &#39;r&#39;) as f:
+                                verilog = f.read()
+
+                # find module
+                regex = f&#34;module\s+{self.name}\s*\(.*?\);(.*?)endmodule&#34;
+                m = re.search(regex,verilog,re.DOTALL)
+                module =  m.group(1)
+
+                # create graph
+                G = nx.DiGraph()
+
+                # handle gates
+                regex = &#34;(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);&#34;
+                for gate, net_str in re.findall(regex,module,re.DOTALL):
+
+                        # parse all nets
+                        nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                        output = nets[0]
+                        inputs = nets[1:]
+
+                        # add to graph
+                        G.add_edges_from((net,output) for net in inputs)
+                        G.nodes[output][&#39;type&#39;] = gate
+
+                # handle ffs
+                regex = &#34;fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\);&#34;
+                for clk,d,q in re.findall(regex,module,re.DOTALL):
+
+                        # add to graph
+                        G.add_node(q,type=&#39;ff&#39;)
+
+                        G.add_edge(d,f&#39;d[{q}]&#39;)
+                        G.nodes[f&#39;d[{q}]&#39;][&#39;type&#39;] = &#39;d&#39;
+                        G.add_edge(f&#39;d[{q}]&#39;,q)
+
+                        G.add_edge(clk,f&#39;clk[{q}]&#39;)
+                        G.nodes[f&#39;clk[{q}]&#39;][&#39;type&#39;] = &#39;clk&#39;
+                        G.add_edge(f&#39;clk[{q}]&#39;,q)
+
+                # handle lats
+                regex = &#34;latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);&#34;
+                for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
+
+                        # add to graph
+                        G.add_node(q,type=&#39;lat&#39;)
+
+                        G.add_edge(d,f&#39;d[{q}]&#39;)
+                        G.nodes[f&#39;d[{q}]&#39;][&#39;type&#39;] = &#39;d&#39;
+                        G.add_edge(f&#39;d[{q}]&#39;,q)
+
+                        G.add_edge(clk,f&#39;clk[{q}]&#39;)
+                        G.nodes[f&#39;clk[{q}]&#39;][&#39;type&#39;] = &#39;clk&#39;
+                        G.add_edge(f&#39;clk[{q}]&#39;,q)
+
+                        G.add_edge(d,f&#39;r[{q}]&#39;)
+                        G.nodes[f&#39;r[{q}]&#39;][&#39;type&#39;] = &#39;r&#39;
+                        G.add_edge(f&#39;r[{q}]&#39;,q)
+
+                # handle assigns
+                assign_regex = &#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
+                for n0, n1 in re.findall(assign_regex,module):
+                        output = n0.replace(&#39; &#39;,&#39;&#39;)
+                        inpt = n1.replace(&#39; &#39;,&#39;&#39;)
+                        G.add_edge(inpt,output)
+                        G.nodes[output][&#39;type&#39;] = &#39;buf&#39;
+
+                for n in G.nodes():
+                        if &#39;type&#39; not in G.nodes[n]:
+                                if n == &#34;1&#39;b0&#34;:
+                                        G.nodes[n][&#39;type&#39;] = &#39;0&#39;
+                                elif n == &#34;1&#39;b1&#34;:
+                                        G.nodes[n][&#39;type&#39;] = &#39;1&#39;
+                                else:
+                                        G.nodes[n][&#39;type&#39;] = &#39;input&#39;
+
+                # get outputs
+                out_regex = &#34;output\s(.+?);&#34;
+                for net_str in re.findall(out_regex,module,re.DOTALL):
+                        nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                        for net in nets:
+                                G.add_edge(net,f&#39;output[{net}]&#39;)
+                                G.nodes[f&#39;output[{net}]&#39;][&#39;type&#39;] = &#39;output&#39;
+
+                return G
+
+        def miter(self,c=None,inputs=None,outputs=None):
+                if not c:
+                        c = self
+                if not inputs:
+                        inputs = self.startpoints()
+                if not outputs:
+                        outputs = self.endpoints()
+
+                # get inputs to be used in miter
+                common_inputs = self.startpoints()&amp;inputs
+                common_outputs = self.endpoints()&amp;outputs
+
+                # create miter
+                m = c.relabel({n:f&#39;c0_{n}&#39; for n in c.nodes()-common_inputs})
+                m.extend(self.relabel({n:f&#39;c1_{n}&#39; for n in c.nodes()-common_inputs}))
+
+                # compare outputs
+                m.add(&#39;sat&#39;,&#39;or&#39;)
+                for o in common_outputs:
+                        m.add(f&#39;miter_{o}&#39;,&#39;xor&#39;,fanin=[f&#39;c0_{o}&#39;,f&#39;c1_{o}&#39;],fanout=[&#39;sat&#39;])
+
+                return m
+
+        def unroll(self,cycles):
+                pass</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="circuitgraph.circuitgraph.Circuit.add"><code class="name flex">
+<span>def <span class="ident">add</span></span>(<span>self, n, type, fanin=None, fanout=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add(self,n,type,fanin=None,fanout=None):
+        if fanin is None: fanin=[]
+        if fanout is None: fanout=[]
+        self.graph.add_node(n,type=type)
+        self.graph.add_edges_from((f,n) for f in fanin)
+        self.graph.add_edges_from((n,f) for f in fanout)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.cnf"><code class="name flex">
+<span>def <span class="ident">cnf</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cnf(self):
+        variables = IDPool()
+        clauses = CNF()
+
+        for n in self.nodes():
+                variables.id(n)
+                if self.type(n) == &#39;and&#39;:
+                        for f in self.fanin(n):
+                                clauses.append([-variables.id(n),variables.id(f)])
+                        clauses.append([variables.id(n)] + [-variables.id(f) for f in self.fanin(n)])
+                elif self.type(n) == &#39;nand&#39;:
+                        for f in self.fanin(n):
+                                clauses.append([variables.id(n),variables.id(f)])
+                        clauses.append([-variables.id(n)] + [-variables.id(f) for f in self.fanin(n)])
+                elif self.type(n) == &#39;or&#39;:
+                        for f in self.fanin(n):
+                                clauses.append([variables.id(n),-variables.id(f)])
+                        clauses.append([-variables.id(n)] + [variables.id(f) for f in self.fanin(n)])
+                elif self.type(n) == &#39;nor&#39;:
+                        for f in self.fanin(n):
+                                clauses.append([-variables.id(n),-variables.id(f)])
+                        clauses.append([variables.id(n)] + [variables.id(f) for f in self.fanin(n)])
+                elif self.type(n) == &#39;not&#39;:
+                        f = self.fanin(n).pop()
+                        clauses.append([variables.id(n),variables.id(f)])
+                        clauses.append([-variables.id(n),-variables.id(f)])
+                elif self.type(n) in [&#39;output&#39;,&#39;d&#39;,&#39;r&#39;,&#39;buf&#39;,&#39;clk&#39;]:
+                        f = self.fanin(n).pop()
+                        clauses.append([variables.id(n),-variables.id(f)])
+                        clauses.append([-variables.id(n),variables.id(f)])
+                elif self.type(n) in [&#39;xor&#39;,&#39;xnor&#39;]:
+                        # break into heirarchical xors
+                        nets = list(self.fanin(n))
+
+                        # xor gen
+                        def xorClauses(a,b,c):
+                                clauses.append([-variables.id(c),-variables.id(b),-variables.id(a)])
+                                clauses.append([-variables.id(c),variables.id(b),variables.id(a)])
+                                clauses.append([variables.id(c),-variables.id(b),variables.id(a)])
+                                clauses.append([variables.id(c),variables.id(b),-variables.id(a)])
+
+                        while len(nets)&gt;2:
+                                #create new net
+                                new_net = &#39;xor_&#39;+nets[-2]+&#39;_&#39;+nets[-1]
+                                variables.id(new_net)
+
+                                # add sub xors
+                                xorClauses(nets[-2],nets[-1],new_net)
+
+                                # remove last 2 nets
+                                nets = nets[:-2]
+
+                                # insert before out
+                                nets.insert(0,new_net)
+
+                        # add final xor
+                        if self.type(n) == &#39;xor&#39;:
+                                xorClauses(nets[-2],nets[-1],n)
+                        else:
+                                # invert xor
+                                variables.id(f&#39;xor_inv_{n}&#39;)
+                                xorClauses(nets[-2],nets[-1],f&#39;xor_inv_{n}&#39;)
+                                clauses.append([variables.id(n),variables.id(f&#39;xor_inv_{n}&#39;)])
+                                clauses.append([-variables.id(n),-variables.id(f&#39;xor_inv_{n}&#39;)])
+                elif self.type(n) == &#39;0&#39;:
+                        clauses.append([-variables.id(n)])
+                elif self.type(n) == &#39;1&#39;:
+                        clauses.append([variables.id(n)])
+                elif self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;]:
+                        pass
+                else:
+                        print(f&#34;unknown gate type: {self.type(n)}&#34;)
+                        code.interact(local=dict(globals(), **locals()))
+
+        return clauses,variables</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.dual_rail_ternary_encoding"><code class="name flex">
+<span>def <span class="ident">dual_rail_ternary_encoding</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def dual_rail_ternary_encoding(self):
+        d = deepcopy(c)
+
+        # add dual nodes
+        for n in c:
+                if c.nodes[n][&#39;type&#39;] in [&#39;and&#39;,&#39;nand&#39;]:
+                        d.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
+                        d.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
+                        d.add_node(f&#39;{n}_0_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
+                        d.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_0_not_in_fi&#39;,f&#39;{n}_x&#39;)])
+                        d.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
+                        for p in c.predecessors(n):
+                                d.add_node(f&#39;{p}_is_0&#39;,gate=&#39;nor&#39;,output=False)
+                                d.add_edge(f&#39;{p}_is_0&#39;,f&#39;{n}_0_not_in_fi&#39;)
+                                d.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_is_0&#39;)
+                                d.add_edge(p,f&#39;{p}_is_0&#39;)
+
+                elif c.nodes[n][&#39;type&#39;] in [&#39;or&#39;,&#39;nor&#39;]:
+                        d.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
+                        d.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
+                        d.add_node(f&#39;{n}_1_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
+                        d.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_1_not_in_fi&#39;,f&#39;{n}_x&#39;)])
+                        d.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
+                        for p in c.predecessors(n):
+                                d.add_node(f&#39;{p}_is_1&#39;,gate=&#39;and&#39;,output=False)
+                                d.add_edge(f&#39;{p}_is_1&#39;,f&#39;{n}_1_not_in_fi&#39;)
+                                d.add_node(f&#39;{p}_not_x&#39;,gate=&#39;not&#39;,output=False)
+                                d.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_not_x&#39;)
+                                d.add_edge(f&#39;{p}_not_x&#39;,f&#39;{p}_is_1&#39;)
+                                d.add_edge(p,f&#39;{p}_is_1&#39;)
+
+                elif c.nodes[n][&#39;type&#39;] in [&#39;buf&#39;,&#39;not&#39;]:
+                        d.add_node(f&#39;{n}_x&#39;,gate=&#39;buf&#39;,output=c.nodes[n][&#39;output&#39;])
+                        p = list(c.predecessors(n))[0]
+                        d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+
+                elif c.nodes[n][&#39;type&#39;] in [&#39;xor&#39;,&#39;xnor&#39;]:
+                        d.add_node(f&#39;{n}_x&#39;,gate=&#39;or&#39;,output=c.nodes[n][&#39;output&#39;])
+                        d.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x&#39;) for p in c.predecessors(n))
+
+                elif c.nodes[n][&#39;type&#39;] in [&#39;0&#39;,&#39;1&#39;]:
+                        d.add_node(f&#39;{n}_x&#39;,gate=&#39;0&#39;,output=c.nodes[n][&#39;output&#39;])
+
+                elif c.nodes[n][&#39;type&#39;] in [&#39;input&#39;]:
+                        d.add_node(f&#39;{n}_x&#39;,gate=&#39;input&#39;,output=c.nodes[n][&#39;output&#39;])
+
+                elif c.nodes[n][&#39;type&#39;] in [&#39;dff&#39;]:
+                        d.add_node(f&#39;{n}_x&#39;,gate=&#39;dff&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;])
+                        p = list(c.predecessors(n))[0]
+                        d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+
+                elif c.nodes[n][&#39;type&#39;] in [&#39;lat&#39;]:
+                        d.add_node(f&#39;{n}_x&#39;,gate=&#39;lat&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;],rst=c.nodes[n][&#39;rst&#39;])
+                        p = list(c.predecessors(n))[0]
+                        d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+
+                else:
+                        print(f&#34;unknown gate type: {c.nodes[n][&#39;type&#39;]}&#34;)
+                        code.interact(local=locals())
+
+        for n in d:
+                if &#39;type&#39; not in d.nodes[n]:
+                        print(f&#34;empty gate type: {n}&#34;)
+                        code.interact(local=locals())
+
+        return d</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.edges"><code class="name flex">
+<span>def <span class="ident">edges</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def edges(self):
+        return self.graph.edges</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.endpoints"><code class="name flex">
+<span>def <span class="ident">endpoints</span></span>(<span>self, ns=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def endpoints(self,ns=None):
+        if ns:
+                return set(n for n in self.transitiveFanout(ns) if self.type(n) in [&#39;d&#39;,&#39;output&#39;])
+        else:
+                return set(n for n in self.graph if self.type(n) in [&#39;d&#39;,&#39;output&#39;])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.extend"><code class="name flex">
+<span>def <span class="ident">extend</span></span>(<span>self, c)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def extend(self,c):
+        self.graph.update(c.graph)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.fanin"><code class="name flex">
+<span>def <span class="ident">fanin</span></span>(<span>self, ns)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def fanin(self,ns):
+        gates = set()
+        if isinstance(ns,str): ns = [ns]
+        for n in ns:
+                gates |= set(self.graph.predecessors(n))
+        return gates</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.fanout"><code class="name flex">
+<span>def <span class="ident">fanout</span></span>(<span>self, ns)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def fanout(self,ns):
+        gates = set()
+        if isinstance(ns,str): ns = [ns]
+        for n in ns:
+                gates |= set(self.graph.successors(n))
+        return gates</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.ffs"><code class="name flex">
+<span>def <span class="ident">ffs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ffs(self): return self.nodes(&#39;ff&#39;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.inputs"><code class="name flex">
+<span>def <span class="ident">inputs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def inputs(self): return self.nodes(&#39;input&#39;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.io"><code class="name flex">
+<span>def <span class="ident">io</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def io(self): return self.nodes([&#39;output&#39;,&#39;input&#39;])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.lats"><code class="name flex">
+<span>def <span class="ident">lats</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lats(self): return self.nodes(&#39;lat&#39;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.miter"><code class="name flex">
+<span>def <span class="ident">miter</span></span>(<span>self, c=None, inputs=None, outputs=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def miter(self,c=None,inputs=None,outputs=None):
+        if not c:
+                c = self
+        if not inputs:
+                inputs = self.startpoints()
+        if not outputs:
+                outputs = self.endpoints()
+
+        # get inputs to be used in miter
+        common_inputs = self.startpoints()&amp;inputs
+        common_outputs = self.endpoints()&amp;outputs
+
+        # create miter
+        m = c.relabel({n:f&#39;c0_{n}&#39; for n in c.nodes()-common_inputs})
+        m.extend(self.relabel({n:f&#39;c1_{n}&#39; for n in c.nodes()-common_inputs}))
+
+        # compare outputs
+        m.add(&#39;sat&#39;,&#39;or&#39;)
+        for o in common_outputs:
+                m.add(f&#39;miter_{o}&#39;,&#39;xor&#39;,fanin=[f&#39;c0_{o}&#39;,f&#39;c1_{o}&#39;],fanout=[&#39;sat&#39;])
+
+        return m</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.nodes"><code class="name flex">
+<span>def <span class="ident">nodes</span></span>(<span>self, types=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def nodes(self,types=None):
+        if types is None:
+                return self.graph.nodes
+        else:
+                if isinstance(types,str): types = [types]
+                return set(n for n in self.nodes() if self.type(n) in types)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.outputs"><code class="name flex">
+<span>def <span class="ident">outputs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def outputs(self): return self.nodes(&#39;input&#39;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.parseModule"><code class="name flex">
+<span>def <span class="ident">parseModule</span></span>(<span>self, verilog, path)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def parseModule(self,verilog,path):
+        # read verilog
+        if path:
+                with open(path, &#39;r&#39;) as f:
+                        verilog = f.read()
+
+        # find module
+        regex = f&#34;module\s+{self.name}\s*\(.*?\);(.*?)endmodule&#34;
+        m = re.search(regex,verilog,re.DOTALL)
+        module =  m.group(1)
+
+        # create graph
+        G = nx.DiGraph()
+
+        # handle gates
+        regex = &#34;(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);&#34;
+        for gate, net_str in re.findall(regex,module,re.DOTALL):
+
+                # parse all nets
+                nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                output = nets[0]
+                inputs = nets[1:]
+
+                # add to graph
+                G.add_edges_from((net,output) for net in inputs)
+                G.nodes[output][&#39;type&#39;] = gate
+
+        # handle ffs
+        regex = &#34;fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\);&#34;
+        for clk,d,q in re.findall(regex,module,re.DOTALL):
+
+                # add to graph
+                G.add_node(q,type=&#39;ff&#39;)
+
+                G.add_edge(d,f&#39;d[{q}]&#39;)
+                G.nodes[f&#39;d[{q}]&#39;][&#39;type&#39;] = &#39;d&#39;
+                G.add_edge(f&#39;d[{q}]&#39;,q)
+
+                G.add_edge(clk,f&#39;clk[{q}]&#39;)
+                G.nodes[f&#39;clk[{q}]&#39;][&#39;type&#39;] = &#39;clk&#39;
+                G.add_edge(f&#39;clk[{q}]&#39;,q)
+
+        # handle lats
+        regex = &#34;latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);&#34;
+        for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
+
+                # add to graph
+                G.add_node(q,type=&#39;lat&#39;)
+
+                G.add_edge(d,f&#39;d[{q}]&#39;)
+                G.nodes[f&#39;d[{q}]&#39;][&#39;type&#39;] = &#39;d&#39;
+                G.add_edge(f&#39;d[{q}]&#39;,q)
+
+                G.add_edge(clk,f&#39;clk[{q}]&#39;)
+                G.nodes[f&#39;clk[{q}]&#39;][&#39;type&#39;] = &#39;clk&#39;
+                G.add_edge(f&#39;clk[{q}]&#39;,q)
+
+                G.add_edge(d,f&#39;r[{q}]&#39;)
+                G.nodes[f&#39;r[{q}]&#39;][&#39;type&#39;] = &#39;r&#39;
+                G.add_edge(f&#39;r[{q}]&#39;,q)
+
+        # handle assigns
+        assign_regex = &#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
+        for n0, n1 in re.findall(assign_regex,module):
+                output = n0.replace(&#39; &#39;,&#39;&#39;)
+                inpt = n1.replace(&#39; &#39;,&#39;&#39;)
+                G.add_edge(inpt,output)
+                G.nodes[output][&#39;type&#39;] = &#39;buf&#39;
+
+        for n in G.nodes():
+                if &#39;type&#39; not in G.nodes[n]:
+                        if n == &#34;1&#39;b0&#34;:
+                                G.nodes[n][&#39;type&#39;] = &#39;0&#39;
+                        elif n == &#34;1&#39;b1&#34;:
+                                G.nodes[n][&#39;type&#39;] = &#39;1&#39;
+                        else:
+                                G.nodes[n][&#39;type&#39;] = &#39;input&#39;
+
+        # get outputs
+        out_regex = &#34;output\s(.+?);&#34;
+        for net_str in re.findall(out_regex,module,re.DOTALL):
+                nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
+                for net in nets:
+                        G.add_edge(net,f&#39;output[{net}]&#39;)
+                        G.nodes[f&#39;output[{net}]&#39;][&#39;type&#39;] = &#39;output&#39;
+
+        return G</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.relabel"><code class="name flex">
+<span>def <span class="ident">relabel</span></span>(<span>self, mapping, name=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def relabel(self,mapping,name=None):
+        return Circuit(graph=nx.relabel_nodes(self.graph,mapping),name=name)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.sat"><code class="name flex">
+<span>def <span class="ident">sat</span></span>(<span>self, true=None, false=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sat(self,true=None,false=None):
+        solver,clauses,variables = self.solver(true,false)
+        if solver.solve():
+                model = solver.get_model()
+                return {n:model[variables.id(n)-1]&gt;0 for n in self.nodes()}
+        else:
+                return False</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.seq"><code class="name flex">
+<span>def <span class="ident">seq</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def seq(self): return self.nodes([&#39;ff&#39;,&#39;lat&#39;])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.seqGraph"><code class="name flex">
+<span>def <span class="ident">seqGraph</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def seqGraph(self):
+        graph = nx.DiGraph()
+
+        # add nodes
+        for n in self.io()|self.seq():
+                graph.add_node(n,gate=self.type(n))
+
+        # add edges
+        for n in graph.nodes:
+                graph.add_edges_from((s,n) for s in self.startpoints(n))
+
+        return graph</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.solver"><code class="name flex">
+<span>def <span class="ident">solver</span></span>(<span>self, true=None, false=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def solver(self,true=None,false=None):
+        if true is None: true = set()
+        if false is None: false = set()
+        clauses,variables = self.cnf()
+        for n in true: clauses.append([variables.id(n)])
+        for n in false: clauses.append([-variables.id(n)])
+        solver = Cadical(bootstrap_with=clauses)
+        return solver,clauses,variables</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.startpoints"><code class="name flex">
+<span>def <span class="ident">startpoints</span></span>(<span>self, ns=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def startpoints(self,ns=None):
+        if ns:
+                return set(n for n in self.transitiveFanin(ns) if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
+        else:
+                return set(n for n in self.graph if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.syn"><code class="name flex">
+<span>def <span class="ident">syn</span></span>(<span>self, printOutput=False)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def syn(self,printOutput=False):
+        verilog = self.verilog()
+
+        with tempfile.NamedTemporaryFile() as tmp:
+                cmd = [&#39;genus&#39;,&#39;-execute&#39;,f&#34;&#34;&#34;set_db / .library $env(GENUS_DIR)/share/synth/tutorials/tech/tutorial.lib;
+                                read_hdl -sv {tmp.name};
+                                elaborate;
+                                set_db syn_generic_effort high
+                                syn_generic;
+                                syn_map;
+                                syn_opt;
+                                write_hdl -generic;
+                                exit;&#34;&#34;&#34;]
+                tmp.write(bytes(verilog,&#39;ascii&#39;))
+                tmp.flush()
+                #code.interact(local=dict(globals(), **locals()))
+
+                process = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+                output = &#39;&#39;
+                while True:
+                        line = process.stdout.readline()
+                        if line == &#39;&#39; and process.poll() is not None:
+                                break
+                        if line:
+                                if printOutput:
+                                        print(line.strip())
+                                output += line
+
+        regex = &#34;(module.*endmodule)&#34;
+        m = re.search(regex,output,re.DOTALL)
+        syn_verilog = m.group(1)
+
+        c = Circuit(verilog=syn_verilog,name=self.name)
+        c.name = f&#39;{self.name}_syn&#39;
+        return c</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.transitiveFanin"><code class="name flex">
+<span>def <span class="ident">transitiveFanin</span></span>(<span>self, ns, stopat=['ff', 'lat'], gates=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def transitiveFanin(self,ns,stopat=[&#39;ff&#39;,&#39;lat&#39;],gates=None):
+        if gates is None: gates=set()
+        if isinstance(ns,str): ns = [ns]
+        for n in ns:
+                for p in self.graph.predecessors(n):
+                        if p not in gates:
+                                gates.add(p)
+                                if self.type(p) not in stopat:
+                                        self.transitiveFanin(p,stopat,gates)
+        return gates</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.transitiveFanout"><code class="name flex">
+<span>def <span class="ident">transitiveFanout</span></span>(<span>self, ns, stopat=['d'], gates=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def transitiveFanout(self,ns,stopat=[&#39;d&#39;],gates=None):
+        if gates is None: gates=set()
+        if isinstance(ns,str): ns = [ns]
+        for n in ns:
+                for s in self.graph.successors(n):
+                        if s not in gates:
+                                gates.add(s)
+                                if self.type(s) not in stopat:
+                                        self.transitiveFanout(s,stopat,gates)
+        return gates</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.two_input"><code class="name flex">
+<span>def <span class="ident">two_input</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def two_input(self):
+        two_inp_c = nx.DiGraph()
+
+        # create nodes
+        for n in self.nodes():
+                two_inp_c.add_node(n)
+                for a,v in c.nodes[n].items():
+                        two_inp_c.nodes[n][a] = v
+
+        # connect nodes
+        for n in self.nodes():
+                # handle fanin
+                pred = list(c.predecessors(n))
+
+                # select new gate type
+                if c.nodes[n][&#39;type&#39;] in [&#39;and&#39;,&#39;nand&#39;]:
+                        t = &#39;and&#39;
+                elif c.nodes[n][&#39;type&#39;] in [&#39;or&#39;,&#39;nor&#39;]:
+                        t = &#39;or&#39;
+                elif c.nodes[n][&#39;type&#39;] in [&#39;xor&#39;,&#39;xnor&#39;]:
+                        t = &#39;xor&#39;
+
+                while len(pred)&gt;2:
+                        # create new, connect
+                        two_inp_c.add_node(f&#39;{n}_add_{len(pred)}&#39;,output=False,gate=t)
+                        two_inp_c.add_edges_from((p,f&#39;{n}_add_{len(pred)}&#39;) for p in pred[0:2])
+
+                        # update list
+                        pred.append(f&#39;{n}_add_{len(pred)}&#39;)
+                        pred = pred[2:]
+
+                # add final input connections
+                two_inp_c.add_edges_from((p,n) for p in pred)
+
+                # ensure all are two inputs
+                for n in two_inp_c.nodes():
+                        if two_inp_c.in_degree(n)&gt;2:
+                                print(f&#34;gate with more than 2 inputs&#34;)
+                                code.interact(local=dict(globals(), **locals()))
+
+        return two_inp_c</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.type"><code class="name flex">
+<span>def <span class="ident">type</span></span>(<span>self, n)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def type(self,n):
+        return self.graph.nodes[n][&#39;type&#39;]</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.unroll"><code class="name flex">
+<span>def <span class="ident">unroll</span></span>(<span>self, cycles)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unroll(self,cycles):
+        pass</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuitgraph.Circuit.verilog"><code class="name flex">
+<span>def <span class="ident">verilog</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def verilog(self):
+        inputs = []
+        outputs = []
+        insts = []
+        wires = []
+
+        for n in self.nodes():
+                if c.type(n) in [&#39;xor&#39;,&#39;xnor&#39;,&#39;buf&#39;,&#39;not&#39;,&#39;nor&#39;,&#39;or&#39;,&#39;and&#39;,&#39;nand&#39;]:
+                        fanin = &#39;,&#39;.join(p for p in c.fanin(n))
+                        insts.append(f&#34;{c.type(n)} g_{n} ({n},{fanin})&#34;)
+                        wires.append(n)
+                elif c.type(n) in [&#39;0&#39;,&#39;1&#39;]:
+                        insts.append(f&#34;assign {n} = 1&#39;b{c.type()}&#34;)
+                elif c.type(n) in [&#39;input&#39;]:
+                        inputs.append(n)
+                        wires.append(n)
+                elif c.type(n) in [&#39;output&#39;]:
+                        outputs.append(n.replace(&#39;output[&#39;,&#39;&#39;)[:-1])
+                elif c.type(n) in [&#39;ff&#39;]:
+                        d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                        clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                        insts.append(f&#34;fflopd g_{n} (.CK({clk}),.D({d}),.Q({n}))&#34;)
+                elif c.type(n) in [&#39;lat&#39;]:
+                        d = c.fanin(f&#39;d[{n}]&#39;).pop()
+                        clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+                        r = c.fanin(f&#39;r[{n}]&#39;).pop()
+                        insts.append(f&#34;latchdrs g_{n} (.ENA({clk}),.D({d}),.R({r}),.S(1&#39;b1),.Q({n}))&#34;)
+                elif c.type(n) in [&#39;clk&#39;,&#39;d&#39;,&#39;r&#39;]:
+                        pass
+                else:
+                        print(f&#34;unknown gate type: {c.type(n)}&#34;)
+                        return
+
+        verilog = f&#34;module {c.name} (&#34;+&#39;,&#39;.join(inputs+outputs)+&#39;);\n&#39;
+        verilog += &#39;&#39;.join(f&#39;input {inp};\n&#39; for inp in inputs)
+        verilog += &#39;&#39;.join(f&#39;output {out};\n&#39; for out in outputs)
+        verilog += &#39;&#39;.join(f&#39;wire {wire};\n&#39; for wire in wires)
+        verilog += &#39;&#39;.join(f&#39;{inst};\n&#39; for inst in insts)
+        verilog += &#39;endmodule\n&#39;
+
+        return verilog</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="circuitgraph" href="index.html">circuitgraph</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="circuitgraph.circuitgraph.Circuit" href="#circuitgraph.circuitgraph.Circuit">Circuit</a></code></h4>
+<ul class="">
+<li><code><a title="circuitgraph.circuitgraph.Circuit.add" href="#circuitgraph.circuitgraph.Circuit.add">add</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.cnf" href="#circuitgraph.circuitgraph.Circuit.cnf">cnf</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.dual_rail_ternary_encoding" href="#circuitgraph.circuitgraph.Circuit.dual_rail_ternary_encoding">dual_rail_ternary_encoding</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.edges" href="#circuitgraph.circuitgraph.Circuit.edges">edges</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.endpoints" href="#circuitgraph.circuitgraph.Circuit.endpoints">endpoints</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.extend" href="#circuitgraph.circuitgraph.Circuit.extend">extend</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.fanin" href="#circuitgraph.circuitgraph.Circuit.fanin">fanin</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.fanout" href="#circuitgraph.circuitgraph.Circuit.fanout">fanout</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.ffs" href="#circuitgraph.circuitgraph.Circuit.ffs">ffs</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.inputs" href="#circuitgraph.circuitgraph.Circuit.inputs">inputs</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.io" href="#circuitgraph.circuitgraph.Circuit.io">io</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.lats" href="#circuitgraph.circuitgraph.Circuit.lats">lats</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.miter" href="#circuitgraph.circuitgraph.Circuit.miter">miter</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.nodes" href="#circuitgraph.circuitgraph.Circuit.nodes">nodes</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.outputs" href="#circuitgraph.circuitgraph.Circuit.outputs">outputs</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.parseModule" href="#circuitgraph.circuitgraph.Circuit.parseModule">parseModule</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.relabel" href="#circuitgraph.circuitgraph.Circuit.relabel">relabel</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.sat" href="#circuitgraph.circuitgraph.Circuit.sat">sat</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.seq" href="#circuitgraph.circuitgraph.Circuit.seq">seq</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.seqGraph" href="#circuitgraph.circuitgraph.Circuit.seqGraph">seqGraph</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.solver" href="#circuitgraph.circuitgraph.Circuit.solver">solver</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.startpoints" href="#circuitgraph.circuitgraph.Circuit.startpoints">startpoints</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.syn" href="#circuitgraph.circuitgraph.Circuit.syn">syn</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.transitiveFanin" href="#circuitgraph.circuitgraph.Circuit.transitiveFanin">transitiveFanin</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.transitiveFanout" href="#circuitgraph.circuitgraph.Circuit.transitiveFanout">transitiveFanout</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.two_input" href="#circuitgraph.circuitgraph.Circuit.two_input">two_input</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.type" href="#circuitgraph.circuitgraph.Circuit.type">type</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.unroll" href="#circuitgraph.circuitgraph.Circuit.unroll">unroll</a></code></li>
+<li><code><a title="circuitgraph.circuitgraph.Circuit.verilog" href="#circuitgraph.circuitgraph.Circuit.verilog">verilog</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+</footer>
+</body>
+</html>
