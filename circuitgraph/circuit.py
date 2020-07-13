@@ -69,22 +69,24 @@ class Circuit:
 	def __iter__(self):
 		return self.graph.__iter__()
 
-	def type(self,n):
+	def type(self,ns):
 		"""
-		Returns node type
+		Returns node(s) type(s).
 
 		Parameters
 		----------
-		n : str
+		ns : str or iterable of str
 			Node.
 
 		Returns
 		-------
-		str
-			Type of node.
+		str or set of str
+			Type of node or a set of node types.
 
 		"""
-		return self.graph.nodes[n]['type']
+		if isinstance(ns,str):
+			return self.graph.nodes[ns]['type']
+		return set(self.graph.nodes[n]['type'] for n in ns)
 
 	def nodes(self,types=None):
 		"""
@@ -158,15 +160,20 @@ class Circuit:
 
 		Example
 		-------
-		Quickly generate an and tree
+		Add a single node
+
 		>>> import circuitgraph as cg
-		>>> c = Circuit()
 		>>> c = cg.Circuit()
+		>>> c.add('a','or')
+		'a'
+
+		In the above example the function returns the name of the new node.
+		This allows us to quickly generate an AND tree with the following syntax.
+
 		>>> c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
 		'g'
 		>>> c.fanin('g')
 		{'in_1', 'in_0', 'in_3', 'in_2'}
-
 
 		"""
 		# clean arguments
@@ -306,6 +313,96 @@ class Circuit:
 						self.transitiveFanin(p,stopatTypes,stopatNodes,gates)
 		return gates
 
+	def faninCombDepth(self,ns,shortest=False,visited=None,depth=0):
+		"""
+		Computes the combinational fanin depth of a node(s).
+
+		Parameters
+		----------
+		ns : str or iterable of str
+			Node(s) to compute depth for.
+		shortest : bool
+			Selects between finding the shortest and longest paths.
+		visited : set of str
+			Visited nodes.
+		depth : int
+			Depth of current path.
+
+		Returns
+		-------
+		int
+			Depth.
+
+		"""
+		# select between shortest and longest paths
+		comp = min if shortest else max
+
+		if not isinstance(ns,str):
+			return comp(self.faninCombDepth(n,shortest) for n in ns)
+		else:
+			n = ns
+
+		if visited is None: visited=set()
+
+		depth += 1
+		depths = set()
+		visited.add(n)
+
+		# find depth
+		for f in self.fanin(n):
+			if self.type(f) not in ['ff','lat','input'] and f not in visited:
+				# continue recursion
+				depths.add(self.faninCombDepth(f,shortest,visited.copy(),depth))
+			else:
+				# add depth of endpoint or loop
+				depths.add(depth)
+
+		return comp(depths)
+
+	def fanoutCombDepth(self,ns,shortest=False,visited=None,depth=0):
+		"""
+		Computes the combinational fanout depth of a node(s).
+
+		Parameters
+		----------
+		ns : str or iterable of str
+			Node(s) to compute depth for.
+		shortest : bool
+			Selects between finding the shortest and longest paths.
+		visited : set of str
+			Visited nodes.
+		depth : int
+			Depth of current path.
+
+		Returns
+		-------
+		int
+			Depth.
+
+		"""
+		# select between shortest and longest paths
+		comp = min if shortest else max
+
+		if not isinstance(ns,str):
+			return comp(self.fanoutCombDepth(n,shortest) for n in ns)
+		else:
+			n = ns
+
+		if visited is None: visited=set()
+
+		depth += 1
+		depths = set()
+		visited.add(n)
+
+		# find depth
+		for f in self.fanout(n):
+			if self.type(f) not in ['d','r','s','clk','output'] and f not in visited:
+				depths.add(self.fanoutCombDepth(f,shortest,visited.copy(),depth))
+			else:
+				depths.add(depth)
+
+		return comp(depths)
+
 	def fanout(self,ns):
 		"""
 		Computes the fanout of a node.
@@ -314,8 +411,6 @@ class Circuit:
 		----------
 		ns : str or iterable of str
 			Node(s) to compute fanout for.
-		gates : set of str
-			Visited nodes.
 
 		Returns
 		-------
@@ -338,8 +433,6 @@ class Circuit:
 		----------
 		ns : str or iterable of str
 			Node(s) to compute fanin for.
-		gates : set of str
-			Visited nodes.
 
 		Returns
 		-------
@@ -398,6 +491,42 @@ class Circuit:
 
 		"""
 		return self.nodes(['ff','lat'])
+
+	def d(self,s):
+		"""
+		Returns the d input of a sequential node
+
+		Returns
+		-------
+		str
+			D input node.
+
+		"""
+		return [f for f in self.fanin(s) if self.type(f)=='d'][0]
+
+	def clk(self,s):
+		"""
+		Returns the clk input of a sequential node
+
+		Returns
+		-------
+		str
+			Clk input node.
+
+		"""
+		return [f for f in self.fanin(s) if self.type(f)=='clk'][0]
+
+	def r(self,s):
+		"""
+		Returns the r input of a sequential node
+
+		Returns
+		-------
+		str
+			R input node.
+
+		"""
+		return [f for f in self.fanin(s) if self.type(f)=='r'][0]
 
 	def inputs(self):
 		"""

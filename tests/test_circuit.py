@@ -19,6 +19,18 @@ class TestCircuit(unittest.TestCase):
 		self.assertFalse(self.c17.fanin('G1'))
 		self.assertSetEqual(self.c17.fanin(['G9','G17']), self.c17.fanin('G9')|self.c17.fanin('G17'))
 
+	def test_faninCombDepth(self):
+		self.assertEqual(self.s27.faninCombDepth('n_5'),2)
+		self.assertEqual(self.s27.faninCombDepth('n_20',shortest=True),1)
+		self.assertEqual(self.s27.faninCombDepth(['n_5','n_1']),2)
+		self.assertEqual(self.s27.faninCombDepth(['n_5','n_1'],shortest=True),1)
+
+	def test_fanoutCombDepth(self):
+		self.assertEqual(self.s27.fanoutCombDepth('n_10'),3)
+		self.assertEqual(self.s27.fanoutCombDepth('n_10',shortest=True),2)
+		self.assertEqual(self.s27.fanoutCombDepth(['n_10','n_11']),3)
+		self.assertEqual(self.s27.fanoutCombDepth(['n_10','n_11'],shortest=True),2)
+
 	def test_fanout(self):
 		self.assertSetEqual(self.c17.fanout('G1'), set(['G8']))
 		self.assertSetEqual(self.c17.fanout('G12'), set(['G16', 'G17']))

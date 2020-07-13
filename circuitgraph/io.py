@@ -40,7 +40,7 @@ def verilog_to_circuit(verilog, name):
 
 	# handle lats
 	regex = "latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);"
-	for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
+	for r,s,clk,d,q in re.findall(regex,module,re.DOTALL):
 		c.add(q,'lat',fanin=d,clk=clk,r=r)
 
 	# handle assigns

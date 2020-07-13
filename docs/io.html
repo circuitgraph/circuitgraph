@@ -69,7 +69,7 @@ def verilog_to_circuit(verilog, name):
 
         # handle lats
         regex = &#34;latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);&#34;
-        for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
+        for r,s,clk,d,q in re.findall(regex,module,re.DOTALL):
                 c.add(q,&#39;lat&#39;,fanin=d,clk=clk,r=r)
 
         # handle assigns
@@ -254,7 +254,7 @@ file name, specify it using the <code>name</code> argument</p></div>
 
         # handle lats
         regex = &#34;latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);&#34;
-        for r,s,c,d,q in re.findall(regex,module,re.DOTALL):
+        for r,s,clk,d,q in re.findall(regex,module,re.DOTALL):
                 c.add(q,&#39;lat&#39;,fanin=d,clk=clk,r=r)
 
         # handle assigns

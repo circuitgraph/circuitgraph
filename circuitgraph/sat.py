@@ -266,3 +266,27 @@ def modelCount(c,true=None,false=None,timeout=None):
 
 	return count
 
+def signalProbability(c,n):
+	"""
+	Determines the probability of the output being true overall startpoint combinations
+
+	Parameters
+	----------
+	c : Circuit
+		Input circuit.
+	n : str
+		Nodes to determine probability for.
+
+	Returns
+	-------
+	float
+		Probability.
+	"""
+	# get startpoints not in node fanin
+	non_fanin_startpoints = c.startpoints()-c.startpoints(n)
+
+	# get approximate count with node true and other inputs fixed
+	count = approxModelCount(c,true=non_fanin_startpoints|set([n]))
+
+	return count/(2**len(c.startpoints(n)))
+

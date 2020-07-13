@@ -293,7 +293,31 @@ def modelCount(c,true=None,false=None,timeout=None):
                         solver.add_clause([-model[variables.id(n)-1] for n in startpoints])
                         count += 1
 
-        return count</code></pre>
+        return count
+
+def signalProbability(c,n):
+        &#34;&#34;&#34;
+        Determines the probability of the output being true overall startpoint combinations
+
+        Parameters
+        ----------
+        c : Circuit
+                Input circuit.
+        n : str
+                Nodes to determine probability for.
+
+        Returns
+        -------
+        float
+                Probability.
+        &#34;&#34;&#34;
+        # get startpoints not in node fanin
+        non_fanin_startpoints = c.startpoints()-c.startpoints(n)
+
+        # get approximate count with node true and other inputs fixed
+        count = approxModelCount(c,true=non_fanin_startpoints|set([n]))
+
+        return count/(2**len(c.startpoints(n)))</code></pre>
 </details>
 </section>
 <section>
@@ -695,6 +719,52 @@ False
                         return False</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.sat.signalProbability"><code class="name flex">
+<span>def <span class="ident">signalProbability</span></span>(<span>c, n)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the probability of the output being true overall startpoint combinations</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>Nodes to determine probability for.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float</code></dt>
+<dd>Probability.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def signalProbability(c,n):
+        &#34;&#34;&#34;
+        Determines the probability of the output being true overall startpoint combinations
+
+        Parameters
+        ----------
+        c : Circuit
+                Input circuit.
+        n : str
+                Nodes to determine probability for.
+
+        Returns
+        -------
+        float
+                Probability.
+        &#34;&#34;&#34;
+        # get startpoints not in node fanin
+        non_fanin_startpoints = c.startpoints()-c.startpoints(n)
+
+        # get approximate count with node true and other inputs fixed
+        count = approxModelCount(c,true=non_fanin_startpoints|set([n]))
+
+        return count/(2**len(c.startpoints(n)))</code></pre>
+</details>
+</dd>
 </dl>
 </section>
 <section>
@@ -767,6 +837,7 @@ False
 <li><code><a title="circuitgraph.sat.construct_solver" href="#circuitgraph.sat.construct_solver">construct_solver</a></code></li>
 <li><code><a title="circuitgraph.sat.modelCount" href="#circuitgraph.sat.modelCount">modelCount</a></code></li>
 <li><code><a title="circuitgraph.sat.sat" href="#circuitgraph.sat.sat">sat</a></code></li>
+<li><code><a title="circuitgraph.sat.signalProbability" href="#circuitgraph.sat.signalProbability">signalProbability</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
