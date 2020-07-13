@@ -2,10 +2,11 @@
 
 The Circuit class can be constructed from a generic verilog file or existing graph.
 Each node in the graph represents a logic gate and has an associated name and gate type. The supported types are:
-	- Standard input-order-independent gates: ['and','nand','or','nor','not','buf','xor','xnor']
-	- Inputs and Outputs: ['input','output']
-	- Constant values: ['1','0']
-	- Sequential elements and supporting types: ['ff','lat'] and ['d','r','s','clk']
+
+- Standard input-order-independent gates: ['and','nand','or','nor','not','buf','xor','xnor']
+- Inputs and Outputs: ['input','output']
+- Constant values: ['1','0']
+- Sequential elements and supporting types: ['ff','lat'] and ['d','r','s','clk']
 
 """
 
