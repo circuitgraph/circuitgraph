@@ -32,3 +32,6 @@ MANIFEST
 *.log*
 *.cmd*
 fv/
+
+# Verilator
+obj_dir/
