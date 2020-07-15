@@ -138,7 +138,7 @@ class Circuit:
 		"""
 		return self.graph.edges
 
-	def add(self,n,type,fanin=None,fanout=None,clk=None,r=None):
+	def add(self,n,type,fanin=None,fanout=None,clk=None,r=None,s=None):
 		"""
 		Adds a new node to the circuit, optionally connecting it
 
@@ -152,6 +152,12 @@ class Circuit:
 			Nodes to add to new node's fanin
 		fanout : iterable of str
 			Nodes to add to new node's fanout
+		clk : str
+			Clock connecttion of sequential element
+		r : str
+			Reset connection of sequential element
+		s : str
+			Set connection of sequential element
 
 		Returns
 		-------
@@ -187,6 +193,7 @@ class Circuit:
 			self.graph.add_node(n,type=type)
 			self.graph.add_node(f'd[{n}]',type='d')
 			self.graph.add_node(f'r[{n}]',type='r')
+			self.graph.add_node(f's[{n}]',type='s')
 			self.graph.add_node(f'clk[{n}]',type='clk')
 
 			# connect
@@ -194,6 +201,7 @@ class Circuit:
 			self.graph.add_edges_from([(f'd[{n}]',n),(f'clk[{n}]',n),(f'r[{n}]',n)])
 			self.graph.add_edges_from((f,f'd[{n}]') for f in fanin)
 			if r: self.graph.add_edge(r,f'r[{n}]')
+			if s: self.graph.add_edge(s,f's[{n}]')
 			if clk: self.graph.add_edge(clk,f'clk[{n}]')
 		elif type == 'output':
 			self.graph.add_node(f'output[{n}]',type='output')
@@ -518,12 +526,24 @@ class Circuit:
 
 	def r(self,s):
 		"""
-		Returns the r input of a sequential node
+		Returns the reset input of a sequential node
 
 		Returns
 		-------
 		str
-			R input node.
+			Reset input node.
+
+		"""
+		return [f for f in self.fanin(s) if self.type(f)=='r'][0]
+
+	def s(self,s):
+		"""
+		Returns the set input of a sequential node
+
+		Returns
+		-------
+		str
+			Set input node.
 
 		"""
 		return [f for f in self.fanin(s) if self.type(f)=='r'][0]

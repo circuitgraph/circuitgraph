@@ -4,18 +4,21 @@ import networkx as nx
 import re
 from circuitgraph import Circuit
 
-def from_file(path,name=None):
+def from_file(path,name=None,seqTypes=None):
 	"""Creates a new CircuitGraph from a verilog file.
 	If the name of the module to create a graph from is different than the
 	file name, specify it using the `name` argument"""
 	if name is None:
 		name = path.split('/')[-1].replace('.v', '')
+	if seqTypes is None:
+		seqTypes = [{'name':'fflopd','type':'ff','io':{'d':'D','q':'Q','clk':'CK'}},
+				{'name':'latchdrs','type':'lat','io':{'d':'D','q':'Q','clk':'ENA','r':'R','s':'S'}}]
 	with open(path, 'r') as f:
 		verilog = f.read()
-	return verilog_to_circuit(verilog,name)
+	return verilog_to_circuit(verilog,name,seqTypes)
 
 
-def verilog_to_circuit(verilog, name):
+def verilog_to_circuit(verilog, name, seqTypes):
 	"""Creates a new Circuit from a verilog string."""
 
 	# extract module
@@ -33,15 +36,21 @@ def verilog_to_circuit(verilog, name):
 		nets = net_str.replace(" ","").replace("\n","").replace("\t","").split(",")
 		c.add(nets[0],gate,fanin=nets[1:])
 
-	# handle ffs
-	regex = "fflopd\s+\S+\s*\(\.CK\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\);"
-	for clk,d,q in re.findall(regex,module,re.DOTALL):
-		c.add(q,'ff',fanin=d,clk=clk)
+	# handle seq
+	for st in seqTypes:
+		# find matching insts
+		regex = f"{st['name']}\s+[^\s(]+\s*\((.+?)\);"
+		for io in re.findall(regex,module,re.DOTALL):
+			# find matching pins
+			pins = {}
+			for typ,name in st['io'].items():
+				regex = f".{name}\s*\((.+?)\)"
+				n = re.findall(regex,io,re.DOTALL)[0]
+				pins[typ] = n
 
-	# handle lats
-	regex = "latchdrs\s+\S+\s*\(\s*\.R\s*\((.+?)\),\s*\.S\s*\((.+?)\),\s*\.ENA\s*\((.+?)\),\s*.D\s*\((.+?)\),\s*.Q\s*\((.+?)\)\s*\);"
-	for r,s,clk,d,q in re.findall(regex,module,re.DOTALL):
-		c.add(q,'lat',fanin=d,clk=clk,r=r)
+			c.add(pins.get('q',None),st['type'],fanin=pins.get('d',None),clk=pins.get('clk',None),
+					r=pins.get('r',None),s=pins.get('s',None))
+
 
 	# handle assigns
 	assign_regex = "assign\s+(.+?)\s*=\s*(.+?);"
