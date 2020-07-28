@@ -2,6 +2,7 @@
 
 import tempfile
 import pyverilator
+import code
 from circuitgraph.io import verilog_to_circuit,circuit_to_verilog
 from tempfile import NamedTemporaryFile
 
@@ -12,12 +13,12 @@ def construct_simulator(c):
 	Parameters
 	----------
 	c : Circuit
-		Circuit to simulate
+		Circuit to simulate.
 
 	Returns
 	-------
 	PyVerilator
-		Simulation instance
+		Simulation instance.
 	"""
 
 	verilog = circuit_to_verilog(c)
@@ -29,16 +30,16 @@ def construct_simulator(c):
 
 	return sim
 
-def sim(c,values):
+def sim(c,forced):
 	"""
 	Simulates circuit with given values
 
 	Parameters
 	----------
 	c : Circuit
-		Circuit to simulate
-	values : dict of str:bool
-		Values to simulate
+		Circuit to simulate.
+	forced : dict of str:bool
+		Values to force in the simulation.
 
 	Returns
 	-------
@@ -46,9 +47,10 @@ def sim(c,values):
 		Output values.
 	"""
 	sim = construct_simulator(c)
+	#code.interact(local=dict(globals(), **locals()))
 
-	for n,v in values.items():
-		setattr(sim.io,n,v)
+	for n,v in forced.items():
+		sim[n] = v
 
-	return {n:getattr(sim.io,n) for n in c}
+	return {n:sim[n.replace('output[','')[:-1]] for n in c.outputs()}
 

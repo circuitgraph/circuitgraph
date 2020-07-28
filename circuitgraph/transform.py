@@ -33,7 +33,7 @@ def syn(c,engine='Genus',printOutput=False):
 	# probably should write output to the tmp file
 	with NamedTemporaryFile() as tmp:
 		if engine=='Genus':
-			cmd = ['genus','-execute',f"""set_db / .library $env(GENUS_DIR)/share/synth/tutorials/tech/tutorial.lib;
+			cmd = ['genus','-no_gui','-execute',f"""set_db / .library /afs/ece.cmu.edu/support/cds/share/image/usr/cds/genus-19.12.000/share/synth/tutorials/tech/tutorial.lib;
 					read_hdl -sv {tmp.name};
 					elaborate;
 					set_db syn_generic_effort high
@@ -132,12 +132,12 @@ def ternary(c):
 
 		else:
 			print(f"unknown gate type: {c.nodes[n]['type']}")
-			code.interact(local=locals())
+			code.interact(local=dict(globals(), **locals()))
 
 	for n in t:
 		if 'type' not in t.nodes[n]:
 			print(f"empty gate type: {n}")
-			code.interact(local=locals())
+			code.interact(local=dict(globals(), **locals()))
 
 	return t
 
@@ -201,7 +201,7 @@ def comb(c):
 
 	for lat in c.lats():
 		relabeled_model = nx.relabel_nodes(lat_model,{n:f'{lat}_{n}' for n in lat_model})
-		c_comb.update(relabeled_model)
+		c_comb.extend(relabeled_model)
 		c_comb.add_edges_from((f'{lat}_q',s) for s in c_comb.successors(lat))
 		c_comb.add_edges_from((p,f'{lat}_d') for p in c_comb.predecessors(lat))
 		c_comb.add_edge(c.nodes[lat]['clk'],f'{lat}_clk')
@@ -210,7 +210,7 @@ def comb(c):
 
 	for ff in c.ffs():
 		relabeled_model = nx.relabel_nodes(ff_model,{n:f'{ff}_{n}' for n in ff_model})
-		c_comb.update(relabeled_model)
+		c_comb.extend(relabeled_model)
 		c_comb.add_edges_from((f'{ff}_q',s) for s in c_comb.successors(ff))
 		c_comb.add_edges_from((p,f'{ff}_d') for p in c_comb.predecessors(ff))
 		c_comb.add_edge(c.nodes[ff]['clk'],f'{ff}_clk')
@@ -294,7 +294,7 @@ def unroll(c,cycles):
 	u = nx.DiGraph()
 	for i in range(cycles):
 		c_comb_i = nx.relabel_nodes(c_comb,{n:f'{n}_{i}' for n in c_comb})
-		u.update(c_comb_i)
+		u.extend(c_comb_i)
 		if i==0:
 			# convert si to inputs
 			for n in c:
@@ -312,7 +312,7 @@ def unroll(c,cycles):
 
 	return u
 
-def sensitivity(c,endpoint):
+def sensitivity(c,n):
 	"""
 	Creates a circuit to compute sensitivity.
 
@@ -320,7 +320,7 @@ def sensitivity(c,endpoint):
 	----------
 	c : Circuit
 		Sequential circuit to unroll.
-	endpoint : str
+	n : str
 		Node to compute sensitivity at.
 
 	Returns
@@ -329,7 +329,44 @@ def sensitivity(c,endpoint):
 		Sensitivity circuit.
 
 	"""
-	pass
+
+	# get fanin cone of node
+	if n in c.startpoints():
+		print(f'{n} is in startpoints')
+		return None
+
+	fiNodes = c.transitiveFanin(n)|set([n])
+	startpoints = c.startpoints(n)
+	subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
+
+	# convert outputs to buffers
+	for o in subCircuit.outputs():
+		subCircuit.graph.nodes[o]['type'] = 'buf'
+
+	# convert startpoints to inputs
+	for s in subCircuit.startpoints():
+		subCircuit.graph.nodes[s]['type'] = 'input'
+		subCircuit.graph.remove_edges_from((p,s) for p in list(subCircuit.graph.predecessors(s)))
+
+	# create sensitivity circuit and add first copy of subcircuit
+	sensitivityCircuit = Circuit()
+	sensitivityCircuit.extend(subCircuit)
+
+	# stamp out a copies of the circuit with s inverted
+	for s in startpoints:
+		mapping = {g:f'sen_{s}_{g}' for g in subCircuit if g not in startpoints-set([s])}
+		relabeledSubCircuit = subCircuit.relabel(mapping)
+		sensitivityCircuit.extend(relabeledSubCircuit)
+
+		# connect inverted input
+		sensitivityCircuit.graph.nodes[f'sen_{s}_{s}']['type'] = 'not'
+		sensitivityCircuit.graph.add_edge(s,f'sen_{s}_{s}')
+
+		# compare to first copy
+		sensitivityCircuit.add(f'difference_{s}','xor',fanin=[n,f'sen_{s}_{n}'])
+		sensitivityCircuit.add(f'difference_{s}','output',fanin=f'difference_{s}')
+
+	return sensitivityCircuit
 
 def sensitize(c,n):
 	"""
@@ -348,7 +385,19 @@ def sensitize(c,n):
 		Output circuit.
 
 	"""
-	pass
+	# get fanin/out cone of node
+	nodes = c.transitiveFanin(n)|c.transitiveFanout(n)|set([n])
+	subCircuit = Circuit(c.graph.subgraph(nodes).copy())
+
+	# create miter
+	m = miter(subCircuit)
+
+	# cut and invert n in one side of miter
+	m.graph.nodes[f'c1_{n}']['type'] = 'not'
+	m.graph.remove_edges_from((f,f'c1_{n}') for f in m.fanin(f'c1_{n}'))
+	m.graph.add_edge(f'c0_{n}',f'c1_{n}')
+
+	return m
 
 def mphf(w=30,n=800):
 	"""

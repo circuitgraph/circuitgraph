@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.8.3" />
+<title>circuitgraph.locks API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js" integrity="sha256-eOgo0OtLL4cdq7RdwRUiGKLX9XsIJ7nGhWEKbohmVAQ=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>circuitgraph.locks</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import code
+import circuitgraph as cg
+from circuitgraph.transform import miter,syn
+from circuitgraph.sat import sat
+from circuitgraph.logic import *
+from random import sample,choice,randint
+from pysat.solvers import Cadical
+from pysat.formula import IDPool
+from pysat.card import *
+
+def xorLock(c,k):
+        # create copy to lock
+        cl = c.copy()
+
+        # randomly select gates
+        gates = sample(cl.nodes()-cl.outputs(),k)
+
+        # insert key gates
+        key = {}
+        for i,gate in enumerate(gates):
+                # select random key value
+                key[f&#39;key_{i}&#39;] = choice([True,False])
+
+                # create xor/xnor,input
+                gate_type = &#39;xnor&#39; if key[f&#39;key_{i}&#39;] else &#39;xor&#39;
+                fanout = cl.fanout(gate)
+                cl.disconnect(gate,fanout)
+                cl.add(f&#39;key_gate_{i}&#39;,gate_type,fanin=gate,fanout=fanout)
+                cl.add(f&#39;key_{i}&#39;,&#39;input&#39;,fanout=f&#39;key_gate_{i}&#39;)
+
+        return cl, key
+
+
+def muxLock(c,k):
+        # create copy to lock
+        cl = c.copy()
+
+        # get 2:1 mux
+        m = mux(2).stripIO()
+
+        # randomly select gates
+        gates = sample(cl.nodes()-cl.outputs(),k)
+        decoyGates = sample(cl.nodes()-cl.outputs(),k)
+
+        # insert key gates
+        key = {}
+        for i,(gate,decoyGate) in enumerate(zip(gates,decoyGates)):
+                # select random key value
+                key[f&#39;key_{i}&#39;] = choice([True,False])
+
+                # create and connect mux
+                fanout = cl.fanout(gate)
+                cl.disconnect(gate,fanout)
+                cl.extend(m.relabel({n:f&#39;mux_{i}_{n}&#39; for n in m.nodes()}))
+                cl.connect(f&#39;mux_{i}_out&#39;,fanout)
+                cl.add(f&#39;key_{i}&#39;,&#39;input&#39;,fanout=f&#39;mux_{i}_sel_0&#39;)
+                if key[f&#39;key_{i}&#39;]:
+                        cl.connect(gate,f&#39;mux_{i}_in_1&#39;)
+                        cl.connect(decoyGate,f&#39;mux_{i}_in_0&#39;)
+                else:
+                        cl.connect(gate,f&#39;mux_{i}_in_0&#39;)
+                        cl.connect(decoyGate,f&#39;mux_{i}_in_1&#39;)
+
+        return cl, key
+
+
+def lutLock(c,n,w):
+        # create copy to lock
+        cl = c.copy()
+
+        # parse mux
+        m = mux(2**w).stripIO()
+
+        # randomly select gates
+        potentialGates = set(g for g in cl.nodes()-cl.io() if len(c.fanin(g))&lt;=w)
+        gates = sample(potentialGates,n)
+        potentialGates -= set(gates)
+
+        # insert key gates
+        key = {}
+        for i,gate in enumerate(gates):
+
+                fanout = cl.fanout(gate)
+                fanin = list(cl.fanin(gate))
+                padding = sample(potentialGates-cl.fanin(gate),w-len(fanin))
+
+                # create and connect LUT
+                cl.extend(m.relabel({n:f&#39;lut_{i}_{n}&#39; for n in m.nodes()}))
+                cl.connect(f&#39;lut_{i}_out&#39;,fanout)
+
+                # connect sel
+                for j,f in enumerate(fanin+padding):
+                        cl.connect(f,f&#39;lut_{i}_sel_{j}&#39;)
+
+                # connect keys
+                for j,vs in enumerate(product([False,True],repeat=len(fanin+padding))):
+                        assumptions = {s:v for s,v in zip(fanin+padding,vs[::-1]) if s in fanin}
+                        cl.add(f&#39;key_{i*2**w+j}&#39;,&#39;input&#39;,fanout=f&#39;lut_{i}_in_{j}&#39;)
+                        key[f&#39;key_{i*2**w+j}&#39;] = sat(c,assumptions)[gate]
+
+                # delete gate
+                cl.remove(gate)
+                cl = cl.relabel({f&#39;lut_{i}_out&#39;:gate})
+
+        return cl, key
+
+
+def sfllHD(c,w,hd):
+        # create copy to lock
+        cl = c.copy()
+
+        # parse popcount
+        p = popcount(w)
+        lcomp = len(p.outputs())
+        p = p.stripIO()
+
+        # find output with large enough fanin
+        potential_outs = [o for o in cl.outputs() if len(cl.startpoints(o))&gt;=w]
+        if not potential_outs:
+                print(&#39;input with too small&#39;)
+                return None
+        out = sample(potential_outs,1)[0]
+        out_driver = cl.fanin(out).pop()
+
+        # create key
+        key = {f&#39;key_{i}&#39;:choice([True,False]) for i in range(w)}
+
+        # instantiate and connect hd circuits
+        cl.extend(p.relabel({n:f&#39;flip_pop_{n}&#39; for n in p.nodes()}))
+        cl.extend(p.relabel({n:f&#39;restore_pop_{n}&#39; for n in p.nodes()}))
+
+        # connect inputs
+        for i,inp in enumerate(sample(cl.startpoints(out),w)):
+                cl.add(f&#39;key_{i}&#39;,&#39;input&#39;)
+                cl.add(f&#39;hardcoded_key_{i}&#39;,&#39;1&#39; if key[f&#39;key_{i}&#39;] else &#39;0&#39;)
+                cl.add(f&#39;restore_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;key_{i}&#39;,inp])
+                cl.add(f&#39;flip_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;hardcoded_key_{i}&#39;,inp])
+                cl.connect(f&#39;flip_xor_{i}&#39;,f&#39;flip_pop_in_{i}&#39;)
+                cl.connect(f&#39;restore_xor_{i}&#39;,f&#39;restore_pop_in_{i}&#39;)
+
+        # connect outputs
+        cl.add(f&#39;flip_out&#39;,&#39;and&#39;)
+        cl.add(f&#39;restore_out&#39;,&#39;and&#39;)
+        for i,v in enumerate(format(hd, f&#39;0{cg.clog2(w)+1}b&#39;)[::-1]):
+                cl.add(f&#39;hd_{i}&#39;,v)
+                cl.add(f&#39;restore_out_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;hd_{i}&#39;,f&#39;restore_pop_out_{i}&#39;],fanout=&#39;restore_out&#39;)
+                cl.add(f&#39;flip_out_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;hd_{i}&#39;,f&#39;flip_pop_out_{i}&#39;],fanout=&#39;flip_out&#39;)
+
+        # flip output
+        cl.disconnect(out_driver,out)
+        cl.add(&#39;out_xor&#39;,&#39;xor&#39;,fanin=[&#39;restore_out&#39;,&#39;flip_out&#39;,out_driver],fanout=out)
+
+        return cl, key
+
+
+def ttLock(c,w):
+        # create copy to lock
+        cl = c.copy()
+
+        # find output with large enough fanin
+        potential_outs = [o for o in cl.outputs() if len(cl.startpoints(o))&gt;=w]
+        if not potential_outs:
+                print(&#39;input with too small&#39;)
+                return None
+        out = sample(potential_outs,1)[0]
+        out_driver = cl.fanin(out).pop()
+
+        # create key
+        key = {f&#39;key_{i}&#39;:choice([True,False]) for i in range(w)}
+
+        # connect comparators
+        cl.add(f&#39;flip_out&#39;,&#39;and&#39;)
+        cl.add(f&#39;restore_out&#39;,&#39;and&#39;)
+        for i,inp in enumerate(sample(cl.startpoints(out),w)):
+                cl.add(f&#39;key_{i}&#39;,&#39;input&#39;)
+                cl.add(f&#39;hardcoded_key_{i}&#39;,&#39;1&#39; if key[f&#39;key_{i}&#39;] else &#39;0&#39;)
+                cl.add(f&#39;restore_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;key_{i}&#39;,inp],fanout=&#39;restore_out&#39;)
+                cl.add(f&#39;flip_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;hardcoded_key_{i}&#39;,inp],fanout=&#39;flip_out&#39;)
+
+        # flip output
+        cl.disconnect(out_driver,out)
+        cl.add(&#39;out_xor&#39;,&#39;xor&#39;,fanin=[&#39;restore_out&#39;,&#39;flip_out&#39;,out_driver],fanout=out)
+
+        return cl,key
+
+
+def sfllFlex(c,w,n):
+        # create copy to lock
+        cl = c.copy()
+
+        # find output with large enough fanin
+        potential_outs = [o for o in cl.outputs() if len(cl.startpoints(o))&gt;=w]
+        if not potential_outs:
+                print(&#39;input with too small&#39;)
+                return None
+        out = sample(potential_outs,1)[0]
+        out_driver = cl.fanin(out).pop()
+
+        # create key
+        key = {f&#39;key_{i}&#39;:choice([True,False]) for i in range(w*n)}
+
+        # connect comparators
+        cl.add(f&#39;flip_out&#39;,&#39;or&#39;)
+        cl.add(f&#39;restore_out&#39;,&#39;or&#39;)
+
+        for j in range(n):
+                cl.add(f&#39;flip_and_{j}&#39;,&#39;and&#39;,fanout=f&#39;flip_out&#39;)
+                cl.add(f&#39;restore_and_{j}&#39;,&#39;and&#39;,fanout=f&#39;restore_out&#39;)
+
+        for i,inp in enumerate(sample(cl.startpoints(out),w)):
+                for j in range(n):
+                        cl.add(f&#39;key_{i+j*w}&#39;,&#39;input&#39;)
+                        cl.add(f&#39;hardcoded_key_{i}_{j}&#39;,&#39;1&#39; if key[f&#39;key_{i+j*w}&#39;] else &#39;0&#39;)
+                        cl.add(f&#39;restore_xor_{i}_{j}&#39;,&#39;xor&#39;,fanin=[f&#39;key_{i+j*w}&#39;,inp],fanout=f&#39;restore_and_{j}&#39;)
+                        cl.add(f&#39;flip_xor_{i}_{j}&#39;,&#39;xor&#39;,fanin=[f&#39;hardcoded_key_{i}_{j}&#39;,inp],fanout=f&#39;flip_and_{j}&#39;)
+
+        # flip output
+        cl.disconnect(out_driver,out)
+        cl.add(&#39;out_xor&#39;,&#39;xor&#39;,fanin=[&#39;restore_out&#39;,&#39;flip_out&#39;,out_driver],fanout=out)
+
+        return cl,key
+
+def ttLockSen(params):
+        pass
+
+
+def switch():
+        m = mux(2).stripIO()
+        s = Circuit(name=&#39;switch&#39;)
+        s.extend(m.relabel({n:f&#39;m0_{n}&#39; for n in m.nodes()}))
+        s.extend(m.relabel({n:f&#39;m1_{n}&#39; for n in m.nodes()}))
+        s.add(&#39;in_0&#39;,&#39;buf&#39;,fanout=[&#39;m0_in_0&#39;,&#39;m1_in_1&#39;])
+        s.add(&#39;in_1&#39;,&#39;buf&#39;,fanout=[&#39;m0_in_1&#39;,&#39;m1_in_0&#39;])
+        s.add(&#39;out_0&#39;,&#39;xor&#39;,fanin=&#39;m0_out&#39;)
+        s.add(&#39;out_1&#39;,&#39;xor&#39;,fanin=&#39;m1_out&#39;)
+        s.add(&#39;key_0&#39;,&#39;input&#39;,fanout=[&#39;m0_sel_0&#39;,&#39;m1_sel_0&#39;])
+        s.add(&#39;key_1&#39;,&#39;input&#39;,fanout=&#39;out_0&#39;)
+        s.add(&#39;key_2&#39;,&#39;input&#39;,fanout=&#39;out_1&#39;)
+        return s
+
+def connectBanyan(cl,swb_ins,swb_outs,bw):
+        I = int(2*clog2(bw)-2)
+        J = int(bw/2)
+        for i in range(clog2(J)):
+                r = J/(2**i)
+                for j in range(J):
+                        t = (j%r)&gt;=(r/2)
+                        # straight
+                        out_i = int((i*bw)+(2*j)+t)
+                        in_i = int((i*bw+bw)+(2*j)+t)
+                        cl.connect(swb_outs[out_i],swb_ins[in_i])
+
+                        # cross
+                        out_i = int((i*bw)+(2*j)+(1-t)+((r-1)*((1-t)*2-1)))
+                        in_i = int((i*bw+bw)+(2*j)+(1-t))
+                        cl.connect(swb_outs[out_i],swb_ins[in_i])
+
+                        if r&gt;2:
+                                # straight
+                                out_i = int(((I*J*2)-((2+i)*bw))+(2*j)+t)
+                                in_i = int(((I*J*2)-((1+i)*bw))+(2*j)+t)
+                                cl.connect(swb_outs[out_i],swb_ins[in_i])
+
+                                # cross
+                                out_i = int(((I*J*2)-((2+i)*bw))+(2*j)+(1-t)+((r-1)*((1-t)*2-1)))
+                                in_i = int(((I*J*2)-((1+i)*bw))+(2*j)+(1-t))
+                                cl.connect(swb_outs[out_i],swb_ins[in_i])
+
+
+def fullLock(c,bw,lw):
+        # lock with luts
+        cl,key = lutLock(c,int(bw/lw),lw)
+
+        # generate switch
+        s = switch()
+
+        # generate banyan
+        I = int(2*clog2(bw)-2)
+        J = int(bw/2)
+
+        # add switches
+        for i in range(I*J):
+                cl.extend(s.relabel({n:f&#39;swb_{i}_{n}&#39; for n in s}))
+
+        # make connections
+        swb_ins = [f&#39;swb_{i//2}_in_{i%2}&#39; for i in range(I*J*2)]
+        swb_outs = [f&#39;swb_{i//2}_out_{i%2}&#39; for i in range(I*J*2)]
+        connectBanyan(cl,swb_ins,swb_outs,bw)
+
+        # get banyan io
+        net_ins = swb_ins[:bw]
+        net_outs = swb_outs[-bw:]
+
+        # generate key
+        for i in range(I*J):
+                for j in range(3):
+                        key[f&#39;swb_{i}_key_{j}&#39;] = choice([True,False])
+
+        # get banyan mapping
+        mapping = {}
+        polarity = {}
+        orig_result = sat(cl,{**{n:False for n in net_ins},**key})
+        for net_in in net_ins:
+                result = sat(cl,{**{n:False if n!=net_in else True for n in net_ins},**key})
+                for net_out in net_outs:
+                        if result[net_out]!=orig_result[net_out]:
+                                mapping[net_in] = net_out
+                                polarity[net_in] = result[net_out]
+                                break
+
+        # connect banyan io to luts
+        for i in range(int(bw/lw)):
+                for j in range(lw):
+                        driver = cl.fanin(f&#39;lut_{i}_sel_{j}&#39;).pop()
+                        cl.disconnect(driver,f&#39;lut_{i}_sel_{j}&#39;)
+                        net_in = net_ins[i*lw+j]
+                        cl.connect(mapping[net_in],f&#39;lut_{i}_sel_{j}&#39;)
+                        if not polarity[net_in]:
+                                driver = cl.add(f&#39;not_{net_in}&#39;,&#39;not&#39;,fanin=driver)
+                        cl.connect(driver,net_in)
+
+        return cl,key
+
+
+#def lebl(c,bw,ng):
+#       # create copy to lock
+#       cl = c.copy()
+#
+#       # generate switch and mux
+#       s = switch()
+#       m = mux(4)
+#
+#       # generate banyan
+#       I = int(2*clog2(bw)-2)
+#       J = int(bw/2)
+#
+#       # add switches and muxes
+#       for i in range(I*J):
+#               cl.extend(s.relabel({n:f&#39;swb_{i}_{n}&#39; for n in s}))
+#               cl.extend(m.relabel({n:f&#39;mux_0_{i}_{n}&#39; for n in m}))
+#               cl.extend(m.relabel({n:f&#39;mux_1_{i}_{n}&#39; for n in m}))
+#
+#       # make connections
+#       swb_ins = [f&#39;swb_{i//2}_in_{i%2}&#39; for i in range(I*J*2)]
+#       swb_outs = [f&#39;mux_{i%2}_{i//2}_out&#39; for i in range(I*J*2)]
+#       connectBanyan(cl,swb_ins,swb_outs,bw)
+#
+#       # get banyan io
+#       net_ins = swb_ins[:bw]
+#       net_outs = swb_outs[-bw:]
+#
+#       # generate connections between swb outs
+#       swb_out_fin = {o:set() for o in swb_outs}
+#       swb_out_fout = {o:set() for o in swb_outs}
+#       for o in swb_outs:
+#               fo_node = cl.fanout(o).pop()
+#               swb_i = fo_node.split(&#39;_&#39;)[1]
+#               swb_out_fin[f&#39;mux_0_{swb_i}_out&#39;].add(o)
+#               swb_out_fin[f&#39;mux_1_{swb_i}_out&#39;].add(o)
+#               swb_out_fout[o].add(f&#39;mux_0_{swb_i}_out&#39;)
+#               swb_out_fout[o].add(f&#39;mux_1_{swb_i}_out&#39;)
+#
+#       # find a mapping of circuit onto banyan
+#       net_map = IDPool()
+#       for bn in swb_outs+net_ins:
+#               for cn in c:
+#                       net_map.id(f&#39;m_{bn}_{cn}&#39;)
+#
+#       # mapping implications
+#       clauses = []
+#       for bn in swb_outs:
+#               # fanin
+#               if swb_out_fin[bn]:
+#                       for cn in c:
+#                               if c.fanin(cn):
+#                                       for fcn in c.fanin(cn):
+#                                               clause = [-net_map.id(f&#39;m_{bn}_{cn}&#39;)]
+#                                               clause += [net_map.id(f&#39;m_{fbn}_{fcn}&#39;) for fbn in swb_out_fin[bn]]
+#                                               clause += [net_map.id(f&#39;m_{fbn}_{cn}&#39;) for fbn in swb_out_fin[bn]]
+#                                               clauses.append(clause)
+#                               else:
+#                                       clause = [-net_map.id(f&#39;m_{bn}_{cn}&#39;)]
+#                                       clause += [net_map.id(f&#39;m_{fbn}_{cn}&#39;) for fbn in swb_out_fin[bn]]
+#                                       clauses.append(clause)
+#
+#               # fanout
+#               if swb_out_fout[bn]:
+#                       for cn in c:
+#                               clause = [-net_map.id(f&#39;m_{bn}_{cn}&#39;)]
+#                               clause += [net_map.id(f&#39;m_{fbn}_{cn}&#39;) for fbn in swb_out_fout[bn]]
+#                               for fcn in c.fanout(cn):
+#                                       clause += [net_map.id(f&#39;m_{fbn}_{fcn}&#39;) for fbn in swb_out_fout[bn]]
+#                               clauses.append(clause)
+#
+#       # input implications
+#       for i,bn in enumerate(net_ins):
+#               for cn in c:
+#                       clause = [-net_map.id(f&#39;m_{bn}_{cn}&#39;)]
+#                       clause += [net_map.id(f&#39;m_{fbn}_{cn}&#39;) for fbn in swb_outs[2*(i//2):2*(i//2)+2]]
+#                       for fcn in c.fanout(cn):
+#                               clause += [net_map.id(f&#39;m_{fbn}_{fcn}&#39;) for fbn in swb_outs[2*(i//2):2*(i//2)+2]]
+#                       clauses.append(clause)
+#
+#       # no feed through
+#       for cn in c:
+#               net_map.id(f&#39;INPUT_OR_{cn}&#39;)
+#               net_map.id(f&#39;OUTPUT_OR_{cn}&#39;)
+#               clauses.append([-net_map.id(f&#39;INPUT_OR_{cn}&#39;)]+[net_map.id(f&#39;m_{bn}_{cn}&#39;) for bn in net_ins])
+#               clauses.append([-net_map.id(f&#39;OUTPUT_OR_{cn}&#39;)]+[net_map.id(f&#39;m_{bn}_{cn}&#39;) for bn in net_outs])
+#               for bn in net_ins:
+#                       clauses.append([net_map.id(f&#39;INPUT_OR_{cn}&#39;),-net_map.id(f&#39;m_{bn}_{cn}&#39;)])
+#               for bn in net_outs:
+#                       clauses.append([net_map.id(f&#39;OUTPUT_OR_{cn}&#39;),-net_map.id(f&#39;m_{bn}_{cn}&#39;)])
+#               clauses.append([-net_map.id(f&#39;OUTPUT_OR_{cn}&#39;),-net_map.id(f&#39;INPUT_OR_{cn}&#39;)])
+#
+#       # at least ngates
+#       for bn in swb_outs+net_ins:
+#               net_map.id(f&#39;NGATES_OR_{bn}&#39;)
+#               clauses.append([-net_map.id(f&#39;NGATES_OR_{bn}&#39;)]+[net_map.id(f&#39;m_{bn}_{cn}&#39;) for cn in c])
+#               for cn in c:
+#                       clauses.append([net_map.id(f&#39;NGATES_OR_{bn}&#39;),-net_map.id(f&#39;m_{bn}_{cn}&#39;)])
+#       clauses += CardEnc.atleast(bound=ng,lits=[net_map.id(f&#39;NGATES_OR_{bn}&#39;) for bn in swb_outs+net_ins],vpool=net_map).clauses
+#
+#       # at most one mapping per out
+#       for bn in swb_outs+net_ins:
+#               clauses += CardEnc.atmost(lits=[net_map.id(f&#39;m_{bn}_{cn}&#39;) for cn in c],vpool=net_map).clauses
+#
+#       # limit output usage
+#       for cn in c:
+#               lits = [net_map.id(f&#39;m_{bn}_{cn}&#39;) for bn in net_outs]
+#               bound = len(list(c.fanout(cn)))
+#               if len(lits)&lt;bound: continue
+#               clauses += CardEnc.atmost(bound=bound,lits=lits,vpool=net_map).clauses
+#
+#       # remove outputs from middle of net
+#       for bn in swb_outs[:-bw]+net_ins:
+#               for cn in c:
+#                       if c[cn][&#39;output&#39;]:
+#                               clauses += [[-net_map.id(f&#39;m_{bn}_{cn}&#39;)]]
+#       # solve
+#       solver = Cadical()
+#       solver.append_formula(clauses)
+#       #found = solver.solve(assumptions=ass)
+#       found = solver.solve()
+#       if not found:
+#               print(f&#39;no config for width: {bw}&#39;)
+#               core = solver.get_core()
+#               print(core)
+#               code.interact(local=locals())
+#       else:
+#               print(&#39;found&#39;)
+#       model = solver.get_model()
+#
+#       # get each banyan outs gate
+#       mapping = {}
+#       for bn in swb_outs+net_ins:
+#               selected_gates = [cn for cn in c if model[net_map.id(f&#39;m_{bn}_{cn}&#39;)-1]&gt;0]
+#               if len(selected_gates)&gt;1:
+#                       print(f&#39;multiple gates mapped to: {bn}&#39;)
+#                       code.interact(local=locals())
+#               mapping[bn] = selected_gates[0] if selected_gates else None
+#
+#       # get outputs in fanout
+#       net_fanout_outs = set()
+#       for bn in net_outs:
+#               if mapping[bn]:
+#                       net_fanout_outs |= set(n for n in nx.descendants(c,mapping[bn]) if c[n][&#39;output&#39;])
+#
+#       # get potential fanouts
+#       potential_decoy_fanouts = set()
+#       for n in c:
+#               node_fanout_outs = set(d for d in nx.descendants(c,n) if c[n][&#39;output&#39;])
+#               if all(f in net_fanout_outs for f in node_fanout_outs) and c[n][&#39;gate&#39;]!=&#39;input&#39;:
+#                       potential_decoy_fanouts.add(n)
+#       potential_decoy_fanouts -= set(mapping.values())
+#
+#       # get inputs in fanin
+#       net_fanin_ins = set()
+#       for bn in net_ins:
+#               if mapping[bn]:
+#                       net_fanin_ins |= set(n for n in nx.ancestors(c,mapping[bn]) if c[n][&#39;gate&#39;]==&#39;input&#39;)
+#
+#       # get potential fanins
+#       potential_decoy_fanins = set()
+#       for n in c:
+#               node_fanin_ins = set(d for d in nx.ancestors(c,n) if c[n][&#39;gate&#39;]==&#39;input&#39;)
+#               if all(f in net_fanin_ins for f in node_fanin_ins) and not c[n][&#39;output&#39;]:
+#                       potential_decoy_fanins.add(n)
+#       potential_decoy_fanins -= set(mapping.values())
+#
+#       # connect net inputs
+#       c.add_edges_from((mapping[bn],bn) for bn in net_ins if mapping[bn])
+#       c.add_edges_from((sample(potential_decoy_fanins,1)[0],bn) for bn in net_ins if not mapping[bn])
+#       mapping.update({list(c.fanin(bn))[0]:list(c.fanin(bn))[0] for bn in net_ins})
+#
+#       # connect switch boxes
+#       for i,bn in enumerate(swb_outs):
+#               # get keys
+#               if key_values[f&#39;mux_0_{i//2}_key_0&#39;]==1 and key_values[f&#39;mux_0_{i//2}_key_1&#39;]==1:
+#                       key = 3
+#               elif key_values[f&#39;mux_0_{i//2}_key_0&#39;]==-1 and key_values[f&#39;mux_0_{i//2}_key_1&#39;]==1:
+#                       key = 2
+#               elif key_values[f&#39;mux_0_{i//2}_key_0&#39;]==1 and key_values[f&#39;mux_0_{i//2}_key_1&#39;]==-1:
+#                       key = 1
+#               elif key_values[f&#39;mux_0_{i//2}_key_0&#39;]==-1 and key_values[f&#39;mux_0_{i//2}_key_1&#39;]==-1:
+#                       key = 0
+#               switch_key = 1 if key_values[f&#39;switch_{i//2}_key&#39;]==1 else 0
+#
+#               # connect inner nodes
+#               mux_gate_types = set()
+#
+#               # constant output, hookup to a node that is already in the affected outputs fanin, not in others
+#               if not mapping[bn] and bn in net_outs:
+#                       decoy_fanout_gate = sample(potential_decoy_fanouts,1)[0]
+#                       c.add_edge(bn,decoy_fanout_gate)
+#                       if c.nodes[decoy_fanout_gate][&#39;gate&#39;] in [&#39;and&#39;,&#39;nand&#39;]:
+#                               c.nodes[f&#39;mux_{i%2}_{i//2}_in_{key}&#39;][&#39;gate&#39;] = &#39;1&#39;
+#                       elif c.nodes[decoy_fanout_gate][&#39;gate&#39;] in [&#39;or&#39;,&#39;nor&#39;,&#39;xor&#39;,&#39;xnor&#39;]:
+#                               c.nodes[f&#39;mux_{i%2}_{i//2}_in_{key}&#39;][&#39;gate&#39;] = &#39;0&#39;
+#                       elif c.nodes[decoy_fanout_gate][&#39;gate&#39;] in [&#39;buf&#39;]:
+#                               if randint(0,1):
+#                                       c.nodes[f&#39;mux_{i%2}_{i//2}_in_{key}&#39;][&#39;gate&#39;] = &#39;1&#39;
+#                                       c.nodes[decoy_fanout_gate][&#39;gate&#39;] = sample([&#39;and&#39;,&#39;xnor&#39;],1)[0]
+#                               else:
+#                                       c.nodes[f&#39;mux_{i%2}_{i//2}_in_{key}&#39;][&#39;gate&#39;] = &#39;0&#39;
+#                                       c.nodes[decoy_fanout_gate][&#39;gate&#39;] = sample([&#39;or&#39;,&#39;xor&#39;],1)[0]
+#                       elif c.nodes[decoy_fanout_gate][&#39;gate&#39;] in [&#39;not&#39;]:
+#                               if randint(0,1):
+#                                       c.nodes[f&#39;mux_{i%2}_{i//2}_in_{key}&#39;][&#39;gate&#39;] = &#39;1&#39;
+#                                       c.nodes[decoy_fanout_gate][&#39;gate&#39;] = sample([&#39;nand&#39;,&#39;xor&#39;],1)[0]
+#                               else:
+#                                       c.nodes[f&#39;mux_{i%2}_{i//2}_in_{key}&#39;][&#39;gate&#39;] = &#39;0&#39;
+#                                       c.nodes[decoy_fanout_gate][&#39;gate&#39;] = sample([&#39;nor&#39;,&#39;xnor&#39;],1)[0]
+#                       mux_gate_types.add(c.nodes[f&#39;mux_{i%2}_{i//2}_in_{key}&#39;][&#39;gate&#39;])
+#
+#               # feedthrough
+#               elif mapping[bn] in [mapping[fbn] for fbn in swb_out_fin[bn]]:
+#                       c.nodes[f&#39;mux_{i%2}_{i//2}_in_{key}&#39;][&#39;gate&#39;] = &#39;buf&#39;
+#                       mux_gate_types.add(&#39;buf&#39;)
+#                       if mapping[list(c.fanin(f&#39;switch_{i//2}_in_0&#39;))[0]]==mapping[bn]:
+#                               c.add_edge(f&#39;switch_{i//2}_out_{switch_key}&#39;,f&#39;mux_{i%2}_{i//2}_in_{key}&#39;)
+#                       else:
+#                               c.add_edge(f&#39;switch_{i//2}_out_{1-switch_key}&#39;,f&#39;mux_{i%2}_{i//2}_in_{key}&#39;)
+#
+#               # gate
+#               elif mapping[bn]:
+#                       c.nodes[f&#39;mux_{i%2}_{i//2}_in_{key}&#39;][&#39;gate&#39;] = c.nodes[mapping[bn]][&#39;gate&#39;]
+#                       mux_gate_types.add(c.nodes[mapping[bn]][&#39;gate&#39;])
+#                       if mapping[list(c.fanin(f&#39;switch_{i//2}_in_0&#39;))[0]] in list(c.fanin(mapping[bn])):
+#                               c.add_edge(f&#39;switch_{i//2}_out_{switch_key}&#39;,f&#39;mux_{i%2}_{i//2}_in_{key}&#39;)
+#                       if mapping[list(c.fanin(f&#39;switch_{i//2}_in_1&#39;))[0]] in list(c.fanin(mapping[bn])):
+#                               c.add_edge(f&#39;switch_{i//2}_out_{1-switch_key}&#39;,f&#39;mux_{i%2}_{i//2}_in_{key}&#39;)
+#
+#               # mapped to None, any key works
+#               else:
+#                       key = None
+#
+#               # fill out random gates
+#               for j in range(4):
+#                       if j != key:
+#                               t = sample(set([&#39;buf&#39;,&#39;or&#39;,&#39;nor&#39;,&#39;and&#39;,&#39;nand&#39;,&#39;not&#39;,&#39;xor&#39;,&#39;xnor&#39;,&#39;0&#39;,&#39;1&#39;])-mux_gate_types,1)[0]
+#                               mux_gate_types.add(t)
+#                               c.nodes[f&#39;mux_{i%2}_{i//2}_in_{j}&#39;][&#39;gate&#39;] = t
+#                               if t==&#39;not&#39; or t==&#39;buf&#39;:
+#                                       # pick a random fanin
+#                                       c.add_edge(f&#39;switch_{i//2}_out_{randint(0,1)}&#39;,f&#39;mux_{i%2}_{i//2}_in_{j}&#39;)
+#                               elif t==&#39;1&#39; or t==&#39;0&#39;:
+#                                       pass
+#                               else:
+#                                       c.add_edge(f&#39;switch_{i//2}_out_0&#39;,f&#39;mux_{i%2}_{i//2}_in_{j}&#39;)
+#                                       c.add_edge(f&#39;switch_{i//2}_out_1&#39;,f&#39;mux_{i%2}_{i//2}_in_{j}&#39;)
+#
+#       # connect outputs non constant outs
+#       rev_mapping = {}
+#       for bn in net_outs:
+#               if mapping[bn]:
+#                       if mapping[bn] not in rev_mapping:
+#                               rev_mapping[mapping[bn]] = set()
+#                       rev_mapping[mapping[bn]].add(bn)
+#
+#       for cn in rev_mapping.keys():
+#               for fcn in c.fanout(cn):
+#                       c.add_edge(sample(rev_mapping[cn],1)[0],fcn)
+#
+#       # delete mapped gates
+#       deleted = True
+#       while deleted:
+#               deleted = False
+#               for n in list(c.nodes):
+#                       # node and all fanout are in the net
+#                       if n not in mapping and n in mapping.values():
+#                               if all(s not in mapping and s in mapping.values() for s in c.fanout(n)):
+#                                       c.remove_node(n)
+#                                       deleted = True
+#                       # node in net fanout
+#                       if n in [mapping[o] for o in net_outs] and n in c.nodes:
+#                               c.remove_node(n)
+#                               deleted = True
+#
+#       return cl,key
+
+def checkLock(c,cl,key):
+        m = miter(c,cl)
+        key = {f&#39;c1_{k}&#39;:v for k,v in key.items()}
+
+        live = sat(m,assumptions=key)
+        if not live:
+                return True
+
+        return sat(m,assumptions={&#39;sat&#39;:True,**key})</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="circuitgraph.locks.checkLock"><code class="name flex">
+<span>def <span class="ident">checkLock</span></span>(<span>c, cl, key)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def checkLock(c,cl,key):
+        m = miter(c,cl)
+        key = {f&#39;c1_{k}&#39;:v for k,v in key.items()}
+
+        live = sat(m,assumptions=key)
+        if not live:
+                return True
+
+        return sat(m,assumptions={&#39;sat&#39;:True,**key})</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.connectBanyan"><code class="name flex">
+<span>def <span class="ident">connectBanyan</span></span>(<span>cl, swb_ins, swb_outs, bw)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def connectBanyan(cl,swb_ins,swb_outs,bw):
+        I = int(2*clog2(bw)-2)
+        J = int(bw/2)
+        for i in range(clog2(J)):
+                r = J/(2**i)
+                for j in range(J):
+                        t = (j%r)&gt;=(r/2)
+                        # straight
+                        out_i = int((i*bw)+(2*j)+t)
+                        in_i = int((i*bw+bw)+(2*j)+t)
+                        cl.connect(swb_outs[out_i],swb_ins[in_i])
+
+                        # cross
+                        out_i = int((i*bw)+(2*j)+(1-t)+((r-1)*((1-t)*2-1)))
+                        in_i = int((i*bw+bw)+(2*j)+(1-t))
+                        cl.connect(swb_outs[out_i],swb_ins[in_i])
+
+                        if r&gt;2:
+                                # straight
+                                out_i = int(((I*J*2)-((2+i)*bw))+(2*j)+t)
+                                in_i = int(((I*J*2)-((1+i)*bw))+(2*j)+t)
+                                cl.connect(swb_outs[out_i],swb_ins[in_i])
+
+                                # cross
+                                out_i = int(((I*J*2)-((2+i)*bw))+(2*j)+(1-t)+((r-1)*((1-t)*2-1)))
+                                in_i = int(((I*J*2)-((1+i)*bw))+(2*j)+(1-t))
+                                cl.connect(swb_outs[out_i],swb_ins[in_i])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.fullLock"><code class="name flex">
+<span>def <span class="ident">fullLock</span></span>(<span>c, bw, lw)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def fullLock(c,bw,lw):
+        # lock with luts
+        cl,key = lutLock(c,int(bw/lw),lw)
+
+        # generate switch
+        s = switch()
+
+        # generate banyan
+        I = int(2*clog2(bw)-2)
+        J = int(bw/2)
+
+        # add switches
+        for i in range(I*J):
+                cl.extend(s.relabel({n:f&#39;swb_{i}_{n}&#39; for n in s}))
+
+        # make connections
+        swb_ins = [f&#39;swb_{i//2}_in_{i%2}&#39; for i in range(I*J*2)]
+        swb_outs = [f&#39;swb_{i//2}_out_{i%2}&#39; for i in range(I*J*2)]
+        connectBanyan(cl,swb_ins,swb_outs,bw)
+
+        # get banyan io
+        net_ins = swb_ins[:bw]
+        net_outs = swb_outs[-bw:]
+
+        # generate key
+        for i in range(I*J):
+                for j in range(3):
+                        key[f&#39;swb_{i}_key_{j}&#39;] = choice([True,False])
+
+        # get banyan mapping
+        mapping = {}
+        polarity = {}
+        orig_result = sat(cl,{**{n:False for n in net_ins},**key})
+        for net_in in net_ins:
+                result = sat(cl,{**{n:False if n!=net_in else True for n in net_ins},**key})
+                for net_out in net_outs:
+                        if result[net_out]!=orig_result[net_out]:
+                                mapping[net_in] = net_out
+                                polarity[net_in] = result[net_out]
+                                break
+
+        # connect banyan io to luts
+        for i in range(int(bw/lw)):
+                for j in range(lw):
+                        driver = cl.fanin(f&#39;lut_{i}_sel_{j}&#39;).pop()
+                        cl.disconnect(driver,f&#39;lut_{i}_sel_{j}&#39;)
+                        net_in = net_ins[i*lw+j]
+                        cl.connect(mapping[net_in],f&#39;lut_{i}_sel_{j}&#39;)
+                        if not polarity[net_in]:
+                                driver = cl.add(f&#39;not_{net_in}&#39;,&#39;not&#39;,fanin=driver)
+                        cl.connect(driver,net_in)
+
+        return cl,key</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.lutLock"><code class="name flex">
+<span>def <span class="ident">lutLock</span></span>(<span>c, n, w)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lutLock(c,n,w):
+        # create copy to lock
+        cl = c.copy()
+
+        # parse mux
+        m = mux(2**w).stripIO()
+
+        # randomly select gates
+        potentialGates = set(g for g in cl.nodes()-cl.io() if len(c.fanin(g))&lt;=w)
+        gates = sample(potentialGates,n)
+        potentialGates -= set(gates)
+
+        # insert key gates
+        key = {}
+        for i,gate in enumerate(gates):
+
+                fanout = cl.fanout(gate)
+                fanin = list(cl.fanin(gate))
+                padding = sample(potentialGates-cl.fanin(gate),w-len(fanin))
+
+                # create and connect LUT
+                cl.extend(m.relabel({n:f&#39;lut_{i}_{n}&#39; for n in m.nodes()}))
+                cl.connect(f&#39;lut_{i}_out&#39;,fanout)
+
+                # connect sel
+                for j,f in enumerate(fanin+padding):
+                        cl.connect(f,f&#39;lut_{i}_sel_{j}&#39;)
+
+                # connect keys
+                for j,vs in enumerate(product([False,True],repeat=len(fanin+padding))):
+                        assumptions = {s:v for s,v in zip(fanin+padding,vs[::-1]) if s in fanin}
+                        cl.add(f&#39;key_{i*2**w+j}&#39;,&#39;input&#39;,fanout=f&#39;lut_{i}_in_{j}&#39;)
+                        key[f&#39;key_{i*2**w+j}&#39;] = sat(c,assumptions)[gate]
+
+                # delete gate
+                cl.remove(gate)
+                cl = cl.relabel({f&#39;lut_{i}_out&#39;:gate})
+
+        return cl, key</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.muxLock"><code class="name flex">
+<span>def <span class="ident">muxLock</span></span>(<span>c, k)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def muxLock(c,k):
+        # create copy to lock
+        cl = c.copy()
+
+        # get 2:1 mux
+        m = mux(2).stripIO()
+
+        # randomly select gates
+        gates = sample(cl.nodes()-cl.outputs(),k)
+        decoyGates = sample(cl.nodes()-cl.outputs(),k)
+
+        # insert key gates
+        key = {}
+        for i,(gate,decoyGate) in enumerate(zip(gates,decoyGates)):
+                # select random key value
+                key[f&#39;key_{i}&#39;] = choice([True,False])
+
+                # create and connect mux
+                fanout = cl.fanout(gate)
+                cl.disconnect(gate,fanout)
+                cl.extend(m.relabel({n:f&#39;mux_{i}_{n}&#39; for n in m.nodes()}))
+                cl.connect(f&#39;mux_{i}_out&#39;,fanout)
+                cl.add(f&#39;key_{i}&#39;,&#39;input&#39;,fanout=f&#39;mux_{i}_sel_0&#39;)
+                if key[f&#39;key_{i}&#39;]:
+                        cl.connect(gate,f&#39;mux_{i}_in_1&#39;)
+                        cl.connect(decoyGate,f&#39;mux_{i}_in_0&#39;)
+                else:
+                        cl.connect(gate,f&#39;mux_{i}_in_0&#39;)
+                        cl.connect(decoyGate,f&#39;mux_{i}_in_1&#39;)
+
+        return cl, key</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.sfllFlex"><code class="name flex">
+<span>def <span class="ident">sfllFlex</span></span>(<span>c, w, n)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sfllFlex(c,w,n):
+        # create copy to lock
+        cl = c.copy()
+
+        # find output with large enough fanin
+        potential_outs = [o for o in cl.outputs() if len(cl.startpoints(o))&gt;=w]
+        if not potential_outs:
+                print(&#39;input with too small&#39;)
+                return None
+        out = sample(potential_outs,1)[0]
+        out_driver = cl.fanin(out).pop()
+
+        # create key
+        key = {f&#39;key_{i}&#39;:choice([True,False]) for i in range(w*n)}
+
+        # connect comparators
+        cl.add(f&#39;flip_out&#39;,&#39;or&#39;)
+        cl.add(f&#39;restore_out&#39;,&#39;or&#39;)
+
+        for j in range(n):
+                cl.add(f&#39;flip_and_{j}&#39;,&#39;and&#39;,fanout=f&#39;flip_out&#39;)
+                cl.add(f&#39;restore_and_{j}&#39;,&#39;and&#39;,fanout=f&#39;restore_out&#39;)
+
+        for i,inp in enumerate(sample(cl.startpoints(out),w)):
+                for j in range(n):
+                        cl.add(f&#39;key_{i+j*w}&#39;,&#39;input&#39;)
+                        cl.add(f&#39;hardcoded_key_{i}_{j}&#39;,&#39;1&#39; if key[f&#39;key_{i+j*w}&#39;] else &#39;0&#39;)
+                        cl.add(f&#39;restore_xor_{i}_{j}&#39;,&#39;xor&#39;,fanin=[f&#39;key_{i+j*w}&#39;,inp],fanout=f&#39;restore_and_{j}&#39;)
+                        cl.add(f&#39;flip_xor_{i}_{j}&#39;,&#39;xor&#39;,fanin=[f&#39;hardcoded_key_{i}_{j}&#39;,inp],fanout=f&#39;flip_and_{j}&#39;)
+
+        # flip output
+        cl.disconnect(out_driver,out)
+        cl.add(&#39;out_xor&#39;,&#39;xor&#39;,fanin=[&#39;restore_out&#39;,&#39;flip_out&#39;,out_driver],fanout=out)
+
+        return cl,key</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.sfllHD"><code class="name flex">
+<span>def <span class="ident">sfllHD</span></span>(<span>c, w, hd)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sfllHD(c,w,hd):
+        # create copy to lock
+        cl = c.copy()
+
+        # parse popcount
+        p = popcount(w)
+        lcomp = len(p.outputs())
+        p = p.stripIO()
+
+        # find output with large enough fanin
+        potential_outs = [o for o in cl.outputs() if len(cl.startpoints(o))&gt;=w]
+        if not potential_outs:
+                print(&#39;input with too small&#39;)
+                return None
+        out = sample(potential_outs,1)[0]
+        out_driver = cl.fanin(out).pop()
+
+        # create key
+        key = {f&#39;key_{i}&#39;:choice([True,False]) for i in range(w)}
+
+        # instantiate and connect hd circuits
+        cl.extend(p.relabel({n:f&#39;flip_pop_{n}&#39; for n in p.nodes()}))
+        cl.extend(p.relabel({n:f&#39;restore_pop_{n}&#39; for n in p.nodes()}))
+
+        # connect inputs
+        for i,inp in enumerate(sample(cl.startpoints(out),w)):
+                cl.add(f&#39;key_{i}&#39;,&#39;input&#39;)
+                cl.add(f&#39;hardcoded_key_{i}&#39;,&#39;1&#39; if key[f&#39;key_{i}&#39;] else &#39;0&#39;)
+                cl.add(f&#39;restore_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;key_{i}&#39;,inp])
+                cl.add(f&#39;flip_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;hardcoded_key_{i}&#39;,inp])
+                cl.connect(f&#39;flip_xor_{i}&#39;,f&#39;flip_pop_in_{i}&#39;)
+                cl.connect(f&#39;restore_xor_{i}&#39;,f&#39;restore_pop_in_{i}&#39;)
+
+        # connect outputs
+        cl.add(f&#39;flip_out&#39;,&#39;and&#39;)
+        cl.add(f&#39;restore_out&#39;,&#39;and&#39;)
+        for i,v in enumerate(format(hd, f&#39;0{cg.clog2(w)+1}b&#39;)[::-1]):
+                cl.add(f&#39;hd_{i}&#39;,v)
+                cl.add(f&#39;restore_out_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;hd_{i}&#39;,f&#39;restore_pop_out_{i}&#39;],fanout=&#39;restore_out&#39;)
+                cl.add(f&#39;flip_out_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;hd_{i}&#39;,f&#39;flip_pop_out_{i}&#39;],fanout=&#39;flip_out&#39;)
+
+        # flip output
+        cl.disconnect(out_driver,out)
+        cl.add(&#39;out_xor&#39;,&#39;xor&#39;,fanin=[&#39;restore_out&#39;,&#39;flip_out&#39;,out_driver],fanout=out)
+
+        return cl, key</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.switch"><code class="name flex">
+<span>def <span class="ident">switch</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def switch():
+        m = mux(2).stripIO()
+        s = Circuit(name=&#39;switch&#39;)
+        s.extend(m.relabel({n:f&#39;m0_{n}&#39; for n in m.nodes()}))
+        s.extend(m.relabel({n:f&#39;m1_{n}&#39; for n in m.nodes()}))
+        s.add(&#39;in_0&#39;,&#39;buf&#39;,fanout=[&#39;m0_in_0&#39;,&#39;m1_in_1&#39;])
+        s.add(&#39;in_1&#39;,&#39;buf&#39;,fanout=[&#39;m0_in_1&#39;,&#39;m1_in_0&#39;])
+        s.add(&#39;out_0&#39;,&#39;xor&#39;,fanin=&#39;m0_out&#39;)
+        s.add(&#39;out_1&#39;,&#39;xor&#39;,fanin=&#39;m1_out&#39;)
+        s.add(&#39;key_0&#39;,&#39;input&#39;,fanout=[&#39;m0_sel_0&#39;,&#39;m1_sel_0&#39;])
+        s.add(&#39;key_1&#39;,&#39;input&#39;,fanout=&#39;out_0&#39;)
+        s.add(&#39;key_2&#39;,&#39;input&#39;,fanout=&#39;out_1&#39;)
+        return s</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.ttLock"><code class="name flex">
+<span>def <span class="ident">ttLock</span></span>(<span>c, w)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ttLock(c,w):
+        # create copy to lock
+        cl = c.copy()
+
+        # find output with large enough fanin
+        potential_outs = [o for o in cl.outputs() if len(cl.startpoints(o))&gt;=w]
+        if not potential_outs:
+                print(&#39;input with too small&#39;)
+                return None
+        out = sample(potential_outs,1)[0]
+        out_driver = cl.fanin(out).pop()
+
+        # create key
+        key = {f&#39;key_{i}&#39;:choice([True,False]) for i in range(w)}
+
+        # connect comparators
+        cl.add(f&#39;flip_out&#39;,&#39;and&#39;)
+        cl.add(f&#39;restore_out&#39;,&#39;and&#39;)
+        for i,inp in enumerate(sample(cl.startpoints(out),w)):
+                cl.add(f&#39;key_{i}&#39;,&#39;input&#39;)
+                cl.add(f&#39;hardcoded_key_{i}&#39;,&#39;1&#39; if key[f&#39;key_{i}&#39;] else &#39;0&#39;)
+                cl.add(f&#39;restore_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;key_{i}&#39;,inp],fanout=&#39;restore_out&#39;)
+                cl.add(f&#39;flip_xor_{i}&#39;,&#39;xor&#39;,fanin=[f&#39;hardcoded_key_{i}&#39;,inp],fanout=&#39;flip_out&#39;)
+
+        # flip output
+        cl.disconnect(out_driver,out)
+        cl.add(&#39;out_xor&#39;,&#39;xor&#39;,fanin=[&#39;restore_out&#39;,&#39;flip_out&#39;,out_driver],fanout=out)
+
+        return cl,key</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.ttLockSen"><code class="name flex">
+<span>def <span class="ident">ttLockSen</span></span>(<span>params)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ttLockSen(params):
+        pass</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.locks.xorLock"><code class="name flex">
+<span>def <span class="ident">xorLock</span></span>(<span>c, k)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def xorLock(c,k):
+        # create copy to lock
+        cl = c.copy()
+
+        # randomly select gates
+        gates = sample(cl.nodes()-cl.outputs(),k)
+
+        # insert key gates
+        key = {}
+        for i,gate in enumerate(gates):
+                # select random key value
+                key[f&#39;key_{i}&#39;] = choice([True,False])
+
+                # create xor/xnor,input
+                gate_type = &#39;xnor&#39; if key[f&#39;key_{i}&#39;] else &#39;xor&#39;
+                fanout = cl.fanout(gate)
+                cl.disconnect(gate,fanout)
+                cl.add(f&#39;key_gate_{i}&#39;,gate_type,fanin=gate,fanout=fanout)
+                cl.add(f&#39;key_{i}&#39;,&#39;input&#39;,fanout=f&#39;key_gate_{i}&#39;)
+
+        return cl, key</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<header>
+<img src="circuitgraph.png" alt="">
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+<a class="github-button" href="https://github.com/circuitgraph/circuigraph" aria-label="Star circuitgraph/circuigraph on GitHub">Star</a>
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="circuitgraph" href="index.html">circuitgraph</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="two-column">
+<li><code><a title="circuitgraph.locks.checkLock" href="#circuitgraph.locks.checkLock">checkLock</a></code></li>
+<li><code><a title="circuitgraph.locks.connectBanyan" href="#circuitgraph.locks.connectBanyan">connectBanyan</a></code></li>
+<li><code><a title="circuitgraph.locks.fullLock" href="#circuitgraph.locks.fullLock">fullLock</a></code></li>
+<li><code><a title="circuitgraph.locks.lutLock" href="#circuitgraph.locks.lutLock">lutLock</a></code></li>
+<li><code><a title="circuitgraph.locks.muxLock" href="#circuitgraph.locks.muxLock">muxLock</a></code></li>
+<li><code><a title="circuitgraph.locks.sfllFlex" href="#circuitgraph.locks.sfllFlex">sfllFlex</a></code></li>
+<li><code><a title="circuitgraph.locks.sfllHD" href="#circuitgraph.locks.sfllHD">sfllHD</a></code></li>
+<li><code><a title="circuitgraph.locks.switch" href="#circuitgraph.locks.switch">switch</a></code></li>
+<li><code><a title="circuitgraph.locks.ttLock" href="#circuitgraph.locks.ttLock">ttLock</a></code></li>
+<li><code><a title="circuitgraph.locks.ttLockSen" href="#circuitgraph.locks.ttLockSen">ttLockSen</a></code></li>
+<li><code><a title="circuitgraph.locks.xorLock" href="#circuitgraph.locks.xorLock">xorLock</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+</footer>
+</body>
+</html>

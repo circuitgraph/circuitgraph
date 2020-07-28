@@ -9,8 +9,7 @@ class TestCircuit(unittest.TestCase):
 
 	@classmethod
 	def setUpClass(cls):
-		cls.c432 = cg.from_file(os.path.dirname(__file__) +
-								  '/../rtl/c432.v', name='c432')
+		cls.c432 = cg.from_lib('c432')
 
 	def test_fanin(self):
 		sim = cg.construct_simulator(self.c432)

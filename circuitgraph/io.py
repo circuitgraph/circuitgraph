@@ -2,7 +2,31 @@
 
 import networkx as nx
 import re
+import os
 from circuitgraph import Circuit
+
+defaultSeqTypes = [{'name':'fflopd','type':'ff','io':{'d':'D','q':'Q','clk':'CK'},
+'def':"""
+module fflopd(CK, D, Q);
+  input CK, D;
+  output Q;
+  wire CK, D;
+  wire Q;
+  wire next_state;
+  reg  qi;
+  assign #1 Q = qi;
+  assign next_state = D;
+  always
+    @(posedge CK)
+      qi <= next_state;
+  initial
+    qi <= 1'b0;
+endmodule
+"""
+	},
+	{'name':'latchdrs','type':'lat','io':{'d':'D','q':'Q','clk':'ENA','r':'R','s':'S'},
+'def':""
+}]
 
 def from_file(path,name=None,seqTypes=None):
 	"""Creates a new CircuitGraph from a verilog file.
@@ -10,16 +34,19 @@ def from_file(path,name=None,seqTypes=None):
 	file name, specify it using the `name` argument"""
 	if name is None:
 		name = path.split('/')[-1].replace('.v', '')
-	if seqTypes is None:
-		seqTypes = [{'name':'fflopd','type':'ff','io':{'d':'D','q':'Q','clk':'CK'}},
-				{'name':'latchdrs','type':'lat','io':{'d':'D','q':'Q','clk':'ENA','r':'R','s':'S'}}]
 	with open(path, 'r') as f:
 		verilog = f.read()
 	return verilog_to_circuit(verilog,name,seqTypes)
 
+def from_lib(circuit,name=None):
+	path = f'{os.path.dirname(__file__)}/../netlists/{circuit}.v'
+	return from_file(path,name)
 
-def verilog_to_circuit(verilog, name, seqTypes):
+def verilog_to_circuit(verilog, name, seqTypes=None):
 	"""Creates a new Circuit from a verilog string."""
+
+	if seqTypes is None:
+		seqTypes = defaultSeqTypes
 
 	# extract module
 	regex = rf"module\s+{name}\s*\(.*?\);(.*?)endmodule"
@@ -76,11 +103,15 @@ def verilog_to_circuit(verilog, name, seqTypes):
 	return c
 
 
-def circuit_to_verilog(c):
+def circuit_to_verilog(c,seqTypes=None):
 	inputs = []
 	outputs = []
 	insts = []
 	wires = []
+	defs = set()
+
+	if seqTypes is None:
+		seqTypes = defaultSeqTypes
 
 	for n in c.nodes():
 		if c.type(n) in ['xor','xnor','buf','not','nor','or','and','nand']:
@@ -88,22 +119,40 @@ def circuit_to_verilog(c):
 			insts.append(f"{c.type(n)} g_{n} ({n},{fanin})")
 			wires.append(n)
 		elif c.type(n) in ['0','1']:
-			insts.append(f"assign {n} = 1'b{c.type()}")
+			insts.append(f"assign {n} = 1'b{c.type(n)}")
 		elif c.type(n) in ['input']:
 			inputs.append(n)
 			wires.append(n)
 		elif c.type(n) in ['output']:
 			outputs.append(n.replace('output[','')[:-1])
-		elif c.type(n) in ['ff']:
-			d = c.fanin(f'd[{n}]').pop()
-			clk = c.fanin(f'clk[{n}]').pop()
-			insts.append(f"fflopd g_{n} (.CK({clk}),.D({d}),.Q({n}))")
-		elif c.type(n) in ['lat']:
-			d = c.fanin(f'd[{n}]').pop()
-			clk = c.fanin(f'clk[{n}]').pop()
-			r = c.fanin(f'r[{n}]').pop()
-			insts.append(f"latchdrs g_{n} (.ENA({clk}),.D({d}),.R({r}),.S(1'b1),.Q({n}))")
-		elif c.type(n) in ['clk','d','r']:
+		elif c.type(n) in ['ff','lat']:
+			wires.append(n)
+
+			# get template
+			for s in seqTypes:
+				if s['type']==c.type(n):
+					seq	= s
+					defs.add(s['def'])
+					break
+
+			# connect
+			io = []
+			if f'd[{n}]' in c:
+				d = c.fanin(f'd[{n}]').pop()
+				io.append(f".{seq['io']['d']}({d})")
+			if f'r[{n}]' in c:
+				r = c.fanin(f'r[{n}]').pop()
+				io.append(f".{seq['io']['r']}({r})")
+			if f's[{n}]' in c:
+				s = c.fanin(f's[{n}]').pop()
+				io.append(f".{seq['io']['s']}({s})")
+			if f'clk[{n}]' in c:
+				clk = c.fanin(f'clk[{n}]').pop()
+				io.append(f".{seq['io']['clk']}({clk})")
+			io.append(f".{seq['io']['q']}({n})")
+			insts.append(f"{s['name']} g_{n} ({','.join(io)})")
+
+		elif c.type(n) in ['clk','d','r','s']:
 			pass
 		else:
 			print(f"unknown gate type: {c.type(n)}")
@@ -115,6 +164,8 @@ def circuit_to_verilog(c):
 	verilog += ''.join(f'wire {wire};\n' for wire in wires)
 	verilog += ''.join(f'{inst};\n' for inst in insts)
 	verilog += 'endmodule\n'
+	verilog += '\n'.join(defs)
+
 
 	return verilog
 

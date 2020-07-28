@@ -23,24 +23,23 @@ class Timeout:
 		if self.seconds:
 			signal.alarm(0)
 
-def add_assumptions(formula,variables,true=None,false=None):
-	if true is None: true = set()
-	if false is None: false = set()
-	for n in true: formula.append([variables.id(n)])
-	for n in false: formula.append([-variables.id(n)])
+def addAssumptions(formula,variables,assumptions):
+	for n,val in assumptions.items():
+		if val:
+			formula.append([variables.id(n)])
+		else:
+			formula.append([-variables.id(n)])
 
-def construct_solver(c,true=None,false=None):
+def constructSolver(c,assumptions):
 	"""
 	Constructs a SAT solver instance with the given circuit and assumptions
 
 	Parameters
 	----------
 	c : Circuit
-		circuit to add to solver
-	true : iterable of str
-		Nodes to assume True.
-	false : iterable of str
-		Nodes to assume False.
+		circuit to encode
+	assumptions : dict of str:int
+		Assumptions to add to solver
 
 	Returns
 	-------
@@ -50,7 +49,8 @@ def construct_solver(c,true=None,false=None):
 		solver variable mapping
 	"""
 	formula,variables = cnf(c)
-	add_assumptions(formula,variables,true,false)
+	if assumptions:
+		addAssumptions(formula,variables,assumptions)
 	solver = Cadical(bootstrap_with=formula)
 	return solver,variables
 
@@ -96,7 +96,7 @@ def cnf(c):
 				f = c.fanin(n).pop()
 				formula.append([variables.id(n),variables.id(f)])
 				formula.append([-variables.id(n),-variables.id(f)])
-		elif c.type(n) in ['output','d','r','buf','clk']:
+		elif c.type(n) in ['output','d','s','r','buf','clk']:
 			if c.fanin(n):
 				f = c.fanin(n).pop()
 				formula.append([variables.id(n),-variables.id(f)])
@@ -147,7 +147,7 @@ def cnf(c):
 
 	return formula,variables
 
-def sat(c,true=None,false=None,timeout=None):
+def sat(c,assumptions=None,timeout=None):
 	"""
 	Trys to find satisfying assignment, with optional assumptions
 
@@ -155,10 +155,8 @@ def sat(c,true=None,false=None,timeout=None):
 	----------
 	c : Circuit
 		Input circuit.
-	true : iterable of str
-		Nodes to assume True.
-	false : iterable of str
-		Nodes to assume False.
+	assumptions : dict of str:int
+		Nodes to assume True or False.
 	timeout : int
 		Seconds until timeout.
 
@@ -172,13 +170,12 @@ def sat(c,true=None,false=None,timeout=None):
 	>>> import circuitgraph as cg
 	>>> c = cg.from_file('rtl/s27.v')
 	>>> cg.sat(c)
-	{'G17': True, 'n_20': False, 'n_12': True, 'n_11': False, 'G0': True, 'n_9': True, 'n_10': True, 'n_7': False, 'n_8': False, 'n_1': False, 'G7': True, 'n_4': True, 'n_5': True, 'n_6': True, 'G2': False, 'n_3': False, 'n_2': False, 'G6': True, 'G3': True, 'n_0': False, 'G1': True, 'G5': True, 'n_21': False, 'd[G5]': True, 'r[G5]': True, 'clk[G5]': True, 'clk': True, 'd[G6]': False, 'r[G6]': True, 'clk[G6]': True, 'd[G7]': True, 'r[G7]': True, 'clk[G7]': True, 'output[G17]':
-			True}
-	>>> cg.sat(c,true=['G17','n_20'],false=['G6'])
+	{'G17': True, 'n_20': False, 'n_12': True, 'n_11': False, 'G0': True, 'n_9': True, 'n_10': True, 'n_7': False, 'n_8': False, 'n_1': False, 'G7': True, 'n_4': True, 'n_5': True, 'n_6': True, 'G2': False, 'n_3': False, 'n_2': False, 'G6': True, 'G3': True, 'n_0': False, 'G1': True, 'G5': True, 'n_21': False, 'd[G5]': True, 'r[G5]': True, 'clk[G5]': True, 'clk': True, 'd[G6]': False, 'r[G6]': True, 'clk[G6]': True, 'd[G7]': True, 'r[G7]': True, 'clk[G7]': True, 'output[G17]': True}
+	>>> cg.sat(c,assumptions={'G17':True,'n_20':True,'G6':False})
 	False
 
 	"""
-	solver,variables = construct_solver(c,true,false)
+	solver,variables = constructSolver(c,assumptions)
 	with Timeout(seconds=timeout):
 		if solver.solve():
 			model = solver.get_model()
@@ -186,7 +183,7 @@ def sat(c,true=None,false=None,timeout=None):
 		else:
 			return False
 
-def approxModelCount(c,true=None,false=None,e=0.9,d=0.1,timeout=None):
+def approxModelCount(c,assumptions=None,e=0.9,d=0.1,timeout=None):
 	"""
 	Approximates the number of solutions to circuit
 
@@ -194,10 +191,8 @@ def approxModelCount(c,true=None,false=None,e=0.9,d=0.1,timeout=None):
 	----------
 	c : Circuit
 		Input circuit.
-	true : iterable of str
-		Nodes to assume True.
-	false : iterable of str
-		Nodes to assume False.
+	assumptions : dict of str:int
+		Nodes to assume True or False.
 	e : float (0-1)
 		epsilon of approxmc
 	d : float (0-1)
@@ -212,7 +207,7 @@ def approxModelCount(c,true=None,false=None,e=0.9,d=0.1,timeout=None):
 	"""
 
 	formula,variables = cnf(c)
-	add_assumptions(formula,variables,true,false)
+	add_assumptions(formula,variables,assumptions)
 
 	# specify sampling set
 	enc_inps = ' '.join([str(variables.id(n)) for n in c.startpoints()])
@@ -234,7 +229,7 @@ def approxModelCount(c,true=None,false=None,e=0.9,d=0.1,timeout=None):
 	estimate = int(m.group(1))*(2**int(m.group(2)))
 	return estimate
 
-def modelCount(c,true=None,false=None,timeout=None):
+def modelCount(c,assumptions=None,timeout=None):
 	"""
 	Determines the number of solutions to circuit
 
@@ -242,10 +237,8 @@ def modelCount(c,true=None,false=None,timeout=None):
 	----------
 	c : Circuit
 		Input circuit.
-	true : iterable of str
-		Nodes to assume True.
-	false : iterable of str
-		Nodes to assume False.
+	assumptions : dict of str:int
+		Nodes to assume True or False.
 	timeout : int
 		Seconds until timeout.
 
@@ -256,7 +249,7 @@ def modelCount(c,true=None,false=None,timeout=None):
 	"""
 
 	startpoints = c.startpoints()
-	solver,variables = construct_solver(c,true,false)
+	solver,variables = construct_solver(c,assumptions)
 	with Timeout(seconds=timeout):
 		count = 0
 		while solver.solve():
@@ -286,7 +279,7 @@ def signalProbability(c,n):
 	non_fanin_startpoints = c.startpoints()-c.startpoints(n)
 
 	# get approximate count with node true and other inputs fixed
-	count = approxModelCount(c,true=non_fanin_startpoints|set([n]))
+	count = approxModelCount(c,assumptions={g:True for g in non_fanin_startpoints|set([n])})
 
 	return count/(2**len(c.startpoints(n)))
 

@@ -31,6 +31,7 @@
 
 import tempfile
 import pyverilator
+import code
 from circuitgraph.io import verilog_to_circuit,circuit_to_verilog
 from tempfile import NamedTemporaryFile
 
@@ -41,12 +42,12 @@ def construct_simulator(c):
         Parameters
         ----------
         c : Circuit
-                Circuit to simulate
+                Circuit to simulate.
 
         Returns
         -------
         PyVerilator
-                Simulation instance
+                Simulation instance.
         &#34;&#34;&#34;
 
         verilog = circuit_to_verilog(c)
@@ -58,16 +59,16 @@ def construct_simulator(c):
 
         return sim
 
-def sim(c,values):
+def sim(c,forced):
         &#34;&#34;&#34;
         Simulates circuit with given values
 
         Parameters
         ----------
         c : Circuit
-                Circuit to simulate
-        values : dict of str:bool
-                Values to simulate
+                Circuit to simulate.
+        forced : dict of str:bool
+                Values to force in the simulation.
 
         Returns
         -------
@@ -75,11 +76,12 @@ def sim(c,values):
                 Output values.
         &#34;&#34;&#34;
         sim = construct_simulator(c)
+        #code.interact(local=dict(globals(), **locals()))
 
-        for n,v in values.items():
-                setattr(sim.io,n,v)
+        for n,v in forced.items():
+                sim[n] = v
 
-        return {n:getattr(sim.io,n) for n in c}</code></pre>
+        return {n:sim[n.replace(&#39;output[&#39;,&#39;&#39;)[:-1]] for n in c.outputs()}</code></pre>
 </details>
 </section>
 <section>
@@ -97,12 +99,12 @@ def sim(c,values):
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>Circuit to simulate</dd>
+<dd>Circuit to simulate.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>PyVerilator</code></dt>
-<dd>Simulation instance</dd>
+<dd>Simulation instance.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -115,12 +117,12 @@ def sim(c,values):
         Parameters
         ----------
         c : Circuit
-                Circuit to simulate
+                Circuit to simulate.
 
         Returns
         -------
         PyVerilator
-                Simulation instance
+                Simulation instance.
         &#34;&#34;&#34;
 
         verilog = circuit_to_verilog(c)
@@ -134,16 +136,16 @@ def sim(c,values):
 </details>
 </dd>
 <dt id="circuitgraph.sim.sim"><code class="name flex">
-<span>def <span class="ident">sim</span></span>(<span>c, values)</span>
+<span>def <span class="ident">sim</span></span>(<span>c, forced)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Simulates circuit with given values</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>Circuit to simulate</dd>
-<dt><strong><code>values</code></strong> :&ensp;<code>dict</code> of <code>str:bool</code></dt>
-<dd>Values to simulate</dd>
+<dd>Circuit to simulate.</dd>
+<dt><strong><code>forced</code></strong> :&ensp;<code>dict</code> of <code>str:bool</code></dt>
+<dd>Values to force in the simulation.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -154,16 +156,16 @@ def sim(c,values):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sim(c,values):
+<pre><code class="python">def sim(c,forced):
         &#34;&#34;&#34;
         Simulates circuit with given values
 
         Parameters
         ----------
         c : Circuit
-                Circuit to simulate
-        values : dict of str:bool
-                Values to simulate
+                Circuit to simulate.
+        forced : dict of str:bool
+                Values to force in the simulation.
 
         Returns
         -------
@@ -171,11 +173,12 @@ def sim(c,values):
                 Output values.
         &#34;&#34;&#34;
         sim = construct_simulator(c)
+        #code.interact(local=dict(globals(), **locals()))
 
-        for n,v in values.items():
-                setattr(sim.io,n,v)
+        for n,v in forced.items():
+                sim[n] = v
 
-        return {n:getattr(sim.io,n) for n in c}</code></pre>
+        return {n:sim[n.replace(&#39;output[&#39;,&#39;&#39;)[:-1]] for n in c.outputs()}</code></pre>
 </details>
 </dd>
 </dl>
@@ -186,6 +189,8 @@ def sim(c,values):
 <nav id="sidebar">
 <header>
 <img src="circuitgraph.png" alt="">
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+<a class="github-button" href="https://github.com/circuitgraph/circuigraph" aria-label="Star circuitgraph/circuigraph on GitHub">Star</a>
 </header>
 <h1>Index</h1>
 <div class="toc">

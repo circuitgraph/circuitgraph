@@ -62,7 +62,7 @@ def syn(c,engine=&#39;Genus&#39;,printOutput=False):
         # probably should write output to the tmp file
         with NamedTemporaryFile() as tmp:
                 if engine==&#39;Genus&#39;:
-                        cmd = [&#39;genus&#39;,&#39;-execute&#39;,f&#34;&#34;&#34;set_db / .library $env(GENUS_DIR)/share/synth/tutorials/tech/tutorial.lib;
+                        cmd = [&#39;genus&#39;,&#39;-no_gui&#39;,&#39;-execute&#39;,f&#34;&#34;&#34;set_db / .library /afs/ece.cmu.edu/support/cds/share/image/usr/cds/genus-19.12.000/share/synth/tutorials/tech/tutorial.lib;
                                         read_hdl -sv {tmp.name};
                                         elaborate;
                                         set_db syn_generic_effort high
@@ -161,12 +161,12 @@ def ternary(c):
 
                 else:
                         print(f&#34;unknown gate type: {c.nodes[n][&#39;type&#39;]}&#34;)
-                        code.interact(local=locals())
+                        code.interact(local=dict(globals(), **locals()))
 
         for n in t:
                 if &#39;type&#39; not in t.nodes[n]:
                         print(f&#34;empty gate type: {n}&#34;)
-                        code.interact(local=locals())
+                        code.interact(local=dict(globals(), **locals()))
 
         return t
 
@@ -230,7 +230,7 @@ def comb(c):
 
         for lat in c.lats():
                 relabeled_model = nx.relabel_nodes(lat_model,{n:f&#39;{lat}_{n}&#39; for n in lat_model})
-                c_comb.update(relabeled_model)
+                c_comb.extend(relabeled_model)
                 c_comb.add_edges_from((f&#39;{lat}_q&#39;,s) for s in c_comb.successors(lat))
                 c_comb.add_edges_from((p,f&#39;{lat}_d&#39;) for p in c_comb.predecessors(lat))
                 c_comb.add_edge(c.nodes[lat][&#39;clk&#39;],f&#39;{lat}_clk&#39;)
@@ -239,7 +239,7 @@ def comb(c):
 
         for ff in c.ffs():
                 relabeled_model = nx.relabel_nodes(ff_model,{n:f&#39;{ff}_{n}&#39; for n in ff_model})
-                c_comb.update(relabeled_model)
+                c_comb.extend(relabeled_model)
                 c_comb.add_edges_from((f&#39;{ff}_q&#39;,s) for s in c_comb.successors(ff))
                 c_comb.add_edges_from((p,f&#39;{ff}_d&#39;) for p in c_comb.predecessors(ff))
                 c_comb.add_edge(c.nodes[ff][&#39;clk&#39;],f&#39;{ff}_clk&#39;)
@@ -323,7 +323,7 @@ def unroll(c,cycles):
         u = nx.DiGraph()
         for i in range(cycles):
                 c_comb_i = nx.relabel_nodes(c_comb,{n:f&#39;{n}_{i}&#39; for n in c_comb})
-                u.update(c_comb_i)
+                u.extend(c_comb_i)
                 if i==0:
                         # convert si to inputs
                         for n in c:
@@ -341,7 +341,7 @@ def unroll(c,cycles):
 
         return u
 
-def sensitivity(c,endpoint):
+def sensitivity(c,n):
         &#34;&#34;&#34;
         Creates a circuit to compute sensitivity.
 
@@ -349,7 +349,7 @@ def sensitivity(c,endpoint):
         ----------
         c : Circuit
                 Sequential circuit to unroll.
-        endpoint : str
+        n : str
                 Node to compute sensitivity at.
 
         Returns
@@ -358,7 +358,44 @@ def sensitivity(c,endpoint):
                 Sensitivity circuit.
 
         &#34;&#34;&#34;
-        pass
+
+        # get fanin cone of node
+        if n in c.startpoints():
+                print(f&#39;{n} is in startpoints&#39;)
+                return None
+
+        fiNodes = c.transitiveFanin(n)|set([n])
+        startpoints = c.startpoints(n)
+        subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
+
+        # convert outputs to buffers
+        for o in subCircuit.outputs():
+                subCircuit.graph.nodes[o][&#39;type&#39;] = &#39;buf&#39;
+
+        # convert startpoints to inputs
+        for s in subCircuit.startpoints():
+                subCircuit.graph.nodes[s][&#39;type&#39;] = &#39;input&#39;
+                subCircuit.graph.remove_edges_from((p,s) for p in list(subCircuit.graph.predecessors(s)))
+
+        # create sensitivity circuit and add first copy of subcircuit
+        sensitivityCircuit = Circuit()
+        sensitivityCircuit.extend(subCircuit)
+
+        # stamp out a copies of the circuit with s inverted
+        for s in startpoints:
+                mapping = {g:f&#39;sen_{s}_{g}&#39; for g in subCircuit if g not in startpoints-set([s])}
+                relabeledSubCircuit = subCircuit.relabel(mapping)
+                sensitivityCircuit.extend(relabeledSubCircuit)
+
+                # connect inverted input
+                sensitivityCircuit.graph.nodes[f&#39;sen_{s}_{s}&#39;][&#39;type&#39;] = &#39;not&#39;
+                sensitivityCircuit.graph.add_edge(s,f&#39;sen_{s}_{s}&#39;)
+
+                # compare to first copy
+                sensitivityCircuit.add(f&#39;difference_{s}&#39;,&#39;xor&#39;,fanin=[n,f&#39;sen_{s}_{n}&#39;])
+                sensitivityCircuit.add(f&#39;difference_{s}&#39;,&#39;output&#39;,fanin=f&#39;difference_{s}&#39;)
+
+        return sensitivityCircuit
 
 def sensitize(c,n):
         &#34;&#34;&#34;
@@ -377,7 +414,19 @@ def sensitize(c,n):
                 Output circuit.
 
         &#34;&#34;&#34;
-        pass
+        # get fanin/out cone of node
+        nodes = c.transitiveFanin(n)|c.transitiveFanout(n)|set([n])
+        subCircuit = Circuit(c.graph.subgraph(nodes).copy())
+
+        # create miter
+        m = miter(subCircuit)
+
+        # cut and invert n in one side of miter
+        m.graph.nodes[f&#39;c1_{n}&#39;][&#39;type&#39;] = &#39;not&#39;
+        m.graph.remove_edges_from((f,f&#39;c1_{n}&#39;) for f in m.fanin(f&#39;c1_{n}&#39;))
+        m.graph.add_edge(f&#39;c0_{n}&#39;,f&#39;c1_{n}&#39;)
+
+        return m
 
 def mphf(w=30,n=800):
         &#34;&#34;&#34;
@@ -460,7 +509,7 @@ def mphf(w=30,n=800):
 
         for lat in c.lats():
                 relabeled_model = nx.relabel_nodes(lat_model,{n:f&#39;{lat}_{n}&#39; for n in lat_model})
-                c_comb.update(relabeled_model)
+                c_comb.extend(relabeled_model)
                 c_comb.add_edges_from((f&#39;{lat}_q&#39;,s) for s in c_comb.successors(lat))
                 c_comb.add_edges_from((p,f&#39;{lat}_d&#39;) for p in c_comb.predecessors(lat))
                 c_comb.add_edge(c.nodes[lat][&#39;clk&#39;],f&#39;{lat}_clk&#39;)
@@ -469,7 +518,7 @@ def mphf(w=30,n=800):
 
         for ff in c.ffs():
                 relabeled_model = nx.relabel_nodes(ff_model,{n:f&#39;{ff}_{n}&#39; for n in ff_model})
-                c_comb.update(relabeled_model)
+                c_comb.extend(relabeled_model)
                 c_comb.add_edges_from((f&#39;{ff}_q&#39;,s) for s in c_comb.successors(ff))
                 c_comb.add_edges_from((p,f&#39;{ff}_d&#39;) for p in c_comb.predecessors(ff))
                 c_comb.add_edge(c.nodes[ff][&#39;clk&#39;],f&#39;{ff}_clk&#39;)
@@ -674,7 +723,7 @@ def mphf(w=30,n=800):
 </details>
 </dd>
 <dt id="circuitgraph.transform.sensitivity"><code class="name flex">
-<span>def <span class="ident">sensitivity</span></span>(<span>c, endpoint)</span>
+<span>def <span class="ident">sensitivity</span></span>(<span>c, n)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a circuit to compute sensitivity.</p>
@@ -682,7 +731,7 @@ def mphf(w=30,n=800):
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>Sequential circuit to unroll.</dd>
-<dt><strong><code>endpoint</code></strong> :&ensp;<code>str</code></dt>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
 <dd>Node to compute sensitivity at.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
@@ -694,7 +743,7 @@ def mphf(w=30,n=800):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sensitivity(c,endpoint):
+<pre><code class="python">def sensitivity(c,n):
         &#34;&#34;&#34;
         Creates a circuit to compute sensitivity.
 
@@ -702,7 +751,7 @@ def mphf(w=30,n=800):
         ----------
         c : Circuit
                 Sequential circuit to unroll.
-        endpoint : str
+        n : str
                 Node to compute sensitivity at.
 
         Returns
@@ -711,7 +760,44 @@ def mphf(w=30,n=800):
                 Sensitivity circuit.
 
         &#34;&#34;&#34;
-        pass</code></pre>
+
+        # get fanin cone of node
+        if n in c.startpoints():
+                print(f&#39;{n} is in startpoints&#39;)
+                return None
+
+        fiNodes = c.transitiveFanin(n)|set([n])
+        startpoints = c.startpoints(n)
+        subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
+
+        # convert outputs to buffers
+        for o in subCircuit.outputs():
+                subCircuit.graph.nodes[o][&#39;type&#39;] = &#39;buf&#39;
+
+        # convert startpoints to inputs
+        for s in subCircuit.startpoints():
+                subCircuit.graph.nodes[s][&#39;type&#39;] = &#39;input&#39;
+                subCircuit.graph.remove_edges_from((p,s) for p in list(subCircuit.graph.predecessors(s)))
+
+        # create sensitivity circuit and add first copy of subcircuit
+        sensitivityCircuit = Circuit()
+        sensitivityCircuit.extend(subCircuit)
+
+        # stamp out a copies of the circuit with s inverted
+        for s in startpoints:
+                mapping = {g:f&#39;sen_{s}_{g}&#39; for g in subCircuit if g not in startpoints-set([s])}
+                relabeledSubCircuit = subCircuit.relabel(mapping)
+                sensitivityCircuit.extend(relabeledSubCircuit)
+
+                # connect inverted input
+                sensitivityCircuit.graph.nodes[f&#39;sen_{s}_{s}&#39;][&#39;type&#39;] = &#39;not&#39;
+                sensitivityCircuit.graph.add_edge(s,f&#39;sen_{s}_{s}&#39;)
+
+                # compare to first copy
+                sensitivityCircuit.add(f&#39;difference_{s}&#39;,&#39;xor&#39;,fanin=[n,f&#39;sen_{s}_{n}&#39;])
+                sensitivityCircuit.add(f&#39;difference_{s}&#39;,&#39;output&#39;,fanin=f&#39;difference_{s}&#39;)
+
+        return sensitivityCircuit</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.sensitize"><code class="name flex">
@@ -752,7 +838,19 @@ def mphf(w=30,n=800):
                 Output circuit.
 
         &#34;&#34;&#34;
-        pass</code></pre>
+        # get fanin/out cone of node
+        nodes = c.transitiveFanin(n)|c.transitiveFanout(n)|set([n])
+        subCircuit = Circuit(c.graph.subgraph(nodes).copy())
+
+        # create miter
+        m = miter(subCircuit)
+
+        # cut and invert n in one side of miter
+        m.graph.nodes[f&#39;c1_{n}&#39;][&#39;type&#39;] = &#39;not&#39;
+        m.graph.remove_edges_from((f,f&#39;c1_{n}&#39;) for f in m.fanin(f&#39;c1_{n}&#39;))
+        m.graph.add_edge(f&#39;c0_{n}&#39;,f&#39;c1_{n}&#39;)
+
+        return m</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.syn"><code class="name flex">
@@ -802,7 +900,7 @@ def mphf(w=30,n=800):
         # probably should write output to the tmp file
         with NamedTemporaryFile() as tmp:
                 if engine==&#39;Genus&#39;:
-                        cmd = [&#39;genus&#39;,&#39;-execute&#39;,f&#34;&#34;&#34;set_db / .library $env(GENUS_DIR)/share/synth/tutorials/tech/tutorial.lib;
+                        cmd = [&#39;genus&#39;,&#39;-no_gui&#39;,&#39;-execute&#39;,f&#34;&#34;&#34;set_db / .library /afs/ece.cmu.edu/support/cds/share/image/usr/cds/genus-19.12.000/share/synth/tutorials/tech/tutorial.lib;
                                         read_hdl -sv {tmp.name};
                                         elaborate;
                                         set_db syn_generic_effort high
@@ -921,12 +1019,12 @@ def mphf(w=30,n=800):
 
                 else:
                         print(f&#34;unknown gate type: {c.nodes[n][&#39;type&#39;]}&#34;)
-                        code.interact(local=locals())
+                        code.interact(local=dict(globals(), **locals()))
 
         for n in t:
                 if &#39;type&#39; not in t.nodes[n]:
                         print(f&#34;empty gate type: {n}&#34;)
-                        code.interact(local=locals())
+                        code.interact(local=dict(globals(), **locals()))
 
         return t</code></pre>
 </details>
@@ -973,7 +1071,7 @@ def mphf(w=30,n=800):
         u = nx.DiGraph()
         for i in range(cycles):
                 c_comb_i = nx.relabel_nodes(c_comb,{n:f&#39;{n}_{i}&#39; for n in c_comb})
-                u.update(c_comb_i)
+                u.extend(c_comb_i)
                 if i==0:
                         # convert si to inputs
                         for n in c:
@@ -1000,6 +1098,8 @@ def mphf(w=30,n=800):
 <nav id="sidebar">
 <header>
 <img src="circuitgraph.png" alt="">
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+<a class="github-button" href="https://github.com/circuitgraph/circuigraph" aria-label="Star circuitgraph/circuigraph on GitHub">Star</a>
 </header>
 <h1>Index</h1>
 <div class="toc">

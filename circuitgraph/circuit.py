@@ -69,6 +69,22 @@ class Circuit:
 	def __iter__(self):
 		return self.graph.__iter__()
 
+	def setType(self,ns,t):
+		"""
+		Returns node(s) type(s).
+
+		Parameters
+		----------
+		ns : str or iterable of str
+			Node.
+		t : str
+			Type.
+		"""
+		if isinstance(ns,str):
+			ns = [ns]
+		for n in ns:
+			self.graph.nodes[n]['type'] = t
+
 	def type(self,ns):
 		"""
 		Returns node(s) type(s).
@@ -82,6 +98,23 @@ class Circuit:
 		-------
 		str or set of str
 			Type of node or a set of node types.
+
+		Examples
+		--------
+		Create a with several gate types.
+
+		>>> c = cg.Circuit()
+		>>> for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}',g)
+
+		Calling `type` for a single gate returns a single type
+
+		>>> c.type('g0')
+		{'xor'}
+
+		Calling `type` on an iterable returns a set of types
+
+		>>> c.type(c.nodes())
+		{'xor','or','xor','ff'}
 
 		"""
 		if isinstance(ns,str):
@@ -192,13 +225,15 @@ class Circuit:
 			# add auxillary nodes for sequential element
 			self.graph.add_node(n,type=type)
 			self.graph.add_node(f'd[{n}]',type='d')
-			self.graph.add_node(f'r[{n}]',type='r')
-			self.graph.add_node(f's[{n}]',type='s')
+			if r: self.graph.add_node(f'r[{n}]',type='r')
+			if s: self.graph.add_node(f's[{n}]',type='s')
 			self.graph.add_node(f'clk[{n}]',type='clk')
 
 			# connect
 			self.graph.add_edges_from((n,f) for f in fanout)
-			self.graph.add_edges_from([(f'd[{n}]',n),(f'clk[{n}]',n),(f'r[{n}]',n)])
+			self.graph.add_edge(f'd[{n}]',n)
+			if r: self.graph.add_edge(f'r[{n}]',n)
+			if clk: self.graph.add_edge(f'clk[{n}]',n)
 			self.graph.add_edges_from((f,f'd[{n}]') for f in fanin)
 			if r: self.graph.add_edge(r,f'r[{n}]')
 			if s: self.graph.add_edge(s,f's[{n}]')
@@ -213,6 +248,18 @@ class Circuit:
 
 		return n
 
+	def remove(self,ns):
+		"""
+		Removes node(s)
+
+		Parameters
+		----------
+		ns : str or iterable of str
+			Node(s) to remove.
+		"""
+		if isinstance(ns,str): ns = [ns]
+		self.graph.remove_nodes_from(ns)
+
 	def extend(self,c):
 		"""
 		Adds nodes from another circuit
@@ -223,6 +270,22 @@ class Circuit:
 			Other circuit
 		"""
 		self.graph.update(c.graph)
+
+	def stripIO(self):
+		"""
+		Removes outputs and converts inputs to buffers for easy instantiation.
+
+		Parameters
+		----------
+		c : Circuit
+			Other circuit
+		"""
+		g = self.graph.copy()
+		g.remove_nodes_from(self.outputs())
+		for i in self.inputs():
+			g.nodes[i]['type'] = 'buf'
+
+		return Circuit(graph=g,name=self.name)
 
 	def connect(self,us,vs):
 		"""
@@ -239,6 +302,22 @@ class Circuit:
 		if isinstance(us,str): us = [us]
 		if isinstance(vs,str): vs = [vs]
 		self.graph.add_edges_from((u,v) for u in us for v in vs)
+
+	def disconnect(self,us,vs):
+		"""
+		Removes connections to the graph
+
+		Parameters
+		----------
+		us : str or iterable of str
+			Head node(s)
+		vs : str or iterable of str
+			Tail node(s)
+
+		"""
+		if isinstance(us,str): us = [us]
+		if isinstance(vs,str): vs = [vs]
+		self.graph.remove_edges_from((u,v) for u in us for v in vs)
 
 	def relabel(self,mapping):
 		"""
@@ -352,8 +431,8 @@ class Circuit:
 
 		if visited is None: visited=set()
 
+		depths = set([depth])
 		depth += 1
-		depths = set()
 		visited.add(n)
 
 		# find depth
@@ -646,4 +725,24 @@ class Circuit:
 
 		return graph
 
+def clog2(num: int) -> int:
+	r"""Return the ceiling log base two of an integer :math:`\ge 1`.
+	This function tells you the minimum dimension of a Boolean space with at
+	least N points.
+	For example, here are the values of ``clog2(N)`` for :math:`1 \le N < 18`:
+	>>> [clog2(n) for n in range(1, 18)]
+	[0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5]
+	This function is undefined for non-positive integers:
+	>>> clog2(0)
+	Traceback (most recent call last):
+	...
+	ValueError: expected num >= 1
+	"""
+	if num < 1:
+		raise ValueError("expected num >= 1")
+	accum, shifter = 0, 1
+	while num > shifter:
+		shifter <<= 1
+		accum += 1
+	return accum
 

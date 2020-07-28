@@ -106,6 +106,22 @@ class Circuit:
         def __iter__(self):
                 return self.graph.__iter__()
 
+        def setType(self,ns,t):
+                &#34;&#34;&#34;
+                Returns node(s) type(s).
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node.
+                t : str
+                        Type.
+                &#34;&#34;&#34;
+                if isinstance(ns,str):
+                        ns = [ns]
+                for n in ns:
+                        self.graph.nodes[n][&#39;type&#39;] = t
+
         def type(self,ns):
                 &#34;&#34;&#34;
                 Returns node(s) type(s).
@@ -119,6 +135,23 @@ class Circuit:
                 -------
                 str or set of str
                         Type of node or a set of node types.
+
+                Examples
+                --------
+                Create a with several gate types.
+
+                &gt;&gt;&gt; c = cg.Circuit()
+                &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;,g)
+
+                Calling `type` for a single gate returns a single type
+
+                &gt;&gt;&gt; c.type(&#39;g0&#39;)
+                {&#39;xor&#39;}
+
+                Calling `type` on an iterable returns a set of types
+
+                &gt;&gt;&gt; c.type(c.nodes())
+                {&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;}
 
                 &#34;&#34;&#34;
                 if isinstance(ns,str):
@@ -175,7 +208,7 @@ class Circuit:
                 &#34;&#34;&#34;
                 return self.graph.edges
 
-        def add(self,n,type,fanin=None,fanout=None,clk=None,r=None):
+        def add(self,n,type,fanin=None,fanout=None,clk=None,r=None,s=None):
                 &#34;&#34;&#34;
                 Adds a new node to the circuit, optionally connecting it
 
@@ -189,6 +222,12 @@ class Circuit:
                         Nodes to add to new node&#39;s fanin
                 fanout : iterable of str
                         Nodes to add to new node&#39;s fanout
+                clk : str
+                        Clock connecttion of sequential element
+                r : str
+                        Reset connection of sequential element
+                s : str
+                        Set connection of sequential element
 
                 Returns
                 -------
@@ -223,14 +262,18 @@ class Circuit:
                         # add auxillary nodes for sequential element
                         self.graph.add_node(n,type=type)
                         self.graph.add_node(f&#39;d[{n}]&#39;,type=&#39;d&#39;)
-                        self.graph.add_node(f&#39;r[{n}]&#39;,type=&#39;r&#39;)
+                        if r: self.graph.add_node(f&#39;r[{n}]&#39;,type=&#39;r&#39;)
+                        if s: self.graph.add_node(f&#39;s[{n}]&#39;,type=&#39;s&#39;)
                         self.graph.add_node(f&#39;clk[{n}]&#39;,type=&#39;clk&#39;)
 
                         # connect
                         self.graph.add_edges_from((n,f) for f in fanout)
-                        self.graph.add_edges_from([(f&#39;d[{n}]&#39;,n),(f&#39;clk[{n}]&#39;,n),(f&#39;r[{n}]&#39;,n)])
+                        self.graph.add_edge(f&#39;d[{n}]&#39;,n)
+                        if r: self.graph.add_edge(f&#39;r[{n}]&#39;,n)
+                        if clk: self.graph.add_edge(f&#39;clk[{n}]&#39;,n)
                         self.graph.add_edges_from((f,f&#39;d[{n}]&#39;) for f in fanin)
                         if r: self.graph.add_edge(r,f&#39;r[{n}]&#39;)
+                        if s: self.graph.add_edge(s,f&#39;s[{n}]&#39;)
                         if clk: self.graph.add_edge(clk,f&#39;clk[{n}]&#39;)
                 elif type == &#39;output&#39;:
                         self.graph.add_node(f&#39;output[{n}]&#39;,type=&#39;output&#39;)
@@ -242,6 +285,18 @@ class Circuit:
 
                 return n
 
+        def remove(self,ns):
+                &#34;&#34;&#34;
+                Removes node(s)
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to remove.
+                &#34;&#34;&#34;
+                if isinstance(ns,str): ns = [ns]
+                self.graph.remove_nodes_from(ns)
+
         def extend(self,c):
                 &#34;&#34;&#34;
                 Adds nodes from another circuit
@@ -252,6 +307,22 @@ class Circuit:
                         Other circuit
                 &#34;&#34;&#34;
                 self.graph.update(c.graph)
+
+        def stripIO(self):
+                &#34;&#34;&#34;
+                Removes outputs and converts inputs to buffers for easy instantiation.
+
+                Parameters
+                ----------
+                c : Circuit
+                        Other circuit
+                &#34;&#34;&#34;
+                g = self.graph.copy()
+                g.remove_nodes_from(self.outputs())
+                for i in self.inputs():
+                        g.nodes[i][&#39;type&#39;] = &#39;buf&#39;
+
+                return Circuit(graph=g,name=self.name)
 
         def connect(self,us,vs):
                 &#34;&#34;&#34;
@@ -268,6 +339,22 @@ class Circuit:
                 if isinstance(us,str): us = [us]
                 if isinstance(vs,str): vs = [vs]
                 self.graph.add_edges_from((u,v) for u in us for v in vs)
+
+        def disconnect(self,us,vs):
+                &#34;&#34;&#34;
+                Removes connections to the graph
+
+                Parameters
+                ----------
+                us : str or iterable of str
+                        Head node(s)
+                vs : str or iterable of str
+                        Tail node(s)
+
+                &#34;&#34;&#34;
+                if isinstance(us,str): us = [us]
+                if isinstance(vs,str): vs = [vs]
+                self.graph.remove_edges_from((u,v) for u in us for v in vs)
 
         def relabel(self,mapping):
                 &#34;&#34;&#34;
@@ -381,8 +468,8 @@ class Circuit:
 
                 if visited is None: visited=set()
 
+                depths = set([depth])
                 depth += 1
-                depths = set()
                 visited.add(n)
 
                 # find depth
@@ -555,12 +642,24 @@ class Circuit:
 
         def r(self,s):
                 &#34;&#34;&#34;
-                Returns the r input of a sequential node
+                Returns the reset input of a sequential node
 
                 Returns
                 -------
                 str
-                        R input node.
+                        Reset input node.
+
+                &#34;&#34;&#34;
+                return [f for f in self.fanin(s) if self.type(f)==&#39;r&#39;][0]
+
+        def s(self,s):
+                &#34;&#34;&#34;
+                Returns the set input of a sequential node
+
+                Returns
+                -------
+                str
+                        Set input node.
 
                 &#34;&#34;&#34;
                 return [f for f in self.fanin(s) if self.type(f)==&#39;r&#39;][0]
@@ -661,7 +760,28 @@ class Circuit:
                 for n in graph.nodes:
                         graph.add_edges_from((s,n) for s in self.startpoints(n))
 
-                return graph</code></pre>
+                return graph
+
+def clog2(num: int) -&gt; int:
+        r&#34;&#34;&#34;Return the ceiling log base two of an integer :math:`\ge 1`.
+        This function tells you the minimum dimension of a Boolean space with at
+        least N points.
+        For example, here are the values of ``clog2(N)`` for :math:`1 \le N &lt; 18`:
+        &gt;&gt;&gt; [clog2(n) for n in range(1, 18)]
+        [0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5]
+        This function is undefined for non-positive integers:
+        &gt;&gt;&gt; clog2(0)
+        Traceback (most recent call last):
+        ...
+        ValueError: expected num &gt;= 1
+        &#34;&#34;&#34;
+        if num &lt; 1:
+                raise ValueError(&#34;expected num &gt;= 1&#34;)
+        accum, shifter = 0, 1
+        while num &gt; shifter:
+                shifter &lt;&lt;= 1
+                accum += 1
+        return accum</code></pre>
 </details>
 </section>
 <section>
@@ -669,6 +789,51 @@ class Circuit:
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="circuitgraph.circuit.clog2"><code class="name flex">
+<span>def <span class="ident">clog2</span></span>(<span>num: int) ‑> int</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Return the ceiling log base two of an integer :math:<code>\ge 1</code>.
+This function tells you the minimum dimension of a Boolean space with at
+least N points.
+For example, here are the values of <code><a title="circuitgraph.circuit.clog2" href="#circuitgraph.circuit.clog2">clog2()</a>(N)</code> for :math:<code>1 \le N &lt; 18</code>:</p>
+<pre><code class="python">&gt;&gt;&gt; [clog2(n) for n in range(1, 18)]
+[0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5]
+This function is undefined for non-positive integers:
+&gt;&gt;&gt; clog2(0)
+Traceback (most recent call last):
+...
+ValueError: expected num &gt;= 1
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def clog2(num: int) -&gt; int:
+        r&#34;&#34;&#34;Return the ceiling log base two of an integer :math:`\ge 1`.
+        This function tells you the minimum dimension of a Boolean space with at
+        least N points.
+        For example, here are the values of ``clog2(N)`` for :math:`1 \le N &lt; 18`:
+        &gt;&gt;&gt; [clog2(n) for n in range(1, 18)]
+        [0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5]
+        This function is undefined for non-positive integers:
+        &gt;&gt;&gt; clog2(0)
+        Traceback (most recent call last):
+        ...
+        ValueError: expected num &gt;= 1
+        &#34;&#34;&#34;
+        if num &lt; 1:
+                raise ValueError(&#34;expected num &gt;= 1&#34;)
+        accum, shifter = 0, 1
+        while num &gt; shifter:
+                shifter &lt;&lt;= 1
+                accum += 1
+        return accum</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
@@ -761,6 +926,22 @@ class Circuit:
         def __iter__(self):
                 return self.graph.__iter__()
 
+        def setType(self,ns,t):
+                &#34;&#34;&#34;
+                Returns node(s) type(s).
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node.
+                t : str
+                        Type.
+                &#34;&#34;&#34;
+                if isinstance(ns,str):
+                        ns = [ns]
+                for n in ns:
+                        self.graph.nodes[n][&#39;type&#39;] = t
+
         def type(self,ns):
                 &#34;&#34;&#34;
                 Returns node(s) type(s).
@@ -774,6 +955,23 @@ class Circuit:
                 -------
                 str or set of str
                         Type of node or a set of node types.
+
+                Examples
+                --------
+                Create a with several gate types.
+
+                &gt;&gt;&gt; c = cg.Circuit()
+                &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;,g)
+
+                Calling `type` for a single gate returns a single type
+
+                &gt;&gt;&gt; c.type(&#39;g0&#39;)
+                {&#39;xor&#39;}
+
+                Calling `type` on an iterable returns a set of types
+
+                &gt;&gt;&gt; c.type(c.nodes())
+                {&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;}
 
                 &#34;&#34;&#34;
                 if isinstance(ns,str):
@@ -830,7 +1028,7 @@ class Circuit:
                 &#34;&#34;&#34;
                 return self.graph.edges
 
-        def add(self,n,type,fanin=None,fanout=None,clk=None,r=None):
+        def add(self,n,type,fanin=None,fanout=None,clk=None,r=None,s=None):
                 &#34;&#34;&#34;
                 Adds a new node to the circuit, optionally connecting it
 
@@ -844,6 +1042,12 @@ class Circuit:
                         Nodes to add to new node&#39;s fanin
                 fanout : iterable of str
                         Nodes to add to new node&#39;s fanout
+                clk : str
+                        Clock connecttion of sequential element
+                r : str
+                        Reset connection of sequential element
+                s : str
+                        Set connection of sequential element
 
                 Returns
                 -------
@@ -878,14 +1082,18 @@ class Circuit:
                         # add auxillary nodes for sequential element
                         self.graph.add_node(n,type=type)
                         self.graph.add_node(f&#39;d[{n}]&#39;,type=&#39;d&#39;)
-                        self.graph.add_node(f&#39;r[{n}]&#39;,type=&#39;r&#39;)
+                        if r: self.graph.add_node(f&#39;r[{n}]&#39;,type=&#39;r&#39;)
+                        if s: self.graph.add_node(f&#39;s[{n}]&#39;,type=&#39;s&#39;)
                         self.graph.add_node(f&#39;clk[{n}]&#39;,type=&#39;clk&#39;)
 
                         # connect
                         self.graph.add_edges_from((n,f) for f in fanout)
-                        self.graph.add_edges_from([(f&#39;d[{n}]&#39;,n),(f&#39;clk[{n}]&#39;,n),(f&#39;r[{n}]&#39;,n)])
+                        self.graph.add_edge(f&#39;d[{n}]&#39;,n)
+                        if r: self.graph.add_edge(f&#39;r[{n}]&#39;,n)
+                        if clk: self.graph.add_edge(f&#39;clk[{n}]&#39;,n)
                         self.graph.add_edges_from((f,f&#39;d[{n}]&#39;) for f in fanin)
                         if r: self.graph.add_edge(r,f&#39;r[{n}]&#39;)
+                        if s: self.graph.add_edge(s,f&#39;s[{n}]&#39;)
                         if clk: self.graph.add_edge(clk,f&#39;clk[{n}]&#39;)
                 elif type == &#39;output&#39;:
                         self.graph.add_node(f&#39;output[{n}]&#39;,type=&#39;output&#39;)
@@ -897,6 +1105,18 @@ class Circuit:
 
                 return n
 
+        def remove(self,ns):
+                &#34;&#34;&#34;
+                Removes node(s)
+
+                Parameters
+                ----------
+                ns : str or iterable of str
+                        Node(s) to remove.
+                &#34;&#34;&#34;
+                if isinstance(ns,str): ns = [ns]
+                self.graph.remove_nodes_from(ns)
+
         def extend(self,c):
                 &#34;&#34;&#34;
                 Adds nodes from another circuit
@@ -907,6 +1127,22 @@ class Circuit:
                         Other circuit
                 &#34;&#34;&#34;
                 self.graph.update(c.graph)
+
+        def stripIO(self):
+                &#34;&#34;&#34;
+                Removes outputs and converts inputs to buffers for easy instantiation.
+
+                Parameters
+                ----------
+                c : Circuit
+                        Other circuit
+                &#34;&#34;&#34;
+                g = self.graph.copy()
+                g.remove_nodes_from(self.outputs())
+                for i in self.inputs():
+                        g.nodes[i][&#39;type&#39;] = &#39;buf&#39;
+
+                return Circuit(graph=g,name=self.name)
 
         def connect(self,us,vs):
                 &#34;&#34;&#34;
@@ -923,6 +1159,22 @@ class Circuit:
                 if isinstance(us,str): us = [us]
                 if isinstance(vs,str): vs = [vs]
                 self.graph.add_edges_from((u,v) for u in us for v in vs)
+
+        def disconnect(self,us,vs):
+                &#34;&#34;&#34;
+                Removes connections to the graph
+
+                Parameters
+                ----------
+                us : str or iterable of str
+                        Head node(s)
+                vs : str or iterable of str
+                        Tail node(s)
+
+                &#34;&#34;&#34;
+                if isinstance(us,str): us = [us]
+                if isinstance(vs,str): vs = [vs]
+                self.graph.remove_edges_from((u,v) for u in us for v in vs)
 
         def relabel(self,mapping):
                 &#34;&#34;&#34;
@@ -1036,8 +1288,8 @@ class Circuit:
 
                 if visited is None: visited=set()
 
+                depths = set([depth])
                 depth += 1
-                depths = set()
                 visited.add(n)
 
                 # find depth
@@ -1210,12 +1462,24 @@ class Circuit:
 
         def r(self,s):
                 &#34;&#34;&#34;
-                Returns the r input of a sequential node
+                Returns the reset input of a sequential node
 
                 Returns
                 -------
                 str
-                        R input node.
+                        Reset input node.
+
+                &#34;&#34;&#34;
+                return [f for f in self.fanin(s) if self.type(f)==&#39;r&#39;][0]
+
+        def s(self,s):
+                &#34;&#34;&#34;
+                Returns the set input of a sequential node
+
+                Returns
+                -------
+                str
+                        Set input node.
 
                 &#34;&#34;&#34;
                 return [f for f in self.fanin(s) if self.type(f)==&#39;r&#39;][0]
@@ -1321,7 +1585,7 @@ class Circuit:
 <h3>Methods</h3>
 <dl>
 <dt id="circuitgraph.circuit.Circuit.add"><code class="name flex">
-<span>def <span class="ident">add</span></span>(<span>self, n, type, fanin=None, fanout=None, clk=None, r=None)</span>
+<span>def <span class="ident">add</span></span>(<span>self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Adds a new node to the circuit, optionally connecting it</p>
@@ -1335,6 +1599,12 @@ class Circuit:
 <dd>Nodes to add to new node's fanin</dd>
 <dt><strong><code>fanout</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
 <dd>Nodes to add to new node's fanout</dd>
+<dt><strong><code>clk</code></strong> :&ensp;<code>str</code></dt>
+<dd>Clock connecttion of sequential element</dd>
+<dt><strong><code>r</code></strong> :&ensp;<code>str</code></dt>
+<dd>Reset connection of sequential element</dd>
+<dt><strong><code>s</code></strong> :&ensp;<code>str</code></dt>
+<dd>Set connection of sequential element</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1359,7 +1629,7 @@ This allows us to quickly generate an AND tree with the following syntax.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def add(self,n,type,fanin=None,fanout=None,clk=None,r=None):
+<pre><code class="python">def add(self,n,type,fanin=None,fanout=None,clk=None,r=None,s=None):
         &#34;&#34;&#34;
         Adds a new node to the circuit, optionally connecting it
 
@@ -1373,6 +1643,12 @@ This allows us to quickly generate an AND tree with the following syntax.</p>
                 Nodes to add to new node&#39;s fanin
         fanout : iterable of str
                 Nodes to add to new node&#39;s fanout
+        clk : str
+                Clock connecttion of sequential element
+        r : str
+                Reset connection of sequential element
+        s : str
+                Set connection of sequential element
 
         Returns
         -------
@@ -1407,14 +1683,18 @@ This allows us to quickly generate an AND tree with the following syntax.</p>
                 # add auxillary nodes for sequential element
                 self.graph.add_node(n,type=type)
                 self.graph.add_node(f&#39;d[{n}]&#39;,type=&#39;d&#39;)
-                self.graph.add_node(f&#39;r[{n}]&#39;,type=&#39;r&#39;)
+                if r: self.graph.add_node(f&#39;r[{n}]&#39;,type=&#39;r&#39;)
+                if s: self.graph.add_node(f&#39;s[{n}]&#39;,type=&#39;s&#39;)
                 self.graph.add_node(f&#39;clk[{n}]&#39;,type=&#39;clk&#39;)
 
                 # connect
                 self.graph.add_edges_from((n,f) for f in fanout)
-                self.graph.add_edges_from([(f&#39;d[{n}]&#39;,n),(f&#39;clk[{n}]&#39;,n),(f&#39;r[{n}]&#39;,n)])
+                self.graph.add_edge(f&#39;d[{n}]&#39;,n)
+                if r: self.graph.add_edge(f&#39;r[{n}]&#39;,n)
+                if clk: self.graph.add_edge(f&#39;clk[{n}]&#39;,n)
                 self.graph.add_edges_from((f,f&#39;d[{n}]&#39;) for f in fanin)
                 if r: self.graph.add_edge(r,f&#39;r[{n}]&#39;)
+                if s: self.graph.add_edge(s,f&#39;s[{n}]&#39;)
                 if clk: self.graph.add_edge(clk,f&#39;clk[{n}]&#39;)
         elif type == &#39;output&#39;:
                 self.graph.add_node(f&#39;output[{n}]&#39;,type=&#39;output&#39;)
@@ -1525,6 +1805,39 @@ This allows us to quickly generate an AND tree with the following syntax.</p>
 
         &#34;&#34;&#34;
         return [f for f in self.fanin(s) if self.type(f)==&#39;d&#39;][0]</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.disconnect"><code class="name flex">
+<span>def <span class="ident">disconnect</span></span>(<span>self, us, vs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Removes connections to the graph</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>us</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Head node(s)</dd>
+<dt><strong><code>vs</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Tail node(s)</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def disconnect(self,us,vs):
+        &#34;&#34;&#34;
+        Removes connections to the graph
+
+        Parameters
+        ----------
+        us : str or iterable of str
+                Head node(s)
+        vs : str or iterable of str
+                Tail node(s)
+
+        &#34;&#34;&#34;
+        if isinstance(us,str): us = [us]
+        if isinstance(vs,str): vs = [vs]
+        self.graph.remove_edges_from((u,v) for u in us for v in vs)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.edges"><code class="name flex">
@@ -1735,8 +2048,8 @@ This allows us to quickly generate an AND tree with the following syntax.</p>
 
         if visited is None: visited=set()
 
+        depths = set([depth])
         depth += 1
-        depths = set()
         visited.add(n)
 
         # find depth
@@ -2073,11 +2386,11 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
 <span>def <span class="ident">r</span></span>(<span>self, s)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Returns the r input of a sequential node</p>
+<div class="desc"><p>Returns the reset input of a sequential node</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>str</code></dt>
-<dd>R input node.</dd>
+<dd>Reset input node.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -2085,12 +2398,12 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
 </summary>
 <pre><code class="python">def r(self,s):
         &#34;&#34;&#34;
-        Returns the r input of a sequential node
+        Returns the reset input of a sequential node
 
         Returns
         -------
         str
-                R input node.
+                Reset input node.
 
         &#34;&#34;&#34;
         return [f for f in self.fanin(s) if self.type(f)==&#39;r&#39;][0]</code></pre>
@@ -2131,6 +2444,60 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
 
         &#34;&#34;&#34;
         return Circuit(graph=nx.relabel_nodes(self.graph,mapping),name=self.name)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.remove"><code class="name flex">
+<span>def <span class="ident">remove</span></span>(<span>self, ns)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Removes node(s)</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ns</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Node(s) to remove.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def remove(self,ns):
+        &#34;&#34;&#34;
+        Removes node(s)
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to remove.
+        &#34;&#34;&#34;
+        if isinstance(ns,str): ns = [ns]
+        self.graph.remove_nodes_from(ns)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.s"><code class="name flex">
+<span>def <span class="ident">s</span></span>(<span>self, s)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the set input of a sequential node</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code></dt>
+<dd>Set input node.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def s(self,s):
+        &#34;&#34;&#34;
+        Returns the set input of a sequential node
+
+        Returns
+        -------
+        str
+                Set input node.
+
+        &#34;&#34;&#34;
+        return [f for f in self.fanin(s) if self.type(f)==&#39;r&#39;][0]</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.seq"><code class="name flex">
@@ -2197,6 +2564,39 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
         return graph</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.circuit.Circuit.setType"><code class="name flex">
+<span>def <span class="ident">setType</span></span>(<span>self, ns, t)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns node(s) type(s).</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ns</code></strong> :&ensp;<code>str</code> or <code>iterable</code> of <code>str</code></dt>
+<dd>Node.</dd>
+<dt><strong><code>t</code></strong> :&ensp;<code>str</code></dt>
+<dd>Type.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def setType(self,ns,t):
+        &#34;&#34;&#34;
+        Returns node(s) type(s).
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node.
+        t : str
+                Type.
+        &#34;&#34;&#34;
+        if isinstance(ns,str):
+                ns = [ns]
+        for n in ns:
+                self.graph.nodes[n][&#39;type&#39;] = t</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.circuit.Circuit.startpoints"><code class="name flex">
 <span>def <span class="ident">startpoints</span></span>(<span>self, ns=None)</span>
 </code></dt>
@@ -2235,6 +2635,37 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
                 return set(n for n in self.transitiveFanin(ns) if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])
         else:
                 return set(n for n in self.graph if self.type(n) in [&#39;ff&#39;,&#39;lat&#39;,&#39;input&#39;])</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.stripIO"><code class="name flex">
+<span>def <span class="ident">stripIO</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Removes outputs and converts inputs to buffers for easy instantiation.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></dt>
+<dd>Other circuit</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def stripIO(self):
+        &#34;&#34;&#34;
+        Removes outputs and converts inputs to buffers for easy instantiation.
+
+        Parameters
+        ----------
+        c : Circuit
+                Other circuit
+        &#34;&#34;&#34;
+        g = self.graph.copy()
+        g.remove_nodes_from(self.outputs())
+        for i in self.inputs():
+                g.nodes[i][&#39;type&#39;] = &#39;buf&#39;
+
+        return Circuit(graph=g,name=self.name)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.transitiveFanin"><code class="name flex">
@@ -2367,7 +2798,20 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
 <dl>
 <dt><code>str</code> or <code>set</code> of <code>str</code></dt>
 <dd>Type of node or a set of node types.</dd>
-</dl></div>
+</dl>
+<h2 id="examples">Examples</h2>
+<p>Create a with several gate types.</p>
+<pre><code class="python">&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}',g)
+</code></pre>
+<p>Calling <code>type</code> for a single gate returns a single type</p>
+<pre><code class="python">&gt;&gt;&gt; c.type('g0')
+{'xor'}
+</code></pre>
+<p>Calling <code>type</code> on an iterable returns a set of types</p>
+<pre><code class="python">&gt;&gt;&gt; c.type(c.nodes())
+{'xor','or','xor','ff'}
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -2386,6 +2830,23 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
         str or set of str
                 Type of node or a set of node types.
 
+        Examples
+        --------
+        Create a with several gate types.
+
+        &gt;&gt;&gt; c = cg.Circuit()
+        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;,g)
+
+        Calling `type` for a single gate returns a single type
+
+        &gt;&gt;&gt; c.type(&#39;g0&#39;)
+        {&#39;xor&#39;}
+
+        Calling `type` on an iterable returns a set of types
+
+        &gt;&gt;&gt; c.type(c.nodes())
+        {&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;}
+
         &#34;&#34;&#34;
         if isinstance(ns,str):
                 return self.graph.nodes[ns][&#39;type&#39;]
@@ -2400,6 +2861,8 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
 <nav id="sidebar">
 <header>
 <img src="circuitgraph.png" alt="">
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+<a class="github-button" href="https://github.com/circuitgraph/circuigraph" aria-label="Star circuitgraph/circuigraph on GitHub">Star</a>
 </header>
 <h1>Index</h1>
 <div class="toc">
@@ -2409,6 +2872,11 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
 <li><h3>Super-module</h3>
 <ul>
 <li><code><a title="circuitgraph" href="index.html">circuitgraph</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="circuitgraph.circuit.clog2" href="#circuitgraph.circuit.clog2">clog2</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
@@ -2421,6 +2889,7 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
 <li><code><a title="circuitgraph.circuit.Circuit.connect" href="#circuitgraph.circuit.Circuit.connect">connect</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.copy" href="#circuitgraph.circuit.Circuit.copy">copy</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.d" href="#circuitgraph.circuit.Circuit.d">d</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.disconnect" href="#circuitgraph.circuit.Circuit.disconnect">disconnect</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.edges" href="#circuitgraph.circuit.Circuit.edges">edges</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.endpoints" href="#circuitgraph.circuit.Circuit.endpoints">endpoints</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.extend" href="#circuitgraph.circuit.Circuit.extend">extend</a></code></li>
@@ -2436,9 +2905,13 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
 <li><code><a title="circuitgraph.circuit.Circuit.outputs" href="#circuitgraph.circuit.Circuit.outputs">outputs</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.r" href="#circuitgraph.circuit.Circuit.r">r</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.relabel" href="#circuitgraph.circuit.Circuit.relabel">relabel</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.remove" href="#circuitgraph.circuit.Circuit.remove">remove</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.s" href="#circuitgraph.circuit.Circuit.s">s</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.seq" href="#circuitgraph.circuit.Circuit.seq">seq</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.seqGraph" href="#circuitgraph.circuit.Circuit.seqGraph">seqGraph</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.setType" href="#circuitgraph.circuit.Circuit.setType">setType</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.startpoints" href="#circuitgraph.circuit.Circuit.startpoints">startpoints</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.stripIO" href="#circuitgraph.circuit.Circuit.stripIO">stripIO</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.transitiveFanin" href="#circuitgraph.circuit.Circuit.transitiveFanin">transitiveFanin</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.transitiveFanout" href="#circuitgraph.circuit.Circuit.transitiveFanout">transitiveFanout</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.type" href="#circuitgraph.circuit.Circuit.type">type</a></code></li>

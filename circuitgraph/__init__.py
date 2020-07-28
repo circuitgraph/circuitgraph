@@ -14,8 +14,9 @@ Features include:
 
 """
 
-from circuitgraph.circuit import Circuit
+from circuitgraph.circuit import *
 from circuitgraph.io import *
 from circuitgraph.sat import *
 from circuitgraph.sim import *
 from circuitgraph.transform import *
+from circuitgraph.logic import *

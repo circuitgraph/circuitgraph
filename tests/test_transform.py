@@ -4,14 +4,14 @@ import os
 import circuitgraph as cg
 from circuitgraph.transform import *
 from circuitgraph.sat import sat
+from random import sample,randint
 import code
 
 
 class TestTransform(unittest.TestCase):
 
 	def setUp(self):
-		self.s27 = cg.from_file(os.path.dirname(__file__) +
-								  '/../rtl/s27.v', name='s27')
+		cls.s27 = cg.from_file('s27')
 
 		# incorrect copy of s27
 		self.s27m = self.s27.copy()
@@ -22,23 +22,23 @@ class TestTransform(unittest.TestCase):
 		m = miter(self.s27)
 		live = sat(m)
 		self.assertTrue(live)
-		different_output = sat(m,true=['sat'])
+		different_output = sat(m,assumptions={'sat':True})
 		self.assertFalse(different_output)
 
 		# check equivalence with incorrect copy
 		m = miter(self.s27,self.s27m)
 		live = sat(m)
 		self.assertTrue(live)
-		different_output = sat(m,true=['sat'])
+		different_output = sat(m,assumptions={'sat':True})
 		self.assertTrue(different_output)
 
 		# check equivalence with free inputs
-		startpoints = self.s27.startpoints()
+		startpoints = self.s27.startpoints()-set(['clk'])
 		startpoints.pop()
 		m = miter(self.s27,startpoints=startpoints)
 		live = sat(m)
 		self.assertTrue(live)
-		different_output = sat(m,true=['sat'])
+		different_output = sat(m,assumptions={'sat':True})
 		self.assertTrue(different_output)
 
 	def test_syn(self):
@@ -47,6 +47,32 @@ class TestTransform(unittest.TestCase):
 		m = miter(self.s27,s)
 		live = sat(m)
 		self.assertTrue(live)
-		different_output = sat(m,true=['sat'])
+		different_output = sat(m,assumptions={'sat':True})
 		self.assertFalse(different_output)
+
+	def test_sensitivity(self):
+		# pick random node and input value
+		n = sample(self.s27.nodes()-self.s27.startpoints(),1)[0]
+		input_val = {i:randint(0,1) for i in self.s27.startpoints(n)}
+
+		# build sensitivity circuit
+		s = sensitivity(self.s27,n)
+
+		# find sensitivity at an input
+		model = sat(s,input_val)
+		sen_s = sum(model[o] for o in s.outputs())
+
+		# try inputs Hamming distance 1 away
+		output_val = sat(self.s27,input_val)[n]
+		sen_sim = 0
+		for i in self.s27.startpoints(n):
+			neighbor_input_val = {g:v if g!=i else not v for g,v in input_val.items()}
+			neighbor_output_val = sat(self.s27,neighbor_input_val)[n]
+			if neighbor_output_val!=output_val: sen_sim += 1
+
+		if sen_s!=sen_sim:
+			code.interact(local=dict(globals(), **locals()))
+
+		# check answer
+		self.assertEqual(sen_s,sen_sim)
 

@@ -7,10 +7,8 @@ class TestCircuit(unittest.TestCase):
 
 	@classmethod
 	def setUpClass(cls):
-		cls.c17 = cg.from_file(os.path.dirname(__file__) +
-								  '/../rtl/c17_gates.v', name='c17')
-		cls.s27 = cg.from_file(os.path.dirname(__file__) +
-								  '/../rtl/s27.v', name='s27')
+		cls.c17 = cg.from_lib('c17_gates','c17')
+		cls.s27 = cg.from_file('s27')
 
 	def test_fanin(self):
 		self.assertSetEqual(self.c17.fanin('G9'), set(['G3', 'G4']))
@@ -81,8 +79,7 @@ class TestCircuit(unittest.TestCase):
 class TestCircuitEdit(unittest.TestCase):
 
 	def setUp(self):
-		self.c17 = cg.from_file(os.path.dirname(__file__) +
-								  '/../rtl/c17_gates.v', name='c17')
+		cls.c17 = cg.from_lib('c17_gates','c17')
 
 	def test_add(self):
 		pass
