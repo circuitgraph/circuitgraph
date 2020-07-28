@@ -8,7 +8,7 @@ class TestCircuit(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
 		cls.c17 = cg.from_lib('c17_gates','c17')
-		cls.s27 = cg.from_file('s27')
+		cls.s27 = cg.from_lib('s27')
 
 	def test_fanin(self):
 		self.assertSetEqual(self.c17.fanin('G9'), set(['G3', 'G4']))
@@ -46,6 +46,12 @@ class TestCircuit(unittest.TestCase):
 		self.assertFalse('adsf' in self.s27)
 		self.assertTrue('G7' in self.s27)
 
+	def test_isCyclic(self):
+		c = cg.Circuit()
+		c.add('a','buf')
+		c.add('b','buf',fanin='a',fanout='a')
+		self.assertTrue(c.isCyclic())
+
 	def test_type(self):
 		self.assertTrue(self.s27.type('G7')=='ff')
 		self.assertTrue(self.s27.type('clk[G7]')=='clk')
@@ -75,18 +81,4 @@ class TestCircuit(unittest.TestCase):
 		self.assertSetEqual(self.s27.transitiveFanin('n_4',stopatTypes=['not'],stopatNodes=['n_0']),set(['n_0','G3']))
 		self.assertSetEqual(self.s27.transitiveFanin(['n_4','n_3']),set(['G3','n_0','G7','G1']))
 
-
-class TestCircuitEdit(unittest.TestCase):
-
-	def setUp(self):
-		cls.c17 = cg.from_lib('c17_gates','c17')
-
-	def test_add(self):
-		pass
-
-	def test_extend(self):
-		pass
-
-	def test_connect(self):
-		pass
 

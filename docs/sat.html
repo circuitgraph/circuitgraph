@@ -59,7 +59,11 @@ def addAssumptions(formula,variables,assumptions):
                 else:
                         formula.append([-variables.id(n)])
 
-def constructSolver(c,assumptions):
+def remap(clauses,offset):
+        new_clauses = [[v+offset if v&gt;0 else v-offset for v in c] for c in clauses]
+        return new_clauses
+
+def constructSolver(c,assumptions=None):
         &#34;&#34;&#34;
         Constructs a SAT solver instance with the given circuit and assumptions
 
@@ -527,7 +531,7 @@ def signalProbability(c,n):
 </details>
 </dd>
 <dt id="circuitgraph.sat.constructSolver"><code class="name flex">
-<span>def <span class="ident">constructSolver</span></span>(<span>c, assumptions)</span>
+<span>def <span class="ident">constructSolver</span></span>(<span>c, assumptions=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Constructs a SAT solver instance with the given circuit and assumptions</p>
@@ -549,7 +553,7 @@ def signalProbability(c,n):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def constructSolver(c,assumptions):
+<pre><code class="python">def constructSolver(c,assumptions=None):
         &#34;&#34;&#34;
         Constructs a SAT solver instance with the given circuit and assumptions
 
@@ -626,6 +630,20 @@ def signalProbability(c,n):
                         count += 1
 
         return count</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.sat.remap"><code class="name flex">
+<span>def <span class="ident">remap</span></span>(<span>clauses, offset)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def remap(clauses,offset):
+        new_clauses = [[v+offset if v&gt;0 else v-offset for v in c] for c in clauses]
+        return new_clauses</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.sat.sat"><code class="name flex">
@@ -815,6 +833,7 @@ False
 <li><code><a title="circuitgraph.sat.cnf" href="#circuitgraph.sat.cnf">cnf</a></code></li>
 <li><code><a title="circuitgraph.sat.constructSolver" href="#circuitgraph.sat.constructSolver">constructSolver</a></code></li>
 <li><code><a title="circuitgraph.sat.modelCount" href="#circuitgraph.sat.modelCount">modelCount</a></code></li>
+<li><code><a title="circuitgraph.sat.remap" href="#circuitgraph.sat.remap">remap</a></code></li>
 <li><code><a title="circuitgraph.sat.sat" href="#circuitgraph.sat.sat">sat</a></code></li>
 <li><code><a title="circuitgraph.sat.signalProbability" href="#circuitgraph.sat.signalProbability">signalProbability</a></code></li>
 </ul>

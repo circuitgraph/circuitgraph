@@ -196,6 +196,25 @@ class Circuit:
                         if isinstance(types,str): types = [types]
                         return set(n for n in self.nodes() if self.type(n) in types)
 
+        def isCyclic(self):
+                &#34;&#34;&#34;
+                Checks for combinational loops in circuit
+
+                Returns
+                -------
+                Bool
+                        Existence of cycle
+
+                &#34;&#34;&#34;
+                g = self.graph.copy()
+                g.remove_edges_from((e,s) for s in self.startpoints() for e in self.endpoints())
+                try:
+                        if nx.find_cycle(g):
+                                return True
+                except:
+                        pass
+                return False
+
         def edges(self):
                 &#34;&#34;&#34;
                 Returns circuit edges
@@ -1015,6 +1034,25 @@ ValueError: expected num &gt;= 1
                 else:
                         if isinstance(types,str): types = [types]
                         return set(n for n in self.nodes() if self.type(n) in types)
+
+        def isCyclic(self):
+                &#34;&#34;&#34;
+                Checks for combinational loops in circuit
+
+                Returns
+                -------
+                Bool
+                        Existence of cycle
+
+                &#34;&#34;&#34;
+                g = self.graph.copy()
+                g.remove_edges_from((e,s) for s in self.startpoints() for e in self.endpoints())
+                try:
+                        if nx.find_cycle(g):
+                                return True
+                except:
+                        pass
+                return False
 
         def edges(self):
                 &#34;&#34;&#34;
@@ -2257,6 +2295,40 @@ This allows us to quickly generate an AND tree with the following syntax.</p>
         return self.nodes([&#39;output&#39;,&#39;input&#39;])</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.circuit.Circuit.isCyclic"><code class="name flex">
+<span>def <span class="ident">isCyclic</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Checks for combinational loops in circuit</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Bool</code></dt>
+<dd>Existence of cycle</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def isCyclic(self):
+        &#34;&#34;&#34;
+        Checks for combinational loops in circuit
+
+        Returns
+        -------
+        Bool
+                Existence of cycle
+
+        &#34;&#34;&#34;
+        g = self.graph.copy()
+        g.remove_edges_from((e,s) for s in self.startpoints() for e in self.endpoints())
+        try:
+                if nx.find_cycle(g):
+                        return True
+        except:
+                pass
+        return False</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.circuit.Circuit.lats"><code class="name flex">
 <span>def <span class="ident">lats</span></span>(<span>self)</span>
 </code></dt>
@@ -2900,6 +2972,7 @@ NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
 <li><code><a title="circuitgraph.circuit.Circuit.ffs" href="#circuitgraph.circuit.Circuit.ffs">ffs</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.inputs" href="#circuitgraph.circuit.Circuit.inputs">inputs</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.io" href="#circuitgraph.circuit.Circuit.io">io</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.isCyclic" href="#circuitgraph.circuit.Circuit.isCyclic">isCyclic</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.lats" href="#circuitgraph.circuit.Circuit.lats">lats</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.nodes" href="#circuitgraph.circuit.Circuit.nodes">nodes</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.outputs" href="#circuitgraph.circuit.Circuit.outputs">outputs</a></code></li>

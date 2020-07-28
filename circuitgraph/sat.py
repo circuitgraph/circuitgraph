@@ -30,7 +30,11 @@ def addAssumptions(formula,variables,assumptions):
 		else:
 			formula.append([-variables.id(n)])
 
-def constructSolver(c,assumptions):
+def remap(clauses,offset):
+	new_clauses = [[v+offset if v>0 else v-offset for v in c] for c in clauses]
+	return new_clauses
+
+def constructSolver(c,assumptions=None):
 	"""
 	Constructs a SAT solver instance with the given circuit and assumptions
 

@@ -159,6 +159,25 @@ class Circuit:
 			if isinstance(types,str): types = [types]
 			return set(n for n in self.nodes() if self.type(n) in types)
 
+	def isCyclic(self):
+		"""
+		Checks for combinational loops in circuit
+
+		Returns
+		-------
+		Bool
+			Existence of cycle
+
+		"""
+		g = self.graph.copy()
+		g.remove_edges_from((e,s) for s in self.startpoints() for e in self.endpoints())
+		try:
+			if nx.find_cycle(g):
+				return True
+		except:
+			pass
+		return False
+
 	def edges(self):
 		"""
 		Returns circuit edges
