@@ -12,7 +12,7 @@ setuptools.setup(
     description="Tools for working with circuits as graphs.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/rbnprdy/circuitgraph",
+    url="https://github.com/circuitgraph/circuitgraph",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
