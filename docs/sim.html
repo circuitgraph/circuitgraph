@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.3" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.sim API documentation</title>
 <meta name="description" content="Functions for simulating circuits using Verilator" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -29,59 +29,58 @@
 </summary>
 <pre><code class="python">&#34;&#34;&#34;Functions for simulating circuits using Verilator&#34;&#34;&#34;
 
-import tempfile
 import pyverilator
-import code
-from circuitgraph.io import verilog_to_circuit,circuit_to_verilog
+from circuitgraph.io import circuit_to_verilog
 from tempfile import NamedTemporaryFile
 
+
 def construct_simulator(c):
-        &#34;&#34;&#34;
-        Constructs a PyVerilator instance.
+    &#34;&#34;&#34;
+    Constructs a PyVerilator instance.
 
-        Parameters
-        ----------
-        c : Circuit
-                Circuit to simulate.
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to simulate.
 
-        Returns
-        -------
-        PyVerilator
-                Simulation instance.
-        &#34;&#34;&#34;
+    Returns
+    -------
+    PyVerilator
+            Simulation instance.
+    &#34;&#34;&#34;
 
-        verilog = circuit_to_verilog(c)
+    verilog = circuit_to_verilog(c)
 
-        with NamedTemporaryFile(suffix=&#39;.v&#39;) as tmp:
-                tmp.write(bytes(verilog,&#39;ascii&#39;))
-                tmp.flush()
-                sim = pyverilator.PyVerilator.build(tmp.name)
+    with NamedTemporaryFile(suffix=&#39;.v&#39;) as tmp:
+        tmp.write(bytes(verilog, &#39;ascii&#39;))
+        tmp.flush()
+        sim = pyverilator.PyVerilator.build(tmp.name)
 
-        return sim
+    return sim
 
-def sim(c,forced):
-        &#34;&#34;&#34;
-        Simulates circuit with given values
 
-        Parameters
-        ----------
-        c : Circuit
-                Circuit to simulate.
-        forced : dict of str:bool
-                Values to force in the simulation.
+def sim(c, forced):
+    &#34;&#34;&#34;
+    Simulates circuit with given values
 
-        Returns
-        -------
-        dict of str:bool
-                Output values.
-        &#34;&#34;&#34;
-        sim = construct_simulator(c)
-        #code.interact(local=dict(globals(), **locals()))
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to simulate.
+    forced : dict of str:bool
+            Values to force in the simulation.
 
-        for n,v in forced.items():
-                sim[n] = v
+    Returns
+    -------
+    dict of str:bool
+            Output values.
+    &#34;&#34;&#34;
+    sim = construct_simulator(c)
 
-        return {n:sim[n.replace(&#39;output[&#39;,&#39;&#39;)[:-1]] for n in c.outputs()}</code></pre>
+    for n, v in forced.items():
+        sim[n] = v
+
+    return {n: sim[n.replace(&#39;output[&#39;, &#39;&#39;)[:-1]] for n in c.outputs()}</code></pre>
 </details>
 </section>
 <section>
@@ -111,28 +110,28 @@ def sim(c,forced):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def construct_simulator(c):
-        &#34;&#34;&#34;
-        Constructs a PyVerilator instance.
+    &#34;&#34;&#34;
+    Constructs a PyVerilator instance.
 
-        Parameters
-        ----------
-        c : Circuit
-                Circuit to simulate.
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to simulate.
 
-        Returns
-        -------
-        PyVerilator
-                Simulation instance.
-        &#34;&#34;&#34;
+    Returns
+    -------
+    PyVerilator
+            Simulation instance.
+    &#34;&#34;&#34;
 
-        verilog = circuit_to_verilog(c)
+    verilog = circuit_to_verilog(c)
 
-        with NamedTemporaryFile(suffix=&#39;.v&#39;) as tmp:
-                tmp.write(bytes(verilog,&#39;ascii&#39;))
-                tmp.flush()
-                sim = pyverilator.PyVerilator.build(tmp.name)
+    with NamedTemporaryFile(suffix=&#39;.v&#39;) as tmp:
+        tmp.write(bytes(verilog, &#39;ascii&#39;))
+        tmp.flush()
+        sim = pyverilator.PyVerilator.build(tmp.name)
 
-        return sim</code></pre>
+    return sim</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.sim.sim"><code class="name flex">
@@ -156,29 +155,28 @@ def sim(c,forced):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sim(c,forced):
-        &#34;&#34;&#34;
-        Simulates circuit with given values
+<pre><code class="python">def sim(c, forced):
+    &#34;&#34;&#34;
+    Simulates circuit with given values
 
-        Parameters
-        ----------
-        c : Circuit
-                Circuit to simulate.
-        forced : dict of str:bool
-                Values to force in the simulation.
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to simulate.
+    forced : dict of str:bool
+            Values to force in the simulation.
 
-        Returns
-        -------
-        dict of str:bool
-                Output values.
-        &#34;&#34;&#34;
-        sim = construct_simulator(c)
-        #code.interact(local=dict(globals(), **locals()))
+    Returns
+    -------
+    dict of str:bool
+            Output values.
+    &#34;&#34;&#34;
+    sim = construct_simulator(c)
 
-        for n,v in forced.items():
-                sim[n] = v
+    for n, v in forced.items():
+        sim[n] = v
 
-        return {n:sim[n.replace(&#39;output[&#39;,&#39;&#39;)[:-1]] for n in c.outputs()}</code></pre>
+    return {n: sim[n.replace(&#39;output[&#39;, &#39;&#39;)[:-1]] for n in c.outputs()}</code></pre>
 </details>
 </dd>
 </dl>
@@ -212,7 +210,7 @@ def sim(c,forced):
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

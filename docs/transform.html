@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.3" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.transform API documentation</title>
 <meta name="description" content="Functions for transforming circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -31,435 +31,471 @@
 # TODO: this file name could change
 
 import math
-from circuitgraph import Circuit
-from circuitgraph.io import verilog_to_circuit,circuit_to_verilog
-from subprocess import PIPE,Popen
+import code
+from subprocess import PIPE, Popen
 from tempfile import NamedTemporaryFile
 from random import sample
+import os
+
+import networkx as nx
+
+from circuitgraph import Circuit
+from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
 
 
-def syn(c,engine=&#39;Genus&#39;,printOutput=False):
-        &#34;&#34;&#34;
-        Synthesizes the circuit using Genus.
+def syn(c, engine=&#39;Genus&#39;, printOutput=False):
+    &#34;&#34;&#34;
+    Synthesizes the circuit using Genus.
 
-        Parameters
-        ----------
-        c : Circuit
-                Circuit to synthesize.
-        engine : string
-                Synthesis tool to use (&#39;Genus&#39; or &#39;Yosys&#39;)
-        printOutput : bool
-                Option to print synthesis log
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to synthesize.
+    engine : string
+            Synthesis tool to use (&#39;Genus&#39; or &#39;Yosys&#39;)
+    printOutput : bool
+            Option to print synthesis log
 
-        Returns
-        -------
-        Circuit
-                Synthesized circuit.
+    Returns
+    -------
+    Circuit
+            Synthesized circuit.
+    &#34;&#34;&#34;
+    verilog = circuit_to_verilog(c)
 
-        &#34;&#34;&#34;
-        verilog = circuit_to_verilog(c)
+    # probably should write output to the tmp file
+    with NamedTemporaryFile() as tmp:
+        if engine == &#39;Genus&#39;:
+            cmd = [&#39;genus&#39;, &#39;-no_gui&#39;, &#39;-execute&#39;,
+                   &#39;set_db / .library &#39;
+                   f&#34;{os.environ[&#39;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#39;]};\n&#34;
+                   f&#39;read_hdl -sv {tmp.name};\n&#39;
+                   &#39;elaborate;\n&#39;
+                   &#39;set_db syn_generic_effort high\n&#39;
+                   &#39;_syn_generic;\n&#39;
+                   &#39;syn_map;\n&#39;
+                   &#39;syn_opt;\n&#39;
+                   &#39;write_hdl -generic;\n&#39;
+                   &#39;exit;&#39;]
+        else:
+            print(&#39;not implemented&#39;)
+        tmp.write(bytes(verilog, &#39;ascii&#39;))
+        tmp.flush()
 
-        # probably should write output to the tmp file
-        with NamedTemporaryFile() as tmp:
-                if engine==&#39;Genus&#39;:
-                        cmd = [&#39;genus&#39;,&#39;-no_gui&#39;,&#39;-execute&#39;,f&#34;&#34;&#34;set_db / .library /afs/ece.cmu.edu/support/cds/share/image/usr/cds/genus-19.12.000/share/synth/tutorials/tech/tutorial.lib;
-                                        read_hdl -sv {tmp.name};
-                                        elaborate;
-                                        set_db syn_generic_effort high
-                                        syn_generic;
-                                        syn_map;
-                                        syn_opt;
-                                        write_hdl -generic;
-                                        exit;&#34;&#34;&#34;]
-                else:
-                        print(&#39;not implemented&#39;)
-                tmp.write(bytes(verilog,&#39;ascii&#39;))
-                tmp.flush()
+        process = Popen(cmd, stdout=PIPE, stderr=PIPE,
+                        universal_newlines=True)
+        output = &#39;&#39;
+        while True:
+            line = process.stdout.readline()
+            if line == &#39;&#39; and process.poll() is not None:
+                break
+            if line:
+                if printOutput:
+                    print(line.strip())
+                output += line
 
-                process = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
-                output = &#39;&#39;
-                while True:
-                        line = process.stdout.readline()
-                        if line == &#39;&#39; and process.poll() is not None:
-                                break
-                        if line:
-                                if printOutput:
-                                        print(line.strip())
-                                output += line
+    return verilog_to_circuit(output, c.name)
 
-        return verilog_to_circuit(output,c.name)
 
 def ternary(c):
-        &#34;&#34;&#34;
-        Encodes the circuit with ternary values
+    &#34;&#34;&#34;
+    Encodes the circuit with ternary values
 
-        Parameters
-        ----------
-        c : Circuit
-                Circuit to encode.
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to encode.
 
-        Returns
-        -------
-        Circuit
-                Encoded circuit.
+    Returns
+    -------
+    Circuit
+            Encoded circuit.
 
-        &#34;&#34;&#34;
-        t = c.copy()
+    &#34;&#34;&#34;
+    t = c.copy()
 
-        # add dual nodes
-        for n in c:
-                if c.type(n) in [&#39;and&#39;,&#39;nand&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
-                        t.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
-                        t.add_node(f&#39;{n}_0_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
-                        t.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_0_not_in_fi&#39;,f&#39;{n}_x&#39;)])
-                        t.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
-                        for p in c.predecessors(n):
-                                t.add_node(f&#39;{p}_is_0&#39;,gate=&#39;nor&#39;,output=False)
-                                t.add_edge(f&#39;{p}_is_0&#39;,f&#39;{n}_0_not_in_fi&#39;)
-                                t.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_is_0&#39;)
-                                t.add_edge(p,f&#39;{p}_is_0&#39;)
+    # add dual nodes
+    for n in c:
+        if c.type(n) in [&#39;and&#39;, &#39;nand&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;and&#39;, output=c.nodes[n][&#39;output&#39;])
+            t.add_node(f&#39;{n}_x_in_fi&#39;, gate=&#39;or&#39;, output=False)
+            t.add_node(f&#39;{n}_0_not_in_fi&#39;, gate=&#39;nor&#39;, output=False)
+            t.add_edges_from([(f&#39;{n}_x_in_fi&#39;, f&#39;{n}_x&#39;),
+                              (f&#39;{n}_0_not_in_fi&#39;, f&#39;{n}_x&#39;)])
+            t.add_edges_from((f&#39;{p}_x&#39;, f&#39;{n}_x_in_fi&#39;)
+                             for p in c.predecessors(n))
+            for p in c.predecessors(n):
+                t.add_node(f&#39;{p}_is_0&#39;, gate=&#39;nor&#39;, output=False)
+                t.add_edge(f&#39;{p}_is_0&#39;, f&#39;{n}_0_not_in_fi&#39;)
+                t.add_edge(f&#39;{p}_x&#39;, f&#39;{p}_is_0&#39;)
+                t.add_edge(p, f&#39;{p}_is_0&#39;)
 
-                elif c.type(n) in [&#39;or&#39;,&#39;nor&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
-                        t.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
-                        t.add_node(f&#39;{n}_1_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
-                        t.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_1_not_in_fi&#39;,f&#39;{n}_x&#39;)])
-                        t.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
-                        for p in c.predecessors(n):
-                                t.add_node(f&#39;{p}_is_1&#39;,gate=&#39;and&#39;,output=False)
-                                t.add_edge(f&#39;{p}_is_1&#39;,f&#39;{n}_1_not_in_fi&#39;)
-                                t.add_node(f&#39;{p}_not_x&#39;,gate=&#39;not&#39;,output=False)
-                                t.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_not_x&#39;)
-                                t.add_edge(f&#39;{p}_not_x&#39;,f&#39;{p}_is_1&#39;)
-                                t.add_edge(p,f&#39;{p}_is_1&#39;)
+        elif c.type(n) in [&#39;or&#39;, &#39;nor&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;and&#39;, output=c.nodes[n][&#39;output&#39;])
+            t.add_node(f&#39;{n}_x_in_fi&#39;, gate=&#39;or&#39;, output=False)
+            t.add_node(f&#39;{n}_1_not_in_fi&#39;, gate=&#39;nor&#39;, output=False)
+            t.add_edges_from([(f&#39;{n}_x_in_fi&#39;, f&#39;{n}_x&#39;),
+                              (f&#39;{n}_1_not_in_fi&#39;, f&#39;{n}_x&#39;)])
+            t.add_edges_from((f&#39;{p}_x&#39;, f&#39;{n}_x_in_fi&#39;)
+                             for p in c.predecessors(n))
+            for p in c.predecessors(n):
+                t.add_node(f&#39;{p}_is_1&#39;, gate=&#39;and&#39;, output=False)
+                t.add_edge(f&#39;{p}_is_1&#39;, f&#39;{n}_1_not_in_fi&#39;)
+                t.add_node(f&#39;{p}_not_x&#39;, gate=&#39;not&#39;, output=False)
+                t.add_edge(f&#39;{p}_x&#39;, f&#39;{p}_not_x&#39;)
+                t.add_edge(f&#39;{p}_not_x&#39;, f&#39;{p}_is_1&#39;)
+                t.add_edge(p, f&#39;{p}_is_1&#39;)
 
-                elif c.type(n) in [&#39;buf&#39;,&#39;not&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;buf&#39;,output=c.nodes[n][&#39;output&#39;])
-                        p = list(c.predecessors(n))[0]
-                        t.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+        elif c.type(n) in [&#39;buf&#39;, &#39;not&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;buf&#39;, output=c.nodes[n][&#39;output&#39;])
+            p = list(c.predecessors(n))[0]
+            t.add_edge(f&#39;{p}_x&#39;, f&#39;{n}_x&#39;)
 
-                elif c.type(n) in [&#39;xor&#39;,&#39;xnor&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;or&#39;,output=c.nodes[n][&#39;output&#39;])
-                        t.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x&#39;) for p in c.predecessors(n))
+        elif c.type(n) in [&#39;xor&#39;, &#39;xnor&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;or&#39;, output=c.nodes[n][&#39;output&#39;])
+            t.add_edges_from((f&#39;{p}_x&#39;, f&#39;{n}_x&#39;) for p in c.predecessors(n))
 
-                elif c.type(n) in [&#39;0&#39;,&#39;1&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;0&#39;,output=c.nodes[n][&#39;output&#39;])
+        elif c.type(n) in [&#39;0&#39;, &#39;1&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;0&#39;, output=c.nodes[n][&#39;output&#39;])
 
-                elif c.type(n) in [&#39;input&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;input&#39;,output=c.nodes[n][&#39;output&#39;])
+        elif c.type(n) in [&#39;input&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;input&#39;, output=c.nodes[n][&#39;output&#39;])
 
-                elif c.type(n) in [&#39;dff&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;dff&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;])
-                        p = list(c.predecessors(n))[0]
-                        d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+        elif c.type(n) in [&#39;dff&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;dff&#39;,
+                       output=c.nodes[n][&#39;output&#39;], clk=c.nodes[n][&#39;clk&#39;])
+            p = list(c.predecessors(n))[0]
+            t.add_edge(f&#39;{p}_x&#39;, f&#39;{n}_x&#39;)
 
-                elif c.type(n) in [&#39;lat&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;lat&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;],rst=c.nodes[n][&#39;rst&#39;])
-                        p = list(c.predecessors(n))[0]
-                        t.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+        elif c.type(n) in [&#39;lat&#39;]:
+            t.add_node(
+                f&#39;{n}_x&#39;, gate=&#39;lat&#39;, output=c.nodes[n][&#39;output&#39;],
+                clk=c.nodes[n][&#39;clk&#39;], rst=c.nodes[n][&#39;rst&#39;])
+            p = list(c.predecessors(n))[0]
+            t.add_edge(f&#39;{p}_x&#39;, f&#39;{n}_x&#39;)
 
-                else:
-                        print(f&#34;unknown gate type: {c.nodes[n][&#39;type&#39;]}&#34;)
-                        code.interact(local=dict(globals(), **locals()))
+        else:
+            print(f&#34;unknown gate type: {c.nodes[n][&#39;type&#39;]}&#34;)
+            code.interact(local=dict(globals(), **locals()))
 
-        for n in t:
-                if &#39;type&#39; not in t.nodes[n]:
-                        print(f&#34;empty gate type: {n}&#34;)
-                        code.interact(local=dict(globals(), **locals()))
+    for n in t:
+        if &#39;type&#39; not in t.nodes[n]:
+            print(f&#34;empty gate type: {n}&#34;)
+            code.interact(local=dict(globals(), **locals()))
 
-        return t
+    return t
 
-def miter(c0,c1=None,startpoints=None,endpoints=None):
-        &#34;&#34;&#34;
-        Creates a miter circuit
 
-        Parameters
-        ----------
-        c0 : Circuit
-                First circuit.
-        c1 : Circuit
-                Optional second circuit, if None c0 is mitered with itself.
-        startpoints : iterable of str
-                Nodes to be tied together, must exist in both circuits.
-        endpoints : iterable of str
-                Nodes to be compared, must exist in both circuits.
+def miter(c0, c1=None, startpoints=None, endpoints=None):
+    &#34;&#34;&#34;
+    Creates a miter circuit
 
-        Returns
-        -------
-        Circuit
-                Miter circuit.
+    Parameters
+    ----------
+    c0 : Circuit
+            First circuit.
+    c1 : Circuit
+            Optional second circuit, if None c0 is mitered with itself.
+    startpoints : iterable of str
+            Nodes to be tied together, must exist in both circuits.
+    endpoints : iterable of str
+            Nodes to be compared, must exist in both circuits.
 
-        &#34;&#34;&#34;
-        if not c1:
-                c1 = c0
-        if not startpoints:
-                startpoints = c0.startpoints()&amp;c1.startpoints()
-        if not endpoints:
-                endpoints = c0.endpoints()&amp;c1.endpoints()
+    Returns
+    -------
+    Circuit
+            Miter circuit.
 
-        # create miter, relabel to avoid overlap except for common startpoints
-        m = c0.relabel({n:f&#39;c0_{n}&#39; for n in c0.nodes()-startpoints})
-        m.extend(c1.relabel({n:f&#39;c1_{n}&#39; for n in c1.nodes()-startpoints}))
+    &#34;&#34;&#34;
+    if not c1:
+        c1 = c0
+    if not startpoints:
+        startpoints = c0.startpoints() &amp; c1.startpoints()
+    if not endpoints:
+        endpoints = c0.endpoints() &amp; c1.endpoints()
 
-        # compare outputs
-        m.add(&#39;sat&#39;,&#39;or&#39;)
-        for o in endpoints:
-                m.add(f&#39;miter_{o}&#39;,&#39;xor&#39;,fanin=[f&#39;c0_{o}&#39;,f&#39;c1_{o}&#39;],fanout=[&#39;sat&#39;])
+    # create miter, relabel to avoid overlap except for common startpoints
+    m = c0.relabel({n: f&#39;c0_{n}&#39; for n in c0.nodes()-startpoints})
+    m.extend(c1.relabel({n: f&#39;c1_{n}&#39; for n in c1.nodes()-startpoints}))
 
-        return m
+    # compare outputs
+    m.add(&#39;sat&#39;, &#39;or&#39;)
+    for o in endpoints:
+        m.add(f&#39;miter_{o}&#39;, &#39;xor&#39;, fanin=[
+              f&#39;c0_{o}&#39;, f&#39;c1_{o}&#39;], fanout=[&#39;sat&#39;])
+
+    return m
+
 
 def comb(c):
-        &#34;&#34;&#34;
-        Creates combinational version of the circuit.
+    &#34;&#34;&#34;
+    Creates combinational version of the circuit.
 
-        Parameters
-        ----------
-        c : Circuit
-                Sequential circuit to unroll.
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to unroll.
 
-        Returns
-        -------
-        Circuit
-                Combinational circuit.
+    Returns
+    -------
+    Circuit
+            Combinational circuit.
 
-        &#34;&#34;&#34;
-        c_comb = c.copy()
-        lat_model = gen_lat_model()
-        ff_model = gen_ff_model()
+    &#34;&#34;&#34;
+    c_comb = c.copy()
+    lat_model = gen_lat_model()
+    ff_model = gen_ff_model()
 
-        for lat in c.lats():
-                relabeled_model = nx.relabel_nodes(lat_model,{n:f&#39;{lat}_{n}&#39; for n in lat_model})
-                c_comb.extend(relabeled_model)
-                c_comb.add_edges_from((f&#39;{lat}_q&#39;,s) for s in c_comb.successors(lat))
-                c_comb.add_edges_from((p,f&#39;{lat}_d&#39;) for p in c_comb.predecessors(lat))
-                c_comb.add_edge(c.nodes[lat][&#39;clk&#39;],f&#39;{lat}_clk&#39;)
-                c_comb.add_edge(c.nodes[lat][&#39;rst&#39;],f&#39;{lat}_rst&#39;)
-                c_comb.remove_node(lat)
+    for lat in c.lats():
+        relabeled_model = nx.relabel_nodes(
+            lat_model, {n: f&#39;{lat}_{n}&#39; for n in lat_model})
+        c_comb.extend(relabeled_model)
+        c_comb.add_edges_from((f&#39;{lat}_q&#39;, s) for s in c_comb.successors(lat))
+        c_comb.add_edges_from((p, f&#39;{lat}_d&#39;)
+                              for p in c_comb.predecessors(lat))
+        c_comb.add_edge(c.nodes[lat][&#39;clk&#39;], f&#39;{lat}_clk&#39;)
+        c_comb.add_edge(c.nodes[lat][&#39;rst&#39;], f&#39;{lat}_rst&#39;)
+        c_comb.remove_node(lat)
 
-        for ff in c.ffs():
-                relabeled_model = nx.relabel_nodes(ff_model,{n:f&#39;{ff}_{n}&#39; for n in ff_model})
-                c_comb.extend(relabeled_model)
-                c_comb.add_edges_from((f&#39;{ff}_q&#39;,s) for s in c_comb.successors(ff))
-                c_comb.add_edges_from((p,f&#39;{ff}_d&#39;) for p in c_comb.predecessors(ff))
-                c_comb.add_edge(c.nodes[ff][&#39;clk&#39;],f&#39;{ff}_clk&#39;)
-                c_comb.remove_node(ff)
+    for ff in c.ffs():
+        relabeled_model = nx.relabel_nodes(
+            ff_model, {n: f&#39;{ff}_{n}&#39; for n in ff_model})
+        c_comb.extend(relabeled_model)
+        c_comb.add_edges_from((f&#39;{ff}_q&#39;, s) for s in c_comb.successors(ff))
+        c_comb.add_edges_from((p, f&#39;{ff}_d&#39;) for p in c_comb.predecessors(ff))
+        c_comb.add_edge(c.nodes[ff][&#39;clk&#39;], f&#39;{ff}_clk&#39;)
+        c_comb.remove_node(ff)
+
+    return c_comb
+
 
 def gen_lat_model():
-        lm = nx.DiGraph()
-        # inputs
-        lm.add_node(&#39;si&#39;,gate=&#39;buf&#39;,output=False)
-        lm.add_node(&#39;d&#39;,gate=&#39;buf&#39;,output=False)
-        lm.add_node(&#39;clk&#39;,gate=&#39;buf&#39;,output=False)
-        lm.add_node(&#39;rst&#39;,gate=&#39;buf&#39;,output=False)
-        lm.add_node(&#39;mux_out&#39;,gate=&#39;or&#39;,output=False)
-        lm.add_node(&#39;mux_a0&#39;,gate=&#39;and&#39;,output=False)
-        lm.add_node(&#39;mux_a1&#39;,gate=&#39;and&#39;,output=False)
-        lm.add_node(&#39;clk_b&#39;,gate=&#39;not&#39;,output=False)
+    lm = nx.DiGraph()
+    # inputs
+    lm.add_node(&#39;si&#39;, gate=&#39;buf&#39;, output=False)
+    lm.add_node(&#39;d&#39;, gate=&#39;buf&#39;, output=False)
+    lm.add_node(&#39;clk&#39;, gate=&#39;buf&#39;, output=False)
+    lm.add_node(&#39;rst&#39;, gate=&#39;buf&#39;, output=False)
+    lm.add_node(&#39;mux_out&#39;, gate=&#39;or&#39;, output=False)
+    lm.add_node(&#39;mux_a0&#39;, gate=&#39;and&#39;, output=False)
+    lm.add_node(&#39;mux_a1&#39;, gate=&#39;and&#39;, output=False)
+    lm.add_node(&#39;clk_b&#39;, gate=&#39;not&#39;, output=False)
 
-        # outputs
-        lm.add_node(&#39;q&#39;,gate=&#39;and&#39;,output=False)
-        lm.add_node(&#39;so&#39;,gate=&#39;buf&#39;,output=False)
+    # outputs
+    lm.add_node(&#39;q&#39;, gate=&#39;and&#39;, output=False)
+    lm.add_node(&#39;so&#39;, gate=&#39;buf&#39;, output=False)
 
-        #cons
-        lm.add_edge(&#39;q&#39;,&#39;so&#39;)
-        lm.add_edge(&#39;rst&#39;,&#39;q&#39;)
-        lm.add_edge(&#39;mux_out&#39;,&#39;q&#39;)
-        lm.add_edge(&#39;mux_out&#39;,&#39;q&#39;)
-        lm.add_edge(&#39;mux_a0&#39;,&#39;mux_out&#39;)
-        lm.add_edge(&#39;mux_a1&#39;,&#39;mux_out&#39;)
-        lm.add_edge(&#39;clk&#39;,&#39;clk_b&#39;)
-        lm.add_edge(&#39;clk_b&#39;,&#39;mux_a0&#39;)
-        lm.add_edge(&#39;clk&#39;,&#39;mux_a1&#39;)
-        lm.add_edge(&#39;d&#39;,&#39;mux_a0&#39;)
-        lm.add_edge(&#39;si&#39;,&#39;mux_a1&#39;)
+    # cons
+    lm.add_edge(&#39;q&#39;, &#39;so&#39;)
+    lm.add_edge(&#39;rst&#39;, &#39;q&#39;)
+    lm.add_edge(&#39;mux_out&#39;, &#39;q&#39;)
+    lm.add_edge(&#39;mux_out&#39;, &#39;q&#39;)
+    lm.add_edge(&#39;mux_a0&#39;, &#39;mux_out&#39;)
+    lm.add_edge(&#39;mux_a1&#39;, &#39;mux_out&#39;)
+    lm.add_edge(&#39;clk&#39;, &#39;clk_b&#39;)
+    lm.add_edge(&#39;clk_b&#39;, &#39;mux_a0&#39;)
+    lm.add_edge(&#39;clk&#39;, &#39;mux_a1&#39;)
+    lm.add_edge(&#39;d&#39;, &#39;mux_a0&#39;)
+    lm.add_edge(&#39;si&#39;, &#39;mux_a1&#39;)
 
-        return lm
+    return lm
+
 
 def gen_ff_model():
-        fm = nx.DiGraph()
-        # inputs
-        fm.add_node(&#39;si&#39;,gate=&#39;buf&#39;,output=False)
-        fm.add_node(&#39;d&#39;,gate=&#39;buf&#39;,output=False)
-        fm.add_node(&#39;clk&#39;,gate=&#39;buf&#39;,output=False)
-        fm.add_node(&#39;mux_a0&#39;,gate=&#39;and&#39;,output=False)
-        fm.add_node(&#39;mux_a1&#39;,gate=&#39;and&#39;,output=False)
-        fm.add_node(&#39;clk_b&#39;,gate=&#39;not&#39;,output=False)
+    fm = nx.DiGraph()
+    # inputs
+    fm.add_node(&#39;si&#39;, gate=&#39;buf&#39;, output=False)
+    fm.add_node(&#39;d&#39;, gate=&#39;buf&#39;, output=False)
+    fm.add_node(&#39;clk&#39;, gate=&#39;buf&#39;, output=False)
+    fm.add_node(&#39;mux_a0&#39;, gate=&#39;and&#39;, output=False)
+    fm.add_node(&#39;mux_a1&#39;, gate=&#39;and&#39;, output=False)
+    fm.add_node(&#39;clk_b&#39;, gate=&#39;not&#39;, output=False)
 
-        # outputs
-        fm.add_node(&#39;q&#39;,gate=&#39;and&#39;,output=False)
-        fm.add_node(&#39;so&#39;,gate=&#39;or&#39;,output=False)
+    # outputs
+    fm.add_node(&#39;q&#39;, gate=&#39;and&#39;, output=False)
+    fm.add_node(&#39;so&#39;, gate=&#39;or&#39;, output=False)
 
-        #cons
-        fm.add_edge(&#39;si&#39;,&#39;q&#39;)
-        fm.add_edge(&#39;mux_a0&#39;,&#39;so&#39;)
-        fm.add_edge(&#39;mux_a1&#39;,&#39;so&#39;)
-        fm.add_edge(&#39;clk&#39;,&#39;clk_b&#39;)
-        fm.add_edge(&#39;clk_b&#39;,&#39;mux_a0&#39;)
-        fm.add_edge(&#39;clk&#39;,&#39;mux_a1&#39;)
-        fm.add_edge(&#39;d&#39;,&#39;mux_a0&#39;)
-        fm.add_edge(&#39;si&#39;,&#39;mux_a1&#39;)
+    # cons
+    fm.add_edge(&#39;si&#39;, &#39;q&#39;)
+    fm.add_edge(&#39;mux_a0&#39;, &#39;so&#39;)
+    fm.add_edge(&#39;mux_a1&#39;, &#39;so&#39;)
+    fm.add_edge(&#39;clk&#39;, &#39;clk_b&#39;)
+    fm.add_edge(&#39;clk_b&#39;, &#39;mux_a0&#39;)
+    fm.add_edge(&#39;clk&#39;, &#39;mux_a1&#39;)
+    fm.add_edge(&#39;d&#39;, &#39;mux_a0&#39;)
+    fm.add_edge(&#39;si&#39;, &#39;mux_a1&#39;)
 
-        return fm
+    return fm
 
-def unroll(c,cycles):
-        &#34;&#34;&#34;
-        Creates combinational unrolling of the circuit.
 
-        Parameters
-        ----------
-        c : Circuit
-                Sequential circuit to unroll.
-        cycles : int
-                Number of cycles to unroll
+def unroll(c, cycles):
+    &#34;&#34;&#34;
+    Creates combinational unrolling of the circuit.
 
-        Returns
-        -------
-        Circuit
-                Unrolled circuit.
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to unroll.
+    cycles : int
+            Number of cycles to unroll
 
-        &#34;&#34;&#34;
+    Returns
+    -------
+    Circuit
+            Unrolled circuit.
 
-        u = nx.DiGraph()
-        for i in range(cycles):
-                c_comb_i = nx.relabel_nodes(c_comb,{n:f&#39;{n}_{i}&#39; for n in c_comb})
-                u.extend(c_comb_i)
-                if i==0:
-                        # convert si to inputs
-                        for n in c:
-                                if c.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;,&#39;dff&#39;]:
-                                        u.nodes[f&#39;{n}_si_{i}&#39;][&#39;gate&#39;] = &#39;input&#39;
+    &#34;&#34;&#34;
+    u = nx.DiGraph()
+    c_comb = c
+    for i in range(cycles):
+        c_comb_i = nx.relabel_nodes(c_comb, {n: f&#39;{n}_{i}&#39; for n in c_comb})
+        u.extend(c_comb_i)
+        if i == 0:
+            # convert si to inputs
+            for n in c:
+                if c.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;, &#39;dff&#39;]:
+                    u.nodes[f&#39;{n}_si_{i}&#39;][&#39;gate&#39;] = &#39;input&#39;
 
-                else:
-                        # connect prev si
-                        for n in c:
-                                if c.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;,&#39;dff&#39;]:
-                                        u.add_edge(f&#39;{n}_si_{i-1}&#39;,f&#39;{n}_si_{i}&#39;)
-                for n in u:
-                        if &#39;gate&#39; not in u.nodes[n]:
-                                print(n)
+        else:
+            # connect prev si
+            for n in c:
+                if c.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;, &#39;dff&#39;]:
+                    u.add_edge(f&#39;{n}_si_{i-1}&#39;, f&#39;{n}_si_{i}&#39;)
+        for n in u:
+            if &#39;gate&#39; not in u.nodes[n]:
+                print(n)
 
-        return u
+    return u
 
-def sensitivity(c,n):
-        &#34;&#34;&#34;
-        Creates a circuit to compute sensitivity.
 
-        Parameters
-        ----------
-        c : Circuit
-                Sequential circuit to unroll.
-        n : str
-                Node to compute sensitivity at.
+def sensitivity(c, n):
+    &#34;&#34;&#34;
+    Creates a circuit to compute sensitivity.
 
-        Returns
-        -------
-        Circuit
-                Sensitivity circuit.
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to unroll.
+    n : str
+            Node to compute sensitivity at.
 
-        &#34;&#34;&#34;
+    Returns
+    -------
+    Circuit
+            Sensitivity circuit.
 
-        # get fanin cone of node
-        if n in c.startpoints():
-                print(f&#39;{n} is in startpoints&#39;)
-                return None
+    &#34;&#34;&#34;
 
-        fiNodes = c.transitiveFanin(n)|set([n])
-        startpoints = c.startpoints(n)
-        subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
+    # get fanin cone of node
+    if n in c.startpoints():
+        print(f&#39;{n} is in startpoints&#39;)
+        return None
 
-        # convert outputs to buffers
-        for o in subCircuit.outputs():
-                subCircuit.graph.nodes[o][&#39;type&#39;] = &#39;buf&#39;
+    fiNodes = c.transitive_fanin(n) | set([n])
+    startpoints = c.startpoints(n)
+    subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
 
-        # convert startpoints to inputs
-        for s in subCircuit.startpoints():
-                subCircuit.graph.nodes[s][&#39;type&#39;] = &#39;input&#39;
-                subCircuit.graph.remove_edges_from((p,s) for p in list(subCircuit.graph.predecessors(s)))
+    # convert outputs to buffers
+    for o in subCircuit.outputs():
+        subCircuit.graph.nodes[o][&#39;type&#39;] = &#39;buf&#39;
 
-        # create sensitivity circuit and add first copy of subcircuit
-        sensitivityCircuit = Circuit()
-        sensitivityCircuit.extend(subCircuit)
+    # convert startpoints to inputs
+    for s in subCircuit.startpoints():
+        subCircuit.graph.nodes[s][&#39;type&#39;] = &#39;input&#39;
+        subCircuit.graph.remove_edges_from(
+            (p, s) for p in list(subCircuit.graph.predecessors(s)))
 
-        # stamp out a copies of the circuit with s inverted
-        for s in startpoints:
-                mapping = {g:f&#39;sen_{s}_{g}&#39; for g in subCircuit if g not in startpoints-set([s])}
-                relabeledSubCircuit = subCircuit.relabel(mapping)
-                sensitivityCircuit.extend(relabeledSubCircuit)
+    # create sensitivity circuit and add first copy of subcircuit
+    sensitivityCircuit = Circuit()
+    sensitivityCircuit.extend(subCircuit)
 
-                # connect inverted input
-                sensitivityCircuit.graph.nodes[f&#39;sen_{s}_{s}&#39;][&#39;type&#39;] = &#39;not&#39;
-                sensitivityCircuit.graph.add_edge(s,f&#39;sen_{s}_{s}&#39;)
+    # stamp out a copies of the circuit with s inverted
+    for s in startpoints:
+        mapping = {
+            g: f&#39;sen_{s}_{g}&#39; for g in subCircuit
+            if g not in startpoints-set([s])}
+        relabeledSubCircuit = subCircuit.relabel(mapping)
+        sensitivityCircuit.extend(relabeledSubCircuit)
 
-                # compare to first copy
-                sensitivityCircuit.add(f&#39;difference_{s}&#39;,&#39;xor&#39;,fanin=[n,f&#39;sen_{s}_{n}&#39;])
-                sensitivityCircuit.add(f&#39;difference_{s}&#39;,&#39;output&#39;,fanin=f&#39;difference_{s}&#39;)
+        # connect inverted input
+        sensitivityCircuit.graph.nodes[f&#39;sen_{s}_{s}&#39;][&#39;type&#39;] = &#39;not&#39;
+        sensitivityCircuit.graph.add_edge(s, f&#39;sen_{s}_{s}&#39;)
 
-        return sensitivityCircuit
+        # compare to first copy
+        sensitivityCircuit.add(
+            f&#39;difference_{s}&#39;, &#39;xor&#39;, fanin=[n, f&#39;sen_{s}_{n}&#39;])
+        sensitivityCircuit.add(
+            f&#39;difference_{s}&#39;, &#39;output&#39;, fanin=f&#39;difference_{s}&#39;)
 
-def sensitize(c,n):
-        &#34;&#34;&#34;
-        Creates a circuit to sensitize a node to an endpoint.
+    return sensitivityCircuit
 
-        Parameters
-        ----------
-        c : Circuit
-                Input circuit.
-        n : str
-                Node to sensitize.
 
-        Returns
-        -------
-        Circuit
-                Output circuit.
+def sensitize(c, n):
+    &#34;&#34;&#34;
+    Creates a circuit to sensitize a node to an endpoint.
 
-        &#34;&#34;&#34;
-        # get fanin/out cone of node
-        nodes = c.transitiveFanin(n)|c.transitiveFanout(n)|set([n])
-        subCircuit = Circuit(c.graph.subgraph(nodes).copy())
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    n : str
+            Node to sensitize.
 
-        # create miter
-        m = miter(subCircuit)
+    Returns
+    -------
+    Circuit
+            Output circuit.
 
-        # cut and invert n in one side of miter
-        m.graph.nodes[f&#39;c1_{n}&#39;][&#39;type&#39;] = &#39;not&#39;
-        m.graph.remove_edges_from((f,f&#39;c1_{n}&#39;) for f in m.fanin(f&#39;c1_{n}&#39;))
-        m.graph.add_edge(f&#39;c0_{n}&#39;,f&#39;c1_{n}&#39;)
+    &#34;&#34;&#34;
+    # get fanin/out cone of node
+    nodes = c.transitive_fanin(n) | c.transitive_fanout(n) | set([n])
+    subCircuit = Circuit(c.graph.subgraph(nodes).copy())
 
-        return m
+    # create miter
+    m = miter(subCircuit)
 
-def mphf(w=30,n=800):
-        &#34;&#34;&#34;
-        Creates a SAT-hard circuit based on the structure of minimum perfect hash functions.
+    # cut and invert n in one side of miter
+    m.graph.nodes[f&#39;c1_{n}&#39;][&#39;type&#39;] = &#39;not&#39;
+    m.graph.remove_edges_from((f, f&#39;c1_{n}&#39;) for f in m.fanin(f&#39;c1_{n}&#39;))
+    m.graph.add_edge(f&#39;c0_{n}&#39;, f&#39;c1_{n}&#39;)
 
-        Parameters
-        ----------
-        w : int
-                Input width.
-        n : int
-                Number of constraints.
+    return m
 
-        Returns
-        -------
-        Circuit
-                Output circuit.
 
-        &#34;&#34;&#34;
-        o = max(1,math.ceil(math.log2(w)))
-        c = Circuit()
+def mphf(w=30, n=800):
+    &#34;&#34;&#34;
+    Creates a SAT-hard circuit based on the structure of minimum perfect hash
+    functions.
 
-        # add inputs
-        inputs = [c.add(f&#39;in_{i}&#39;,&#39;input&#39;) for i in range(w)]
+    Parameters
+    ----------
+    w : int
+            Input width.
+    n : int
+            Number of constraints.
 
-        # add constraints
-        ors = []
-        for ni in range(n):
-                xors = [c.add(f&#39;xor_{ni}_{oi}&#39;,&#39;xor&#39;,fanin=sample(inputs,2)) for oi in range(o)]
-                ors.append(c.add(f&#39;or_{ni}&#39;,&#39;or&#39;,fanin=xors))
-        c.add(f&#39;sat&#39;,&#39;and&#39;,fanin=ors)
-        c.add(f&#39;sat&#39;,&#39;output&#39;,fanin=&#39;sat&#39;)
+    Returns
+    -------
+    Circuit
+            Output circuit.
 
-        return c</code></pre>
+    &#34;&#34;&#34;
+    o = max(1, math.ceil(math.log2(w)))
+    c = Circuit()
+
+    # add inputs
+    inputs = [c.add(f&#39;in_{i}&#39;, &#39;input&#39;) for i in range(w)]
+
+    # add constraints
+    ors = []
+    for ni in range(n):
+        xors = [c.add(f&#39;xor_{ni}_{oi}&#39;, &#39;xor&#39;, fanin=sample(inputs, 2))
+                for oi in range(o)]
+        ors.append(c.add(f&#39;or_{ni}&#39;, &#39;or&#39;, fanin=xors))
+    c.add(&#39;sat&#39;, &#39;and&#39;, fanin=ors)
+    c.add(&#39;sat&#39;, &#39;output&#39;, fanin=&#39;sat&#39;)
+
+    return c</code></pre>
 </details>
 </section>
 <section>
@@ -489,40 +525,45 @@ def mphf(w=30,n=800):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def comb(c):
-        &#34;&#34;&#34;
-        Creates combinational version of the circuit.
+    &#34;&#34;&#34;
+    Creates combinational version of the circuit.
 
-        Parameters
-        ----------
-        c : Circuit
-                Sequential circuit to unroll.
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to unroll.
 
-        Returns
-        -------
-        Circuit
-                Combinational circuit.
+    Returns
+    -------
+    Circuit
+            Combinational circuit.
 
-        &#34;&#34;&#34;
-        c_comb = c.copy()
-        lat_model = gen_lat_model()
-        ff_model = gen_ff_model()
+    &#34;&#34;&#34;
+    c_comb = c.copy()
+    lat_model = gen_lat_model()
+    ff_model = gen_ff_model()
 
-        for lat in c.lats():
-                relabeled_model = nx.relabel_nodes(lat_model,{n:f&#39;{lat}_{n}&#39; for n in lat_model})
-                c_comb.extend(relabeled_model)
-                c_comb.add_edges_from((f&#39;{lat}_q&#39;,s) for s in c_comb.successors(lat))
-                c_comb.add_edges_from((p,f&#39;{lat}_d&#39;) for p in c_comb.predecessors(lat))
-                c_comb.add_edge(c.nodes[lat][&#39;clk&#39;],f&#39;{lat}_clk&#39;)
-                c_comb.add_edge(c.nodes[lat][&#39;rst&#39;],f&#39;{lat}_rst&#39;)
-                c_comb.remove_node(lat)
+    for lat in c.lats():
+        relabeled_model = nx.relabel_nodes(
+            lat_model, {n: f&#39;{lat}_{n}&#39; for n in lat_model})
+        c_comb.extend(relabeled_model)
+        c_comb.add_edges_from((f&#39;{lat}_q&#39;, s) for s in c_comb.successors(lat))
+        c_comb.add_edges_from((p, f&#39;{lat}_d&#39;)
+                              for p in c_comb.predecessors(lat))
+        c_comb.add_edge(c.nodes[lat][&#39;clk&#39;], f&#39;{lat}_clk&#39;)
+        c_comb.add_edge(c.nodes[lat][&#39;rst&#39;], f&#39;{lat}_rst&#39;)
+        c_comb.remove_node(lat)
 
-        for ff in c.ffs():
-                relabeled_model = nx.relabel_nodes(ff_model,{n:f&#39;{ff}_{n}&#39; for n in ff_model})
-                c_comb.extend(relabeled_model)
-                c_comb.add_edges_from((f&#39;{ff}_q&#39;,s) for s in c_comb.successors(ff))
-                c_comb.add_edges_from((p,f&#39;{ff}_d&#39;) for p in c_comb.predecessors(ff))
-                c_comb.add_edge(c.nodes[ff][&#39;clk&#39;],f&#39;{ff}_clk&#39;)
-                c_comb.remove_node(ff)</code></pre>
+    for ff in c.ffs():
+        relabeled_model = nx.relabel_nodes(
+            ff_model, {n: f&#39;{ff}_{n}&#39; for n in ff_model})
+        c_comb.extend(relabeled_model)
+        c_comb.add_edges_from((f&#39;{ff}_q&#39;, s) for s in c_comb.successors(ff))
+        c_comb.add_edges_from((p, f&#39;{ff}_d&#39;) for p in c_comb.predecessors(ff))
+        c_comb.add_edge(c.nodes[ff][&#39;clk&#39;], f&#39;{ff}_clk&#39;)
+        c_comb.remove_node(ff)
+
+    return c_comb</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.gen_ff_model"><code class="name flex">
@@ -535,30 +576,30 @@ def mphf(w=30,n=800):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def gen_ff_model():
-        fm = nx.DiGraph()
-        # inputs
-        fm.add_node(&#39;si&#39;,gate=&#39;buf&#39;,output=False)
-        fm.add_node(&#39;d&#39;,gate=&#39;buf&#39;,output=False)
-        fm.add_node(&#39;clk&#39;,gate=&#39;buf&#39;,output=False)
-        fm.add_node(&#39;mux_a0&#39;,gate=&#39;and&#39;,output=False)
-        fm.add_node(&#39;mux_a1&#39;,gate=&#39;and&#39;,output=False)
-        fm.add_node(&#39;clk_b&#39;,gate=&#39;not&#39;,output=False)
+    fm = nx.DiGraph()
+    # inputs
+    fm.add_node(&#39;si&#39;, gate=&#39;buf&#39;, output=False)
+    fm.add_node(&#39;d&#39;, gate=&#39;buf&#39;, output=False)
+    fm.add_node(&#39;clk&#39;, gate=&#39;buf&#39;, output=False)
+    fm.add_node(&#39;mux_a0&#39;, gate=&#39;and&#39;, output=False)
+    fm.add_node(&#39;mux_a1&#39;, gate=&#39;and&#39;, output=False)
+    fm.add_node(&#39;clk_b&#39;, gate=&#39;not&#39;, output=False)
 
-        # outputs
-        fm.add_node(&#39;q&#39;,gate=&#39;and&#39;,output=False)
-        fm.add_node(&#39;so&#39;,gate=&#39;or&#39;,output=False)
+    # outputs
+    fm.add_node(&#39;q&#39;, gate=&#39;and&#39;, output=False)
+    fm.add_node(&#39;so&#39;, gate=&#39;or&#39;, output=False)
 
-        #cons
-        fm.add_edge(&#39;si&#39;,&#39;q&#39;)
-        fm.add_edge(&#39;mux_a0&#39;,&#39;so&#39;)
-        fm.add_edge(&#39;mux_a1&#39;,&#39;so&#39;)
-        fm.add_edge(&#39;clk&#39;,&#39;clk_b&#39;)
-        fm.add_edge(&#39;clk_b&#39;,&#39;mux_a0&#39;)
-        fm.add_edge(&#39;clk&#39;,&#39;mux_a1&#39;)
-        fm.add_edge(&#39;d&#39;,&#39;mux_a0&#39;)
-        fm.add_edge(&#39;si&#39;,&#39;mux_a1&#39;)
+    # cons
+    fm.add_edge(&#39;si&#39;, &#39;q&#39;)
+    fm.add_edge(&#39;mux_a0&#39;, &#39;so&#39;)
+    fm.add_edge(&#39;mux_a1&#39;, &#39;so&#39;)
+    fm.add_edge(&#39;clk&#39;, &#39;clk_b&#39;)
+    fm.add_edge(&#39;clk_b&#39;, &#39;mux_a0&#39;)
+    fm.add_edge(&#39;clk&#39;, &#39;mux_a1&#39;)
+    fm.add_edge(&#39;d&#39;, &#39;mux_a0&#39;)
+    fm.add_edge(&#39;si&#39;, &#39;mux_a1&#39;)
 
-        return fm</code></pre>
+    return fm</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.gen_lat_model"><code class="name flex">
@@ -571,35 +612,35 @@ def mphf(w=30,n=800):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def gen_lat_model():
-        lm = nx.DiGraph()
-        # inputs
-        lm.add_node(&#39;si&#39;,gate=&#39;buf&#39;,output=False)
-        lm.add_node(&#39;d&#39;,gate=&#39;buf&#39;,output=False)
-        lm.add_node(&#39;clk&#39;,gate=&#39;buf&#39;,output=False)
-        lm.add_node(&#39;rst&#39;,gate=&#39;buf&#39;,output=False)
-        lm.add_node(&#39;mux_out&#39;,gate=&#39;or&#39;,output=False)
-        lm.add_node(&#39;mux_a0&#39;,gate=&#39;and&#39;,output=False)
-        lm.add_node(&#39;mux_a1&#39;,gate=&#39;and&#39;,output=False)
-        lm.add_node(&#39;clk_b&#39;,gate=&#39;not&#39;,output=False)
+    lm = nx.DiGraph()
+    # inputs
+    lm.add_node(&#39;si&#39;, gate=&#39;buf&#39;, output=False)
+    lm.add_node(&#39;d&#39;, gate=&#39;buf&#39;, output=False)
+    lm.add_node(&#39;clk&#39;, gate=&#39;buf&#39;, output=False)
+    lm.add_node(&#39;rst&#39;, gate=&#39;buf&#39;, output=False)
+    lm.add_node(&#39;mux_out&#39;, gate=&#39;or&#39;, output=False)
+    lm.add_node(&#39;mux_a0&#39;, gate=&#39;and&#39;, output=False)
+    lm.add_node(&#39;mux_a1&#39;, gate=&#39;and&#39;, output=False)
+    lm.add_node(&#39;clk_b&#39;, gate=&#39;not&#39;, output=False)
 
-        # outputs
-        lm.add_node(&#39;q&#39;,gate=&#39;and&#39;,output=False)
-        lm.add_node(&#39;so&#39;,gate=&#39;buf&#39;,output=False)
+    # outputs
+    lm.add_node(&#39;q&#39;, gate=&#39;and&#39;, output=False)
+    lm.add_node(&#39;so&#39;, gate=&#39;buf&#39;, output=False)
 
-        #cons
-        lm.add_edge(&#39;q&#39;,&#39;so&#39;)
-        lm.add_edge(&#39;rst&#39;,&#39;q&#39;)
-        lm.add_edge(&#39;mux_out&#39;,&#39;q&#39;)
-        lm.add_edge(&#39;mux_out&#39;,&#39;q&#39;)
-        lm.add_edge(&#39;mux_a0&#39;,&#39;mux_out&#39;)
-        lm.add_edge(&#39;mux_a1&#39;,&#39;mux_out&#39;)
-        lm.add_edge(&#39;clk&#39;,&#39;clk_b&#39;)
-        lm.add_edge(&#39;clk_b&#39;,&#39;mux_a0&#39;)
-        lm.add_edge(&#39;clk&#39;,&#39;mux_a1&#39;)
-        lm.add_edge(&#39;d&#39;,&#39;mux_a0&#39;)
-        lm.add_edge(&#39;si&#39;,&#39;mux_a1&#39;)
+    # cons
+    lm.add_edge(&#39;q&#39;, &#39;so&#39;)
+    lm.add_edge(&#39;rst&#39;, &#39;q&#39;)
+    lm.add_edge(&#39;mux_out&#39;, &#39;q&#39;)
+    lm.add_edge(&#39;mux_out&#39;, &#39;q&#39;)
+    lm.add_edge(&#39;mux_a0&#39;, &#39;mux_out&#39;)
+    lm.add_edge(&#39;mux_a1&#39;, &#39;mux_out&#39;)
+    lm.add_edge(&#39;clk&#39;, &#39;clk_b&#39;)
+    lm.add_edge(&#39;clk_b&#39;, &#39;mux_a0&#39;)
+    lm.add_edge(&#39;clk&#39;, &#39;mux_a1&#39;)
+    lm.add_edge(&#39;d&#39;, &#39;mux_a0&#39;)
+    lm.add_edge(&#39;si&#39;, &#39;mux_a1&#39;)
 
-        return lm</code></pre>
+    return lm</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.miter"><code class="name flex">
@@ -627,51 +668,53 @@ def mphf(w=30,n=800):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def miter(c0,c1=None,startpoints=None,endpoints=None):
-        &#34;&#34;&#34;
-        Creates a miter circuit
+<pre><code class="python">def miter(c0, c1=None, startpoints=None, endpoints=None):
+    &#34;&#34;&#34;
+    Creates a miter circuit
 
-        Parameters
-        ----------
-        c0 : Circuit
-                First circuit.
-        c1 : Circuit
-                Optional second circuit, if None c0 is mitered with itself.
-        startpoints : iterable of str
-                Nodes to be tied together, must exist in both circuits.
-        endpoints : iterable of str
-                Nodes to be compared, must exist in both circuits.
+    Parameters
+    ----------
+    c0 : Circuit
+            First circuit.
+    c1 : Circuit
+            Optional second circuit, if None c0 is mitered with itself.
+    startpoints : iterable of str
+            Nodes to be tied together, must exist in both circuits.
+    endpoints : iterable of str
+            Nodes to be compared, must exist in both circuits.
 
-        Returns
-        -------
-        Circuit
-                Miter circuit.
+    Returns
+    -------
+    Circuit
+            Miter circuit.
 
-        &#34;&#34;&#34;
-        if not c1:
-                c1 = c0
-        if not startpoints:
-                startpoints = c0.startpoints()&amp;c1.startpoints()
-        if not endpoints:
-                endpoints = c0.endpoints()&amp;c1.endpoints()
+    &#34;&#34;&#34;
+    if not c1:
+        c1 = c0
+    if not startpoints:
+        startpoints = c0.startpoints() &amp; c1.startpoints()
+    if not endpoints:
+        endpoints = c0.endpoints() &amp; c1.endpoints()
 
-        # create miter, relabel to avoid overlap except for common startpoints
-        m = c0.relabel({n:f&#39;c0_{n}&#39; for n in c0.nodes()-startpoints})
-        m.extend(c1.relabel({n:f&#39;c1_{n}&#39; for n in c1.nodes()-startpoints}))
+    # create miter, relabel to avoid overlap except for common startpoints
+    m = c0.relabel({n: f&#39;c0_{n}&#39; for n in c0.nodes()-startpoints})
+    m.extend(c1.relabel({n: f&#39;c1_{n}&#39; for n in c1.nodes()-startpoints}))
 
-        # compare outputs
-        m.add(&#39;sat&#39;,&#39;or&#39;)
-        for o in endpoints:
-                m.add(f&#39;miter_{o}&#39;,&#39;xor&#39;,fanin=[f&#39;c0_{o}&#39;,f&#39;c1_{o}&#39;],fanout=[&#39;sat&#39;])
+    # compare outputs
+    m.add(&#39;sat&#39;, &#39;or&#39;)
+    for o in endpoints:
+        m.add(f&#39;miter_{o}&#39;, &#39;xor&#39;, fanin=[
+              f&#39;c0_{o}&#39;, f&#39;c1_{o}&#39;], fanout=[&#39;sat&#39;])
 
-        return m</code></pre>
+    return m</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.mphf"><code class="name flex">
 <span>def <span class="ident">mphf</span></span>(<span>w=30, n=800)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a SAT-hard circuit based on the structure of minimum perfect hash functions.</p>
+<div class="desc"><p>Creates a SAT-hard circuit based on the structure of minimum perfect hash
+functions.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>w</code></strong> :&ensp;<code>int</code></dt>
@@ -688,38 +731,40 @@ def mphf(w=30,n=800):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def mphf(w=30,n=800):
-        &#34;&#34;&#34;
-        Creates a SAT-hard circuit based on the structure of minimum perfect hash functions.
+<pre><code class="python">def mphf(w=30, n=800):
+    &#34;&#34;&#34;
+    Creates a SAT-hard circuit based on the structure of minimum perfect hash
+    functions.
 
-        Parameters
-        ----------
-        w : int
-                Input width.
-        n : int
-                Number of constraints.
+    Parameters
+    ----------
+    w : int
+            Input width.
+    n : int
+            Number of constraints.
 
-        Returns
-        -------
-        Circuit
-                Output circuit.
+    Returns
+    -------
+    Circuit
+            Output circuit.
 
-        &#34;&#34;&#34;
-        o = max(1,math.ceil(math.log2(w)))
-        c = Circuit()
+    &#34;&#34;&#34;
+    o = max(1, math.ceil(math.log2(w)))
+    c = Circuit()
 
-        # add inputs
-        inputs = [c.add(f&#39;in_{i}&#39;,&#39;input&#39;) for i in range(w)]
+    # add inputs
+    inputs = [c.add(f&#39;in_{i}&#39;, &#39;input&#39;) for i in range(w)]
 
-        # add constraints
-        ors = []
-        for ni in range(n):
-                xors = [c.add(f&#39;xor_{ni}_{oi}&#39;,&#39;xor&#39;,fanin=sample(inputs,2)) for oi in range(o)]
-                ors.append(c.add(f&#39;or_{ni}&#39;,&#39;or&#39;,fanin=xors))
-        c.add(f&#39;sat&#39;,&#39;and&#39;,fanin=ors)
-        c.add(f&#39;sat&#39;,&#39;output&#39;,fanin=&#39;sat&#39;)
+    # add constraints
+    ors = []
+    for ni in range(n):
+        xors = [c.add(f&#39;xor_{ni}_{oi}&#39;, &#39;xor&#39;, fanin=sample(inputs, 2))
+                for oi in range(o)]
+        ors.append(c.add(f&#39;or_{ni}&#39;, &#39;or&#39;, fanin=xors))
+    c.add(&#39;sat&#39;, &#39;and&#39;, fanin=ors)
+    c.add(&#39;sat&#39;, &#39;output&#39;, fanin=&#39;sat&#39;)
 
-        return c</code></pre>
+    return c</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.sensitivity"><code class="name flex">
@@ -743,61 +788,66 @@ def mphf(w=30,n=800):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sensitivity(c,n):
-        &#34;&#34;&#34;
-        Creates a circuit to compute sensitivity.
+<pre><code class="python">def sensitivity(c, n):
+    &#34;&#34;&#34;
+    Creates a circuit to compute sensitivity.
 
-        Parameters
-        ----------
-        c : Circuit
-                Sequential circuit to unroll.
-        n : str
-                Node to compute sensitivity at.
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to unroll.
+    n : str
+            Node to compute sensitivity at.
 
-        Returns
-        -------
-        Circuit
-                Sensitivity circuit.
+    Returns
+    -------
+    Circuit
+            Sensitivity circuit.
 
-        &#34;&#34;&#34;
+    &#34;&#34;&#34;
 
-        # get fanin cone of node
-        if n in c.startpoints():
-                print(f&#39;{n} is in startpoints&#39;)
-                return None
+    # get fanin cone of node
+    if n in c.startpoints():
+        print(f&#39;{n} is in startpoints&#39;)
+        return None
 
-        fiNodes = c.transitiveFanin(n)|set([n])
-        startpoints = c.startpoints(n)
-        subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
+    fiNodes = c.transitive_fanin(n) | set([n])
+    startpoints = c.startpoints(n)
+    subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
 
-        # convert outputs to buffers
-        for o in subCircuit.outputs():
-                subCircuit.graph.nodes[o][&#39;type&#39;] = &#39;buf&#39;
+    # convert outputs to buffers
+    for o in subCircuit.outputs():
+        subCircuit.graph.nodes[o][&#39;type&#39;] = &#39;buf&#39;
 
-        # convert startpoints to inputs
-        for s in subCircuit.startpoints():
-                subCircuit.graph.nodes[s][&#39;type&#39;] = &#39;input&#39;
-                subCircuit.graph.remove_edges_from((p,s) for p in list(subCircuit.graph.predecessors(s)))
+    # convert startpoints to inputs
+    for s in subCircuit.startpoints():
+        subCircuit.graph.nodes[s][&#39;type&#39;] = &#39;input&#39;
+        subCircuit.graph.remove_edges_from(
+            (p, s) for p in list(subCircuit.graph.predecessors(s)))
 
-        # create sensitivity circuit and add first copy of subcircuit
-        sensitivityCircuit = Circuit()
-        sensitivityCircuit.extend(subCircuit)
+    # create sensitivity circuit and add first copy of subcircuit
+    sensitivityCircuit = Circuit()
+    sensitivityCircuit.extend(subCircuit)
 
-        # stamp out a copies of the circuit with s inverted
-        for s in startpoints:
-                mapping = {g:f&#39;sen_{s}_{g}&#39; for g in subCircuit if g not in startpoints-set([s])}
-                relabeledSubCircuit = subCircuit.relabel(mapping)
-                sensitivityCircuit.extend(relabeledSubCircuit)
+    # stamp out a copies of the circuit with s inverted
+    for s in startpoints:
+        mapping = {
+            g: f&#39;sen_{s}_{g}&#39; for g in subCircuit
+            if g not in startpoints-set([s])}
+        relabeledSubCircuit = subCircuit.relabel(mapping)
+        sensitivityCircuit.extend(relabeledSubCircuit)
 
-                # connect inverted input
-                sensitivityCircuit.graph.nodes[f&#39;sen_{s}_{s}&#39;][&#39;type&#39;] = &#39;not&#39;
-                sensitivityCircuit.graph.add_edge(s,f&#39;sen_{s}_{s}&#39;)
+        # connect inverted input
+        sensitivityCircuit.graph.nodes[f&#39;sen_{s}_{s}&#39;][&#39;type&#39;] = &#39;not&#39;
+        sensitivityCircuit.graph.add_edge(s, f&#39;sen_{s}_{s}&#39;)
 
-                # compare to first copy
-                sensitivityCircuit.add(f&#39;difference_{s}&#39;,&#39;xor&#39;,fanin=[n,f&#39;sen_{s}_{n}&#39;])
-                sensitivityCircuit.add(f&#39;difference_{s}&#39;,&#39;output&#39;,fanin=f&#39;difference_{s}&#39;)
+        # compare to first copy
+        sensitivityCircuit.add(
+            f&#39;difference_{s}&#39;, &#39;xor&#39;, fanin=[n, f&#39;sen_{s}_{n}&#39;])
+        sensitivityCircuit.add(
+            f&#39;difference_{s}&#39;, &#39;output&#39;, fanin=f&#39;difference_{s}&#39;)
 
-        return sensitivityCircuit</code></pre>
+    return sensitivityCircuit</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.sensitize"><code class="name flex">
@@ -821,36 +871,36 @@ def mphf(w=30,n=800):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sensitize(c,n):
-        &#34;&#34;&#34;
-        Creates a circuit to sensitize a node to an endpoint.
+<pre><code class="python">def sensitize(c, n):
+    &#34;&#34;&#34;
+    Creates a circuit to sensitize a node to an endpoint.
 
-        Parameters
-        ----------
-        c : Circuit
-                Input circuit.
-        n : str
-                Node to sensitize.
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    n : str
+            Node to sensitize.
 
-        Returns
-        -------
-        Circuit
-                Output circuit.
+    Returns
+    -------
+    Circuit
+            Output circuit.
 
-        &#34;&#34;&#34;
-        # get fanin/out cone of node
-        nodes = c.transitiveFanin(n)|c.transitiveFanout(n)|set([n])
-        subCircuit = Circuit(c.graph.subgraph(nodes).copy())
+    &#34;&#34;&#34;
+    # get fanin/out cone of node
+    nodes = c.transitive_fanin(n) | c.transitive_fanout(n) | set([n])
+    subCircuit = Circuit(c.graph.subgraph(nodes).copy())
 
-        # create miter
-        m = miter(subCircuit)
+    # create miter
+    m = miter(subCircuit)
 
-        # cut and invert n in one side of miter
-        m.graph.nodes[f&#39;c1_{n}&#39;][&#39;type&#39;] = &#39;not&#39;
-        m.graph.remove_edges_from((f,f&#39;c1_{n}&#39;) for f in m.fanin(f&#39;c1_{n}&#39;))
-        m.graph.add_edge(f&#39;c0_{n}&#39;,f&#39;c1_{n}&#39;)
+    # cut and invert n in one side of miter
+    m.graph.nodes[f&#39;c1_{n}&#39;][&#39;type&#39;] = &#39;not&#39;
+    m.graph.remove_edges_from((f, f&#39;c1_{n}&#39;) for f in m.fanin(f&#39;c1_{n}&#39;))
+    m.graph.add_edge(f&#39;c0_{n}&#39;, f&#39;c1_{n}&#39;)
 
-        return m</code></pre>
+    return m</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.syn"><code class="name flex">
@@ -876,56 +926,58 @@ def mphf(w=30,n=800):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def syn(c,engine=&#39;Genus&#39;,printOutput=False):
-        &#34;&#34;&#34;
-        Synthesizes the circuit using Genus.
+<pre><code class="python">def syn(c, engine=&#39;Genus&#39;, printOutput=False):
+    &#34;&#34;&#34;
+    Synthesizes the circuit using Genus.
 
-        Parameters
-        ----------
-        c : Circuit
-                Circuit to synthesize.
-        engine : string
-                Synthesis tool to use (&#39;Genus&#39; or &#39;Yosys&#39;)
-        printOutput : bool
-                Option to print synthesis log
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to synthesize.
+    engine : string
+            Synthesis tool to use (&#39;Genus&#39; or &#39;Yosys&#39;)
+    printOutput : bool
+            Option to print synthesis log
 
-        Returns
-        -------
-        Circuit
-                Synthesized circuit.
+    Returns
+    -------
+    Circuit
+            Synthesized circuit.
+    &#34;&#34;&#34;
+    verilog = circuit_to_verilog(c)
 
-        &#34;&#34;&#34;
-        verilog = circuit_to_verilog(c)
+    # probably should write output to the tmp file
+    with NamedTemporaryFile() as tmp:
+        if engine == &#39;Genus&#39;:
+            cmd = [&#39;genus&#39;, &#39;-no_gui&#39;, &#39;-execute&#39;,
+                   &#39;set_db / .library &#39;
+                   f&#34;{os.environ[&#39;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#39;]};\n&#34;
+                   f&#39;read_hdl -sv {tmp.name};\n&#39;
+                   &#39;elaborate;\n&#39;
+                   &#39;set_db syn_generic_effort high\n&#39;
+                   &#39;_syn_generic;\n&#39;
+                   &#39;syn_map;\n&#39;
+                   &#39;syn_opt;\n&#39;
+                   &#39;write_hdl -generic;\n&#39;
+                   &#39;exit;&#39;]
+        else:
+            print(&#39;not implemented&#39;)
+        tmp.write(bytes(verilog, &#39;ascii&#39;))
+        tmp.flush()
 
-        # probably should write output to the tmp file
-        with NamedTemporaryFile() as tmp:
-                if engine==&#39;Genus&#39;:
-                        cmd = [&#39;genus&#39;,&#39;-no_gui&#39;,&#39;-execute&#39;,f&#34;&#34;&#34;set_db / .library /afs/ece.cmu.edu/support/cds/share/image/usr/cds/genus-19.12.000/share/synth/tutorials/tech/tutorial.lib;
-                                        read_hdl -sv {tmp.name};
-                                        elaborate;
-                                        set_db syn_generic_effort high
-                                        syn_generic;
-                                        syn_map;
-                                        syn_opt;
-                                        write_hdl -generic;
-                                        exit;&#34;&#34;&#34;]
-                else:
-                        print(&#39;not implemented&#39;)
-                tmp.write(bytes(verilog,&#39;ascii&#39;))
-                tmp.flush()
+        process = Popen(cmd, stdout=PIPE, stderr=PIPE,
+                        universal_newlines=True)
+        output = &#39;&#39;
+        while True:
+            line = process.stdout.readline()
+            if line == &#39;&#39; and process.poll() is not None:
+                break
+            if line:
+                if printOutput:
+                    print(line.strip())
+                output += line
 
-                process = Popen(cmd,stdout=PIPE,stderr=PIPE,universal_newlines=True)
-                output = &#39;&#39;
-                while True:
-                        line = process.stdout.readline()
-                        if line == &#39;&#39; and process.poll() is not None:
-                                break
-                        if line:
-                                if printOutput:
-                                        print(line.strip())
-                                output += line
-
-        return verilog_to_circuit(output,c.name)</code></pre>
+    return verilog_to_circuit(output, c.name)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.ternary"><code class="name flex">
@@ -948,85 +1000,92 @@ def mphf(w=30,n=800):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def ternary(c):
-        &#34;&#34;&#34;
-        Encodes the circuit with ternary values
+    &#34;&#34;&#34;
+    Encodes the circuit with ternary values
 
-        Parameters
-        ----------
-        c : Circuit
-                Circuit to encode.
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to encode.
 
-        Returns
-        -------
-        Circuit
-                Encoded circuit.
+    Returns
+    -------
+    Circuit
+            Encoded circuit.
 
-        &#34;&#34;&#34;
-        t = c.copy()
+    &#34;&#34;&#34;
+    t = c.copy()
 
-        # add dual nodes
-        for n in c:
-                if c.type(n) in [&#39;and&#39;,&#39;nand&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
-                        t.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
-                        t.add_node(f&#39;{n}_0_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
-                        t.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_0_not_in_fi&#39;,f&#39;{n}_x&#39;)])
-                        t.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
-                        for p in c.predecessors(n):
-                                t.add_node(f&#39;{p}_is_0&#39;,gate=&#39;nor&#39;,output=False)
-                                t.add_edge(f&#39;{p}_is_0&#39;,f&#39;{n}_0_not_in_fi&#39;)
-                                t.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_is_0&#39;)
-                                t.add_edge(p,f&#39;{p}_is_0&#39;)
+    # add dual nodes
+    for n in c:
+        if c.type(n) in [&#39;and&#39;, &#39;nand&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;and&#39;, output=c.nodes[n][&#39;output&#39;])
+            t.add_node(f&#39;{n}_x_in_fi&#39;, gate=&#39;or&#39;, output=False)
+            t.add_node(f&#39;{n}_0_not_in_fi&#39;, gate=&#39;nor&#39;, output=False)
+            t.add_edges_from([(f&#39;{n}_x_in_fi&#39;, f&#39;{n}_x&#39;),
+                              (f&#39;{n}_0_not_in_fi&#39;, f&#39;{n}_x&#39;)])
+            t.add_edges_from((f&#39;{p}_x&#39;, f&#39;{n}_x_in_fi&#39;)
+                             for p in c.predecessors(n))
+            for p in c.predecessors(n):
+                t.add_node(f&#39;{p}_is_0&#39;, gate=&#39;nor&#39;, output=False)
+                t.add_edge(f&#39;{p}_is_0&#39;, f&#39;{n}_0_not_in_fi&#39;)
+                t.add_edge(f&#39;{p}_x&#39;, f&#39;{p}_is_0&#39;)
+                t.add_edge(p, f&#39;{p}_is_0&#39;)
 
-                elif c.type(n) in [&#39;or&#39;,&#39;nor&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;and&#39;,output=c.nodes[n][&#39;output&#39;])
-                        t.add_node(f&#39;{n}_x_in_fi&#39;,gate=&#39;or&#39;,output=False)
-                        t.add_node(f&#39;{n}_1_not_in_fi&#39;,gate=&#39;nor&#39;,output=False)
-                        t.add_edges_from([(f&#39;{n}_x_in_fi&#39;,f&#39;{n}_x&#39;),(f&#39;{n}_1_not_in_fi&#39;,f&#39;{n}_x&#39;)])
-                        t.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x_in_fi&#39;) for p in c.predecessors(n))
-                        for p in c.predecessors(n):
-                                t.add_node(f&#39;{p}_is_1&#39;,gate=&#39;and&#39;,output=False)
-                                t.add_edge(f&#39;{p}_is_1&#39;,f&#39;{n}_1_not_in_fi&#39;)
-                                t.add_node(f&#39;{p}_not_x&#39;,gate=&#39;not&#39;,output=False)
-                                t.add_edge(f&#39;{p}_x&#39;,f&#39;{p}_not_x&#39;)
-                                t.add_edge(f&#39;{p}_not_x&#39;,f&#39;{p}_is_1&#39;)
-                                t.add_edge(p,f&#39;{p}_is_1&#39;)
+        elif c.type(n) in [&#39;or&#39;, &#39;nor&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;and&#39;, output=c.nodes[n][&#39;output&#39;])
+            t.add_node(f&#39;{n}_x_in_fi&#39;, gate=&#39;or&#39;, output=False)
+            t.add_node(f&#39;{n}_1_not_in_fi&#39;, gate=&#39;nor&#39;, output=False)
+            t.add_edges_from([(f&#39;{n}_x_in_fi&#39;, f&#39;{n}_x&#39;),
+                              (f&#39;{n}_1_not_in_fi&#39;, f&#39;{n}_x&#39;)])
+            t.add_edges_from((f&#39;{p}_x&#39;, f&#39;{n}_x_in_fi&#39;)
+                             for p in c.predecessors(n))
+            for p in c.predecessors(n):
+                t.add_node(f&#39;{p}_is_1&#39;, gate=&#39;and&#39;, output=False)
+                t.add_edge(f&#39;{p}_is_1&#39;, f&#39;{n}_1_not_in_fi&#39;)
+                t.add_node(f&#39;{p}_not_x&#39;, gate=&#39;not&#39;, output=False)
+                t.add_edge(f&#39;{p}_x&#39;, f&#39;{p}_not_x&#39;)
+                t.add_edge(f&#39;{p}_not_x&#39;, f&#39;{p}_is_1&#39;)
+                t.add_edge(p, f&#39;{p}_is_1&#39;)
 
-                elif c.type(n) in [&#39;buf&#39;,&#39;not&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;buf&#39;,output=c.nodes[n][&#39;output&#39;])
-                        p = list(c.predecessors(n))[0]
-                        t.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+        elif c.type(n) in [&#39;buf&#39;, &#39;not&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;buf&#39;, output=c.nodes[n][&#39;output&#39;])
+            p = list(c.predecessors(n))[0]
+            t.add_edge(f&#39;{p}_x&#39;, f&#39;{n}_x&#39;)
 
-                elif c.type(n) in [&#39;xor&#39;,&#39;xnor&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;or&#39;,output=c.nodes[n][&#39;output&#39;])
-                        t.add_edges_from((f&#39;{p}_x&#39;,f&#39;{n}_x&#39;) for p in c.predecessors(n))
+        elif c.type(n) in [&#39;xor&#39;, &#39;xnor&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;or&#39;, output=c.nodes[n][&#39;output&#39;])
+            t.add_edges_from((f&#39;{p}_x&#39;, f&#39;{n}_x&#39;) for p in c.predecessors(n))
 
-                elif c.type(n) in [&#39;0&#39;,&#39;1&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;0&#39;,output=c.nodes[n][&#39;output&#39;])
+        elif c.type(n) in [&#39;0&#39;, &#39;1&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;0&#39;, output=c.nodes[n][&#39;output&#39;])
 
-                elif c.type(n) in [&#39;input&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;input&#39;,output=c.nodes[n][&#39;output&#39;])
+        elif c.type(n) in [&#39;input&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;input&#39;, output=c.nodes[n][&#39;output&#39;])
 
-                elif c.type(n) in [&#39;dff&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;dff&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;])
-                        p = list(c.predecessors(n))[0]
-                        d.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+        elif c.type(n) in [&#39;dff&#39;]:
+            t.add_node(f&#39;{n}_x&#39;, gate=&#39;dff&#39;,
+                       output=c.nodes[n][&#39;output&#39;], clk=c.nodes[n][&#39;clk&#39;])
+            p = list(c.predecessors(n))[0]
+            t.add_edge(f&#39;{p}_x&#39;, f&#39;{n}_x&#39;)
 
-                elif c.type(n) in [&#39;lat&#39;]:
-                        t.add_node(f&#39;{n}_x&#39;,gate=&#39;lat&#39;,output=c.nodes[n][&#39;output&#39;],clk=c.nodes[n][&#39;clk&#39;],rst=c.nodes[n][&#39;rst&#39;])
-                        p = list(c.predecessors(n))[0]
-                        t.add_edge(f&#39;{p}_x&#39;,f&#39;{n}_x&#39;)
+        elif c.type(n) in [&#39;lat&#39;]:
+            t.add_node(
+                f&#39;{n}_x&#39;, gate=&#39;lat&#39;, output=c.nodes[n][&#39;output&#39;],
+                clk=c.nodes[n][&#39;clk&#39;], rst=c.nodes[n][&#39;rst&#39;])
+            p = list(c.predecessors(n))[0]
+            t.add_edge(f&#39;{p}_x&#39;, f&#39;{n}_x&#39;)
 
-                else:
-                        print(f&#34;unknown gate type: {c.nodes[n][&#39;type&#39;]}&#34;)
-                        code.interact(local=dict(globals(), **locals()))
+        else:
+            print(f&#34;unknown gate type: {c.nodes[n][&#39;type&#39;]}&#34;)
+            code.interact(local=dict(globals(), **locals()))
 
-        for n in t:
-                if &#39;type&#39; not in t.nodes[n]:
-                        print(f&#34;empty gate type: {n}&#34;)
-                        code.interact(local=dict(globals(), **locals()))
+    for n in t:
+        if &#39;type&#39; not in t.nodes[n]:
+            print(f&#34;empty gate type: {n}&#34;)
+            code.interact(local=dict(globals(), **locals()))
 
-        return t</code></pre>
+    return t</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.unroll"><code class="name flex">
@@ -1050,44 +1109,44 @@ def mphf(w=30,n=800):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def unroll(c,cycles):
-        &#34;&#34;&#34;
-        Creates combinational unrolling of the circuit.
+<pre><code class="python">def unroll(c, cycles):
+    &#34;&#34;&#34;
+    Creates combinational unrolling of the circuit.
 
-        Parameters
-        ----------
-        c : Circuit
-                Sequential circuit to unroll.
-        cycles : int
-                Number of cycles to unroll
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to unroll.
+    cycles : int
+            Number of cycles to unroll
 
-        Returns
-        -------
-        Circuit
-                Unrolled circuit.
+    Returns
+    -------
+    Circuit
+            Unrolled circuit.
 
-        &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    u = nx.DiGraph()
+    c_comb = c
+    for i in range(cycles):
+        c_comb_i = nx.relabel_nodes(c_comb, {n: f&#39;{n}_{i}&#39; for n in c_comb})
+        u.extend(c_comb_i)
+        if i == 0:
+            # convert si to inputs
+            for n in c:
+                if c.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;, &#39;dff&#39;]:
+                    u.nodes[f&#39;{n}_si_{i}&#39;][&#39;gate&#39;] = &#39;input&#39;
 
-        u = nx.DiGraph()
-        for i in range(cycles):
-                c_comb_i = nx.relabel_nodes(c_comb,{n:f&#39;{n}_{i}&#39; for n in c_comb})
-                u.extend(c_comb_i)
-                if i==0:
-                        # convert si to inputs
-                        for n in c:
-                                if c.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;,&#39;dff&#39;]:
-                                        u.nodes[f&#39;{n}_si_{i}&#39;][&#39;gate&#39;] = &#39;input&#39;
+        else:
+            # connect prev si
+            for n in c:
+                if c.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;, &#39;dff&#39;]:
+                    u.add_edge(f&#39;{n}_si_{i-1}&#39;, f&#39;{n}_si_{i}&#39;)
+        for n in u:
+            if &#39;gate&#39; not in u.nodes[n]:
+                print(n)
 
-                else:
-                        # connect prev si
-                        for n in c:
-                                if c.nodes[n][&#39;gate&#39;] in [&#39;lat&#39;,&#39;dff&#39;]:
-                                        u.add_edge(f&#39;{n}_si_{i-1}&#39;,f&#39;{n}_si_{i}&#39;)
-                for n in u:
-                        if &#39;gate&#39; not in u.nodes[n]:
-                                print(n)
-
-        return u</code></pre>
+    return u</code></pre>
 </details>
 </dd>
 </dl>
@@ -1129,7 +1188,7 @@ def mphf(w=30,n=800):
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>
