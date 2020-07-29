@@ -73,7 +73,7 @@ class Circuit:
     def __iter__(self):
         return self.graph.__iter__()
 
-    def setType(self, ns, t):
+    def set_type(self, ns, t):
         """
         Returns node(s) type(s).
 
@@ -121,6 +121,7 @@ class Circuit:
         {'xor','or','xor','ff'}
 
         """
+        # FIXME: Throw an error if type is not yet defined
         if isinstance(ns, str):
             return self.graph.nodes[ns]['type']
         return set(self.graph.nodes[n]['type'] for n in ns)
@@ -164,7 +165,7 @@ class Circuit:
                 types = [types]
             return set(n for n in self.nodes() if self.type(n) in types)
 
-    def isCyclic(self):
+    def is_cyclic(self):
         """
         Checks for combinational loops in circuit
 
@@ -276,8 +277,8 @@ class Circuit:
                 self.graph.add_edge(s, f's[{n}]')
             if clk:
                 self.graph.add_edge(clk, f'clk[{n}]')
-            elif type == 'output':
-                self.graph.add_node(f'output[{n}]', type='output')
+        elif type == 'output':
+            self.graph.add_node(f'output[{n}]', type='output')
             self.graph.add_edges_from(
                 (f, f'output[{n}]') for f in fanin)
         else:
@@ -311,7 +312,7 @@ class Circuit:
         """
         self.graph.update(c.graph)
 
-    def stripIO(self):
+    def strip_io(self):
         """
         Removes outputs and converts inputs to buffers for easy instantiation.
 
@@ -381,7 +382,7 @@ class Circuit:
         return Circuit(graph=nx.relabel_nodes(self.graph, mapping),
                        name=self.name)
 
-    def transitiveFanout(self, ns, stopatTypes=['d'], stopatNodes=[],
+    def transitive_fanout(self, ns, stopatTypes=['d'], stopatNodes=[],
                          gates=None):
         """
         Computes the transitive fanout of a node.
@@ -413,12 +414,11 @@ class Circuit:
                     gates.add(s)
                     if (self.type(s) not in stopatTypes
                             and s not in stopatNodes):
-                        self.transitiveFanout(
+                        self.transitive_fanout(
                             s, stopatTypes, stopatNodes, gates)
-                        break
         return gates
 
-    def transitiveFanin(self, ns, stopatTypes=['ff', 'lat'], stopatNodes=[],
+    def transitive_fanin(self, ns, stopatTypes=['ff', 'lat'], stopatNodes=[],
                         gates=None):
         """
         Computes the transitive fanin of a node.
@@ -451,12 +451,11 @@ class Circuit:
                     gates.add(p)
                     if (self.type(p) not in stopatTypes
                             and p not in stopatNodes):
-                        self.transitiveFanin(
+                        self.transitive_fanin(
                             p, stopatTypes, stopatNodes, gates)
-                        break
         return gates
 
-    def faninCombDepth(self, ns, shortest=False, visited=None, depth=0):
+    def fanin_comb_depth(self, ns, shortest=False, visited=None, depth=0):
         """
         Computes the combinational fanin depth of a node(s).
 
@@ -481,7 +480,7 @@ class Circuit:
         comp = min if shortest else max
 
         if not isinstance(ns, str):
-            return comp(self.faninCombDepth(n, shortest) for n in ns)
+            return comp(self.fanin_comb_depth(n, shortest) for n in ns)
         else:
             n = ns
 
@@ -491,15 +490,15 @@ class Circuit:
         if self.type(n) in ['ff', 'lat', 'input']:
             return 0
 
-        depths = set()
         depth += 1
+        depths = set()
         visited.add(n)
 
         # find depth
         for f in self.fanin(n):
             if self.type(f) not in ['ff', 'lat', 'input'] and f not in visited:
                 # continue recursion
-                depths.add(self.faninCombDepth(
+                depths.add(self.fanin_comb_depth(
                     f, shortest, visited.copy(), depth))
             else:
                 # add depth of endpoint or loop
@@ -507,7 +506,7 @@ class Circuit:
         
         return comp(depths)
 
-    def fanoutCombDepth(self, ns, shortest=False, visited=None, depth=0):
+    def fanout_comb_depth(self, ns, shortest=False, visited=None, depth=0):
         """
         Computes the combinational fanout depth of a node(s).
 
@@ -532,7 +531,7 @@ class Circuit:
         comp = min if shortest else max
 
         if not isinstance(ns, str):
-            return comp(self.fanoutCombDepth(n, shortest) for n in ns)
+            return comp(self.fanout_comb_depth(n, shortest) for n in ns)
         else:
             n = ns
 
@@ -546,7 +545,7 @@ class Circuit:
         for f in self.fanout(n):
             if (self.type(f) not in ['d', 'r', 's', 'clk', 'input', 'output']
                     and f not in visited):
-                depths.add(self.fanoutCombDepth(
+                depths.add(self.fanout_comb_depth(
                     f, shortest, visited.copy(), depth))
             else:
                 depths.add(depth)
@@ -743,7 +742,7 @@ class Circuit:
 
         """
         if ns:
-            return set(n for n in self.transitiveFanin(ns)
+            return set(n for n in self.transitive_fanin(ns)
                        if self.type(n) in ['ff', 'lat', 'input'])
         else:
             return set(n for n in self.graph
@@ -765,13 +764,13 @@ class Circuit:
 
         """
         if ns:
-            return set(n for n in self.transitiveFanout(ns)
+            return set(n for n in self.transitive_fanout(ns)
                        if self.type(n) in ['d', 'output'])
         else:
             return set(n for n in self.graph
                        if self.type(n) in ['d', 'output'])
 
-    def seqGraph(self):
+    def seq_graph(self):
         """
         Creates a graph of the circuit's sequential elements
 

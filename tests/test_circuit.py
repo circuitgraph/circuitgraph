@@ -18,19 +18,19 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(self.c17.fanin(
             ['G9', 'G17']), self.c17.fanin('G9') | self.c17.fanin('G17'))
 
-    def test_faninCombDepth(self):
-        self.assertEqual(self.s27.faninCombDepth('n_5'), 2)
-        self.assertEqual(self.s27.faninCombDepth('n_20', shortest=True), 1)
-        self.assertEqual(self.s27.faninCombDepth(['n_5', 'n_1']), 2)
-        self.assertEqual(self.s27.faninCombDepth(
+    def test_fanin_comb_depth(self):
+        self.assertEqual(self.s27.fanin_comb_depth('n_5'), 2)
+        self.assertEqual(self.s27.fanin_comb_depth('n_20', shortest=True), 1)
+        self.assertEqual(self.s27.fanin_comb_depth(['n_5', 'n_1']), 2)
+        self.assertEqual(self.s27.fanin_comb_depth(
             ['n_5', 'n_1'], shortest=True), 1)
 
-    def test_fanoutCombDepth(self):
-        self.assertEqual(self.s27.fanoutCombDepth('n_10'), 3)
-        self.assertEqual(self.s27.fanoutCombDepth(
+    def test_fanout_comb_depth(self):
+        self.assertEqual(self.s27.fanout_comb_depth('n_10'), 3)
+        self.assertEqual(self.s27.fanout_comb_depth(
             'n_10', shortest=True), 2)
-        self.assertEqual(self.s27.fanoutCombDepth(['n_10', 'n_11']), 3)
-        self.assertEqual(self.s27.fanoutCombDepth(
+        self.assertEqual(self.s27.fanout_comb_depth(['n_10', 'n_11']), 3)
+        self.assertEqual(self.s27.fanout_comb_depth(
             ['n_10', 'n_11'], shortest=True), 2)
 
     def test_fanout(self):
@@ -52,11 +52,11 @@ class TestCircuit(unittest.TestCase):
         self.assertFalse('adsf' in self.s27)
         self.assertTrue('G7' in self.s27)
 
-    def test_isCyclic(self):
+    def test_is_cyclic(self):
         c = cg.Circuit()
         c.add('a', 'buf')
         c.add('b', 'buf', fanin='a', fanout='a')
-        self.assertTrue(c.isCyclic())
+        self.assertTrue(c.is_cyclic())
 
     def test_type(self):
         self.assertTrue(self.s27.type('G7') == 'ff')
@@ -78,34 +78,34 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(self.s27.startpoints(
             ['n_1', 'n_2']), set(['G5', 'G0']))
 
-    def test_transitiveFanout(self):
-        self.assertSetEqual(self.s27.transitiveFanout('G5'), set(
+    def test_transitive_fanout(self):
+        self.assertSetEqual(self.s27.transitive_fanout('G5'), set(
             ['n_1', 'G17', 'output[G17]', 'd[G5]', 'n_12', 'n_11', 'n_9',
              'n_20', 'd[G6]', 'n_21']))
-        self.assertSetEqual(self.s27.transitiveFanout('G5', stopatTypes=[
+        self.assertSetEqual(self.s27.transitive_fanout('G5', stopatTypes=[
                             'not', 'nor']), set(['n_1', 'n_20', 'n_21']))
-        self.assertSetEqual(self.s27.transitiveFanout(
+        self.assertSetEqual(self.s27.transitive_fanout(
                                 'G5',
                                 stopatNodes=['n_21', 'n_20', 'n_1']),
                             set(['n_1', 'n_20', 'n_21']))
-        self.assertSetEqual(self.s27.transitiveFanout(
+        self.assertSetEqual(self.s27.transitive_fanout(
                                 'G5',
                                 stopatTypes=['not'],
                                 stopatNodes=['n_21', 'n_20']),
                             set(['n_1', 'n_20', 'n_21']))
-        self.assertSetEqual(self.s27.transitiveFanout(['G5', 'n_3']),
+        self.assertSetEqual(self.s27.transitive_fanout(['G5', 'n_3']),
                             set(['n_6', 'd[G7]', 'n_1', 'G17', 'output[G17]',
                                  'd[G5]', 'n_12', 'n_11', 'n_9', 'n_20',
                                  'd[G6]', 'n_21']))
 
-    def test_transitiveFanin(self):
-        self.assertSetEqual(self.s27.transitiveFanin(
+    def test_transitive_fanin(self):
+        self.assertSetEqual(self.s27.transitive_fanin(
             'n_4'), set(['G3', 'n_0', 'G1']))
-        self.assertSetEqual(self.s27.transitiveFanin(
+        self.assertSetEqual(self.s27.transitive_fanin(
             'n_4', stopatTypes=['not']), set(['G3', 'n_0']))
-        self.assertSetEqual(self.s27.transitiveFanin(
+        self.assertSetEqual(self.s27.transitive_fanin(
             'n_4', stopatNodes=['n_0']), set(['G3', 'n_0']))
-        self.assertSetEqual(self.s27.transitiveFanin('n_4', stopatTypes=[
+        self.assertSetEqual(self.s27.transitive_fanin('n_4', stopatTypes=[
                             'not'], stopatNodes=['n_0']), set(['n_0', 'G3']))
-        self.assertSetEqual(self.s27.transitiveFanin(
+        self.assertSetEqual(self.s27.transitive_fanin(
             ['n_4', 'n_3']), set(['G3', 'n_0', 'G7', 'G1']))

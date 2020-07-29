@@ -6,6 +6,7 @@ import code
 from subprocess import PIPE, Popen
 from tempfile import NamedTemporaryFile
 from random import sample
+import os
 
 import networkx as nx
 
@@ -37,23 +38,23 @@ def syn(c, engine='Genus', printOutput=False):
     with NamedTemporaryFile() as tmp:
         if engine == 'Genus':
             cmd = ['genus', '-no_gui', '-execute',
-                   'set_db / .library /afs/ece.cmu.edu/support/cds/share/'
-                   'image/usr/cds/genus-19.12.000/share/synth/tutorials/tech/'
-                   'tutorial.lib;'
-                   'read_hdl -sv {tmp.name};'
-                   'elaborate;'
-                   'set_db syn_generic_effort high'
-                   'syn_generic;'
-                   'syn_map;'
-                   'syn_opt;'
-                   'write_hdl -generic;'
+                   'set_db / .library '
+                   f"{os.environ['CIRCUITGRAPH_GENUS_LIBRARY_PATH']};\n"
+                   f'read_hdl -sv {tmp.name};\n'
+                   'elaborate;\n'
+                   'set_db syn_generic_effort high\n'
+                   '_syn_generic;\n'
+                   'syn_map;\n'
+                   'syn_opt;\n'
+                   'write_hdl -generic;\n'
                    'exit;']
         else:
             print('not implemented')
         tmp.write(bytes(verilog, 'ascii'))
         tmp.flush()
 
-        process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        process = Popen(cmd, stdout=PIPE, stderr=PIPE,
+                        universal_newlines=True)
         output = ''
         while True:
             line = process.stdout.readline()
@@ -135,7 +136,7 @@ def ternary(c):
             t.add_node(f'{n}_x', gate='dff',
                        output=c.nodes[n]['output'], clk=c.nodes[n]['clk'])
             p = list(c.predecessors(n))[0]
-            d.add_edge(f'{p}_x', f'{n}_x')
+            t.add_edge(f'{p}_x', f'{n}_x')
 
         elif c.type(n) in ['lat']:
             t.add_node(
@@ -236,6 +237,8 @@ def comb(c):
         c_comb.add_edge(c.nodes[ff]['clk'], f'{ff}_clk')
         c_comb.remove_node(ff)
 
+    return c_comb
+
 
 def gen_lat_model():
     lm = nx.DiGraph()
@@ -313,8 +316,8 @@ def unroll(c, cycles):
             Unrolled circuit.
 
     """
-
     u = nx.DiGraph()
+    c_comb = c
     for i in range(cycles):
         c_comb_i = nx.relabel_nodes(c_comb, {n: f'{n}_{i}' for n in c_comb})
         u.extend(c_comb_i)
@@ -359,7 +362,7 @@ def sensitivity(c, n):
         print(f'{n} is in startpoints')
         return None
 
-    fiNodes = c.transitiveFanin(n) | set([n])
+    fiNodes = c.transitive_fanin(n) | set([n])
     startpoints = c.startpoints(n)
     subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
 
@@ -416,7 +419,7 @@ def sensitize(c, n):
 
     """
     # get fanin/out cone of node
-    nodes = c.transitiveFanin(n) | c.transitiveFanout(n) | set([n])
+    nodes = c.transitive_fanin(n) | c.transitive_fanout(n) | set([n])
     subCircuit = Circuit(c.graph.subgraph(nodes).copy())
 
     # create miter

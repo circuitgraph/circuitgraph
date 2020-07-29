@@ -9,7 +9,7 @@ from circuitgraph import Circuit
 # necessary to define custom sequential types that differ from these
 # TODO: We should probably make a class for this to make it easier to define
 #       custom types
-defaultSeqTypes = [
+default_seq_types = [
     {'name': 'fflopd',
      'type': 'ff',
      'io': {'d': 'D', 'q': 'Q', 'clk': 'CK'},
@@ -34,7 +34,7 @@ defaultSeqTypes = [
      'def': ""}]
 
 
-def from_file(path, name=None, seqTypes=None):
+def from_file(path, name=None, seq_types=None):
     """
     Creates a new `CircuitGraph` from a verilog file.
 
@@ -42,7 +42,7 @@ def from_file(path, name=None, seqTypes=None):
     ----------
     path: the path to the file to read from.
     name: the name of the module to read if different from the filename.
-    seqTypes: the types of sequential elements in the file.
+    seq_types: the types of sequential elements in the file.
 
     Returns
     -------
@@ -52,7 +52,7 @@ def from_file(path, name=None, seqTypes=None):
         name = path.split('/')[-1].replace('.v', '')
     with open(path, 'r') as f:
         verilog = f.read()
-    return verilog_to_circuit(verilog, name, seqTypes)
+    return verilog_to_circuit(verilog, name, seq_types)
 
 
 def from_lib(circuit, name=None):
@@ -73,7 +73,7 @@ def from_lib(circuit, name=None):
     return from_file(path, name)
 
 
-def verilog_to_circuit(verilog, name, seqTypes=None):
+def verilog_to_circuit(verilog, name, seq_types=None):
     """
     Creates a new Circuit from a verilog string.
 
@@ -81,10 +81,10 @@ def verilog_to_circuit(verilog, name, seqTypes=None):
     ----------
     verilog: str of verilog code.
     name: the module name.
-    seqTypes: the sequential element types.
+    seq_types: the sequential element types.
     """
-    if seqTypes is None:
-        seqTypes = defaultSeqTypes
+    if seq_types is None:
+        seq_types = default_seq_types
 
     # extract module
     regex = rf"module\s+{name}\s*\(.*?\);(.*?)endmodule"
@@ -103,7 +103,7 @@ def verilog_to_circuit(verilog, name, seqTypes=None):
         c.add(nets[0], gate, fanin=nets[1:])
 
     # handle seq
-    for st in seqTypes:
+    for st in seq_types:
         # find matching insts
         regex = rf"{st['name']}\s+[^\s(]+\s*\((.+?)\);"
         for io in re.findall(regex, module, re.DOTALL):
@@ -139,19 +139,19 @@ def verilog_to_circuit(verilog, name, seqTypes=None):
         nets = net_str.replace(" ", "").replace(
             "\n", "").replace("\t", "").split(",")
         for n in nets:
-            c.add(f'output[{n}]', 'output', fanin=n)
+            c.add(n, 'output', fanin=n)
 
     return c
 
 
-def circuit_to_verilog(c, seqTypes=None):
+def circuit_to_verilog(c, seq_types=None):
     """
     Generates a str of verilog code from a `CircuitGraph`.
 
     Parameters
     ----------
     c: the circuit to turn into verilog.
-    seqTypes: the sequential element types.
+    seq_types: the sequential element types.
 
     Returns
     -------
@@ -163,8 +163,8 @@ def circuit_to_verilog(c, seqTypes=None):
     wires = []
     defs = set()
 
-    if seqTypes is None:
-        seqTypes = defaultSeqTypes
+    if seq_types is None:
+        seq_types = default_seq_types
 
     for n in c.nodes():
         if c.type(n) in ['xor', 'xnor', 'buf', 'not', 'nor', 'or', 'and',
@@ -183,7 +183,7 @@ def circuit_to_verilog(c, seqTypes=None):
             wires.append(n)
 
             # get template
-            for s in seqTypes:
+            for s in seq_types:
                 if s['type'] == c.type(n):
                     seq = s
                     defs.add(s['def'])

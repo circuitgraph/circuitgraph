@@ -216,7 +216,7 @@ def sat(c, assumptions=None, timeout=None):
             return False
 
 
-def approxModelCount(c, assumptions=None, e=0.9, d=0.1, timeout=None):
+def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
     """
     Approximates the number of solutions to circuit
 
@@ -266,7 +266,7 @@ def approxModelCount(c, assumptions=None, e=0.9, d=0.1, timeout=None):
     return estimate
 
 
-def modelCount(c, assumptions=None, timeout=None):
+def model_count(c, assumptions=None, timeout=None):
     """
     Determines the number of solutions to circuit
 
@@ -297,7 +297,7 @@ def modelCount(c, assumptions=None, timeout=None):
     return count
 
 
-def signalProbability(c, n):
+def signal_probability(c, n):
     """
     Determines the probability of the output being true over all startpoint
     combinations
@@ -318,7 +318,7 @@ def signalProbability(c, n):
     non_fanin_startpoints = c.startpoints()-c.startpoints(n)
 
     # get approximate count with node true and other inputs fixed
-    count = approxModelCount(
+    count = approx_model_count(
         c, assumptions={g: True for g in non_fanin_startpoints | set([n])})
 
     return count/(2**len(c.startpoints(n)))
