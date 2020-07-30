@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.3" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.io API documentation</title>
 <meta name="description" content="Functions for reading/writing CircuitGraphs" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -31,6 +31,9 @@
 
 import re
 import os
+
+from pyeda.parsing import boolexpr
+
 from circuitgraph import Circuit
 
 
@@ -69,9 +72,12 @@ def from_file(path, name=None, seq_types=None):
 
     Parameters
     ----------
-    path: the path to the file to read from.
-    name: the name of the module to read if different from the filename.
-    seq_types: the types of sequential elements in the file.
+    path: str
+            the path to the file to read from.
+    name: str
+            the name of the module to read if different from the filename.
+    seq_types: list of dicts of str:str
+            the types of sequential elements in the file.
 
     Returns
     -------
@@ -148,10 +154,10 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                   clk=pins.get(&#39;clk&#39;, None),
                   r=pins.get(&#39;r&#39;, None), s=pins.get(&#39;s&#39;, None))
 
-    # handle assigns
+    # handle assign statements (with help from pyeda)
     assign_regex = r&#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
-    for n0, n1 in re.findall(assign_regex, module):
-        c.add(n0.replace(&#39; &#39;, &#39;&#39;), &#39;buf&#39;, fanin=n1.replace(&#39; &#39;, &#39;&#39;))
+    for dest, expr in re.findall(assign_regex, module, re.DOTALL):
+        parse_ast(boolexpr.parse(expr), c, dest)
 
     for n in c:
         if &#39;type&#39; not in c.graph.nodes[n]:
@@ -171,6 +177,20 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             c.add(n, &#39;output&#39;, fanin=n)
 
     return c
+
+
+def parse_ast(ast, g, dest, level=0):
+    if ast[0] == &#39;var&#39;:
+        return ast[1][0]
+    else:
+        if level == 0:
+            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]] 
+            g.add(dest, ast[0], fanin=fanin)
+        else:
+            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]]
+            name = f&#34;{ast[0]}_{&#39;_&#39;.join(fanin)}&#34;
+            g.add(name, ast[0], fanin=fanin)
+            return name
 
 
 def circuit_to_verilog(c, seq_types=None):
@@ -207,8 +227,8 @@ def circuit_to_verilog(c, seq_types=None):
             inputs.append(n)
             wires.append(n)
         elif c.type(n) in [&#39;output&#39;]:
-            name = n.replace(&#39;output[&#39;,&#39;&#39;)[:-1]
-            if c.fanin(n).pop()!=name:
+            name = n.replace(&#39;output[&#39;, &#39;&#39;)[:-1]
+            if c.fanin(n).pop() != name:
                 insts.append(f&#34;assign {name} = {c.fanin(n).pop()}&#34;)
             outputs.append(name)
         elif c.type(n) in [&#39;ff&#39;, &#39;lat&#39;]:
@@ -310,8 +330,8 @@ seq_types: the sequential element types.</p>
             inputs.append(n)
             wires.append(n)
         elif c.type(n) in [&#39;output&#39;]:
-            name = n.replace(&#39;output[&#39;,&#39;&#39;)[:-1]
-            if c.fanin(n).pop()!=name:
+            name = n.replace(&#39;output[&#39;, &#39;&#39;)[:-1]
+            if c.fanin(n).pop() != name:
                 insts.append(f&#34;assign {name} = {c.fanin(n).pop()}&#34;)
             outputs.append(name)
         elif c.type(n) in [&#39;ff&#39;, &#39;lat&#39;]:
@@ -364,9 +384,14 @@ seq_types: the sequential element types.</p>
 <dd>
 <div class="desc"><p>Creates a new <code>CircuitGraph</code> from a verilog file.</p>
 <h2 id="parameters">Parameters</h2>
-<p>path: the path to the file to read from.
-name: the name of the module to read if different from the filename.
-seq_types: the types of sequential elements in the file.</p>
+<dl>
+<dt><strong><code>path</code></strong> :&ensp;<code>str</code></dt>
+<dd>the path to the file to read from.</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>the name of the module to read if different from the filename.</dd>
+<dt><strong><code>seq_types</code></strong> :&ensp;<code>list</code> of <code>dicts</code> of <code>str:str</code></dt>
+<dd>the types of sequential elements in the file.</dd>
+</dl>
 <h2 id="returns">Returns</h2>
 <p>a <code>CircuitGraph</code> of the file.</p></div>
 <details class="source">
@@ -379,9 +404,12 @@ seq_types: the types of sequential elements in the file.</p>
 
     Parameters
     ----------
-    path: the path to the file to read from.
-    name: the name of the module to read if different from the filename.
-    seq_types: the types of sequential elements in the file.
+    path: str
+            the path to the file to read from.
+    name: str
+            the name of the module to read if different from the filename.
+    seq_types: list of dicts of str:str
+            the types of sequential elements in the file.
 
     Returns
     -------
@@ -425,6 +453,29 @@ name: the module name, if different from the netlist name.</p>
     &#34;&#34;&#34;
     path = f&#39;{os.path.dirname(__file__)}/../netlists/{circuit}.v&#39;
     return from_file(path, name)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.io.parse_ast"><code class="name flex">
+<span>def <span class="ident">parse_ast</span></span>(<span>ast, g, dest, level=0)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def parse_ast(ast, g, dest, level=0):
+    if ast[0] == &#39;var&#39;:
+        return ast[1][0]
+    else:
+        if level == 0:
+            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]] 
+            g.add(dest, ast[0], fanin=fanin)
+        else:
+            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]]
+            name = f&#34;{ast[0]}_{&#39;_&#39;.join(fanin)}&#34;
+            g.add(name, ast[0], fanin=fanin)
+            return name</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.io.verilog_to_circuit"><code class="name flex">
@@ -486,10 +537,10 @@ seq_types: the sequential element types.</p></div>
                   clk=pins.get(&#39;clk&#39;, None),
                   r=pins.get(&#39;r&#39;, None), s=pins.get(&#39;s&#39;, None))
 
-    # handle assigns
+    # handle assign statements (with help from pyeda)
     assign_regex = r&#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
-    for n0, n1 in re.findall(assign_regex, module):
-        c.add(n0.replace(&#39; &#39;, &#39;&#39;), &#39;buf&#39;, fanin=n1.replace(&#39; &#39;, &#39;&#39;))
+    for dest, expr in re.findall(assign_regex, module, re.DOTALL):
+        parse_ast(boolexpr.parse(expr), c, dest)
 
     for n in c:
         if &#39;type&#39; not in c.graph.nodes[n]:
@@ -537,6 +588,7 @@ seq_types: the sequential element types.</p></div>
 <li><code><a title="circuitgraph.io.circuit_to_verilog" href="#circuitgraph.io.circuit_to_verilog">circuit_to_verilog</a></code></li>
 <li><code><a title="circuitgraph.io.from_file" href="#circuitgraph.io.from_file">from_file</a></code></li>
 <li><code><a title="circuitgraph.io.from_lib" href="#circuitgraph.io.from_lib">from_lib</a></code></li>
+<li><code><a title="circuitgraph.io.parse_ast" href="#circuitgraph.io.parse_ast">parse_ast</a></code></li>
 <li><code><a title="circuitgraph.io.verilog_to_circuit" href="#circuitgraph.io.verilog_to_circuit">verilog_to_circuit</a></code></li>
 </ul>
 </li>
@@ -544,7 +596,7 @@ seq_types: the sequential element types.</p></div>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

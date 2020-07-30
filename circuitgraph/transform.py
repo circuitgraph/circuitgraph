@@ -4,6 +4,7 @@
 import math
 import code
 from subprocess import PIPE, Popen
+import subprocess
 from tempfile import NamedTemporaryFile
 from random import sample
 import os
@@ -14,7 +15,7 @@ from circuitgraph import Circuit
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
 
 
-def syn(c, engine='Genus', printOutput=False):
+def syn(c, engine, print_output=False):
     """
     Synthesizes the circuit using Genus.
 
@@ -22,9 +23,9 @@ def syn(c, engine='Genus', printOutput=False):
     ----------
     c : Circuit
             Circuit to synthesize.
-    engine : string
+    engine : str
             Synthesis tool to use ('Genus' or 'Yosys')
-    printOutput : bool
+    print_output : bool
             Option to print synthesis log
 
     Returns
@@ -35,7 +36,9 @@ def syn(c, engine='Genus', printOutput=False):
     verilog = circuit_to_verilog(c)
 
     # probably should write output to the tmp file
-    with NamedTemporaryFile() as tmp:
+    with NamedTemporaryFile() as tmp: 
+        tmp.write(bytes(verilog, 'ascii'))
+        tmp.flush()
         if engine == 'Genus':
             cmd = ['genus', '-no_gui', '-execute',
                    'set_db / .library '
@@ -48,23 +51,33 @@ def syn(c, engine='Genus', printOutput=False):
                    'syn_opt;\n'
                    'write_hdl -generic;\n'
                    'exit;']
+            process = Popen(cmd, stdout=PIPE, stderr=PIPE,
+                            universal_newlines=True)
+            output = ''
+            while True:
+                line = process.stdout.readline()
+                if line == '' and process.poll() is not None:
+                    break
+                if line:
+                    if print_output:
+                        print(line.strip())
+                    output += line
+
+        elif engine == 'Yosys':
+            with NamedTemporaryFile() as tmpo:
+                cmd = ['yosys', '-p',
+                       f'read_verilog {tmp.name}; '
+                       'proc; opt; fsm; opt; memory; opt; clean; '
+                       f'write_verilog -noattr {tmpo.name}']
+                subprocess.run(cmd) 
+                output = tmpo.read().decode('utf-8')
+                if print_output:
+                    print(output)
+
         else:
-            print('not implemented')
-        tmp.write(bytes(verilog, 'ascii'))
-        tmp.flush()
+            raise ValueError('synthesis engine must be Yosys or Genus')
 
-        process = Popen(cmd, stdout=PIPE, stderr=PIPE,
-                        universal_newlines=True)
-        output = ''
-        while True:
-            line = process.stdout.readline()
-            if line == '' and process.poll() is not None:
-                break
-            if line:
-                if printOutput:
-                    print(line.strip())
-                output += line
-
+        
     return verilog_to_circuit(output, c.name)
 
 

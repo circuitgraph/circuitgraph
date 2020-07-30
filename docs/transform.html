@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.3" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.transform API documentation</title>
 <meta name="description" content="Functions for transforming circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -33,6 +33,7 @@
 import math
 import code
 from subprocess import PIPE, Popen
+import subprocess
 from tempfile import NamedTemporaryFile
 from random import sample
 import os
@@ -43,7 +44,7 @@ from circuitgraph import Circuit
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
 
 
-def syn(c, engine=&#39;Genus&#39;, printOutput=False):
+def syn(c, engine, print_output=False):
     &#34;&#34;&#34;
     Synthesizes the circuit using Genus.
 
@@ -51,9 +52,9 @@ def syn(c, engine=&#39;Genus&#39;, printOutput=False):
     ----------
     c : Circuit
             Circuit to synthesize.
-    engine : string
+    engine : str
             Synthesis tool to use (&#39;Genus&#39; or &#39;Yosys&#39;)
-    printOutput : bool
+    print_output : bool
             Option to print synthesis log
 
     Returns
@@ -64,7 +65,9 @@ def syn(c, engine=&#39;Genus&#39;, printOutput=False):
     verilog = circuit_to_verilog(c)
 
     # probably should write output to the tmp file
-    with NamedTemporaryFile() as tmp:
+    with NamedTemporaryFile() as tmp: 
+        tmp.write(bytes(verilog, &#39;ascii&#39;))
+        tmp.flush()
         if engine == &#39;Genus&#39;:
             cmd = [&#39;genus&#39;, &#39;-no_gui&#39;, &#39;-execute&#39;,
                    &#39;set_db / .library &#39;
@@ -77,23 +80,33 @@ def syn(c, engine=&#39;Genus&#39;, printOutput=False):
                    &#39;syn_opt;\n&#39;
                    &#39;write_hdl -generic;\n&#39;
                    &#39;exit;&#39;]
+            process = Popen(cmd, stdout=PIPE, stderr=PIPE,
+                            universal_newlines=True)
+            output = &#39;&#39;
+            while True:
+                line = process.stdout.readline()
+                if line == &#39;&#39; and process.poll() is not None:
+                    break
+                if line:
+                    if print_output:
+                        print(line.strip())
+                    output += line
+
+        elif engine == &#39;Yosys&#39;:
+            with NamedTemporaryFile() as tmpo:
+                cmd = [&#39;yosys&#39;, &#39;-p&#39;,
+                       f&#39;read_verilog {tmp.name}; &#39;
+                       &#39;proc; opt; fsm; opt; memory; opt; clean; &#39;
+                       f&#39;write_verilog -noattr {tmpo.name}&#39;]
+                subprocess.run(cmd) 
+                output = tmpo.read().decode(&#39;utf-8&#39;)
+                if print_output:
+                    print(output)
+
         else:
-            print(&#39;not implemented&#39;)
-        tmp.write(bytes(verilog, &#39;ascii&#39;))
-        tmp.flush()
+            raise ValueError(&#39;synthesis engine must be Yosys or Genus&#39;)
 
-        process = Popen(cmd, stdout=PIPE, stderr=PIPE,
-                        universal_newlines=True)
-        output = &#39;&#39;
-        while True:
-            line = process.stdout.readline()
-            if line == &#39;&#39; and process.poll() is not None:
-                break
-            if line:
-                if printOutput:
-                    print(line.strip())
-                output += line
-
+        
     return verilog_to_circuit(output, c.name)
 
 
@@ -904,7 +917,7 @@ functions.</p>
 </details>
 </dd>
 <dt id="circuitgraph.transform.syn"><code class="name flex">
-<span>def <span class="ident">syn</span></span>(<span>c, engine='Genus', printOutput=False)</span>
+<span>def <span class="ident">syn</span></span>(<span>c, engine, print_output=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Synthesizes the circuit using Genus.</p>
@@ -912,9 +925,9 @@ functions.</p>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>Circuit to synthesize.</dd>
-<dt><strong><code>engine</code></strong> :&ensp;<code>string</code></dt>
+<dt><strong><code>engine</code></strong> :&ensp;<code>str</code></dt>
 <dd>Synthesis tool to use ('Genus' or 'Yosys')</dd>
-<dt><strong><code>printOutput</code></strong> :&ensp;<code>bool</code></dt>
+<dt><strong><code>print_output</code></strong> :&ensp;<code>bool</code></dt>
 <dd>Option to print synthesis log</dd>
 </dl>
 <h2 id="returns">Returns</h2>
@@ -926,7 +939,7 @@ functions.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def syn(c, engine=&#39;Genus&#39;, printOutput=False):
+<pre><code class="python">def syn(c, engine, print_output=False):
     &#34;&#34;&#34;
     Synthesizes the circuit using Genus.
 
@@ -934,9 +947,9 @@ functions.</p>
     ----------
     c : Circuit
             Circuit to synthesize.
-    engine : string
+    engine : str
             Synthesis tool to use (&#39;Genus&#39; or &#39;Yosys&#39;)
-    printOutput : bool
+    print_output : bool
             Option to print synthesis log
 
     Returns
@@ -947,7 +960,9 @@ functions.</p>
     verilog = circuit_to_verilog(c)
 
     # probably should write output to the tmp file
-    with NamedTemporaryFile() as tmp:
+    with NamedTemporaryFile() as tmp: 
+        tmp.write(bytes(verilog, &#39;ascii&#39;))
+        tmp.flush()
         if engine == &#39;Genus&#39;:
             cmd = [&#39;genus&#39;, &#39;-no_gui&#39;, &#39;-execute&#39;,
                    &#39;set_db / .library &#39;
@@ -960,23 +975,33 @@ functions.</p>
                    &#39;syn_opt;\n&#39;
                    &#39;write_hdl -generic;\n&#39;
                    &#39;exit;&#39;]
+            process = Popen(cmd, stdout=PIPE, stderr=PIPE,
+                            universal_newlines=True)
+            output = &#39;&#39;
+            while True:
+                line = process.stdout.readline()
+                if line == &#39;&#39; and process.poll() is not None:
+                    break
+                if line:
+                    if print_output:
+                        print(line.strip())
+                    output += line
+
+        elif engine == &#39;Yosys&#39;:
+            with NamedTemporaryFile() as tmpo:
+                cmd = [&#39;yosys&#39;, &#39;-p&#39;,
+                       f&#39;read_verilog {tmp.name}; &#39;
+                       &#39;proc; opt; fsm; opt; memory; opt; clean; &#39;
+                       f&#39;write_verilog -noattr {tmpo.name}&#39;]
+                subprocess.run(cmd) 
+                output = tmpo.read().decode(&#39;utf-8&#39;)
+                if print_output:
+                    print(output)
+
         else:
-            print(&#39;not implemented&#39;)
-        tmp.write(bytes(verilog, &#39;ascii&#39;))
-        tmp.flush()
+            raise ValueError(&#39;synthesis engine must be Yosys or Genus&#39;)
 
-        process = Popen(cmd, stdout=PIPE, stderr=PIPE,
-                        universal_newlines=True)
-        output = &#39;&#39;
-        while True:
-            line = process.stdout.readline()
-            if line == &#39;&#39; and process.poll() is not None:
-                break
-            if line:
-                if printOutput:
-                    print(line.strip())
-                output += line
-
+        
     return verilog_to_circuit(output, c.name)</code></pre>
 </details>
 </dd>
@@ -1188,7 +1213,7 @@ functions.</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>
