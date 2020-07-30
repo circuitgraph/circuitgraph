@@ -813,3 +813,7 @@ def clog2(num: int) -> int:
         shifter <<= 1
         accum += 1
     return accum
+
+def int_to_bin(i,w):
+    return tuple(v=='1' for v in bin(i)[2:].zfill(w))
+

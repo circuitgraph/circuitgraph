@@ -11,8 +11,9 @@ import os
 
 import networkx as nx
 
-from circuitgraph import Circuit
+from circuitgraph import Circuit,clog2
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
+from circuitgraph.logic import popcount
 
 
 def syn(c, engine, print_output=False):
@@ -36,7 +37,7 @@ def syn(c, engine, print_output=False):
     verilog = circuit_to_verilog(c)
 
     # probably should write output to the tmp file
-    with NamedTemporaryFile() as tmp: 
+    with NamedTemporaryFile() as tmp:
         tmp.write(bytes(verilog, 'ascii'))
         tmp.flush()
         if engine == 'Genus':
@@ -69,7 +70,7 @@ def syn(c, engine, print_output=False):
                        f'read_verilog {tmp.name}; '
                        'proc; opt; fsm; opt; memory; opt; clean; '
                        f'write_verilog -noattr {tmpo.name}']
-                subprocess.run(cmd) 
+                subprocess.run(cmd)
                 output = tmpo.read().decode('utf-8')
                 if print_output:
                     print(output)
@@ -77,7 +78,7 @@ def syn(c, engine, print_output=False):
         else:
             raise ValueError('synthesis engine must be Yosys or Genus')
 
-        
+
     return verilog_to_circuit(output, c.name)
 
 
@@ -372,8 +373,7 @@ def sensitivity(c, n):
 
     # get fanin cone of node
     if n in c.startpoints():
-        print(f'{n} is in startpoints')
-        return None
+        raise ValueError(f'{n} is in startpoints')
 
     fiNodes = c.transitive_fanin(n) | set([n])
     startpoints = c.startpoints(n)
@@ -393,8 +393,17 @@ def sensitivity(c, n):
     sensitivityCircuit = Circuit()
     sensitivityCircuit.extend(subCircuit)
 
+    # instantiate population count
+
+    p = popcount(len(startpoints)).strip_io()
+    p = p.relabel({g:f'pop_{g}' for g in p})
+    sensitivityCircuit.extend(p)
+    for o in range(clog2(len(startpoints))):
+        sensitivityCircuit.add(f'out_{o}', 'output',
+                               fanin=f'pop_out_{o}')
+
     # stamp out a copies of the circuit with s inverted
-    for s in startpoints:
+    for i,s in enumerate(startpoints):
         mapping = {
             g: f'sen_{s}_{g}' for g in subCircuit
             if g not in startpoints-set([s])}
@@ -407,7 +416,9 @@ def sensitivity(c, n):
 
         # compare to first copy
         sensitivityCircuit.add(
-            f'difference_{s}', 'xor', fanin=[n, f'sen_{s}_{n}'])
+            f'difference_{s}', 'xor', fanin=[n, f'sen_{s}_{n}'],
+            fanout = f'pop_in_{i}'
+        )
         sensitivityCircuit.add(
             f'difference_{s}', 'output', fanin=f'difference_{s}')
 

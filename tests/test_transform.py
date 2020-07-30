@@ -1,4 +1,5 @@
 import unittest
+import os
 
 import circuitgraph as cg
 from circuitgraph.transform import miter, syn, sensitivity
@@ -48,23 +49,54 @@ class TestTransform(unittest.TestCase):
         self.assertTrue(live)
         different_output = sat(m, assumptions={'sat': True})
         self.assertFalse(different_output)
+        if 'CIRCUITGRAPH_GENUS_LIBRARY_PATH' in os.environ:
+            s = syn(self.s27, 'Genus', print_output=True)
+            m = miter(self.s27, s)
+            live = sat(m)
+            self.assertTrue(live)
+            different_output = sat(m, assumptions={'sat': True})
+            self.assertFalse(different_output)
+
 
     def test_sensitivity(self):
         # pick random node and input value
         n = sample(self.s27.nodes()-self.s27.startpoints(), 1)[0]
-        input_val = {i: randint(0, 1) for i in self.s27.startpoints(n)}
+        nstartpoints = self.s27.startpoints(n)
+        input_val = {i: randint(0, 1) for i in nstartpoints}
 
         # build sensitivity circuit
         s = sensitivity(self.s27, n)
 
         # find sensitivity at an input
         model = sat(s, input_val)
-        sen_s = sum(model[o] for o in s.outputs())
+        sen_s = sum(model[o] for o in s.outputs() if 'difference' in o)
 
         # try inputs Hamming distance 1 away
         output_val = sat(self.s27, input_val)[n]
         sen_sim = 0
-        for i in self.s27.startpoints(n):
+        for i in nstartpoints:
+            neighbor_input_val = {g: v if g !=
+                                  i else not v for g, v in input_val.items()}
+            neighbor_output_val = sat(self.s27, neighbor_input_val)[n]
+            if neighbor_output_val != output_val:
+                sen_sim += 1
+
+        if sen_s != sen_sim:
+            code.interact(local=dict(globals(), **locals()))
+
+        # check answer
+        self.assertEqual(sen_s, sen_sim)
+
+        # find input with sensitivity
+        vs = cg.int_to_bin(sen_s,cg.clog2(len(nstartpoints)))
+        model = sat(s, {f'out_{i}':v for i,v in enumerate(vs)})
+
+        input_val = {i: model[i] for i in nstartpoints}
+
+        # try inputs Hamming distance 1 away
+        output_val = sat(self.s27, input_val)[n]
+        sen_sim = 0
+        for i in nstartpoints:
             neighbor_input_val = {g: v if g !=
                                   i else not v for g, v in input_val.items()}
             neighbor_output_val = sat(self.s27, neighbor_input_val)[n]
