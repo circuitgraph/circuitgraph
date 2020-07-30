@@ -2,6 +2,9 @@
 
 import re
 import os
+
+from pyeda.parsing import boolexpr
+
 from circuitgraph import Circuit
 
 
@@ -40,9 +43,12 @@ def from_file(path, name=None, seq_types=None):
 
     Parameters
     ----------
-    path: the path to the file to read from.
-    name: the name of the module to read if different from the filename.
-    seq_types: the types of sequential elements in the file.
+    path: str
+            the path to the file to read from.
+    name: str
+            the name of the module to read if different from the filename.
+    seq_types: list of dicts of str:str
+            the types of sequential elements in the file.
 
     Returns
     -------
@@ -119,10 +125,10 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                   clk=pins.get('clk', None),
                   r=pins.get('r', None), s=pins.get('s', None))
 
-    # handle assigns
+    # handle assign statements (with help from pyeda)
     assign_regex = r"assign\s+(.+?)\s*=\s*(.+?);"
-    for n0, n1 in re.findall(assign_regex, module):
-        c.add(n0.replace(' ', ''), 'buf', fanin=n1.replace(' ', ''))
+    for dest, expr in re.findall(assign_regex, module, re.DOTALL):
+        parse_ast(boolexpr.parse(expr), c, dest)
 
     for n in c:
         if 'type' not in c.graph.nodes[n]:
@@ -142,6 +148,20 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             c.add(n, 'output', fanin=n)
 
     return c
+
+
+def parse_ast(ast, g, dest, level=0):
+    if ast[0] == 'var':
+        return ast[1][0]
+    else:
+        if level == 0:
+            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]] 
+            g.add(dest, ast[0], fanin=fanin)
+        else:
+            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]]
+            name = f"{ast[0]}_{'_'.join(fanin)}"
+            g.add(name, ast[0], fanin=fanin)
+            return name
 
 
 def circuit_to_verilog(c, seq_types=None):
@@ -178,8 +198,8 @@ def circuit_to_verilog(c, seq_types=None):
             inputs.append(n)
             wires.append(n)
         elif c.type(n) in ['output']:
-            name = n.replace('output[','')[:-1]
-            if c.fanin(n).pop()!=name:
+            name = n.replace('output[', '')[:-1]
+            if c.fanin(n).pop() != name:
                 insts.append(f"assign {name} = {c.fanin(n).pop()}")
             outputs.append(name)
         elif c.type(n) in ['ff', 'lat']:
