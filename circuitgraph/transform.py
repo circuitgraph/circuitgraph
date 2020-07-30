@@ -205,7 +205,7 @@ def comb(c):
     Parameters
     ----------
     c : Circuit
-            Sequential circuit to unroll.
+            Sequential circuit to make combinational.
 
     Returns
     -------
@@ -317,7 +317,7 @@ def unroll(c, cycles):
 
     """
     u = nx.DiGraph()
-    c_comb = c
+    c_comb = comb(c)
     for i in range(cycles):
         c_comb_i = nx.relabel_nodes(c_comb, {n: f'{n}_{i}' for n in c_comb})
         u.extend(c_comb_i)
