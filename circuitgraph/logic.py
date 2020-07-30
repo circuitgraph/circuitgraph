@@ -104,7 +104,7 @@ def popcount(w):
             ns += ['null']
 
         # instantiate and connect adder
-        a = adder(aw).stripIO()
+        a = adder(aw).strip_io()
         c.extend(a.relabel({n: f'add_{i}_{n}' for n in a.nodes()}))
         for j, (n, m) in enumerate(zip(ns, ms)):
             c.connect(n, f'add_{i}_a_{j}')
