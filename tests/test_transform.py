@@ -42,7 +42,7 @@ class TestTransform(unittest.TestCase):
 
     def test_syn(self):
         # synthesize and check equiv
-        s = syn(self.s27)
+        s = syn(self.s27, printOutput=True)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)

@@ -178,7 +178,10 @@ def circuit_to_verilog(c, seq_types=None):
             inputs.append(n)
             wires.append(n)
         elif c.type(n) in ['output']:
-            outputs.append(n.replace('output[', '')[:-1])
+            name = n.replace('output[','')[:-1]
+            if c.fanin(n).pop()!=name:
+                insts.append(f"assign {name} = {c.fanin(n).pop()}")
+            outputs.append(name)
         elif c.type(n) in ['ff', 'lat']:
             wires.append(n)
 

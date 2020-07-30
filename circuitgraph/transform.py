@@ -42,8 +42,8 @@ def syn(c, engine='Genus', printOutput=False):
                    f"{os.environ['CIRCUITGRAPH_GENUS_LIBRARY_PATH']};\n"
                    f'read_hdl -sv {tmp.name};\n'
                    'elaborate;\n'
-                   'set_db syn_generic_effort high\n'
-                   '_syn_generic;\n'
+                   'set_db syn_generic_effort high;\n'
+                   'syn_generic;\n'
                    'syn_map;\n'
                    'syn_opt;\n'
                    'write_hdl -generic;\n'

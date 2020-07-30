@@ -150,7 +150,7 @@ class Circuit:
         Calling `nodes` with no argument returns all nodes in the circuit
 
         >>> c.nodes()
-        NodeView(('g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'))
+        {'g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'}
 
         Passing a node type, we can selectively return nodes.
 
@@ -159,7 +159,7 @@ class Circuit:
 
         """
         if types is None:
-            return self.graph.nodes
+            return set(n for n in self.graph.nodes)
         else:
             if isinstance(types, str):
                 types = [types]
@@ -503,7 +503,7 @@ class Circuit:
             else:
                 # add depth of endpoint or loop
                 depths.add(depth)
-        
+
         return comp(depths)
 
     def fanout_comb_depth(self, ns, shortest=False, visited=None, depth=0):
@@ -549,7 +549,7 @@ class Circuit:
                     f, shortest, visited.copy(), depth))
             else:
                 depths.add(depth)
-        
+
         return comp(depths)
 
     def fanout(self, ns):
