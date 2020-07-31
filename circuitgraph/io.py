@@ -44,7 +44,7 @@ default_seq_types = [
 
 def from_file(path, name=None, seq_types=None):
     """
-    Creates a new `CircuitGraph` from a verilog file.
+    Creates a new `Circuit` from a verilog file.
 
     Parameters
     ----------
@@ -57,7 +57,8 @@ def from_file(path, name=None, seq_types=None):
 
     Returns
     -------
-    a `CircuitGraph` of the file.
+    Circuit
+            the parsed circuit.
     """
     if name is None:
         name = path.split("/")[-1].replace(".v", "")
@@ -68,7 +69,7 @@ def from_file(path, name=None, seq_types=None):
 
 def from_lib(circuit, name=None):
     """
-    Creates a new `CircuitGraph` from a netlist in the `../netlists`
+    Creates a new `Circuit` from a netlist in the `../netlists`
     folder
 
     Parameters
@@ -78,7 +79,8 @@ def from_lib(circuit, name=None):
 
     Returns
     -------
-    a `CircuitGraph` of the netlist.
+    Circuit
+            the parsed circuit.
     """
     path = f"{os.path.dirname(__file__)}/../netlists/{circuit}.v"
     return from_file(path, name)
@@ -90,9 +92,17 @@ def verilog_to_circuit(verilog, name, seq_types=None):
 
     Parameters
     ----------
-    verilog: str of verilog code.
-    name: the module name.
-    seq_types: the sequential element types.
+    verilog: str
+            verilog code.
+    name: str
+            the module name.
+    seq_types: list of dicts of str:str
+            the sequential element types.
+    
+    Returns
+    -------
+    Circuit
+            the parsed circuit.
     """
     if seq_types is None:
         seq_types = default_seq_types
@@ -171,18 +181,38 @@ def parse_ast(ast, g, dest, level=0):
             return name
 
 
+def to_file(c, path, seq_types=None):
+    """
+    Writes a `Circuit` to a verilog file.
+
+    Parameters
+    ----------
+    c: Circut
+            the circuit
+    path: str
+            the path to the file to read from.
+    seq_types: list of dicts of str:str
+            the types of sequential elements in the file.
+    """
+    with open(path, "w") as f:
+        f.write(circuit_to_verilog(c, seq_types))
+
+
 def circuit_to_verilog(c, seq_types=None):
     """
     Generates a str of verilog code from a `CircuitGraph`.
 
     Parameters
     ----------
-    c: the circuit to turn into verilog.
-    seq_types: the sequential element types.
+    c: Circuit
+            the circuit to turn into verilog.
+    seq_types: list of dicts of str:str
+            the sequential element types.
 
     Returns
     -------
-    a str of verilog code.
+    str
+        verilog code.
     """
     inputs = []
     outputs = []
