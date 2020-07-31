@@ -13,7 +13,7 @@ from pysat.solvers import Cadical
 class Timeout:
     """Class to handle timeout for SAT executions"""
 
-    def __init__(self, seconds=1, error_message='Timeout'):
+    def __init__(self, seconds=1, error_message="Timeout"):
         self.seconds = seconds
         self.error_message = error_message
 
@@ -39,8 +39,7 @@ def add_assumptions(formula, variables, assumptions):
 
 
 def remap(clauses, offset):
-    new_clauses = [[v+offset if v > 0 else v-offset for v in c]
-                   for c in clauses]
+    new_clauses = [[v + offset if v > 0 else v - offset for v in c] for c in clauses]
     return new_clauses
 
 
@@ -90,54 +89,46 @@ def cnf(c):
 
     for n in c.nodes():
         variables.id(n)
-        if c.type(n) == 'and':
+        if c.type(n) == "and":
             for f in c.fanin(n):
                 formula.append([-variables.id(n), variables.id(f)])
-            formula.append([variables.id(n)] + [-variables.id(f)
-                                                for f in c.fanin(n)])
-        elif c.type(n) == 'nand':
+            formula.append([variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
+        elif c.type(n) == "nand":
             for f in c.fanin(n):
                 formula.append([variables.id(n), variables.id(f)])
-            formula.append([-variables.id(n)] + [-variables.id(f)
-                                                 for f in c.fanin(n)])
-        elif c.type(n) == 'or':
+            formula.append([-variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
+        elif c.type(n) == "or":
             for f in c.fanin(n):
                 formula.append([variables.id(n), -variables.id(f)])
-            formula.append([-variables.id(n)] + [variables.id(f)
-                                                 for f in c.fanin(n)])
-        elif c.type(n) == 'nor':
+            formula.append([-variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
+        elif c.type(n) == "nor":
             for f in c.fanin(n):
                 formula.append([-variables.id(n), -variables.id(f)])
-            formula.append([variables.id(n)] + [variables.id(f)
-                                                for f in c.fanin(n)])
-        elif c.type(n) == 'not':
+            formula.append([variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
+        elif c.type(n) == "not":
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), variables.id(f)])
                 formula.append([-variables.id(n), -variables.id(f)])
-        elif c.type(n) in ['output', 'd', 's', 'r', 'buf', 'clk']:
+        elif c.type(n) in ["output", "d", "s", "r", "buf", "clk"]:
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), -variables.id(f)])
                 formula.append([-variables.id(n), variables.id(f)])
-        elif c.type(n) in ['xor', 'xnor']:
+        elif c.type(n) in ["xor", "xnor"]:
             # break into heirarchical xors
             nets = list(c.fanin(n))
 
             # xor gen
             def xorClauses(a, b, c):
-                formula.append(
-                    [-variables.id(c), -variables.id(b), -variables.id(a)])
-                formula.append(
-                    [-variables.id(c), variables.id(b), variables.id(a)])
-                formula.append(
-                    [variables.id(c), -variables.id(b), variables.id(a)])
-                formula.append(
-                    [variables.id(c), variables.id(b), -variables.id(a)])
+                formula.append([-variables.id(c), -variables.id(b), -variables.id(a)])
+                formula.append([-variables.id(c), variables.id(b), variables.id(a)])
+                formula.append([variables.id(c), -variables.id(b), variables.id(a)])
+                formula.append([variables.id(c), variables.id(b), -variables.id(a)])
 
             while len(nets) > 2:
                 # create new net
-                new_net = 'xor_'+nets[-2]+'_'+nets[-1]
+                new_net = "xor_" + nets[-2] + "_" + nets[-1]
                 variables.id(new_net)
 
                 # add sub xors
@@ -150,20 +141,19 @@ def cnf(c):
                 nets.insert(0, new_net)
 
             # add final xor
-            if c.type(n) == 'xor':
+            if c.type(n) == "xor":
                 xorClauses(nets[-2], nets[-1], n)
             else:
                 # invert xor
-                variables.id(f'xor_inv_{n}')
-                xorClauses(nets[-2], nets[-1], f'xor_inv_{n}')
-                formula.append([variables.id(n), variables.id(f'xor_inv_{n}')])
-                formula.append(
-                    [-variables.id(n), -variables.id(f'xor_inv_{n}')])
-        elif c.type(n) == '0':
+                variables.id(f"xor_inv_{n}")
+                xorClauses(nets[-2], nets[-1], f"xor_inv_{n}")
+                formula.append([variables.id(n), variables.id(f"xor_inv_{n}")])
+                formula.append([-variables.id(n), -variables.id(f"xor_inv_{n}")])
+        elif c.type(n) == "0":
             formula.append([-variables.id(n)])
-        elif c.type(n) == '1':
+        elif c.type(n) == "1":
             formula.append([variables.id(n)])
-        elif c.type(n) in ['ff', 'lat', 'input']:
+        elif c.type(n) in ["ff", "lat", "input"]:
             pass
         else:
             print(f"unknown gate type: {c.type(n)}")
@@ -211,7 +201,7 @@ def sat(c, assumptions=None, timeout=None):
     with Timeout(seconds=timeout):
         if solver.solve():
             model = solver.get_model()
-            return {n: model[variables.id(n)-1] > 0 for n in c.nodes()}
+            return {n: model[variables.id(n) - 1] > 0 for n in c.nodes()}
         else:
             return False
 
@@ -243,26 +233,28 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
     add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
-    enc_inps = ' '.join([str(variables.id(n)) for n in c.startpoints()])
+    enc_inps = " ".join([str(variables.id(n)) for n in c.startpoints()])
 
     # write dimacs to tmp
     with tempfile.NamedTemporaryFile() as tmp:
-        clause_str = '\n'.join(' '.join(str(v) for v in c) + ' 0'
-                               for c in formula.clauses)
-        dimacs = (f'c ind {enc_inps} 0\np cnf {formula.nv} '
-                  f'{len(formula.clauses)}\n{clause_str}\n')
-        tmp.write(bytes(dimacs, 'ascii'))
+        clause_str = "\n".join(
+            " ".join(str(v) for v in c) + " 0" for c in formula.clauses
+        )
+        dimacs = (
+            f"c ind {enc_inps} 0\np cnf {formula.nv} "
+            f"{len(formula.clauses)}\n{clause_str}\n"
+        )
+        tmp.write(bytes(dimacs, "ascii"))
         tmp.flush()
 
         # run approxmc
-        cmd = f'approxmc --epsilon={e} --delta={d} {tmp.name}'.split()
+        cmd = f"approxmc --epsilon={e} --delta={d} {tmp.name}".split()
         with Timeout(seconds=timeout):
-            result = run(cmd, stdout=PIPE, stderr=PIPE,
-                         universal_newlines=True)
+            result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
 
     # parse results
-    m = re.search(r'Number of solutions is: (\d+) x 2\^(\d+)', result.stdout)
-    estimate = int(m.group(1))*(2**int(m.group(2)))
+    m = re.search(r"Number of solutions is: (\d+) x 2\^(\d+)", result.stdout)
+    estimate = int(m.group(1)) * (2 ** int(m.group(2)))
     return estimate
 
 
@@ -291,7 +283,7 @@ def model_count(c, assumptions=None, timeout=None):
         count = 0
         while solver.solve():
             model = solver.get_model()
-            solver.add_clause([-model[variables.id(n)-1] for n in startpoints])
+            solver.add_clause([-model[variables.id(n) - 1] for n in startpoints])
             count += 1
 
     return count
@@ -315,10 +307,11 @@ def signal_probability(c, n):
             Probability.
     """
     # get startpoints not in node fanin
-    non_fanin_startpoints = c.startpoints()-c.startpoints(n)
+    non_fanin_startpoints = c.startpoints() - c.startpoints(n)
 
     # get approximate count with node true and other inputs fixed
     count = approx_model_count(
-        c, assumptions={g: True for g in non_fanin_startpoints | set([n])})
+        c, assumptions={g: True for g in non_fanin_startpoints | set([n])}
+    )
 
-    return count/(2**len(c.startpoints(n)))
+    return count / (2 ** len(c.startpoints(n)))

@@ -1,0 +1,6 @@
+language: python
+install: 
+  - pip install -r requirements.txt
+  - pip install .
+script: coverage run -m unittest
+after_success: codecov

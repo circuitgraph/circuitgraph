@@ -54,7 +54,7 @@ class Circuit:
         if name:
             self.name = name
         else:
-            self.name = 'circuit'
+            self.name = "circuit"
 
         if graph:
             self.graph = graph
@@ -87,7 +87,7 @@ class Circuit:
         if isinstance(ns, str):
             ns = [ns]
         for n in ns:
-            self.graph.nodes[n]['type'] = t
+            self.graph.nodes[n]["type"] = t
 
     def type(self, ns):
         """
@@ -123,8 +123,8 @@ class Circuit:
         """
         # FIXME: Throw an error if type is not yet defined
         if isinstance(ns, str):
-            return self.graph.nodes[ns]['type']
-        return set(self.graph.nodes[n]['type'] for n in ns)
+            return self.graph.nodes[ns]["type"]
+        return set(self.graph.nodes[n]["type"] for n in ns)
 
     def nodes(self, types=None):
         """
@@ -176,8 +176,9 @@ class Circuit:
 
         """
         g = self.graph.copy()
-        g.remove_edges_from((e, s) for s in self.startpoints()
-                            for e in self.endpoints())
+        g.remove_edges_from(
+            (e, s) for s in self.startpoints() for e in self.endpoints()
+        )
         try:
             if nx.find_cycle(g):
                 return True
@@ -252,35 +253,33 @@ class Circuit:
         elif isinstance(fanout, str):
             fanout = [fanout]
 
-        if type in ['ff', 'lat']:
+        if type in ["ff", "lat"]:
             # add auxillary nodes for sequential element
             self.graph.add_node(n, type=type)
-            self.graph.add_node(f'd[{n}]', type='d')
+            self.graph.add_node(f"d[{n}]", type="d")
             if r:
-                self.graph.add_node(f'r[{n}]', type='r')
+                self.graph.add_node(f"r[{n}]", type="r")
             if s:
-                self.graph.add_node(f's[{n}]', type='s')
-            self.graph.add_node(f'clk[{n}]', type='clk')
+                self.graph.add_node(f"s[{n}]", type="s")
+            self.graph.add_node(f"clk[{n}]", type="clk")
 
             # connect
             self.graph.add_edges_from((n, f) for f in fanout)
-            self.graph.add_edge(f'd[{n}]', n)
+            self.graph.add_edge(f"d[{n}]", n)
             if r:
-                self.graph.add_edge(f'r[{n}]', n)
+                self.graph.add_edge(f"r[{n}]", n)
             if clk:
-                self.graph.add_edge(f'clk[{n}]', n)
-            self.graph.add_edges_from(
-                (f, f'd[{n}]') for f in fanin)
+                self.graph.add_edge(f"clk[{n}]", n)
+            self.graph.add_edges_from((f, f"d[{n}]") for f in fanin)
             if r:
-                self.graph.add_edge(r, f'r[{n}]')
+                self.graph.add_edge(r, f"r[{n}]")
             if s:
-                self.graph.add_edge(s, f's[{n}]')
+                self.graph.add_edge(s, f"s[{n}]")
             if clk:
-                self.graph.add_edge(clk, f'clk[{n}]')
-        elif type == 'output':
-            self.graph.add_node(f'output[{n}]', type='output')
-            self.graph.add_edges_from(
-                (f, f'output[{n}]') for f in fanin)
+                self.graph.add_edge(clk, f"clk[{n}]")
+        elif type == "output":
+            self.graph.add_node(f"output[{n}]", type="output")
+            self.graph.add_edges_from((f, f"output[{n}]") for f in fanin)
         else:
             self.graph.add_node(n, type=type)
             self.graph.add_edges_from((n, f) for f in fanout)
@@ -324,7 +323,7 @@ class Circuit:
         g = self.graph.copy()
         g.remove_nodes_from(self.outputs())
         for i in self.inputs():
-            g.nodes[i]['type'] = 'buf'
+            g.nodes[i]["type"] = "buf"
 
         return Circuit(graph=g, name=self.name)
 
@@ -379,11 +378,9 @@ class Circuit:
                 Relabeled circuit.
 
         """
-        return Circuit(graph=nx.relabel_nodes(self.graph, mapping),
-                       name=self.name)
+        return Circuit(graph=nx.relabel_nodes(self.graph, mapping), name=self.name)
 
-    def transitive_fanout(self, ns, stopatTypes=['d'], stopatNodes=[],
-                         gates=None):
+    def transitive_fanout(self, ns, stopatTypes=["d"], stopatNodes=[], gates=None):
         """
         Computes the transitive fanout of a node.
 
@@ -412,14 +409,13 @@ class Circuit:
             for s in self.graph.successors(n):
                 if s not in gates:
                     gates.add(s)
-                    if (self.type(s) not in stopatTypes
-                            and s not in stopatNodes):
-                        self.transitive_fanout(
-                            s, stopatTypes, stopatNodes, gates)
+                    if self.type(s) not in stopatTypes and s not in stopatNodes:
+                        self.transitive_fanout(s, stopatTypes, stopatNodes, gates)
         return gates
 
-    def transitive_fanin(self, ns, stopatTypes=['ff', 'lat'], stopatNodes=[],
-                        gates=None):
+    def transitive_fanin(
+        self, ns, stopatTypes=["ff", "lat"], stopatNodes=[], gates=None
+    ):
         """
         Computes the transitive fanin of a node.
 
@@ -449,10 +445,8 @@ class Circuit:
             for p in self.graph.predecessors(n):
                 if p not in gates:
                     gates.add(p)
-                    if (self.type(p) not in stopatTypes
-                            and p not in stopatNodes):
-                        self.transitive_fanin(
-                            p, stopatTypes, stopatNodes, gates)
+                    if self.type(p) not in stopatTypes and p not in stopatNodes:
+                        self.transitive_fanin(p, stopatTypes, stopatNodes, gates)
         return gates
 
     def fanin_comb_depth(self, ns, shortest=False, visited=None, depth=0):
@@ -487,7 +481,7 @@ class Circuit:
         if visited is None:
             visited = set()
 
-        if self.type(n) in ['ff', 'lat', 'input']:
+        if self.type(n) in ["ff", "lat", "input"]:
             return 0
 
         depth += 1
@@ -496,10 +490,9 @@ class Circuit:
 
         # find depth
         for f in self.fanin(n):
-            if self.type(f) not in ['ff', 'lat', 'input'] and f not in visited:
+            if self.type(f) not in ["ff", "lat", "input"] and f not in visited:
                 # continue recursion
-                depths.add(self.fanin_comb_depth(
-                    f, shortest, visited.copy(), depth))
+                depths.add(self.fanin_comb_depth(f, shortest, visited.copy(), depth))
             else:
                 # add depth of endpoint or loop
                 depths.add(depth)
@@ -543,10 +536,11 @@ class Circuit:
         visited.add(n)
         # find depth
         for f in self.fanout(n):
-            if (self.type(f) not in ['d', 'r', 's', 'clk', 'input', 'output']
-                    and f not in visited):
-                depths.add(self.fanout_comb_depth(
-                    f, shortest, visited.copy(), depth))
+            if (
+                self.type(f) not in ["d", "r", "s", "clk", "input", "output"]
+                and f not in visited
+            ):
+                depths.add(self.fanout_comb_depth(f, shortest, visited.copy(), depth))
             else:
                 depths.add(depth)
 
@@ -616,7 +610,7 @@ class Circuit:
                 Latch nodes in circuit.
 
         """
-        return self.nodes('lat')
+        return self.nodes("lat")
 
     def ffs(self):
         """
@@ -628,7 +622,7 @@ class Circuit:
                 Flip-flop nodes in circuit.
 
         """
-        return self.nodes('ff')
+        return self.nodes("ff")
 
     def seq(self):
         """
@@ -640,7 +634,7 @@ class Circuit:
                 Sequential nodes in circuit.
 
         """
-        return self.nodes(['ff', 'lat'])
+        return self.nodes(["ff", "lat"])
 
     def d(self, s):
         """
@@ -652,7 +646,7 @@ class Circuit:
                 D input node.
 
         """
-        return [f for f in self.fanin(s) if self.type(f) == 'd'][0]
+        return [f for f in self.fanin(s) if self.type(f) == "d"][0]
 
     def clk(self, s):
         """
@@ -664,7 +658,7 @@ class Circuit:
                 Clk input node.
 
         """
-        return [f for f in self.fanin(s) if self.type(f) == 'clk'][0]
+        return [f for f in self.fanin(s) if self.type(f) == "clk"][0]
 
     def r(self, s):
         """
@@ -676,7 +670,7 @@ class Circuit:
                 Reset input node.
 
         """
-        return [f for f in self.fanin(s) if self.type(f) == 'r'][0]
+        return [f for f in self.fanin(s) if self.type(f) == "r"][0]
 
     def s(self, s):
         """
@@ -688,7 +682,7 @@ class Circuit:
                 Set input node.
 
         """
-        return [f for f in self.fanin(s) if self.type(f) == 'r'][0]
+        return [f for f in self.fanin(s) if self.type(f) == "r"][0]
 
     def inputs(self):
         """
@@ -700,7 +694,7 @@ class Circuit:
                 Input nodes in circuit.
 
         """
-        return self.nodes('input')
+        return self.nodes("input")
 
     def outputs(self):
         """
@@ -712,7 +706,7 @@ class Circuit:
                 Output nodes in circuit.
 
         """
-        return self.nodes('output')
+        return self.nodes("output")
 
     def io(self):
         """
@@ -724,7 +718,7 @@ class Circuit:
                 Output and input nodes in circuit.
 
         """
-        return self.nodes(['output', 'input'])
+        return self.nodes(["output", "input"])
 
     def startpoints(self, ns=None):
         """
@@ -742,11 +736,13 @@ class Circuit:
 
         """
         if ns:
-            return set(n for n in self.transitive_fanin(ns)
-                       if self.type(n) in ['ff', 'lat', 'input'])
+            return set(
+                n
+                for n in self.transitive_fanin(ns)
+                if self.type(n) in ["ff", "lat", "input"]
+            )
         else:
-            return set(n for n in self.graph
-                       if self.type(n) in ['ff', 'lat', 'input'])
+            return set(n for n in self.graph if self.type(n) in ["ff", "lat", "input"])
 
     def endpoints(self, ns=None):
         """
@@ -764,11 +760,11 @@ class Circuit:
 
         """
         if ns:
-            return set(n for n in self.transitive_fanout(ns)
-                       if self.type(n) in ['d', 'output'])
+            return set(
+                n for n in self.transitive_fanout(ns) if self.type(n) in ["d", "output"]
+            )
         else:
-            return set(n for n in self.graph
-                       if self.type(n) in ['d', 'output'])
+            return set(n for n in self.graph if self.type(n) in ["d", "output"])
 
     def seq_graph(self):
         """
@@ -814,6 +810,6 @@ def clog2(num: int) -> int:
         accum += 1
     return accum
 
-def int_to_bin(i,w):
-    return tuple(v=='1' for v in bin(i)[2:].zfill(w))
 
+def int_to_bin(i, w):
+    return tuple(v == "1" for v in bin(i)[2:].zfill(w))

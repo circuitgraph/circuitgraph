@@ -1,8 +1,10 @@
 """Functions for simulating circuits using Verilator"""
 
-import pyverilator
-from circuitgraph.io import circuit_to_verilog
 from tempfile import NamedTemporaryFile
+
+import pyverilator
+
+from circuitgraph.io import circuit_to_verilog
 
 
 def construct_simulator(c):
@@ -22,8 +24,8 @@ def construct_simulator(c):
 
     verilog = circuit_to_verilog(c)
 
-    with NamedTemporaryFile(suffix='.v') as tmp:
-        tmp.write(bytes(verilog, 'ascii'))
+    with NamedTemporaryFile(suffix=".v") as tmp:
+        tmp.write(bytes(verilog, "ascii"))
         tmp.flush()
         sim = pyverilator.PyVerilator.build(tmp.name)
 
@@ -51,4 +53,4 @@ def sim(c, forced):
     for n, v in forced.items():
         sim[n] = v
 
-    return {n: sim[n.replace('output[', '')[:-1]] for n in c.outputs()}
+    return {n: sim[n.replace("output[", "")[:-1]] for n in c.outputs()}
