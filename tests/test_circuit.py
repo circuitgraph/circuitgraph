@@ -56,11 +56,19 @@ class TestCircuit(unittest.TestCase):
         c.add("a", "buf")
         c.add("b", "buf", fanin="a", fanout="a")
         self.assertTrue(c.is_cyclic())
+        self.assertFalse(self.c17.is_cyclic())
 
     def test_type(self):
         self.assertTrue(self.s27.type("G7") == "ff")
         self.assertTrue(self.s27.type("clk[G7]") == "clk")
         self.assertTrue(self.s27.type("n_4") == "nand")
+        self.s27.set_type("n_4", "nor")
+        self.assertTrue(self.s27.type("n_4") == "nor")
+        self.assertListEqual(
+            self.s27.type(["G7", "clk[G7]", "n_4"]), ["ff", "clk", "nor"]
+        )
+        self.s27.graph.add_node("temp")
+        self.assertRaises(KeyError, self.s27.type, "temp")
 
     def test_endpoints(self):
         self.assertSetEqual(

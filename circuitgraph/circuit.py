@@ -100,15 +100,20 @@ class Circuit:
 
         Returns
         -------
-        str or set of str
-                Type of node or a set of node types.
+        str or list of str
+                Type of node or a list of node types.
+
+        Raises
+        ------
+        KeyError
+                If type of queried node is not defined.
 
         Examples
         --------
         Create a with several gate types.
 
         >>> c = cg.Circuit()
-        >>> for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}',g)
+        >>> for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}', g)
 
         Calling `type` for a single gate returns a single type
 
@@ -118,13 +123,15 @@ class Circuit:
         Calling `type` on an iterable returns a set of types
 
         >>> c.type(c.nodes())
-        {'xor','or','xor','ff'}
+        ['xor', 'or', 'xor', 'ff']
 
         """
-        # FIXME: Throw an error if type is not yet defined
         if isinstance(ns, str):
-            return self.graph.nodes[ns]["type"]
-        return set(self.graph.nodes[n]["type"] for n in ns)
+            try:
+                return self.graph.nodes[ns]["type"]
+            except KeyError:
+                raise KeyError(f"Node {ns} does not have a type defined.")
+        return [self.graph.nodes[n]["type"] for n in ns]
 
     def nodes(self, types=None):
         """
