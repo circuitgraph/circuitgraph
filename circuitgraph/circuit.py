@@ -275,6 +275,8 @@ class Circuit:
             self.graph.add_edge(f"d[{n}]", n)
             if r:
                 self.graph.add_edge(f"r[{n}]", n)
+            if s:
+                self.graph.add_edge(f"s[{n}]", n)
             if clk:
                 self.graph.add_edge(f"clk[{n}]", n)
             self.graph.add_edges_from((f, f"d[{n}]") for f in fanin)
@@ -689,7 +691,7 @@ class Circuit:
                 Set input node.
 
         """
-        return [f for f in self.fanin(s) if self.type(f) == "r"][0]
+        return [f for f in self.fanin(s) if self.type(f) == "s"][0]
 
     def inputs(self):
         """

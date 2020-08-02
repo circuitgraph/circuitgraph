@@ -1,6 +1,7 @@
 import unittest
 
 import circuitgraph as cg
+from circuitgraph import clog2, int_to_bin
 
 
 class TestCircuit(unittest.TestCase):
@@ -58,6 +59,59 @@ class TestCircuit(unittest.TestCase):
         self.assertTrue(c.is_cyclic())
         self.assertFalse(self.c17.is_cyclic())
 
+    def test_ff_lat(self):
+        self.assertSetEqual(self.s27.ffs(), {"G5", "G6", "G7"})
+        self.assertEqual(self.s27.fanin_comb_depth("G5"), 0)
+        s27_c = self.s27.copy()
+        s27_c.add("c_t", "input")
+        s27_c.add("r_t", "input")
+        s27_c.add("s_t", "input")
+        s27_c.add("test_lat", "lat", fanin=["G5"], clk="c_t", r="r_t", s="s_t")
+        self.assertSetEqual(s27_c.lats(), {"test_lat"})
+        self.assertSetEqual(s27_c.seq(), {"G5", "G6", "G7", "test_lat"})
+        self.assertSetEqual(s27_c.fanin(s27_c.d("test_lat")), {"G5"})
+        self.assertSetEqual(s27_c.fanin(s27_c.clk("test_lat")), {"c_t"})
+        self.assertSetEqual(s27_c.fanin(s27_c.r("test_lat")), {"r_t"})
+        self.assertSetEqual(s27_c.fanin(s27_c.s("test_lat")), {"s_t"})
+
+    # TODO
+    def test_seq_graph(self):
+        pass
+
+    def test_disconnect(self):
+        self.assertSetEqual(self.s27.fanin("G5"), {"d[G5]", "clk[G5]"})
+        s27_c = self.s27.copy()
+        s27_c.disconnect("d[G5]", "G5")
+        self.assertSetEqual(s27_c.fanin("G5"), {"clk[G5]"})
+
+    def test_remove(self):
+        c17_c = self.c17.copy()
+        c17_c.remove("G16")
+        self.assertNotIn("G16", c17_c.nodes())
+        self.assertSetEqual(c17_c.fanout("G8"), set())
+        self.assertSetEqual(c17_c.fanin("output[G16]"), set())
+
+    def test_edges(self):
+        self.assertListEqual(
+            list(self.c17.edges()),
+            [
+                ("G8", "G16"),
+                ("G1", "G8"),
+                ("G3", "G8"),
+                ("G3", "G9"),
+                ("G9", "G12"),
+                ("G9", "G15"),
+                ("G4", "G9"),
+                ("G12", "G16"),
+                ("G12", "G17"),
+                ("G2", "G12"),
+                ("G15", "G17"),
+                ("G5", "G15"),
+                ("G16", "output[G16]"),
+                ("G17", "output[G17]"),
+            ],
+        )
+
     def test_type(self):
         self.assertTrue(self.s27.type("G7") == "ff")
         self.assertTrue(self.s27.type("clk[G7]") == "clk")
@@ -67,8 +121,9 @@ class TestCircuit(unittest.TestCase):
         self.assertListEqual(
             self.s27.type(["G7", "clk[G7]", "n_4"]), ["ff", "clk", "nor"]
         )
-        self.s27.graph.add_node("temp")
-        self.assertRaises(KeyError, self.s27.type, "temp")
+        s27_c = self.s27.copy()
+        s27_c.graph.add_node("temp")
+        self.assertRaises(KeyError, s27_c.type, "temp")
 
     def test_endpoints(self):
         self.assertSetEqual(
@@ -154,3 +209,10 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(
             self.s27.transitive_fanin(["n_4", "n_3"]), set(["G3", "n_0", "G7", "G1"])
         )
+
+    def test_clog2(self):
+        self.assertEqual(clog2(9), 4)
+        self.assertRaises(ValueError, clog2, 0)
+
+    def test_int_to_bin(self):
+        self.assertEqual(int_to_bin(5, 6), tuple(i == "1" for i in "000101"))
