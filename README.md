@@ -1,4 +1,4 @@
-![CircuitGraph Logo](https://github.com/circuitgraph/circuitgraph/blob/master/docs/circuitgraph.png)
+<img src="https://github.com/circuitgraph/circuitgraph/blob/master/docs/circuitgraph.png" width="300">
 
 # CircuitGraph
 
