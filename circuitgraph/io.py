@@ -98,7 +98,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             the module name.
     seq_types: list of dicts of str:str
             the sequential element types.
-    
+
     Returns
     -------
     Circuit
@@ -114,6 +114,13 @@ def verilog_to_circuit(verilog, name, seq_types=None):
 
     # create circuit
     c = Circuit(name=name)
+
+    # get inputs
+    in_regex = r"input\s(.+?);"
+    for net_str in re.findall(in_regex, module, re.DOTALL):
+        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
+        for n in nets:
+            c.add(n, "input")
 
     # handle gates
     regex = r"(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);"
@@ -148,6 +155,13 @@ def verilog_to_circuit(verilog, name, seq_types=None):
     for dest, expr in re.findall(assign_regex, module, re.DOTALL):
         parse_ast(boolexpr.parse(expr), c, dest)
 
+    # get outputs
+    out_regex = r"output\s(.+?);"
+    for net_str in re.findall(out_regex, module, re.DOTALL):
+        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
+        c.set_output(nets)
+
+    # assign constant types
     for n in c:
         if "type" not in c.graph.nodes[n]:
             if n == "1'b0":
@@ -155,14 +169,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             elif n == "1'b1":
                 c.add(n, "1")
             else:
-                c.add(n, "input")
-
-    # get outputs
-    out_regex = r"output\s(.+?);"
-    for net_str in re.findall(out_regex, module, re.DOTALL):
-        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
-        for n in nets:
-            c.add(n, "output", fanin=n)
+                raise ValueError(f"node {n} does not have a type")
 
     return c
 
