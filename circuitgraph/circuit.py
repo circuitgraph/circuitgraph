@@ -505,10 +505,6 @@ class Circuit:
                 Node(s) to compute depth for.
         shortest : bool
                 Selects between finding the shortest and longest paths.
-        visited : set of str
-                Visited nodes.
-        depth : int
-                Depth of current path.
 
         Returns
         -------
@@ -516,9 +512,10 @@ class Circuit:
                 Depth.
 
         """
-        # select between shortest and longest paths
+        # select comparison function
         comp = min if shortest else max
 
+        # find depth of a group
         if not isinstance(ns, str):
             return comp(self.fanin_comb_depth(n, shortest) for n in ns)
         else:
@@ -527,21 +524,15 @@ class Circuit:
         if visited is None:
             visited = set()
 
-        if self.type(n) in ["ff", "lat", "input"]:
-            return 0
-
-        depth += 1
         depths = set()
-        visited.add(n)
+        depth += 1
 
-        # find depth
+        visited.add(n)
         for f in self.fanin(n):
-            if self.type(f) not in ["ff", "lat", "input"] and f not in visited:
-                # continue recursion
-                depths.add(self.fanin_comb_depth(f, shortest, visited.copy(), depth))
-            else:
-                # add depth of endpoint or loop
+            if self.type(f) in ["ff", "lat", "input"] or f in visited:
                 depths.add(depth)
+            else:
+                depths.add(self.fanin_comb_depth(f, shortest, visited.copy(), depth))
 
         return comp(depths)
 
@@ -555,10 +546,6 @@ class Circuit:
                 Node(s) to compute depth for.
         shortest : bool
                 Selects between finding the shortest and longest paths.
-        visited : set of str
-                Visited nodes.
-        depth : int
-                Depth of current path.
 
         Returns
         -------
@@ -566,21 +553,30 @@ class Circuit:
                 Depth.
 
         """
-        # select between shortest and longest paths
+        # select comparison function
+        comp = min if shortest else max
+
+        # find depth of a group
         if not isinstance(ns, str):
-            comp = min if shortest else max
             return comp(self.fanout_comb_depth(n, shortest) for n in ns)
         else:
             n = ns
 
-        if shortest:
-            return min(nx.shortest_path_length(self.graph,
-                       source=n, target=e)-1 for e in self.endpoints(n))
-        else:
-            return max(max(len(p[1:]) for p in nx.all_simple_paths(self.graph,
-                       source=n, target=e)) for e in self.endpoints(n))
+        if visited is None:
+            visited = set()
 
+        depths = set()
+        if self.output(n):
+            depths.add(depth)
 
+        visited.add(n)
+        for f in self.fanout(n):
+            if self.type(f) in ["ff", "lat"] or f in visited:
+                depths.add(depth)
+            else:
+                depths.add(self.fanout_comb_depth(f, shortest, visited.copy(), depth+1))
+
+        return comp(depths)
 
     def fanout(self, ns):
         """

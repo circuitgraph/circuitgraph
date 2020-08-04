@@ -60,7 +60,6 @@ class TestCircuit(unittest.TestCase):
 
     def test_ff_lat(self):
         self.assertSetEqual(self.s27.ffs(), {"G5", "G6", "G7"})
-        self.assertEqual(self.s27.fanin_comb_depth("G5"), 0)
         s27_c = self.s27.copy()
         s27_c.add("c_t", "input")
         s27_c.add("r_t", "input")
