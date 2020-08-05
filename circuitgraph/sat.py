@@ -110,7 +110,7 @@ def cnf(c):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), variables.id(f)])
                 formula.append([-variables.id(n), -variables.id(f)])
-        elif c.type(n) in ["output", "d", "s", "r", "buf", "clk"]:
+        elif c.type(n) == "buf":
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), -variables.id(f)])

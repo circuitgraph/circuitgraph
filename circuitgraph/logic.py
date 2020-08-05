@@ -21,8 +21,8 @@ def adder(w):
         # sum
         c.add(f"a_{i}", "input")
         c.add(f"b_{i}", "input")
-        c.add(f"out_{i}", "xor", fanin=[f"a_{i}", f"b_{i}", carry])
-        c.add(f"out_{i}", "output", fanin=f"out_{i}")
+        c.add(f"out_{i}", "xor", fanin=[f"a_{i}", f"b_{i}", carry],
+              output=True)
 
         # carry
         c.add(f"and_ab_{i}", "and", fanin=[f"a_{i}", f"b_{i}"])
@@ -32,8 +32,7 @@ def adder(w):
             f"carry_{i}", "or", fanin=[f"and_ab_{i}", f"and_ac_{i}", f"and_bc_{i}",]
         )
 
-    c.add(f"out_{w}", "buf", fanin=carry)
-    c.add(f"out_{w}", "output", fanin=f"out_{w}")
+    c.add(f"out_{w}", "buf", fanin=carry, output=True)
     return c
 
 
@@ -61,8 +60,7 @@ def mux(w):
         sels.append([f"not_sel_{i}", f"sel_{i}"])
 
     # create output or
-    c.add("out", "or")
-    c.add("out", "output", fanin="out")
+    c.add("out", "or", output=True)
 
     i = 0
     for sel in product(*sels[::-1]):
@@ -117,7 +115,52 @@ def popcount(w):
 
     # connect outputs
     for i, o in enumerate(ps[0]):
-        c.add(f"out_{i}", "buf", fanin=o)
-        c.add(f"out_{i}", "output", fanin=f"out_{i}")
+        c.add(f"out_{i}", "buf", fanin=o, output=True)
 
     return c
+
+def comb_lat():
+    lm = Circuit(name='lat')
+
+    # mux
+    m = logic.mux(2).strip_io()
+    lm.extend(m.relabel({n: f'mux_{n}' for n in m.nodes()}))
+
+    # inputs
+    lm.add("si", "input", fanout="mux_in_0")
+    lm.add("d", "input", fanout="mux_in_1")
+    lm.add("clk", "input", fanout="mux_sel_0")
+    lm.add("r", "input")
+    lm.add("s", "input")
+
+    # logic
+    lm.add("r_b", "not", fanin="r")
+    lm.add_node("qr", gate="and", fanin=["mux_out","r_b"])
+    lm.add_node("q", gate="or", fanin=["qr","s"],
+                output=True)
+    lm.add_node("so", gate="buf", fanin="q", output=True)
+
+    return lm
+
+def comb_ff():
+    lm = Circuit(name='ff')
+
+    # mux
+    m = logic.mux(2).strip_io()
+    lm.extend(m.relabel({n: f'mux_{n}' for n in m.nodes()}))
+
+    # inputs
+    lm.add("si", "input", fanout="mux_in_0")
+    lm.add("d", "input", fanout="mux_in_1")
+    lm.add("clk", "input", fanout="mux_sel_0")
+    lm.add("r", "input")
+    lm.add("s", "input")
+
+    # logic
+    lm.add("r_b", "not", fanin="r")
+    lm.add_node("qr", gate="and", fanin=["mux_out","r_b"])
+    lm.add_node("q", gate="or", fanin=["qr","s"],
+                output=True)
+    lm.add_node("so", gate="buf", fanin="q", output=True)
+
+    return lm

@@ -367,7 +367,7 @@ class Circuit:
         """
         g = self.graph.copy()
         for o in self.outputs():
-            g.nodes[n]['output'] = False
+            g.nodes[o]['output'] = False
         for i in self.inputs():
             g.nodes[i]["type"] = "buf"
 
@@ -790,7 +790,7 @@ class Circuit:
                 Output and input nodes in circuit.
 
         """
-        return self.nodes("input",output=True)
+        return self.nodes("input")|self.nodes(output=True)
 
     def startpoints(self, ns=None):
         """
