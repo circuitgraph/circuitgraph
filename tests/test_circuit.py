@@ -47,9 +47,28 @@ class TestCircuit(unittest.TestCase):
         )
         self.assertSetEqual(self.s27.nodes(output=True), set(["G17"]))
 
+    def test_add(self):
+        c17_c = self.c17.copy()
+        self.assertRaises(
+            ValueError, c17_c.add, "test_ff", type="ff", fanin=["N1", "N2"]
+        )
+        self.assertRaises(ValueError, c17_c.add, "test_const", type="0", fanin=["N1"])
+
+    def test_output(self):
+        s27_c = self.s27.copy()
+        s27_c.set_output("n_3")
+        self.assertSetEqual(s27_c.nodes(output=True), set(["n_3", "G17"]))
+        self.assertSetEqual(s27_c.nodes(output=True, types=["nor"]), set(["n_3"]))
+        self.assertListEqual(s27_c.output(["G5", "G17"]), [False, True])
+        s27_c.graph.add_node("test", type="or")
+        self.assertRaises(KeyError, s27_c.output, "test")
+
     def test_contains(self):
         self.assertFalse("adsf" in self.s27)
         self.assertTrue("G7" in self.s27)
+
+    def test_io(self):
+        self.assertSetEqual(self.s27.io(), set(["clk", "G0", "G1", "G2", "G3", "G17"]))
 
     def test_is_cyclic(self):
         c = cg.Circuit()
@@ -71,14 +90,22 @@ class TestCircuit(unittest.TestCase):
         self.assertEqual(s27_c.clk("test_lat"), "c_t")
         self.assertEqual(s27_c.r("test_lat"), "r_t")
         self.assertEqual(s27_c.s("test_lat"), "s_t")
+        s27_c.graph.add_node("test_node", type="or")
+        self.assertRaises(KeyError, s27_c.r, ["test_node", "G5"])
+        self.assertRaises(KeyError, s27_c.s, ["test_node", "G5"])
+        self.assertRaises(KeyError, s27_c.d, ["test_node", "G5"])
+        self.assertRaises(KeyError, s27_c.clk, ["test_node", "G5"])
 
     # TODO
     def test_seq_graph(self):
-        pass
+        g = self.s27.seq_graph()
+        self.assertSetEqual(
+            set(g.nodes), set(["G1", "G3", "clk", "G5", "G6", "G0", "G2", "G7", "G17"])
+        )
 
     def test_disconnect(self):
         s27_c = self.s27.copy()
-        s27_c.disconnect("G5","n_1")
+        s27_c.disconnect("G5", "n_1")
         self.assertSetEqual(s27_c.fanout("G5"), {"n_21", "n_20"})
 
     def test_remove(self):
@@ -89,21 +116,24 @@ class TestCircuit(unittest.TestCase):
 
     def test_edges(self):
         self.assertSetEqual(
-            set(tuple((u,v)) for u,v in self.c17.edges()),
-            set(tuple((u,v)) for u,v in [
-                ("G8", "G16"),
-                ("G1", "G8"),
-                ("G3", "G8"),
-                ("G3", "G9"),
-                ("G9", "G12"),
-                ("G9", "G15"),
-                ("G4", "G9"),
-                ("G12", "G16"),
-                ("G12", "G17"),
-                ("G2", "G12"),
-                ("G15", "G17"),
-                ("G5", "G15"),
-            ])
+            set(tuple((u, v)) for u, v in self.c17.edges()),
+            set(
+                tuple((u, v))
+                for u, v in [
+                    ("G8", "G16"),
+                    ("G1", "G8"),
+                    ("G3", "G8"),
+                    ("G3", "G9"),
+                    ("G9", "G12"),
+                    ("G9", "G15"),
+                    ("G4", "G9"),
+                    ("G12", "G16"),
+                    ("G12", "G17"),
+                    ("G2", "G12"),
+                    ("G15", "G17"),
+                    ("G5", "G15"),
+                ]
+            ),
         )
 
     def test_type(self):
@@ -111,21 +141,15 @@ class TestCircuit(unittest.TestCase):
         self.assertTrue(self.s27.type("n_4") == "nand")
         self.s27.set_type("n_4", "nor")
         self.assertTrue(self.s27.type("n_4") == "nor")
-        self.assertListEqual(
-            self.s27.type(["G7", "n_4"]), ["ff", "nor"]
-        )
+        self.assertListEqual(self.s27.type(["G7", "n_4"]), ["ff", "nor"])
         s27_c = self.s27.copy()
         s27_c.graph.add_node("temp")
         self.assertRaises(KeyError, s27_c.type, "temp")
 
     def test_endpoints(self):
-        self.assertSetEqual(
-            self.s27.endpoints(), set(["G5", "G6", "G7", "G17"])
-        )
+        self.assertSetEqual(self.s27.endpoints(), set(["G5", "G6", "G7", "G17"]))
         self.assertSetEqual(self.s27.endpoints("n_20"), set(["G17"]))
-        self.assertSetEqual(
-            self.s27.endpoints(["n_20", "n_11"]), set(["G17", "G5"])
-        )
+        self.assertSetEqual(self.s27.endpoints(["n_20", "n_11"]), set(["G17", "G5"]))
 
     def test_startpoints(self):
         self.assertSetEqual(
@@ -138,19 +162,7 @@ class TestCircuit(unittest.TestCase):
     def test_transitive_fanout(self):
         self.assertSetEqual(
             self.s27.transitive_fanout("G5"),
-            set(
-                [
-                    "n_1",
-                    "G17",
-                    "G5",
-                    "n_12",
-                    "n_11",
-                    "n_9",
-                    "n_20",
-                    "G6",
-                    "n_21",
-                ]
-            ),
+            set(["n_1", "G17", "G5", "n_12", "n_11", "n_9", "n_20", "G6", "n_21",]),
         )
         self.assertSetEqual(
             self.s27.transitive_fanout("G5", stopatTypes=["not", "nor"]),
