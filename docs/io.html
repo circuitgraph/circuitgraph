@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.8.3" />
 <title>circuitgraph.io API documentation</title>
 <meta name="description" content="Functions for reading/writing CircuitGraphs" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -42,33 +42,38 @@ from circuitgraph import Circuit
 # TODO: We should probably make a class for this to make it easier to define
 #       custom types
 default_seq_types = [
-    {&#39;name&#39;: &#39;fflopd&#39;,
-     &#39;type&#39;: &#39;ff&#39;,
-     &#39;io&#39;: {&#39;d&#39;: &#39;D&#39;, &#39;q&#39;: &#39;Q&#39;, &#39;clk&#39;: &#39;CK&#39;},
-     &#39;def&#39;: &#34;module fflopd(CK, D, Q);&#34;
-            &#34;input CK, D;&#34;
-            &#34;output Q;&#34;
-            &#34;wire CK, D;&#34;
-            &#34;wire Q;&#34;
-            &#34;wire next_state;&#34;
-            &#34;reg  qi;&#34;
-            &#34;assign #1 Q = qi;&#34;
-            &#34;assign next_state = D;&#34;
-            &#34;always&#34;
-            &#34;  @(posedge CK)&#34;
-            &#34;    qi &lt;= next_state;&#34;
-            &#34;initial&#34;
-            &#34;  qi &lt;= 1&#39;b0;&#34;
-            &#34;endmodule&#34;},
-    {&#39;name&#39;: &#39;latchdrs&#39;,
-     &#39;type&#39;: &#39;lat&#39;,
-     &#39;io&#39;: {&#39;d&#39;: &#39;D&#39;, &#39;q&#39;: &#39;Q&#39;, &#39;clk&#39;: &#39;ENA&#39;, &#39;r&#39;: &#39;R&#39;, &#39;s&#39;: &#39;S&#39;},
-     &#39;def&#39;: &#34;&#34;}]
+    {
+        &#34;name&#34;: &#34;fflopd&#34;,
+        &#34;type&#34;: &#34;ff&#34;,
+        &#34;io&#34;: {&#34;d&#34;: &#34;D&#34;, &#34;q&#34;: &#34;Q&#34;, &#34;clk&#34;: &#34;CK&#34;},
+        &#34;def&#34;: &#34;module fflopd(CK, D, Q);&#34;
+        &#34;input CK, D;&#34;
+        &#34;output Q;&#34;
+        &#34;wire CK, D;&#34;
+        &#34;wire Q;&#34;
+        &#34;wire next_state;&#34;
+        &#34;reg  qi;&#34;
+        &#34;assign #1 Q = qi;&#34;
+        &#34;assign next_state = D;&#34;
+        &#34;always&#34;
+        &#34;  @(posedge CK)&#34;
+        &#34;    qi &lt;= next_state;&#34;
+        &#34;initial&#34;
+        &#34;  qi &lt;= 1&#39;b0;&#34;
+        &#34;endmodule&#34;,
+    },
+    {
+        &#34;name&#34;: &#34;latchdrs&#34;,
+        &#34;type&#34;: &#34;lat&#34;,
+        &#34;io&#34;: {&#34;d&#34;: &#34;D&#34;, &#34;q&#34;: &#34;Q&#34;, &#34;clk&#34;: &#34;ENA&#34;, &#34;r&#34;: &#34;R&#34;, &#34;s&#34;: &#34;S&#34;},
+        &#34;def&#34;: &#34;&#34;,
+    },
+]
 
 
 def from_file(path, name=None, seq_types=None):
     &#34;&#34;&#34;
-    Creates a new `CircuitGraph` from a verilog file.
+    Creates a new `Circuit` from a verilog file.
 
     Parameters
     ----------
@@ -81,18 +86,19 @@ def from_file(path, name=None, seq_types=None):
 
     Returns
     -------
-    a `CircuitGraph` of the file.
+    Circuit
+            the parsed circuit.
     &#34;&#34;&#34;
     if name is None:
-        name = path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;, &#39;&#39;)
-    with open(path, &#39;r&#39;) as f:
+        name = path.split(&#34;/&#34;)[-1].replace(&#34;.v&#34;, &#34;&#34;)
+    with open(path, &#34;r&#34;) as f:
         verilog = f.read()
     return verilog_to_circuit(verilog, name, seq_types)
 
 
 def from_lib(circuit, name=None):
     &#34;&#34;&#34;
-    Creates a new `CircuitGraph` from a netlist in the `../netlists`
+    Creates a new `Circuit` from a netlist in the `../netlists`
     folder
 
     Parameters
@@ -102,9 +108,10 @@ def from_lib(circuit, name=None):
 
     Returns
     -------
-    a `CircuitGraph` of the netlist.
+    Circuit
+            the parsed circuit.
     &#34;&#34;&#34;
-    path = f&#39;{os.path.dirname(__file__)}/../netlists/{circuit}.v&#39;
+    path = f&#34;{os.path.dirname(__file__)}/../netlists/{circuit}.v&#34;
     return from_file(path, name)
 
 
@@ -114,9 +121,17 @@ def verilog_to_circuit(verilog, name, seq_types=None):
 
     Parameters
     ----------
-    verilog: str of verilog code.
-    name: the module name.
-    seq_types: the sequential element types.
+    verilog: str
+            verilog code.
+    name: str
+            the module name.
+    seq_types: list of dicts of str:str
+            the sequential element types.
+
+    Returns
+    -------
+    Circuit
+            the parsed circuit.
     &#34;&#34;&#34;
     if seq_types is None:
         seq_types = default_seq_types
@@ -129,12 +144,18 @@ def verilog_to_circuit(verilog, name, seq_types=None):
     # create circuit
     c = Circuit(name=name)
 
+    # get inputs
+    in_regex = r&#34;input\s(.+?);&#34;
+    for net_str in re.findall(in_regex, module, re.DOTALL):
+        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
+        for n in nets:
+            c.add(n, &#34;input&#34;)
+
     # handle gates
     regex = r&#34;(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);&#34;
     for gate, net_str in re.findall(regex, module, re.DOTALL):
         # parse all nets
-        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(
-            &#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
+        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
         c.add(nets[0], gate, fanin=nets[1:])
 
     # handle seq
@@ -144,47 +165,50 @@ def verilog_to_circuit(verilog, name, seq_types=None):
         for io in re.findall(regex, module, re.DOTALL):
             # find matching pins
             pins = {}
-            for typ, name in st[&#39;io&#39;].items():
+            for typ, name in st[&#34;io&#34;].items():
                 regex = rf&#34;.{name}\s*\((.+?)\)&#34;
                 n = re.findall(regex, io, re.DOTALL)[0]
                 pins[typ] = n
 
-            c.add(pins.get(&#39;q&#39;, None), st[&#39;type&#39;],
-                  fanin=pins.get(&#39;d&#39;, None),
-                  clk=pins.get(&#39;clk&#39;, None),
-                  r=pins.get(&#39;r&#39;, None), s=pins.get(&#39;s&#39;, None))
+            c.add(
+                pins.get(&#34;q&#34;, None),
+                st[&#34;type&#34;],
+                fanin=pins.get(&#34;d&#34;, None),
+                clk=pins.get(&#34;clk&#34;, None),
+                r=pins.get(&#34;r&#34;, None),
+                s=pins.get(&#34;s&#34;, None),
+            )
 
     # handle assign statements (with help from pyeda)
     assign_regex = r&#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
     for dest, expr in re.findall(assign_regex, module, re.DOTALL):
         parse_ast(boolexpr.parse(expr), c, dest)
 
-    for n in c:
-        if &#39;type&#39; not in c.graph.nodes[n]:
-            if n == &#34;1&#39;b0&#34;:
-                c.add(n, &#39;0&#39;)
-            elif n == &#34;1&#39;b1&#34;:
-                c.add(n, &#39;1&#39;)
-            else:
-                c.add(n, &#39;input&#39;)
-
     # get outputs
     out_regex = r&#34;output\s(.+?);&#34;
     for net_str in re.findall(out_regex, module, re.DOTALL):
-        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(
-            &#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
-        for n in nets:
-            c.add(n, &#39;output&#39;, fanin=n)
+        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
+        c.set_output(nets)
+
+    # assign constant types
+    for n in c:
+        if &#34;type&#34; not in c.graph.nodes[n]:
+            if n == &#34;1&#39;b0&#34;:
+                c.add(n, &#34;0&#34;)
+            elif n == &#34;1&#39;b1&#34;:
+                c.add(n, &#34;1&#34;)
+            else:
+                raise ValueError(f&#34;node {n} does not have a type&#34;)
 
     return c
 
 
 def parse_ast(ast, g, dest, level=0):
-    if ast[0] == &#39;var&#39;:
+    if ast[0] == &#34;var&#34;:
         return ast[1][0]
     else:
         if level == 0:
-            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]] 
+            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]]
             g.add(dest, ast[0], fanin=fanin)
         else:
             fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]]
@@ -193,18 +217,38 @@ def parse_ast(ast, g, dest, level=0):
             return name
 
 
+def to_file(c, path, seq_types=None):
+    &#34;&#34;&#34;
+    Writes a `Circuit` to a verilog file.
+
+    Parameters
+    ----------
+    c: Circut
+            the circuit
+    path: str
+            the path to the file to read from.
+    seq_types: list of dicts of str:str
+            the types of sequential elements in the file.
+    &#34;&#34;&#34;
+    with open(path, &#34;w&#34;) as f:
+        f.write(circuit_to_verilog(c, seq_types))
+
+
 def circuit_to_verilog(c, seq_types=None):
     &#34;&#34;&#34;
     Generates a str of verilog code from a `CircuitGraph`.
 
     Parameters
     ----------
-    c: the circuit to turn into verilog.
-    seq_types: the sequential element types.
+    c: Circuit
+            the circuit to turn into verilog.
+    seq_types: list of dicts of str:str
+            the sequential element types.
 
     Returns
     -------
-    a str of verilog code.
+    str
+        verilog code.
     &#34;&#34;&#34;
     inputs = []
     outputs = []
@@ -216,61 +260,56 @@ def circuit_to_verilog(c, seq_types=None):
         seq_types = default_seq_types
 
     for n in c.nodes():
-        if c.type(n) in [&#39;xor&#39;, &#39;xnor&#39;, &#39;buf&#39;, &#39;not&#39;, &#39;nor&#39;, &#39;or&#39;, &#39;and&#39;,
-                         &#39;nand&#39;]:
-            fanin = &#39;,&#39;.join(p for p in c.fanin(n))
+        if c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;, &#34;buf&#34;, &#34;not&#34;, &#34;nor&#34;, &#34;or&#34;, &#34;and&#34;, &#34;nand&#34;]:
+            fanin = &#34;,&#34;.join(p for p in c.fanin(n))
             insts.append(f&#34;{c.type(n)} g_{n} ({n},{fanin})&#34;)
             wires.append(n)
-        elif c.type(n) in [&#39;0&#39;, &#39;1&#39;]:
+        elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
             insts.append(f&#34;assign {n} = 1&#39;b{c.type(n)}&#34;)
-        elif c.type(n) in [&#39;input&#39;]:
+        elif c.type(n) in [&#34;input&#34;]:
             inputs.append(n)
             wires.append(n)
-        elif c.type(n) in [&#39;output&#39;]:
-            name = n.replace(&#39;output[&#39;, &#39;&#39;)[:-1]
-            if c.fanin(n).pop() != name:
-                insts.append(f&#34;assign {name} = {c.fanin(n).pop()}&#34;)
-            outputs.append(name)
-        elif c.type(n) in [&#39;ff&#39;, &#39;lat&#39;]:
+        elif c.type(n) in [&#34;ff&#34;, &#34;lat&#34;]:
             wires.append(n)
 
             # get template
             for s in seq_types:
-                if s[&#39;type&#39;] == c.type(n):
+                if s[&#34;type&#34;] == c.type(n):
                     seq = s
-                    defs.add(s[&#39;def&#39;])
+                    defs.add(s[&#34;def&#34;])
                     break
 
             # connect
             io = []
-            if f&#39;d[{n}]&#39; in c:
-                d = c.fanin(f&#39;d[{n}]&#39;).pop()
+            if c.d(n):
+                d = c.d(n)
                 io.append(f&#34;.{seq[&#39;io&#39;][&#39;d&#39;]}({d})&#34;)
-            if f&#39;r[{n}]&#39; in c:
-                r = c.fanin(f&#39;r[{n}]&#39;).pop()
+            if c.r(n):
+                r = c.r(n)
                 io.append(f&#34;.{seq[&#39;io&#39;][&#39;r&#39;]}({r})&#34;)
-            if f&#39;s[{n}]&#39; in c:
-                s = c.fanin(f&#39;s[{n}]&#39;).pop()
+            if c.s(n):
+                s = c.s(n)
                 io.append(f&#34;.{seq[&#39;io&#39;][&#39;s&#39;]}({s})&#34;)
-            if f&#39;clk[{n}]&#39; in c:
-                clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+            if c.clk(n):
+                clk = c.clk(n)
                 io.append(f&#34;.{seq[&#39;io&#39;][&#39;clk&#39;]}({clk})&#34;)
             io.append(f&#34;.{seq[&#39;io&#39;][&#39;q&#39;]}({n})&#34;)
             insts.append(f&#34;{s[&#39;name&#39;]} g_{n} ({&#39;,&#39;.join(io)})&#34;)
 
-        elif c.type(n) in [&#39;clk&#39;, &#39;d&#39;, &#39;r&#39;, &#39;s&#39;]:
-            pass
         else:
             print(f&#34;unknown gate type: {c.type(n)}&#34;)
             return
 
-    verilog = f&#34;module {c.name} (&#34;+&#39;,&#39;.join(inputs+outputs)+&#39;);\n&#39;
-    verilog += &#39;&#39;.join(f&#39;input {inp};\n&#39; for inp in inputs)
-    verilog += &#39;&#39;.join(f&#39;output {out};\n&#39; for out in outputs)
-    verilog += &#39;&#39;.join(f&#39;wire {wire};\n&#39; for wire in wires)
-    verilog += &#39;&#39;.join(f&#39;{inst};\n&#39; for inst in insts)
-    verilog += &#39;endmodule\n&#39;
-    verilog += &#39;\n&#39;.join(defs)
+        if c.output(n):
+            outputs.append(n)
+
+    verilog = f&#34;module {c.name} (&#34; + &#34;,&#34;.join(inputs + outputs) + &#34;);\n&#34;
+    verilog += &#34;&#34;.join(f&#34;input {inp};\n&#34; for inp in inputs)
+    verilog += &#34;&#34;.join(f&#34;output {out};\n&#34; for out in outputs)
+    verilog += &#34;&#34;.join(f&#34;wire {wire};\n&#34; for wire in wires)
+    verilog += &#34;&#34;.join(f&#34;{inst};\n&#34; for inst in insts)
+    verilog += &#34;endmodule\n&#34;
+    verilog += &#34;\n&#34;.join(defs)
 
     return verilog</code></pre>
 </details>
@@ -288,10 +327,17 @@ def circuit_to_verilog(c, seq_types=None):
 <dd>
 <div class="desc"><p>Generates a str of verilog code from a <code>CircuitGraph</code>.</p>
 <h2 id="parameters">Parameters</h2>
-<p>c: the circuit to turn into verilog.
-seq_types: the sequential element types.</p>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>the circuit to turn into verilog.</dd>
+<dt><strong><code>seq_types</code></strong> :&ensp;<code>list</code> of <code>dicts</code> of <code>str:str</code></dt>
+<dd>the sequential element types.</dd>
+</dl>
 <h2 id="returns">Returns</h2>
-<p>a str of verilog code.</p></div>
+<dl>
+<dt><code>str</code></dt>
+<dd>verilog code.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -302,12 +348,15 @@ seq_types: the sequential element types.</p>
 
     Parameters
     ----------
-    c: the circuit to turn into verilog.
-    seq_types: the sequential element types.
+    c: Circuit
+            the circuit to turn into verilog.
+    seq_types: list of dicts of str:str
+            the sequential element types.
 
     Returns
     -------
-    a str of verilog code.
+    str
+        verilog code.
     &#34;&#34;&#34;
     inputs = []
     outputs = []
@@ -319,61 +368,56 @@ seq_types: the sequential element types.</p>
         seq_types = default_seq_types
 
     for n in c.nodes():
-        if c.type(n) in [&#39;xor&#39;, &#39;xnor&#39;, &#39;buf&#39;, &#39;not&#39;, &#39;nor&#39;, &#39;or&#39;, &#39;and&#39;,
-                         &#39;nand&#39;]:
-            fanin = &#39;,&#39;.join(p for p in c.fanin(n))
+        if c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;, &#34;buf&#34;, &#34;not&#34;, &#34;nor&#34;, &#34;or&#34;, &#34;and&#34;, &#34;nand&#34;]:
+            fanin = &#34;,&#34;.join(p for p in c.fanin(n))
             insts.append(f&#34;{c.type(n)} g_{n} ({n},{fanin})&#34;)
             wires.append(n)
-        elif c.type(n) in [&#39;0&#39;, &#39;1&#39;]:
+        elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
             insts.append(f&#34;assign {n} = 1&#39;b{c.type(n)}&#34;)
-        elif c.type(n) in [&#39;input&#39;]:
+        elif c.type(n) in [&#34;input&#34;]:
             inputs.append(n)
             wires.append(n)
-        elif c.type(n) in [&#39;output&#39;]:
-            name = n.replace(&#39;output[&#39;, &#39;&#39;)[:-1]
-            if c.fanin(n).pop() != name:
-                insts.append(f&#34;assign {name} = {c.fanin(n).pop()}&#34;)
-            outputs.append(name)
-        elif c.type(n) in [&#39;ff&#39;, &#39;lat&#39;]:
+        elif c.type(n) in [&#34;ff&#34;, &#34;lat&#34;]:
             wires.append(n)
 
             # get template
             for s in seq_types:
-                if s[&#39;type&#39;] == c.type(n):
+                if s[&#34;type&#34;] == c.type(n):
                     seq = s
-                    defs.add(s[&#39;def&#39;])
+                    defs.add(s[&#34;def&#34;])
                     break
 
             # connect
             io = []
-            if f&#39;d[{n}]&#39; in c:
-                d = c.fanin(f&#39;d[{n}]&#39;).pop()
+            if c.d(n):
+                d = c.d(n)
                 io.append(f&#34;.{seq[&#39;io&#39;][&#39;d&#39;]}({d})&#34;)
-            if f&#39;r[{n}]&#39; in c:
-                r = c.fanin(f&#39;r[{n}]&#39;).pop()
+            if c.r(n):
+                r = c.r(n)
                 io.append(f&#34;.{seq[&#39;io&#39;][&#39;r&#39;]}({r})&#34;)
-            if f&#39;s[{n}]&#39; in c:
-                s = c.fanin(f&#39;s[{n}]&#39;).pop()
+            if c.s(n):
+                s = c.s(n)
                 io.append(f&#34;.{seq[&#39;io&#39;][&#39;s&#39;]}({s})&#34;)
-            if f&#39;clk[{n}]&#39; in c:
-                clk = c.fanin(f&#39;clk[{n}]&#39;).pop()
+            if c.clk(n):
+                clk = c.clk(n)
                 io.append(f&#34;.{seq[&#39;io&#39;][&#39;clk&#39;]}({clk})&#34;)
             io.append(f&#34;.{seq[&#39;io&#39;][&#39;q&#39;]}({n})&#34;)
             insts.append(f&#34;{s[&#39;name&#39;]} g_{n} ({&#39;,&#39;.join(io)})&#34;)
 
-        elif c.type(n) in [&#39;clk&#39;, &#39;d&#39;, &#39;r&#39;, &#39;s&#39;]:
-            pass
         else:
             print(f&#34;unknown gate type: {c.type(n)}&#34;)
             return
 
-    verilog = f&#34;module {c.name} (&#34;+&#39;,&#39;.join(inputs+outputs)+&#39;);\n&#39;
-    verilog += &#39;&#39;.join(f&#39;input {inp};\n&#39; for inp in inputs)
-    verilog += &#39;&#39;.join(f&#39;output {out};\n&#39; for out in outputs)
-    verilog += &#39;&#39;.join(f&#39;wire {wire};\n&#39; for wire in wires)
-    verilog += &#39;&#39;.join(f&#39;{inst};\n&#39; for inst in insts)
-    verilog += &#39;endmodule\n&#39;
-    verilog += &#39;\n&#39;.join(defs)
+        if c.output(n):
+            outputs.append(n)
+
+    verilog = f&#34;module {c.name} (&#34; + &#34;,&#34;.join(inputs + outputs) + &#34;);\n&#34;
+    verilog += &#34;&#34;.join(f&#34;input {inp};\n&#34; for inp in inputs)
+    verilog += &#34;&#34;.join(f&#34;output {out};\n&#34; for out in outputs)
+    verilog += &#34;&#34;.join(f&#34;wire {wire};\n&#34; for wire in wires)
+    verilog += &#34;&#34;.join(f&#34;{inst};\n&#34; for inst in insts)
+    verilog += &#34;endmodule\n&#34;
+    verilog += &#34;\n&#34;.join(defs)
 
     return verilog</code></pre>
 </details>
@@ -382,7 +426,7 @@ seq_types: the sequential element types.</p>
 <span>def <span class="ident">from_file</span></span>(<span>path, name=None, seq_types=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a new <code>CircuitGraph</code> from a verilog file.</p>
+<div class="desc"><p>Creates a new <code>Circuit</code> from a verilog file.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>path</code></strong> :&ensp;<code>str</code></dt>
@@ -393,14 +437,17 @@ seq_types: the sequential element types.</p>
 <dd>the types of sequential elements in the file.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>a <code>CircuitGraph</code> of the file.</p></div>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>the parsed circuit.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def from_file(path, name=None, seq_types=None):
     &#34;&#34;&#34;
-    Creates a new `CircuitGraph` from a verilog file.
+    Creates a new `Circuit` from a verilog file.
 
     Parameters
     ----------
@@ -413,11 +460,12 @@ seq_types: the sequential element types.</p>
 
     Returns
     -------
-    a `CircuitGraph` of the file.
+    Circuit
+            the parsed circuit.
     &#34;&#34;&#34;
     if name is None:
-        name = path.split(&#39;/&#39;)[-1].replace(&#39;.v&#39;, &#39;&#39;)
-    with open(path, &#39;r&#39;) as f:
+        name = path.split(&#34;/&#34;)[-1].replace(&#34;.v&#34;, &#34;&#34;)
+    with open(path, &#34;r&#34;) as f:
         verilog = f.read()
     return verilog_to_circuit(verilog, name, seq_types)</code></pre>
 </details>
@@ -426,20 +474,23 @@ seq_types: the sequential element types.</p>
 <span>def <span class="ident">from_lib</span></span>(<span>circuit, name=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a new <code>CircuitGraph</code> from a netlist in the <code>../netlists</code>
+<div class="desc"><p>Creates a new <code>Circuit</code> from a netlist in the <code>../netlists</code>
 folder</p>
 <h2 id="parameters">Parameters</h2>
 <p>circuit: the name of the netlist.
 name: the module name, if different from the netlist name.</p>
 <h2 id="returns">Returns</h2>
-<p>a <code>CircuitGraph</code> of the netlist.</p></div>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>the parsed circuit.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def from_lib(circuit, name=None):
     &#34;&#34;&#34;
-    Creates a new `CircuitGraph` from a netlist in the `../netlists`
+    Creates a new `Circuit` from a netlist in the `../netlists`
     folder
 
     Parameters
@@ -449,9 +500,10 @@ name: the module name, if different from the netlist name.</p>
 
     Returns
     -------
-    a `CircuitGraph` of the netlist.
+    Circuit
+            the parsed circuit.
     &#34;&#34;&#34;
-    path = f&#39;{os.path.dirname(__file__)}/../netlists/{circuit}.v&#39;
+    path = f&#34;{os.path.dirname(__file__)}/../netlists/{circuit}.v&#34;
     return from_file(path, name)</code></pre>
 </details>
 </dd>
@@ -465,11 +517,11 @@ name: the module name, if different from the netlist name.</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def parse_ast(ast, g, dest, level=0):
-    if ast[0] == &#39;var&#39;:
+    if ast[0] == &#34;var&#34;:
         return ast[1][0]
     else:
         if level == 0:
-            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]] 
+            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]]
             g.add(dest, ast[0], fanin=fanin)
         else:
             fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]]
@@ -478,15 +530,60 @@ name: the module name, if different from the netlist name.</p>
             return name</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.io.to_file"><code class="name flex">
+<span>def <span class="ident">to_file</span></span>(<span>c, path, seq_types=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Writes a <code>Circuit</code> to a verilog file.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circut</code></dt>
+<dd>the circuit</dd>
+<dt><strong><code>path</code></strong> :&ensp;<code>str</code></dt>
+<dd>the path to the file to read from.</dd>
+<dt><strong><code>seq_types</code></strong> :&ensp;<code>list</code> of <code>dicts</code> of <code>str:str</code></dt>
+<dd>the types of sequential elements in the file.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def to_file(c, path, seq_types=None):
+    &#34;&#34;&#34;
+    Writes a `Circuit` to a verilog file.
+
+    Parameters
+    ----------
+    c: Circut
+            the circuit
+    path: str
+            the path to the file to read from.
+    seq_types: list of dicts of str:str
+            the types of sequential elements in the file.
+    &#34;&#34;&#34;
+    with open(path, &#34;w&#34;) as f:
+        f.write(circuit_to_verilog(c, seq_types))</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.io.verilog_to_circuit"><code class="name flex">
 <span>def <span class="ident">verilog_to_circuit</span></span>(<span>verilog, name, seq_types=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a new Circuit from a verilog string.</p>
 <h2 id="parameters">Parameters</h2>
-<p>verilog: str of verilog code.
-name: the module name.
-seq_types: the sequential element types.</p></div>
+<dl>
+<dt><strong><code>verilog</code></strong> :&ensp;<code>str</code></dt>
+<dd>verilog code.</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>the module name.</dd>
+<dt><strong><code>seq_types</code></strong> :&ensp;<code>list</code> of <code>dicts</code> of <code>str:str</code></dt>
+<dd>the sequential element types.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>the parsed circuit.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -497,9 +594,17 @@ seq_types: the sequential element types.</p></div>
 
     Parameters
     ----------
-    verilog: str of verilog code.
-    name: the module name.
-    seq_types: the sequential element types.
+    verilog: str
+            verilog code.
+    name: str
+            the module name.
+    seq_types: list of dicts of str:str
+            the sequential element types.
+
+    Returns
+    -------
+    Circuit
+            the parsed circuit.
     &#34;&#34;&#34;
     if seq_types is None:
         seq_types = default_seq_types
@@ -512,12 +617,18 @@ seq_types: the sequential element types.</p></div>
     # create circuit
     c = Circuit(name=name)
 
+    # get inputs
+    in_regex = r&#34;input\s(.+?);&#34;
+    for net_str in re.findall(in_regex, module, re.DOTALL):
+        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
+        for n in nets:
+            c.add(n, &#34;input&#34;)
+
     # handle gates
     regex = r&#34;(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);&#34;
     for gate, net_str in re.findall(regex, module, re.DOTALL):
         # parse all nets
-        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(
-            &#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
+        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
         c.add(nets[0], gate, fanin=nets[1:])
 
     # handle seq
@@ -527,37 +638,40 @@ seq_types: the sequential element types.</p></div>
         for io in re.findall(regex, module, re.DOTALL):
             # find matching pins
             pins = {}
-            for typ, name in st[&#39;io&#39;].items():
+            for typ, name in st[&#34;io&#34;].items():
                 regex = rf&#34;.{name}\s*\((.+?)\)&#34;
                 n = re.findall(regex, io, re.DOTALL)[0]
                 pins[typ] = n
 
-            c.add(pins.get(&#39;q&#39;, None), st[&#39;type&#39;],
-                  fanin=pins.get(&#39;d&#39;, None),
-                  clk=pins.get(&#39;clk&#39;, None),
-                  r=pins.get(&#39;r&#39;, None), s=pins.get(&#39;s&#39;, None))
+            c.add(
+                pins.get(&#34;q&#34;, None),
+                st[&#34;type&#34;],
+                fanin=pins.get(&#34;d&#34;, None),
+                clk=pins.get(&#34;clk&#34;, None),
+                r=pins.get(&#34;r&#34;, None),
+                s=pins.get(&#34;s&#34;, None),
+            )
 
     # handle assign statements (with help from pyeda)
     assign_regex = r&#34;assign\s+(.+?)\s*=\s*(.+?);&#34;
     for dest, expr in re.findall(assign_regex, module, re.DOTALL):
         parse_ast(boolexpr.parse(expr), c, dest)
 
-    for n in c:
-        if &#39;type&#39; not in c.graph.nodes[n]:
-            if n == &#34;1&#39;b0&#34;:
-                c.add(n, &#39;0&#39;)
-            elif n == &#34;1&#39;b1&#34;:
-                c.add(n, &#39;1&#39;)
-            else:
-                c.add(n, &#39;input&#39;)
-
     # get outputs
     out_regex = r&#34;output\s(.+?);&#34;
     for net_str in re.findall(out_regex, module, re.DOTALL):
-        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(
-            &#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
-        for n in nets:
-            c.add(n, &#39;output&#39;, fanin=n)
+        nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
+        c.set_output(nets)
+
+    # assign constant types
+    for n in c:
+        if &#34;type&#34; not in c.graph.nodes[n]:
+            if n == &#34;1&#39;b0&#34;:
+                c.add(n, &#34;0&#34;)
+            elif n == &#34;1&#39;b1&#34;:
+                c.add(n, &#34;1&#34;)
+            else:
+                raise ValueError(f&#34;node {n} does not have a type&#34;)
 
     return c</code></pre>
 </details>
@@ -570,8 +684,7 @@ seq_types: the sequential element types.</p></div>
 <nav id="sidebar">
 <header>
 <img src="circuitgraph.png" alt="">
-<script async defer src="https://buttons.github.io/buttons.js"></script>
-<a class="github-button" href="https://github.com/circuitgraph/circuigraph" aria-label="Star circuitgraph/circuigraph on GitHub">Star</a>
+<a class="github-button" href="https://github.com/circuitgraph/circuitgraph">GitHub</a>
 </header>
 <h1>Index</h1>
 <div class="toc">
@@ -584,11 +697,12 @@ seq_types: the sequential element types.</p></div>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
+<ul class="two-column">
 <li><code><a title="circuitgraph.io.circuit_to_verilog" href="#circuitgraph.io.circuit_to_verilog">circuit_to_verilog</a></code></li>
 <li><code><a title="circuitgraph.io.from_file" href="#circuitgraph.io.from_file">from_file</a></code></li>
 <li><code><a title="circuitgraph.io.from_lib" href="#circuitgraph.io.from_lib">from_lib</a></code></li>
 <li><code><a title="circuitgraph.io.parse_ast" href="#circuitgraph.io.parse_ast">parse_ast</a></code></li>
+<li><code><a title="circuitgraph.io.to_file" href="#circuitgraph.io.to_file">to_file</a></code></li>
 <li><code><a title="circuitgraph.io.verilog_to_circuit" href="#circuitgraph.io.verilog_to_circuit">verilog_to_circuit</a></code></li>
 </ul>
 </li>
@@ -596,7 +710,7 @@ seq_types: the sequential element types.</p></div>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
 </footer>
 </body>
 </html>

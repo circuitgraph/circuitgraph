@@ -214,9 +214,14 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     m.extend(c1.relabel({n: f"c1_{n}" for n in c1.nodes() - startpoints}))
 
     # compare outputs
-    m.add("sat", "or")
+    m.add("sat", "or", output=True)
     for o in endpoints:
-        m.add(f"miter_{o}", "xor", fanin=[f"c0_{o}", f"c1_{o}"], fanout=["sat"])
+        if c0.type(o) in ["lat","ff"]:
+            m.add(f"miter_{o}", "xor", fanin=[f"c0_{c0.d(o)}",
+                  f"c1_{c1.d(o)}"], fanout=["sat"])
+        else:
+            m.add(f"miter_{o}", "xor", fanin=[f"c0_{o}",
+                  f"c1_{o}"], fanout=["sat"])
 
     return m
 
@@ -260,66 +265,6 @@ def comb(c):
         c_comb.remove_node(ff)
 
     return c_comb
-
-
-def gen_lat_model():
-    lm = nx.DiGraph()
-    # inputs
-    lm.add_node("si", gate="buf", output=False)
-    lm.add_node("d", gate="buf", output=False)
-    lm.add_node("clk", gate="buf", output=False)
-    lm.add_node("rst", gate="buf", output=False)
-    lm.add_node("mux_out", gate="or", output=False)
-    lm.add_node("mux_a0", gate="and", output=False)
-    lm.add_node("mux_a1", gate="and", output=False)
-    lm.add_node("clk_b", gate="not", output=False)
-
-    # outputs
-    lm.add_node("q", gate="and", output=False)
-    lm.add_node("so", gate="buf", output=False)
-
-    # cons
-    lm.add_edge("q", "so")
-    lm.add_edge("rst", "q")
-    lm.add_edge("mux_out", "q")
-    lm.add_edge("mux_out", "q")
-    lm.add_edge("mux_a0", "mux_out")
-    lm.add_edge("mux_a1", "mux_out")
-    lm.add_edge("clk", "clk_b")
-    lm.add_edge("clk_b", "mux_a0")
-    lm.add_edge("clk", "mux_a1")
-    lm.add_edge("d", "mux_a0")
-    lm.add_edge("si", "mux_a1")
-
-    return lm
-
-
-def gen_ff_model():
-    fm = nx.DiGraph()
-    # inputs
-    fm.add_node("si", gate="buf", output=False)
-    fm.add_node("d", gate="buf", output=False)
-    fm.add_node("clk", gate="buf", output=False)
-    fm.add_node("mux_a0", gate="and", output=False)
-    fm.add_node("mux_a1", gate="and", output=False)
-    fm.add_node("clk_b", gate="not", output=False)
-
-    # outputs
-    fm.add_node("q", gate="and", output=False)
-    fm.add_node("so", gate="or", output=False)
-
-    # cons
-    fm.add_edge("si", "q")
-    fm.add_edge("mux_a0", "so")
-    fm.add_edge("mux_a1", "so")
-    fm.add_edge("clk", "clk_b")
-    fm.add_edge("clk_b", "mux_a0")
-    fm.add_edge("clk", "mux_a1")
-    fm.add_edge("d", "mux_a0")
-    fm.add_edge("si", "mux_a1")
-
-    return fm
-
 
 def unroll(c, cycles):
     """
@@ -389,7 +334,7 @@ def sensitivity(c, n):
 
     # convert outputs to buffers
     for o in subCircuit.outputs():
-        subCircuit.graph.nodes[o]["type"] = "buf"
+        subCircuit.set_output(o,False)
 
     # convert startpoints to inputs
     for s in subCircuit.startpoints():
@@ -408,7 +353,8 @@ def sensitivity(c, n):
     p = p.relabel({g: f"pop_{g}" for g in p})
     sensitivityCircuit.extend(p)
     for o in range(clog2(len(startpoints))):
-        sensitivityCircuit.add(f"out_{o}", "output", fanin=f"pop_out_{o}")
+        sensitivityCircuit.add(f"out_{o}", "buf", fanin=f"pop_out_{o}",
+                               output=True)
 
     # stamp out a copies of the circuit with s inverted
     for i, s in enumerate(startpoints):
@@ -424,9 +370,9 @@ def sensitivity(c, n):
 
         # compare to first copy
         sensitivityCircuit.add(
-            f"difference_{s}", "xor", fanin=[n, f"sen_{s}_{n}"], fanout=f"pop_in_{i}"
+            f"difference_{s}", "xor", fanin=[n, f"sen_{s}_{n}"],
+            fanout=f"pop_in_{i}",output=True
         )
-        sensitivityCircuit.add(f"difference_{s}", "output", fanin=f"difference_{s}")
 
     return sensitivityCircuit
 
@@ -463,7 +409,7 @@ def sensitize(c, n):
     return m
 
 
-def mphf(w=30, n=800):
+def mphf(w=50, n=8000):
     """
     Creates a SAT-hard circuit based on the structure of minimum perfect hash
     functions.
@@ -494,7 +440,6 @@ def mphf(w=30, n=800):
             c.add(f"xor_{ni}_{oi}", "xor", fanin=sample(inputs, 2)) for oi in range(o)
         ]
         ors.append(c.add(f"or_{ni}", "or", fanin=xors))
-    c.add("sat", "and", fanin=ors)
-    c.add("sat", "output", fanin="sat")
+    c.add("sat", "and", fanin=ors, output=True)
 
     return c

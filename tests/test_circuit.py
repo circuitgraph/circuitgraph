@@ -26,16 +26,15 @@ class TestCircuit(unittest.TestCase):
         self.assertEqual(self.s27.fanin_comb_depth(["n_5", "n_1"], shortest=True), 1)
 
     def test_fanout_comb_depth(self):
-        self.assertEqual(self.s27.fanout_comb_depth("n_10"), 3)
-        self.assertEqual(self.s27.fanout_comb_depth("n_10", shortest=True), 2)
-        self.assertEqual(self.s27.fanout_comb_depth(["n_10", "n_11"]), 3)
-        self.assertEqual(self.s27.fanout_comb_depth(["n_10", "n_11"], shortest=True), 2)
+        self.assertEqual(self.s27.fanout_comb_depth("n_10"), 2)
+        self.assertEqual(self.s27.fanout_comb_depth("n_10", shortest=True), 1)
+        self.assertEqual(self.s27.fanout_comb_depth(["n_10", "n_11"]), 2)
+        self.assertEqual(self.s27.fanout_comb_depth(["n_10", "n_11"], shortest=True), 1)
 
     def test_fanout(self):
         self.assertSetEqual(self.c17.fanout("G1"), set(["G8"]))
         self.assertSetEqual(self.c17.fanout("G12"), set(["G16", "G17"]))
-        self.assertSetEqual(self.c17.fanout("G17"), set(["output[G17]"]))
-        self.assertFalse(self.c17.fanout("output[G17]"))
+        self.assertFalse(self.c17.fanout("G17"))
         self.assertSetEqual(
             self.c17.fanout(["G1", "G8"]), self.c17.fanout("G1") | self.c17.fanout("G8")
         )
@@ -46,7 +45,7 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(
             self.s27.nodes("input"), set(["clk", "G0", "G1", "G2", "G3"])
         )
-        self.assertSetEqual(self.s27.nodes("output"), set(["output[G17]"]))
+        self.assertSetEqual(self.s27.nodes(output=True), set(["G17"]))
 
     def test_contains(self):
         self.assertFalse("adsf" in self.s27)
@@ -61,7 +60,6 @@ class TestCircuit(unittest.TestCase):
 
     def test_ff_lat(self):
         self.assertSetEqual(self.s27.ffs(), {"G5", "G6", "G7"})
-        self.assertEqual(self.s27.fanin_comb_depth("G5"), 0)
         s27_c = self.s27.copy()
         s27_c.add("c_t", "input")
         s27_c.add("r_t", "input")
@@ -69,32 +67,30 @@ class TestCircuit(unittest.TestCase):
         s27_c.add("test_lat", "lat", fanin=["G5"], clk="c_t", r="r_t", s="s_t")
         self.assertSetEqual(s27_c.lats(), {"test_lat"})
         self.assertSetEqual(s27_c.seq(), {"G5", "G6", "G7", "test_lat"})
-        self.assertSetEqual(s27_c.fanin(s27_c.d("test_lat")), {"G5"})
-        self.assertSetEqual(s27_c.fanin(s27_c.clk("test_lat")), {"c_t"})
-        self.assertSetEqual(s27_c.fanin(s27_c.r("test_lat")), {"r_t"})
-        self.assertSetEqual(s27_c.fanin(s27_c.s("test_lat")), {"s_t"})
+        self.assertEqual(s27_c.d("test_lat"), "G5")
+        self.assertEqual(s27_c.clk("test_lat"), "c_t")
+        self.assertEqual(s27_c.r("test_lat"), "r_t")
+        self.assertEqual(s27_c.s("test_lat"), "s_t")
 
     # TODO
     def test_seq_graph(self):
         pass
 
     def test_disconnect(self):
-        self.assertSetEqual(self.s27.fanin("G5"), {"d[G5]", "clk[G5]"})
         s27_c = self.s27.copy()
-        s27_c.disconnect("d[G5]", "G5")
-        self.assertSetEqual(s27_c.fanin("G5"), {"clk[G5]"})
+        s27_c.disconnect("G5","n_1")
+        self.assertSetEqual(s27_c.fanout("G5"), {"n_21", "n_20"})
 
     def test_remove(self):
         c17_c = self.c17.copy()
         c17_c.remove("G16")
         self.assertNotIn("G16", c17_c.nodes())
         self.assertSetEqual(c17_c.fanout("G8"), set())
-        self.assertSetEqual(c17_c.fanin("output[G16]"), set())
 
     def test_edges(self):
-        self.assertListEqual(
-            list(self.c17.edges()),
-            [
+        self.assertSetEqual(
+            set(tuple((u,v)) for u,v in self.c17.edges()),
+            set(tuple((u,v)) for u,v in [
                 ("G8", "G16"),
                 ("G1", "G8"),
                 ("G3", "G8"),
@@ -107,19 +103,16 @@ class TestCircuit(unittest.TestCase):
                 ("G2", "G12"),
                 ("G15", "G17"),
                 ("G5", "G15"),
-                ("G16", "output[G16]"),
-                ("G17", "output[G17]"),
-            ],
+            ])
         )
 
     def test_type(self):
         self.assertTrue(self.s27.type("G7") == "ff")
-        self.assertTrue(self.s27.type("clk[G7]") == "clk")
         self.assertTrue(self.s27.type("n_4") == "nand")
         self.s27.set_type("n_4", "nor")
         self.assertTrue(self.s27.type("n_4") == "nor")
         self.assertListEqual(
-            self.s27.type(["G7", "clk[G7]", "n_4"]), ["ff", "clk", "nor"]
+            self.s27.type(["G7", "n_4"]), ["ff", "nor"]
         )
         s27_c = self.s27.copy()
         s27_c.graph.add_node("temp")
@@ -127,11 +120,11 @@ class TestCircuit(unittest.TestCase):
 
     def test_endpoints(self):
         self.assertSetEqual(
-            self.s27.endpoints(), set(["d[G5]", "d[G6]", "d[G7]", "output[G17]"])
+            self.s27.endpoints(), set(["G5", "G6", "G7", "G17"])
         )
-        self.assertSetEqual(self.s27.endpoints("n_20"), set(["output[G17]"]))
+        self.assertSetEqual(self.s27.endpoints("n_20"), set(["G17"]))
         self.assertSetEqual(
-            self.s27.endpoints(["n_20", "n_11"]), set(["output[G17]", "d[G5]"])
+            self.s27.endpoints(["n_20", "n_11"]), set(["G17", "G5"])
         )
 
     def test_startpoints(self):
@@ -149,13 +142,12 @@ class TestCircuit(unittest.TestCase):
                 [
                     "n_1",
                     "G17",
-                    "output[G17]",
-                    "d[G5]",
+                    "G5",
                     "n_12",
                     "n_11",
                     "n_9",
                     "n_20",
-                    "d[G6]",
+                    "G6",
                     "n_21",
                 ]
             ),
@@ -179,16 +171,15 @@ class TestCircuit(unittest.TestCase):
             set(
                 [
                     "n_6",
-                    "d[G7]",
+                    "G7",
                     "n_1",
                     "G17",
-                    "output[G17]",
-                    "d[G5]",
+                    "G5",
                     "n_12",
                     "n_11",
                     "n_9",
                     "n_20",
-                    "d[G6]",
+                    "G6",
                     "n_21",
                 ]
             ),

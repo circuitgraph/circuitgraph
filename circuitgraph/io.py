@@ -98,7 +98,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             the module name.
     seq_types: list of dicts of str:str
             the sequential element types.
-    
+
     Returns
     -------
     Circuit
@@ -114,6 +114,13 @@ def verilog_to_circuit(verilog, name, seq_types=None):
 
     # create circuit
     c = Circuit(name=name)
+
+    # get inputs
+    in_regex = r"input\s(.+?);"
+    for net_str in re.findall(in_regex, module, re.DOTALL):
+        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
+        for n in nets:
+            c.add(n, "input")
 
     # handle gates
     regex = r"(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);"
@@ -148,6 +155,13 @@ def verilog_to_circuit(verilog, name, seq_types=None):
     for dest, expr in re.findall(assign_regex, module, re.DOTALL):
         parse_ast(boolexpr.parse(expr), c, dest)
 
+    # get outputs
+    out_regex = r"output\s(.+?);"
+    for net_str in re.findall(out_regex, module, re.DOTALL):
+        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
+        c.set_output(nets)
+
+    # assign constant types
     for n in c:
         if "type" not in c.graph.nodes[n]:
             if n == "1'b0":
@@ -155,14 +169,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             elif n == "1'b1":
                 c.add(n, "1")
             else:
-                c.add(n, "input")
-
-    # get outputs
-    out_regex = r"output\s(.+?);"
-    for net_str in re.findall(out_regex, module, re.DOTALL):
-        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
-        for n in nets:
-            c.add(n, "output", fanin=n)
+                raise ValueError(f"node {n} does not have a type")
 
     return c
 
@@ -233,11 +240,6 @@ def circuit_to_verilog(c, seq_types=None):
         elif c.type(n) in ["input"]:
             inputs.append(n)
             wires.append(n)
-        elif c.type(n) in ["output"]:
-            name = n.replace("output[", "")[:-1]
-            if c.fanin(n).pop() != name:
-                insts.append(f"assign {name} = {c.fanin(n).pop()}")
-            outputs.append(name)
         elif c.type(n) in ["ff", "lat"]:
             wires.append(n)
 
@@ -250,26 +252,27 @@ def circuit_to_verilog(c, seq_types=None):
 
             # connect
             io = []
-            if f"d[{n}]" in c:
-                d = c.fanin(f"d[{n}]").pop()
+            if c.d(n):
+                d = c.d(n)
                 io.append(f".{seq['io']['d']}({d})")
-            if f"r[{n}]" in c:
-                r = c.fanin(f"r[{n}]").pop()
+            if c.r(n):
+                r = c.r(n)
                 io.append(f".{seq['io']['r']}({r})")
-            if f"s[{n}]" in c:
-                s = c.fanin(f"s[{n}]").pop()
+            if c.s(n):
+                s = c.s(n)
                 io.append(f".{seq['io']['s']}({s})")
-            if f"clk[{n}]" in c:
-                clk = c.fanin(f"clk[{n}]").pop()
+            if c.clk(n):
+                clk = c.clk(n)
                 io.append(f".{seq['io']['clk']}({clk})")
             io.append(f".{seq['io']['q']}({n})")
             insts.append(f"{s['name']} g_{n} ({','.join(io)})")
 
-        elif c.type(n) in ["clk", "d", "r", "s"]:
-            pass
         else:
             print(f"unknown gate type: {c.type(n)}")
             return
+
+        if c.output(n):
+            outputs.append(n)
 
     verilog = f"module {c.name} (" + ",".join(inputs + outputs) + ");\n"
     verilog += "".join(f"input {inp};\n" for inp in inputs)

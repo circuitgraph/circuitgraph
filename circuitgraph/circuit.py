@@ -6,12 +6,17 @@ an associated name and gate type. The supported types are:
 
 - Standard input-order-independent gates:
     ['and','nand','or','nor','not','buf','xor','xnor']
-- Inputs and Outputs:
-    ['input','output']
-- Constant values:
-    ['1','0']
-- Sequential elements and supporting types:
-    ['ff','lat'] and ['d','r','s','clk']
+- Inputs and Constant values:
+    ['input','1','0']
+- Sequential elements:
+    ['ff','lat']
+
+Additionally, nodes have the following attributes:
+- Labeling node as an output
+    ['output']
+- Tracking sequential element connections
+    ['clk','r','s']
+
 """
 
 import networkx as nx
@@ -131,9 +136,52 @@ class Circuit:
                 return self.graph.nodes[ns]["type"]
             except KeyError:
                 raise KeyError(f"Node {ns} does not have a type defined.")
-        return [self.graph.nodes[n]["type"] for n in ns]
+        return [self.type(n) for n in ns]
 
-    def nodes(self, types=None):
+    def set_output(self, ns, value=True):
+        """
+        Sets node(s) as output.
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node.
+        value : bool
+                Output value.
+        """
+        if isinstance(ns, str):
+            ns = [ns]
+        for n in ns:
+            self.graph.nodes[n]["output"] = value
+
+    def output(self, ns):
+        """
+        Returns node(s) output value.
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node.
+
+        Returns
+        -------
+        str or list of str
+                Type of node or a list of node output values.
+
+        Raises
+        ------
+        KeyError
+                If type of queried node is not defined.
+
+        """
+        if isinstance(ns, str):
+            try:
+                return self.graph.nodes[ns]["output"]
+            except KeyError:
+                raise KeyError(f"Node {ns} does not have a output defined.")
+        return [self.output(n) for n in ns]
+
+    def nodes(self, types=None, output=None):
         """
         Returns circuit nodes, optionally filtering by type
 
@@ -141,6 +189,8 @@ class Circuit:
         ----------
         types : str or iterable of str
                 Type(s) to filter in.
+        output : str or iterable of str
+                Attributes(s) to filter in.
 
         Returns
         -------
@@ -149,7 +199,7 @@ class Circuit:
 
         Examples
         --------
-        Create a with several gate types.
+        Create a circuit with several gate types.
 
         >>> c = cg.Circuit()
         >>> for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}',g)
@@ -157,7 +207,7 @@ class Circuit:
         Calling `nodes` with no argument returns all nodes in the circuit
 
         >>> c.nodes()
-        {'g0', 'g1', 'g2', 'g3', 'd[g3]', 'r[g3]', 'clk[g3]'}
+        {'g0', 'g1', 'g2', 'g3'}
 
         Passing a node type, we can selectively return nodes.
 
@@ -165,12 +215,19 @@ class Circuit:
         {'g2', 'g0'}
 
         """
-        if types is None:
-            return set(n for n in self.graph.nodes)
-        else:
-            if isinstance(types, str):
-                types = [types]
+        if isinstance(types, str):
+            types = [types]
+
+        if types is None and output is None:
+            return set(self.graph.nodes)
+            #return set(n for n in self.graph.nodes)
+        elif types is None:
+            return set(n for n in self.nodes() if self.output(n) == output)
+        elif output is None:
             return set(n for n in self.nodes() if self.type(n) in types)
+        else:
+            return set(n for n in self.nodes()
+                    if self.type(n) in types and self.output(n) == output)
 
     def is_cyclic(self):
         """
@@ -205,7 +262,7 @@ class Circuit:
         """
         return self.graph.edges
 
-    def add(self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None):
+    def add(self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None, output=False):
         """
         Adds a new node to the circuit, optionally connecting it
 
@@ -220,7 +277,7 @@ class Circuit:
         fanout : iterable of str
                 Nodes to add to new node's fanout
         clk : str
-                Clock connecttion of sequential element
+                Clock connection of sequential element
         r : str
                 Reset connection of sequential element
         s : str
@@ -260,39 +317,18 @@ class Circuit:
         elif isinstance(fanout, str):
             fanout = [fanout]
 
-        if type in ["ff", "lat"]:
-            # add auxillary nodes for sequential element
-            self.graph.add_node(n, type=type)
-            self.graph.add_node(f"d[{n}]", type="d")
-            if r:
-                self.graph.add_node(f"r[{n}]", type="r")
-            if s:
-                self.graph.add_node(f"s[{n}]", type="s")
-            self.graph.add_node(f"clk[{n}]", type="clk")
+        # raise error for invalid inputs
+        if len(fanin)>1 and type in ["ff", "lat", "buf", "not"]:
+            raise ValueError(f"{type} cannot have more than one fanin")
+        if fanin and type in ["0", "1", "input"]:
+            raise ValueError(f"{type} cannot have fanin")
 
-            # connect
-            self.graph.add_edges_from((n, f) for f in fanout)
-            self.graph.add_edge(f"d[{n}]", n)
-            if r:
-                self.graph.add_edge(f"r[{n}]", n)
-            if s:
-                self.graph.add_edge(f"s[{n}]", n)
-            if clk:
-                self.graph.add_edge(f"clk[{n}]", n)
-            self.graph.add_edges_from((f, f"d[{n}]") for f in fanin)
-            if r:
-                self.graph.add_edge(r, f"r[{n}]")
-            if s:
-                self.graph.add_edge(s, f"s[{n}]")
-            if clk:
-                self.graph.add_edge(clk, f"clk[{n}]")
-        elif type == "output":
-            self.graph.add_node(f"output[{n}]", type="output")
-            self.graph.add_edges_from((f, f"output[{n}]") for f in fanin)
-        else:
-            self.graph.add_node(n, type=type)
-            self.graph.add_edges_from((n, f) for f in fanout)
-            self.graph.add_edges_from((f, n) for f in fanin)
+        # add node
+        self.graph.add_node(n, type=type,r=r,s=s,clk=clk,output=output)
+
+        # connect
+        self.graph.add_edges_from((n, f) for f in fanout)
+        self.graph.add_edges_from((f, n) for f in fanin)
 
         return n
 
@@ -330,7 +366,8 @@ class Circuit:
                 Other circuit
         """
         g = self.graph.copy()
-        g.remove_nodes_from(self.outputs())
+        for o in self.outputs():
+            g.nodes[o]['output'] = False
         for i in self.inputs():
             g.nodes[i]["type"] = "buf"
 
@@ -389,7 +426,7 @@ class Circuit:
         """
         return Circuit(graph=nx.relabel_nodes(self.graph, mapping), name=self.name)
 
-    def transitive_fanout(self, ns, stopatTypes=["d"], stopatNodes=[], gates=None):
+    def transitive_fanout(self, ns, stopatTypes=["ff", "lat"], stopatNodes=[], gates=None):
         """
         Computes the transitive fanout of a node.
 
@@ -468,10 +505,6 @@ class Circuit:
                 Node(s) to compute depth for.
         shortest : bool
                 Selects between finding the shortest and longest paths.
-        visited : set of str
-                Visited nodes.
-        depth : int
-                Depth of current path.
 
         Returns
         -------
@@ -479,9 +512,10 @@ class Circuit:
                 Depth.
 
         """
-        # select between shortest and longest paths
+        # select comparison function
         comp = min if shortest else max
 
+        # find depth of a group
         if not isinstance(ns, str):
             return comp(self.fanin_comb_depth(n, shortest) for n in ns)
         else:
@@ -490,21 +524,15 @@ class Circuit:
         if visited is None:
             visited = set()
 
-        if self.type(n) in ["ff", "lat", "input"]:
-            return 0
-
-        depth += 1
         depths = set()
-        visited.add(n)
+        depth += 1
 
-        # find depth
+        visited.add(n)
         for f in self.fanin(n):
-            if self.type(f) not in ["ff", "lat", "input"] and f not in visited:
-                # continue recursion
-                depths.add(self.fanin_comb_depth(f, shortest, visited.copy(), depth))
-            else:
-                # add depth of endpoint or loop
+            if self.type(f) in ["ff", "lat", "input"] or f in visited:
                 depths.add(depth)
+            else:
+                depths.add(self.fanin_comb_depth(f, shortest, visited.copy(), depth))
 
         return comp(depths)
 
@@ -518,10 +546,6 @@ class Circuit:
                 Node(s) to compute depth for.
         shortest : bool
                 Selects between finding the shortest and longest paths.
-        visited : set of str
-                Visited nodes.
-        depth : int
-                Depth of current path.
 
         Returns
         -------
@@ -529,9 +553,10 @@ class Circuit:
                 Depth.
 
         """
-        # select between shortest and longest paths
+        # select comparison function
         comp = min if shortest else max
 
+        # find depth of a group
         if not isinstance(ns, str):
             return comp(self.fanout_comb_depth(n, shortest) for n in ns)
         else:
@@ -540,18 +565,16 @@ class Circuit:
         if visited is None:
             visited = set()
 
-        depth += 1
         depths = set()
+        if self.output(n):
+            depths.add(depth)
+
         visited.add(n)
-        # find depth
         for f in self.fanout(n):
-            if (
-                self.type(f) not in ["d", "r", "s", "clk", "input", "output"]
-                and f not in visited
-            ):
-                depths.add(self.fanout_comb_depth(f, shortest, visited.copy(), depth))
-            else:
+            if self.type(f) in ["ff", "lat"] or f in visited:
                 depths.add(depth)
+            else:
+                depths.add(self.fanout_comb_depth(f, shortest, visited.copy(), depth+1))
 
         return comp(depths)
 
@@ -645,53 +668,93 @@ class Circuit:
         """
         return self.nodes(["ff", "lat"])
 
-    def d(self, s):
+    def r(self, ns):
         """
-        Returns the d input of a sequential node
+        Returns sequential element's reset connection
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to return reset for.
 
         Returns
         -------
-        str
-                D input node.
+        set of str
+                Reset nodes.
 
         """
-        return [f for f in self.fanin(s) if self.type(f) == "d"][0]
+        if isinstance(ns, str):
+            try:
+                return self.graph.nodes[ns]["r"]
+            except KeyError:
+                raise KeyError(f"Node {ns} does not have a reset defined.")
+        return [self.r(n) for n in ns]
 
-    def clk(self, s):
+    def s(self, ns):
         """
-        Returns the clk input of a sequential node
+        Returns sequential element's set connection
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to return set for.
 
         Returns
         -------
-        str
-                Clk input node.
+        set of str
+                Set nodes.
 
         """
-        return [f for f in self.fanin(s) if self.type(f) == "clk"][0]
+        if isinstance(ns, str):
+            try:
+                return self.graph.nodes[ns]["s"]
+            except KeyError:
+                raise KeyError(f"Node {ns} does not have a set defined.")
+        return [self.s(n) for n in ns]
 
-    def r(self, s):
+    def clk(self, ns):
         """
-        Returns the reset input of a sequential node
+        Returns sequential element's clk connection
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to return clk for.
 
         Returns
         -------
-        str
-                Reset input node.
+        set of str
+                Clk nodes.
 
         """
-        return [f for f in self.fanin(s) if self.type(f) == "r"][0]
+        if isinstance(ns, str):
+            try:
+                return self.graph.nodes[ns]["clk"]
+            except KeyError:
+                raise KeyError(f"Node {ns} does not have a clk defined.")
+        return [self.clk(n) for n in ns]
 
-    def s(self, s):
+    def d(self, ns):
         """
-        Returns the set input of a sequential node
+        Returns sequential element's d connection
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to return d for.
 
         Returns
         -------
-        str
-                Set input node.
+        set of str
+                D nodes.
 
         """
-        return [f for f in self.fanin(s) if self.type(f) == "s"][0]
+        if isinstance(ns, str):
+            try:
+                return self.fanin(ns).pop()
+            except KeyError:
+                raise KeyError(f"Node {ns} does not have a d defined.")
+        return [self.d(n) for n in ns]
 
     def inputs(self):
         """
@@ -715,7 +778,7 @@ class Circuit:
                 Output nodes in circuit.
 
         """
-        return self.nodes("output")
+        return self.nodes(output=True)
 
     def io(self):
         """
@@ -727,7 +790,7 @@ class Circuit:
                 Output and input nodes in circuit.
 
         """
-        return self.nodes(["output", "input"])
+        return self.nodes("input")|self.nodes(output=True)
 
     def startpoints(self, ns=None):
         """
@@ -744,14 +807,11 @@ class Circuit:
                 Startpoints of ns.
 
         """
+        circuit_startpoints = self.inputs() | self.seq()
         if ns:
-            return set(
-                n
-                for n in self.transitive_fanin(ns)
-                if self.type(n) in ["ff", "lat", "input"]
-            )
+            return self.transitive_fanin(ns) & circuit_startpoints
         else:
-            return set(n for n in self.graph if self.type(n) in ["ff", "lat", "input"])
+            return circuit_startpoints
 
     def endpoints(self, ns=None):
         """
@@ -768,12 +828,11 @@ class Circuit:
                 Endpoints of ns.
 
         """
+        circuit_endpoints = self.outputs() | self.seq()
         if ns:
-            return set(
-                n for n in self.transitive_fanout(ns) if self.type(n) in ["d", "output"]
-            )
+            return self.transitive_fanout(ns) & circuit_endpoints
         else:
-            return set(n for n in self.graph if self.type(n) in ["d", "output"])
+            return circuit_endpoints
 
     def seq_graph(self):
         """
