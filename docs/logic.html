@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.8.3" />
 <title>circuitgraph.logic API documentation</title>
 <meta name="description" content="A collection of common logic elements as `CircuitGraph` objects" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -44,24 +44,24 @@ def adder(w):
     -------
     a `CircuitGraph` addder.
     &#34;&#34;&#34;
-    c = Circuit(name=&#39;adder&#39;)
-    carry = c.add(&#39;null&#39;, &#39;0&#39;)
+    c = Circuit(name=&#34;adder&#34;)
+    carry = c.add(&#34;null&#34;, &#34;0&#34;)
     for i in range(w):
         # sum
-        c.add(f&#39;a_{i}&#39;, &#39;input&#39;)
-        c.add(f&#39;b_{i}&#39;, &#39;input&#39;)
-        c.add(f&#39;out_{i}&#39;, &#39;xor&#39;, fanin=[f&#39;a_{i}&#39;, f&#39;b_{i}&#39;, carry])
-        c.add(f&#39;out_{i}&#39;, &#39;output&#39;, fanin=f&#39;out_{i}&#39;)
+        c.add(f&#34;a_{i}&#34;, &#34;input&#34;)
+        c.add(f&#34;b_{i}&#34;, &#34;input&#34;)
+        c.add(f&#34;out_{i}&#34;, &#34;xor&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;, carry],
+              output=True)
 
         # carry
-        c.add(f&#39;and_ab_{i}&#39;, &#39;and&#39;, fanin=[f&#39;a_{i}&#39;, f&#39;b_{i}&#39;])
-        c.add(f&#39;and_ac_{i}&#39;, &#39;and&#39;, fanin=[f&#39;a_{i}&#39;, carry])
-        c.add(f&#39;and_bc_{i}&#39;, &#39;and&#39;, fanin=[f&#39;b_{i}&#39;, carry])
-        carry = c.add(f&#39;carry_{i}&#39;, &#39;or&#39;, fanin=[
-                      f&#39;and_ab_{i}&#39;, f&#39;and_ac_{i}&#39;, f&#39;and_bc_{i}&#39;, ])
+        c.add(f&#34;and_ab_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;])
+        c.add(f&#34;and_ac_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, carry])
+        c.add(f&#34;and_bc_{i}&#34;, &#34;and&#34;, fanin=[f&#34;b_{i}&#34;, carry])
+        carry = c.add(
+            f&#34;carry_{i}&#34;, &#34;or&#34;, fanin=[f&#34;and_ab_{i}&#34;, f&#34;and_ac_{i}&#34;, f&#34;and_bc_{i}&#34;,]
+        )
 
-    c.add(f&#39;out_{w}&#39;, &#39;buf&#39;, fanin=carry)
-    c.add(f&#39;out_{w}&#39;, &#39;output&#39;, fanin=f&#39;out_{w}&#39;)
+    c.add(f&#34;out_{w}&#34;, &#34;buf&#34;, fanin=carry, output=True)
     return c
 
 
@@ -77,24 +77,23 @@ def mux(w):
     -------
     a `CircuitGraph` mux.
     &#34;&#34;&#34;
-    c = Circuit(name=&#39;mux&#39;)
+    c = Circuit(name=&#34;mux&#34;)
 
     # create inputs
     for i in range(w):
-        c.add(f&#39;in_{i}&#39;, &#39;input&#39;)
+        c.add(f&#34;in_{i}&#34;, &#34;input&#34;)
     sels = []
     for i in range(clog2(w)):
-        c.add(f&#39;sel_{i}&#39;, &#39;input&#39;)
-        c.add(f&#39;not_sel_{i}&#39;, &#39;not&#39;, fanin=f&#39;sel_{i}&#39;)
-        sels.append([f&#39;not_sel_{i}&#39;, f&#39;sel_{i}&#39;])
+        c.add(f&#34;sel_{i}&#34;, &#34;input&#34;)
+        c.add(f&#34;not_sel_{i}&#34;, &#34;not&#34;, fanin=f&#34;sel_{i}&#34;)
+        sels.append([f&#34;not_sel_{i}&#34;, f&#34;sel_{i}&#34;])
 
     # create output or
-    c.add(&#39;out&#39;, &#39;or&#39;)
-    c.add(&#39;out&#39;, &#39;output&#39;, fanin=&#39;out&#39;)
+    c.add(&#34;out&#34;, &#34;or&#34;, output=True)
 
     i = 0
     for sel in product(*sels[::-1]):
-        c.add(f&#39;and_{i}&#39;, &#39;and&#39;, fanin=[*sel, f&#39;in_{i}&#39;], fanout=&#39;out&#39;)
+        c.add(f&#34;and_{i}&#34;, &#34;and&#34;, fanin=[*sel, f&#34;in_{i}&#34;], fanout=&#34;out&#34;)
 
         i += 1
         if i == w:
@@ -115,9 +114,9 @@ def popcount(w):
     -------
     a `CircuitGraph` addder.
     &#34;&#34;&#34;
-    c = Circuit(name=&#39;popcount&#39;)
-    ps = [[c.add(f&#39;in_{i}&#39;, &#39;input&#39;)] for i in range(w)]
-    c.add(&#39;null&#39;, &#39;0&#39;)
+    c = Circuit(name=&#34;popcount&#34;)
+    ps = [[c.add(f&#34;in_{i}&#34;, &#34;input&#34;)] for i in range(w)]
+    c.add(&#34;null&#34;, &#34;0&#34;)
 
     i = 0
     while len(ps) &gt; 1:
@@ -128,27 +127,72 @@ def popcount(w):
         # pad
         aw = max(len(ns), len(ms))
         while len(ms) &lt; aw:
-            ms += [&#39;null&#39;]
+            ms += [&#34;null&#34;]
         while len(ns) &lt; aw:
-            ns += [&#39;null&#39;]
+            ns += [&#34;null&#34;]
 
         # instantiate and connect adder
         a = adder(aw).strip_io()
-        c.extend(a.relabel({n: f&#39;add_{i}_{n}&#39; for n in a.nodes()}))
+        c.extend(a.relabel({n: f&#34;add_{i}_{n}&#34; for n in a.nodes()}))
         for j, (n, m) in enumerate(zip(ns, ms)):
-            c.connect(n, f&#39;add_{i}_a_{j}&#39;)
-            c.connect(m, f&#39;add_{i}_b_{j}&#39;)
+            c.connect(n, f&#34;add_{i}_a_{j}&#34;)
+            c.connect(m, f&#34;add_{i}_b_{j}&#34;)
 
         # add adder outputs
-        ps.append([f&#39;add_{i}_out_{j}&#39; for j in range(aw+1)])
+        ps.append([f&#34;add_{i}_out_{j}&#34; for j in range(aw + 1)])
         i += 1
 
     # connect outputs
     for i, o in enumerate(ps[0]):
-        c.add(f&#39;out_{i}&#39;, &#39;buf&#39;, fanin=o)
-        c.add(f&#39;out_{i}&#39;, &#39;output&#39;, fanin=f&#39;out_{i}&#39;)
+        c.add(f&#34;out_{i}&#34;, &#34;buf&#34;, fanin=o, output=True)
 
-    return c</code></pre>
+    return c
+
+def comb_lat():
+    lm = Circuit(name=&#39;lat&#39;)
+
+    # mux
+    m = logic.mux(2).strip_io()
+    lm.extend(m.relabel({n: f&#39;mux_{n}&#39; for n in m.nodes()}))
+
+    # inputs
+    lm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
+    lm.add(&#34;d&#34;, &#34;input&#34;, fanout=&#34;mux_in_1&#34;)
+    lm.add(&#34;clk&#34;, &#34;input&#34;, fanout=&#34;mux_sel_0&#34;)
+    lm.add(&#34;r&#34;, &#34;input&#34;)
+    lm.add(&#34;s&#34;, &#34;input&#34;)
+
+    # logic
+    lm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
+    lm.add_node(&#34;qr&#34;, gate=&#34;and&#34;, fanin=[&#34;mux_out&#34;,&#34;r_b&#34;])
+    lm.add_node(&#34;q&#34;, gate=&#34;or&#34;, fanin=[&#34;qr&#34;,&#34;s&#34;],
+                output=True)
+    lm.add_node(&#34;so&#34;, gate=&#34;buf&#34;, fanin=&#34;q&#34;, output=True)
+
+    return lm
+
+def comb_ff():
+    lm = Circuit(name=&#39;ff&#39;)
+
+    # mux
+    m = logic.mux(2).strip_io()
+    lm.extend(m.relabel({n: f&#39;mux_{n}&#39; for n in m.nodes()}))
+
+    # inputs
+    lm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
+    lm.add(&#34;d&#34;, &#34;input&#34;, fanout=&#34;mux_in_1&#34;)
+    lm.add(&#34;clk&#34;, &#34;input&#34;, fanout=&#34;mux_sel_0&#34;)
+    lm.add(&#34;r&#34;, &#34;input&#34;)
+    lm.add(&#34;s&#34;, &#34;input&#34;)
+
+    # logic
+    lm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
+    lm.add_node(&#34;qr&#34;, gate=&#34;and&#34;, fanin=[&#34;mux_out&#34;,&#34;r_b&#34;])
+    lm.add_node(&#34;q&#34;, gate=&#34;or&#34;, fanin=[&#34;qr&#34;,&#34;s&#34;],
+                output=True)
+    lm.add_node(&#34;so&#34;, gate=&#34;buf&#34;, fanin=&#34;q&#34;, output=True)
+
+    return lm</code></pre>
 </details>
 </section>
 <section>
@@ -183,25 +227,91 @@ def popcount(w):
     -------
     a `CircuitGraph` addder.
     &#34;&#34;&#34;
-    c = Circuit(name=&#39;adder&#39;)
-    carry = c.add(&#39;null&#39;, &#39;0&#39;)
+    c = Circuit(name=&#34;adder&#34;)
+    carry = c.add(&#34;null&#34;, &#34;0&#34;)
     for i in range(w):
         # sum
-        c.add(f&#39;a_{i}&#39;, &#39;input&#39;)
-        c.add(f&#39;b_{i}&#39;, &#39;input&#39;)
-        c.add(f&#39;out_{i}&#39;, &#39;xor&#39;, fanin=[f&#39;a_{i}&#39;, f&#39;b_{i}&#39;, carry])
-        c.add(f&#39;out_{i}&#39;, &#39;output&#39;, fanin=f&#39;out_{i}&#39;)
+        c.add(f&#34;a_{i}&#34;, &#34;input&#34;)
+        c.add(f&#34;b_{i}&#34;, &#34;input&#34;)
+        c.add(f&#34;out_{i}&#34;, &#34;xor&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;, carry],
+              output=True)
 
         # carry
-        c.add(f&#39;and_ab_{i}&#39;, &#39;and&#39;, fanin=[f&#39;a_{i}&#39;, f&#39;b_{i}&#39;])
-        c.add(f&#39;and_ac_{i}&#39;, &#39;and&#39;, fanin=[f&#39;a_{i}&#39;, carry])
-        c.add(f&#39;and_bc_{i}&#39;, &#39;and&#39;, fanin=[f&#39;b_{i}&#39;, carry])
-        carry = c.add(f&#39;carry_{i}&#39;, &#39;or&#39;, fanin=[
-                      f&#39;and_ab_{i}&#39;, f&#39;and_ac_{i}&#39;, f&#39;and_bc_{i}&#39;, ])
+        c.add(f&#34;and_ab_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;])
+        c.add(f&#34;and_ac_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, carry])
+        c.add(f&#34;and_bc_{i}&#34;, &#34;and&#34;, fanin=[f&#34;b_{i}&#34;, carry])
+        carry = c.add(
+            f&#34;carry_{i}&#34;, &#34;or&#34;, fanin=[f&#34;and_ab_{i}&#34;, f&#34;and_ac_{i}&#34;, f&#34;and_bc_{i}&#34;,]
+        )
 
-    c.add(f&#39;out_{w}&#39;, &#39;buf&#39;, fanin=carry)
-    c.add(f&#39;out_{w}&#39;, &#39;output&#39;, fanin=f&#39;out_{w}&#39;)
+    c.add(f&#34;out_{w}&#34;, &#34;buf&#34;, fanin=carry, output=True)
     return c</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.logic.comb_ff"><code class="name flex">
+<span>def <span class="ident">comb_ff</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def comb_ff():
+    lm = Circuit(name=&#39;ff&#39;)
+
+    # mux
+    m = logic.mux(2).strip_io()
+    lm.extend(m.relabel({n: f&#39;mux_{n}&#39; for n in m.nodes()}))
+
+    # inputs
+    lm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
+    lm.add(&#34;d&#34;, &#34;input&#34;, fanout=&#34;mux_in_1&#34;)
+    lm.add(&#34;clk&#34;, &#34;input&#34;, fanout=&#34;mux_sel_0&#34;)
+    lm.add(&#34;r&#34;, &#34;input&#34;)
+    lm.add(&#34;s&#34;, &#34;input&#34;)
+
+    # logic
+    lm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
+    lm.add_node(&#34;qr&#34;, gate=&#34;and&#34;, fanin=[&#34;mux_out&#34;,&#34;r_b&#34;])
+    lm.add_node(&#34;q&#34;, gate=&#34;or&#34;, fanin=[&#34;qr&#34;,&#34;s&#34;],
+                output=True)
+    lm.add_node(&#34;so&#34;, gate=&#34;buf&#34;, fanin=&#34;q&#34;, output=True)
+
+    return lm</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.logic.comb_lat"><code class="name flex">
+<span>def <span class="ident">comb_lat</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def comb_lat():
+    lm = Circuit(name=&#39;lat&#39;)
+
+    # mux
+    m = logic.mux(2).strip_io()
+    lm.extend(m.relabel({n: f&#39;mux_{n}&#39; for n in m.nodes()}))
+
+    # inputs
+    lm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
+    lm.add(&#34;d&#34;, &#34;input&#34;, fanout=&#34;mux_in_1&#34;)
+    lm.add(&#34;clk&#34;, &#34;input&#34;, fanout=&#34;mux_sel_0&#34;)
+    lm.add(&#34;r&#34;, &#34;input&#34;)
+    lm.add(&#34;s&#34;, &#34;input&#34;)
+
+    # logic
+    lm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
+    lm.add_node(&#34;qr&#34;, gate=&#34;and&#34;, fanin=[&#34;mux_out&#34;,&#34;r_b&#34;])
+    lm.add_node(&#34;q&#34;, gate=&#34;or&#34;, fanin=[&#34;qr&#34;,&#34;s&#34;],
+                output=True)
+    lm.add_node(&#34;so&#34;, gate=&#34;buf&#34;, fanin=&#34;q&#34;, output=True)
+
+    return lm</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.logic.mux"><code class="name flex">
@@ -229,24 +339,23 @@ def popcount(w):
     -------
     a `CircuitGraph` mux.
     &#34;&#34;&#34;
-    c = Circuit(name=&#39;mux&#39;)
+    c = Circuit(name=&#34;mux&#34;)
 
     # create inputs
     for i in range(w):
-        c.add(f&#39;in_{i}&#39;, &#39;input&#39;)
+        c.add(f&#34;in_{i}&#34;, &#34;input&#34;)
     sels = []
     for i in range(clog2(w)):
-        c.add(f&#39;sel_{i}&#39;, &#39;input&#39;)
-        c.add(f&#39;not_sel_{i}&#39;, &#39;not&#39;, fanin=f&#39;sel_{i}&#39;)
-        sels.append([f&#39;not_sel_{i}&#39;, f&#39;sel_{i}&#39;])
+        c.add(f&#34;sel_{i}&#34;, &#34;input&#34;)
+        c.add(f&#34;not_sel_{i}&#34;, &#34;not&#34;, fanin=f&#34;sel_{i}&#34;)
+        sels.append([f&#34;not_sel_{i}&#34;, f&#34;sel_{i}&#34;])
 
     # create output or
-    c.add(&#39;out&#39;, &#39;or&#39;)
-    c.add(&#39;out&#39;, &#39;output&#39;, fanin=&#39;out&#39;)
+    c.add(&#34;out&#34;, &#34;or&#34;, output=True)
 
     i = 0
     for sel in product(*sels[::-1]):
-        c.add(f&#39;and_{i}&#39;, &#39;and&#39;, fanin=[*sel, f&#39;in_{i}&#39;], fanout=&#39;out&#39;)
+        c.add(f&#34;and_{i}&#34;, &#34;and&#34;, fanin=[*sel, f&#34;in_{i}&#34;], fanout=&#34;out&#34;)
 
         i += 1
         if i == w:
@@ -280,9 +389,9 @@ def popcount(w):
     -------
     a `CircuitGraph` addder.
     &#34;&#34;&#34;
-    c = Circuit(name=&#39;popcount&#39;)
-    ps = [[c.add(f&#39;in_{i}&#39;, &#39;input&#39;)] for i in range(w)]
-    c.add(&#39;null&#39;, &#39;0&#39;)
+    c = Circuit(name=&#34;popcount&#34;)
+    ps = [[c.add(f&#34;in_{i}&#34;, &#34;input&#34;)] for i in range(w)]
+    c.add(&#34;null&#34;, &#34;0&#34;)
 
     i = 0
     while len(ps) &gt; 1:
@@ -293,25 +402,24 @@ def popcount(w):
         # pad
         aw = max(len(ns), len(ms))
         while len(ms) &lt; aw:
-            ms += [&#39;null&#39;]
+            ms += [&#34;null&#34;]
         while len(ns) &lt; aw:
-            ns += [&#39;null&#39;]
+            ns += [&#34;null&#34;]
 
         # instantiate and connect adder
         a = adder(aw).strip_io()
-        c.extend(a.relabel({n: f&#39;add_{i}_{n}&#39; for n in a.nodes()}))
+        c.extend(a.relabel({n: f&#34;add_{i}_{n}&#34; for n in a.nodes()}))
         for j, (n, m) in enumerate(zip(ns, ms)):
-            c.connect(n, f&#39;add_{i}_a_{j}&#39;)
-            c.connect(m, f&#39;add_{i}_b_{j}&#39;)
+            c.connect(n, f&#34;add_{i}_a_{j}&#34;)
+            c.connect(m, f&#34;add_{i}_b_{j}&#34;)
 
         # add adder outputs
-        ps.append([f&#39;add_{i}_out_{j}&#39; for j in range(aw+1)])
+        ps.append([f&#34;add_{i}_out_{j}&#34; for j in range(aw + 1)])
         i += 1
 
     # connect outputs
     for i, o in enumerate(ps[0]):
-        c.add(f&#39;out_{i}&#39;, &#39;buf&#39;, fanin=o)
-        c.add(f&#39;out_{i}&#39;, &#39;output&#39;, fanin=f&#39;out_{i}&#39;)
+        c.add(f&#34;out_{i}&#34;, &#34;buf&#34;, fanin=o, output=True)
 
     return c</code></pre>
 </details>
@@ -324,8 +432,7 @@ def popcount(w):
 <nav id="sidebar">
 <header>
 <img src="circuitgraph.png" alt="">
-<script async defer src="https://buttons.github.io/buttons.js"></script>
-<a class="github-button" href="https://github.com/circuitgraph/circuigraph" aria-label="Star circuitgraph/circuigraph on GitHub">Star</a>
+<a class="github-button" href="https://github.com/circuitgraph/circuitgraph">GitHub</a>
 </header>
 <h1>Index</h1>
 <div class="toc">
@@ -340,6 +447,8 @@ def popcount(w):
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="circuitgraph.logic.adder" href="#circuitgraph.logic.adder">adder</a></code></li>
+<li><code><a title="circuitgraph.logic.comb_ff" href="#circuitgraph.logic.comb_ff">comb_ff</a></code></li>
+<li><code><a title="circuitgraph.logic.comb_lat" href="#circuitgraph.logic.comb_lat">comb_lat</a></code></li>
 <li><code><a title="circuitgraph.logic.mux" href="#circuitgraph.logic.mux">mux</a></code></li>
 <li><code><a title="circuitgraph.logic.popcount" href="#circuitgraph.logic.popcount">popcount</a></code></li>
 </ul>
@@ -348,7 +457,7 @@ def popcount(w):
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
 </footer>
 </body>
 </html>

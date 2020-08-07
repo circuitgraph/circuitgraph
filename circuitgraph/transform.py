@@ -409,7 +409,7 @@ def sensitize(c, n):
     return m
 
 
-def mphf(w=30, n=800):
+def mphf(w=50, n=8000):
     """
     Creates a SAT-hard circuit based on the structure of minimum perfect hash
     functions.

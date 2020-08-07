@@ -72,11 +72,6 @@ class TestSat(unittest.TestCase):
             )
         )
 
-        # timeout test
-        c = mphf()
-        with self.assertRaises(TimeoutError):
-            print(sat(c, assumptions={"sat": True}, timeout=1))
-
     def test_model_count(self):
         # allow 3 inputs free
         startpoints = self.s27.startpoints()

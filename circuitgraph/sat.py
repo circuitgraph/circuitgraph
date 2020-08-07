@@ -9,26 +9,8 @@ from subprocess import PIPE, run
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Cadical
 
-
-class Timeout:
-    """Class to handle timeout for SAT executions"""
-
-    def __init__(self, seconds=1, error_message="Timeout"):
-        self.seconds = seconds
-        self.error_message = error_message
-
-    def handle_timeout(self, signum, frame):
-        raise TimeoutError(self.error_message)
-
-    def __enter__(self):
-        if self.seconds:
-            signal.signal(signal.SIGALRM, self.handle_timeout)
-            signal.alarm(self.seconds)
-
-    def __exit__(self, type, value, traceback):
-        if self.seconds:
-            signal.alarm(0)
-
+def interrupt(s):
+    s.interrupt()
 
 def add_assumptions(formula, variables, assumptions):
     for n, val in assumptions.items():
@@ -154,7 +136,7 @@ def cnf(c):
         elif c.type(n) == "1":
             formula.append([variables.id(n)])
         elif c.type(n) in ["ff", "lat", "input"]:
-            pass
+            formula.append([variables.id(n),-variables.id(n)])
         else:
             print(f"unknown gate type: {c.type(n)}")
             code.interact(local=dict(globals(), **locals()))
@@ -162,7 +144,7 @@ def cnf(c):
     return formula, variables
 
 
-def sat(c, assumptions=None, timeout=None):
+def sat(c, assumptions=None):
     """
     Trys to find satisfying assignment, with optional assumptions
 
@@ -172,8 +154,6 @@ def sat(c, assumptions=None, timeout=None):
             Input circuit.
     assumptions : dict of str:int
             Nodes to assume True or False.
-    timeout : int
-            Seconds until timeout.
 
     Returns
     -------
@@ -198,15 +178,14 @@ def sat(c, assumptions=None, timeout=None):
 
     """
     solver, variables = construct_solver(c, assumptions)
-    with Timeout(seconds=timeout):
-        if solver.solve():
-            model = solver.get_model()
-            return {n: model[variables.id(n) - 1] > 0 for n in c.nodes()}
-        else:
-            return False
+    if solver.solve():
+        model = solver.get_model()
+        return {n: model[variables.id(n) - 1] > 0 for n in c.nodes()}
+    else:
+        return False
 
 
-def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
+def approx_model_count(c, assumptions=None, e=0.9, d=0.1):
     """
     Approximates the number of solutions to circuit
 
@@ -220,8 +199,6 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
             epsilon of approxmc
     d : float (0-1)
             delta of approxmc
-    timeout : int
-            Seconds until timeout.
 
     Returns
     -------
@@ -249,8 +226,7 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
 
         # run approxmc
         cmd = f"approxmc --epsilon={e} --delta={d} {tmp.name}".split()
-        with Timeout(seconds=timeout):
-            result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
 
     # parse results
     m = re.search(r"Number of solutions is: (\d+) x 2\^(\d+)", result.stdout)
@@ -258,7 +234,7 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
     return estimate
 
 
-def model_count(c, assumptions=None, timeout=None):
+def model_count(c, assumptions=None):
     """
     Determines the number of solutions to circuit
 
@@ -268,8 +244,6 @@ def model_count(c, assumptions=None, timeout=None):
             Input circuit.
     assumptions : dict of str:int
             Nodes to assume True or False.
-    timeout : int
-            Seconds until timeout.
 
     Returns
     -------
@@ -279,12 +253,11 @@ def model_count(c, assumptions=None, timeout=None):
 
     startpoints = c.startpoints()
     solver, variables = construct_solver(c, assumptions)
-    with Timeout(seconds=timeout):
-        count = 0
-        while solver.solve():
-            model = solver.get_model()
-            solver.add_clause([-model[variables.id(n) - 1] for n in startpoints])
-            count += 1
+    count = 0
+    while solver.solve():
+        model = solver.get_model()
+        solver.add_clause([-model[variables.id(n) - 1] for n in startpoints])
+        count += 1
 
     return count
 
