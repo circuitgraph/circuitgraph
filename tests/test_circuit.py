@@ -96,7 +96,6 @@ class TestCircuit(unittest.TestCase):
         self.assertRaises(KeyError, s27_c.d, ["test_node", "G5"])
         self.assertRaises(KeyError, s27_c.clk, ["test_node", "G5"])
 
-    # TODO
     def test_seq_graph(self):
         g = self.s27.seq_graph()
         self.assertSetEqual(
