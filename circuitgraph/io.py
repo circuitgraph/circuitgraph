@@ -2,6 +2,7 @@
 
 import re
 import os
+from glob import glob
 
 from pyeda.parsing import boolexpr
 
@@ -60,11 +61,17 @@ def from_file(path, name=None, seq_types=None):
     Circuit
             the parsed circuit.
     """
+    ext = path.split(".")[-1]
     if name is None:
-        name = path.split("/")[-1].replace(".v", "")
+        name = path.split("/")[-1].replace(f".{ext}", "")
     with open(path, "r") as f:
-        verilog = f.read()
-    return verilog_to_circuit(verilog, name, seq_types)
+        netlist = f.read()
+    if ext == 'v':
+        return verilog_to_circuit(netlist, name, seq_types)
+    elif ext == 'bench':
+        return bench_to_circuit(netlist, name)
+    else:
+        raise ValueError(f"extension {ext} not supported")
 
 
 def from_lib(circuit, name=None):
@@ -82,9 +89,50 @@ def from_lib(circuit, name=None):
     Circuit
             the parsed circuit.
     """
-    path = f"{os.path.dirname(__file__)}/../netlists/{circuit}.v"
+    path = glob(f"{os.path.dirname(__file__)}/../netlists/{circuit}.*")[0]
     return from_file(path, name)
 
+def bench_to_circuit(bench, name):
+    """
+    Creates a new Circuit from a bench string.
+
+    Parameters
+    ----------
+    bench: str
+            bench code.
+    name: str
+            the module name.
+
+    Returns
+    -------
+    Circuit
+            the parsed circuit.
+    """
+    # create circuit
+    c = Circuit(name=name)
+
+    # get inputs
+    in_regex = r"(?:INPUT|input)\s*\((.+?)\)"
+    for net_str in re.findall(in_regex, bench, re.DOTALL):
+        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
+        for n in nets:
+            c.add(n, "input")
+
+    # handle gates
+    regex = r"(\S+)\s*=\s*(NOT|OR|NOR|AND|NAND|XOR|XNOR|not|or|nor|and|nand|not|xor|xnor)\((.+?)\)"
+    for net, gate, input_str in re.findall(regex, bench):
+        # parse all nets
+        inputs = input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
+        c.add(net, gate.lower(), fanin=inputs)
+
+    # get outputs
+    in_regex = r"(?:OUTPUT|output)\s*\((.+?)\)"
+    for net_str in re.findall(in_regex, bench, re.DOTALL):
+        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
+        for n in nets:
+            c.set_output(n)
+
+    return c
 
 def verilog_to_circuit(verilog, name, seq_types=None):
     """

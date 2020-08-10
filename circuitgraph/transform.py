@@ -306,7 +306,7 @@ def unroll(c, cycles):
     return u
 
 
-def sensitivity(c, n):
+def sensitivity(c, n, startpoints=None):
     """
     Creates a circuit to compute sensitivity.
 
@@ -316,6 +316,8 @@ def sensitivity(c, n):
             Sequential circuit to unroll.
     n : str
             Node to compute sensitivity at.
+    startpoints : iterable of str
+            startpoints of n to flip.
 
     Returns
     -------
@@ -323,58 +325,53 @@ def sensitivity(c, n):
             Sensitivity circuit.
 
     """
+    # choose all startpoints if not specified
+    if startpoints is None:
+        startpoints = c.startpoints(n)
+    all_startpoints = c.startpoints(n)
 
     # get fanin cone of node
     if n in c.startpoints():
         raise ValueError(f"{n} is in startpoints")
 
+    # get input cone
     fiNodes = c.transitive_fanin(n) | set([n])
-    startpoints = c.startpoints(n)
-    subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
+    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
 
-    # convert outputs to buffers
-    for o in subCircuit.outputs():
-        subCircuit.set_output(o,False)
-
-    # convert startpoints to inputs
-    for s in subCircuit.startpoints():
-        subCircuit.graph.nodes[s]["type"] = "input"
-        subCircuit.graph.remove_edges_from(
-            (p, s) for p in list(subCircuit.graph.predecessors(s))
-        )
+    # remove outs, convert startpoints
+    sub_c.set_output(sub_c.outputs(),False)
+    sub_c.set_type(sub_c.startpoints(),'input')
 
     # create sensitivity circuit and add first copy of subcircuit
-    sensitivityCircuit = Circuit()
-    sensitivityCircuit.extend(subCircuit)
+    sen = Circuit()
+    sen.extend(sub_c)
 
     # instantiate population count
-
     p = popcount(len(startpoints)).strip_io()
     p = p.relabel({g: f"pop_{g}" for g in p})
-    sensitivityCircuit.extend(p)
+    sen.extend(p)
     for o in range(clog2(len(startpoints))):
-        sensitivityCircuit.add(f"out_{o}", "buf", fanin=f"pop_out_{o}",
+        sen.add(f"out_{o}", "buf", fanin=f"pop_out_{o}",
                                output=True)
 
     # stamp out a copies of the circuit with s inverted
     for i, s in enumerate(startpoints):
         mapping = {
-            g: f"sen_{s}_{g}" for g in subCircuit if g not in startpoints - set([s])
+            g: f"sen_{s}_{g}" for g in sub_c if g not in all_startpoints - set([s])
         }
-        relabeledSubCircuit = subCircuit.relabel(mapping)
-        sensitivityCircuit.extend(relabeledSubCircuit)
+        sen.extend(sub_c.relabel(mapping))
 
         # connect inverted input
-        sensitivityCircuit.graph.nodes[f"sen_{s}_{s}"]["type"] = "not"
-        sensitivityCircuit.graph.add_edge(s, f"sen_{s}_{s}")
+        sen.set_type(f"sen_{s}_{s}", "not")
+        sen.connect(s, f"sen_{s}_{s}")
 
         # compare to first copy
-        sensitivityCircuit.add(
+        sen.add(
             f"difference_{s}", "xor", fanin=[n, f"sen_{s}_{n}"],
             fanout=f"pop_in_{i}",output=True
         )
 
-    return sensitivityCircuit
+    return sen
 
 
 def sensitize(c, n):
