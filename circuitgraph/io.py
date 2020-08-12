@@ -201,7 +201,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
     # handle assign statements (with help from pyeda)
     assign_regex = r"assign\s+(.+?)\s*=\s*(.+?);"
     for dest, expr in re.findall(assign_regex, module, re.DOTALL):
-        parse_ast(boolexpr.parse(expr), c, dest)
+        c.add(dest,'buf',fanin=parse_ast(boolexpr.parse(expr), c))
 
     # get outputs
     out_regex = r"output\s(.+?);"
@@ -222,18 +222,14 @@ def verilog_to_circuit(verilog, name, seq_types=None):
     return c
 
 
-def parse_ast(ast, g, dest, level=0):
+def parse_ast(ast, g):
     if ast[0] == "var":
         return ast[1][0]
     else:
-        if level == 0:
-            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]]
-            g.add(dest, ast[0], fanin=fanin)
-        else:
-            fanin = [parse_ast(a, g, dest, level + 1) for a in ast[1:]]
-            name = f"{ast[0]}_{'_'.join(fanin)}"
-            g.add(name, ast[0], fanin=fanin)
-            return name
+        fanin = [parse_ast(a, g) for a in ast[1:]]
+        name = f"{ast[0]}_{'_'.join(fanin)}"
+        g.add(name, ast[0], fanin=fanin)
+        return name
 
 
 def to_file(c, path, seq_types=None):

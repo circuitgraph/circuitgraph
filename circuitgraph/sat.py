@@ -185,7 +185,7 @@ def sat(c, assumptions=None):
         return False
 
 
-def approx_model_count(c, assumptions=None, e=0.9, d=0.1):
+def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
     """
     Approximates the number of solutions to circuit
 
@@ -195,6 +195,8 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1):
             Input circuit.
     assumptions : dict of str:int
             Nodes to assume True or False.
+    startpoints : iter of str
+            Startpoints to use for approxmc
     e : float (0-1)
             epsilon of approxmc
     d : float (0-1)
@@ -206,11 +208,14 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1):
             Estimate.
     """
 
+    if startpoints is None:
+        startpoints = c.startpoints()
+
     formula, variables = cnf(c)
     add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
-    enc_inps = " ".join([str(variables.id(n)) for n in c.startpoints()])
+    enc_inps = " ".join([str(variables.id(n)) for n in startpoints])
 
     # write dimacs to tmp
     with tempfile.NamedTemporaryFile() as tmp:
