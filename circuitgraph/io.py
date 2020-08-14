@@ -5,6 +5,8 @@ import os
 from glob import glob
 
 from pyeda.parsing import boolexpr
+import pyverilog
+from pyverilog.vparser.parser import parse
 
 from circuitgraph import Circuit
 
@@ -116,7 +118,7 @@ def from_file(path, name=None, seq_types=None):
     with open(path, "r") as f:
         netlist = f.read()
     if ext == "v":
-        return verilog_to_circuit(netlist, name, seq_types)
+        return verilog_to_circuit(path, name, seq_types)
     elif ext == "bench":
         return bench_to_circuit(netlist, name)
     else:
@@ -187,14 +189,14 @@ def bench_to_circuit(bench, name):
     return c
 
 
-def verilog_to_circuit(verilog, name, seq_types=None):
+def verilog_to_circuit(path, name, seq_types=None):
     """
-    Creates a new Circuit from a verilog string.
+    Creates a new Circuit from a verilog file.
 
     Parameters
     ----------
-    verilog: str
-            verilog code.
+    path: str
+            path to the verilog file.
     name: str
             the module name.
     seq_types: list of dicts of str:str
@@ -208,82 +210,68 @@ def verilog_to_circuit(verilog, name, seq_types=None):
     if seq_types is None:
         seq_types = default_seq_types
 
-    # extract module
-    regex = rf"module\s+{name}\s*\(.*?\);(.*?)endmodule"
-    m = re.search(regex, verilog, re.DOTALL)
-    module = m.group(1)
+    def sanitize_argname(argname):
+        if type(argname) == pyverilog.vparser.ast.Pointer:
+            return f"{argname.var}[{argname.ptr}]"
+        return argname.name
 
-    # create circuit
     c = Circuit(name=name)
 
-    # get inputs
-    in_regex = r"input\s(.+?);"
-    for net_str in re.findall(in_regex, module, re.DOTALL):
-        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
-        for n in nets:
-            c.add(n, "input")
-
-    # handle gates
-    regex = r"(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);"
-    for gate, net_str in re.findall(regex, module, re.DOTALL):
-        # parse all nets
-        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
-        c.add(nets[0], gate, fanin=nets[1:])
-
-    # handle seq
-    for st in seq_types:
-        # find matching insts
-        regex = rf"{st.name}\s+[^\s(]+\s*\((.+?)\);"
-        for io in re.findall(regex, module, re.DOTALL):
-            # find matching pins
-            pins = {}
-            for typ, name in st.io.items():
-                regex = rf".{name}\s*\((.+?)\)"
-                n = re.findall(regex, io, re.DOTALL)[0]
-                pins[typ] = n
-            if pins.get("d") == None:
-                print(pins)
-            c.add(
-                pins.get("q", None),
-                st.seq_type,
-                fanin=pins.get("d", None),
-                clk=pins.get("clk", None),
-                r=pins.get("r", None),
-                s=pins.get("s", None),
-            )
-
-    # handle assign statements (with help from pyeda)
-    assign_regex = r"assign\s+(.+?)\s*=\s*(.+?);"
-    for dest, expr in re.findall(assign_regex, module, re.DOTALL):
-        c.add(dest,'buf',fanin=parse_ast(boolexpr.parse(expr), c))
-
-    # get outputs
-    out_regex = r"output\s(.+?);"
-    for net_str in re.findall(out_regex, module, re.DOTALL):
-        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
-        c.set_output(nets)
-
-    # assign constant types
-    for n in c:
-        if "type" not in c.graph.nodes[n]:
-            if n == "1'b0":
-                c.add(n, "0")
-            elif n == "1'b1":
-                c.add(n, "1")
-            else:
-                raise ValueError(f"node {n} does not have a type")
+    ast, directives = parse([path])
+    description = ast.children()[0]
+    # FIXME: Parse multiple modules in one file
+    module_def = [d for d in description.children() if d.name == name][0]
+    outputs = set()
+    widths = dict()
+    # FIXME: Parse input/output decl in portlist
+    for child in module_def.children():
+        if type(child) == pyverilog.vparser.ast.Decl:
+            for ci in child.children():
+                if ci.width:
+                    widths[ci.name] = (int(ci.width.lsb.value), int(ci.width.msb.value))
+                else:
+                    widths[ci.name] = None
+                if type(ci) == pyverilog.vparser.ast.Input:
+                    # Parse bus
+                    if ci.width:
+                        for i in range(
+                            int(ci.width.lsb.value), int(ci.width.msb.value) + 1
+                        ):
+                            c.add(f"{ci.name}[{i}]", "input")
+                    else:
+                        c.add(ci.name, "input")
+                elif type(ci) == pyverilog.vparser.ast.Output:
+                    outputs.add(ci.name)
+        # FIXME: Parse instance arrays
+        elif type(child) == pyverilog.vparser.ast.InstanceList:
+            for instance in child.instances:
+                gate = instance.module
+                dest = sanitize_argname(instance.portlist[0].argname)
+                sources = [sanitize_argname(i.argname) for i in instance.portlist[1:]]
+                c.add(dest, gate, fanin=sources, output=dest in outputs)
+        elif type(child) == pyverilog.vparser.ast.Assign:
+            dest = child.left.var
+            if type(dest) == pyverilog.vparser.ast.Identifier:
+                dest = dest.name
+            if issubclass(type(child.right.var), pyverilog.vparser.ast.Operator):
+                parse_operator(child.right.var, c, dest=dest)
+                break
+            # TODO
 
     return c
 
 
-def parse_ast(ast, g):
-    if ast[0] == "var":
-        return ast[1][0]
-    else:
-        fanin = [parse_ast(a, g) for a in ast[1:]]
-        name = f"{ast[0]}_{'_'.join(fanin)}"
-        g.add(name, ast[0], fanin=fanin)
-        return name
+def parse_operator(operator, circuit, dest=None):
+    if type(operator) == pyverilog.vparser.ast.Identifier:
+        return operator.name
+    elif type(operator) == pyverilog.vparser.ast.Pointer:
+        return f"{operator.var}[{operator.ptr}]"
+    fanin = [parse_operator(o, circuit) for o in operator.children()]
+    op = str(operator)[1:].split()[0].lower()
+    if dest is None:
+        dest = f"{op}_{'_'.join(fanin)}"
+    circuit.add(dest, op, fanin=fanin)
+    return dest
 
 
 def to_file(c, path, seq_types=None):
