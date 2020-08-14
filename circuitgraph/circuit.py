@@ -220,14 +220,17 @@ class Circuit:
 
         if types is None and output is None:
             return set(self.graph.nodes)
-            #return set(n for n in self.graph.nodes)
+            # return set(n for n in self.graph.nodes)
         elif types is None:
             return set(n for n in self.nodes() if self.output(n) == output)
         elif output is None:
             return set(n for n in self.nodes() if self.type(n) in types)
         else:
-            return set(n for n in self.nodes()
-                    if self.type(n) in types and self.output(n) == output)
+            return set(
+                n
+                for n in self.nodes()
+                if self.type(n) in types and self.output(n) == output
+            )
 
     def is_cyclic(self):
         """
@@ -262,7 +265,9 @@ class Circuit:
         """
         return self.graph.edges
 
-    def add(self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None, output=False):
+    def add(
+        self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None, output=False
+    ):
         """
         Adds a new node to the circuit, optionally connecting it
 
@@ -318,13 +323,13 @@ class Circuit:
             fanout = [fanout]
 
         # raise error for invalid inputs
-        if len(fanin)>1 and type in ["ff", "lat", "buf", "not"]:
+        if len(fanin) > 1 and type in ["ff", "lat", "buf", "not"]:
             raise ValueError(f"{type} cannot have more than one fanin")
         if fanin and type in ["0", "1", "input"]:
             raise ValueError(f"{type} cannot have fanin")
 
         # add node
-        self.graph.add_node(n, type=type,r=r,s=s,clk=clk,output=output)
+        self.graph.add_node(n, type=type, r=r, s=s, clk=clk, output=output)
 
         # connect
         self.graph.add_edges_from((n, f) for f in fanout)
@@ -367,7 +372,7 @@ class Circuit:
         """
         g = self.graph.copy()
         for o in self.outputs():
-            g.nodes[o]['output'] = False
+            g.nodes[o]["output"] = False
         for i in self.inputs():
             g.nodes[i]["type"] = "buf"
 
@@ -426,7 +431,9 @@ class Circuit:
         """
         return Circuit(graph=nx.relabel_nodes(self.graph, mapping), name=self.name)
 
-    def transitive_fanout(self, ns, stopatTypes=["ff", "lat"], stopatNodes=[], gates=None):
+    def transitive_fanout(
+        self, ns, stopatTypes=["ff", "lat"], stopatNodes=[], gates=None
+    ):
         """
         Computes the transitive fanout of a node.
 
@@ -574,7 +581,9 @@ class Circuit:
             if self.type(f) in ["ff", "lat"] or f in visited:
                 depths.add(depth)
             else:
-                depths.add(self.fanout_comb_depth(f, shortest, visited.copy(), depth+1))
+                depths.add(
+                    self.fanout_comb_depth(f, shortest, visited.copy(), depth + 1)
+                )
 
         return comp(depths)
 
@@ -790,7 +799,7 @@ class Circuit:
                 Output and input nodes in circuit.
 
         """
-        return self.nodes("input")|self.nodes(output=True)
+        return self.nodes("input") | self.nodes(output=True)
 
     def startpoints(self, ns=None):
         """
@@ -833,6 +842,25 @@ class Circuit:
             return self.transitive_fanout(ns) & circuit_endpoints
         else:
             return circuit_endpoints
+
+    def comb(self):
+        """
+        Creates a copy of the circuit where sequential elements are removed
+        from the circuit by making thier d ports outputs of the circuits and
+        their q ports inputs to the circuit
+
+        Returns
+        -------
+        Circuit
+            The combinational circuit.
+        """
+        c = self.copy()
+        for i in c.seq():
+            c.remove(i)
+            c.add(i, "input")
+            c.set_output(self.fanin(i).pop())
+
+        return c
 
     def seq_graph(self):
         """

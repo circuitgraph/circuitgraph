@@ -9,37 +9,86 @@ from pyeda.parsing import boolexpr
 from circuitgraph import Circuit
 
 
-# Because there are no standards for sequential elements in Verilog, it may be
-# necessary to define custom sequential types that differ from these
-# TODO: We should probably make a class for this to make it easier to define
-#       custom types
+class SequentialElement:
+    """Defines a representation of a sequential element for reading/writing
+    sequential circuits."""
+
+    def __init__(self, name, seq_type, io, code_def):
+        """
+        Parameters
+        ----------
+        name: str
+                Name of the element (the module name)
+        seq_type: str
+                The type of sequential element, either 'ff' or 'lat'
+        io: dict of str:str
+                The mapping the 'd', 'q', 'clk', and potentially 'r', 's'
+                ports to the names of the ports on the module
+        code_def:
+                The code defining the module, used for writing the circuit
+                to verilog
+        """
+        self.name = name
+        self.seq_type = seq_type
+        self.io = io
+        self.code_def = code_def
+
+
 default_seq_types = [
-    {
-        "name": "fflopd",
-        "type": "ff",
-        "io": {"d": "D", "q": "Q", "clk": "CK"},
-        "def": "module fflopd(CK, D, Q);"
-        "input CK, D;"
-        "output Q;"
-        "wire CK, D;"
-        "wire Q;"
-        "wire next_state;"
-        "reg  qi;"
-        "assign #1 Q = qi;"
-        "assign next_state = D;"
-        "always"
-        "  @(posedge CK)"
-        "    qi <= next_state;"
-        "initial"
-        "  qi <= 1'b0;"
+    SequentialElement(
+        name="fflopd",
+        seq_type="ff",
+        io={"d": "D", "q": "Q", "clk": "CK"},
+        code_def="module fflopd(CK, D, Q);\n"
+        "  input CK, D;\n"
+        "  output Q;\n"
+        "  wire CK, D;\n"
+        "  wire Q;\n"
+        "  wire next_state;\n"
+        "  reg  qi;\n"
+        "  assign #1 Q = qi;\n"
+        "  assign next_state = D;\n"
+        "  always\n"
+        "    @(posedge CK)\n"
+        "      qi <= next_state;\n"
+        "  initial\n"
+        "    qi <= 1'b0;\n"
         "endmodule",
-    },
-    {
-        "name": "latchdrs",
-        "type": "lat",
-        "io": {"d": "D", "q": "Q", "clk": "ENA", "r": "R", "s": "S"},
-        "def": "",
-    },
+    ),
+    SequentialElement(
+        name="latchdrs",
+        seq_type="lat",
+        io={"d": "D", "q": "Q", "clk": "ENA", "r": "R", "s": "S"},
+        code_def="",
+    ),
+]
+
+
+cadence_seq_types = [
+    # Note that this is a modified version of CDN_flop with only a synchronous
+    # reset that always resets to 0
+    SequentialElement(
+        name="CDN_flop",
+        seq_type="ff",
+        io={"d": "d", "q": "q", "clk": "clk", "r": "srl"},
+        code_def="module CDN_flop(clk, d, srl, q);\n"
+        "  input clk, d, srl;\n"
+        "  output q;\n"
+        "  wire clk, d, srl;\n"
+        "  wire q;\n"
+        "  reg  qi;\n"
+        "  assign #1 q = qi;\n"
+        "  always\n"
+        "    @(posedge clk)\n"
+        "      if (srl)\n"
+        "        qi <= 1'b0;\n"
+        "      else if (sena)\n"
+        "        qi <= d;\n"
+        "      end\n"
+        "  initial\n"
+        "    qi <= 1'b0;\n"
+        "endmodule",
+    )
 ]
 
 
@@ -66,9 +115,9 @@ def from_file(path, name=None, seq_types=None):
         name = path.split("/")[-1].replace(f".{ext}", "")
     with open(path, "r") as f:
         netlist = f.read()
-    if ext == 'v':
+    if ext == "v":
         return verilog_to_circuit(netlist, name, seq_types)
-    elif ext == 'bench':
+    elif ext == "bench":
         return bench_to_circuit(netlist, name)
     else:
         raise ValueError(f"extension {ext} not supported")
@@ -91,6 +140,7 @@ def from_lib(circuit, name=None):
     """
     path = glob(f"{os.path.dirname(__file__)}/../netlists/{circuit}.*")[0]
     return from_file(path, name)
+
 
 def bench_to_circuit(bench, name):
     """
@@ -122,7 +172,9 @@ def bench_to_circuit(bench, name):
     regex = r"(\S+)\s*=\s*(NOT|OR|NOR|AND|NAND|XOR|XNOR|not|or|nor|and|nand|not|xor|xnor)\((.+?)\)"
     for net, gate, input_str in re.findall(regex, bench):
         # parse all nets
-        inputs = input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
+        inputs = (
+            input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
+        )
         c.add(net, gate.lower(), fanin=inputs)
 
     # get outputs
@@ -133,6 +185,7 @@ def bench_to_circuit(bench, name):
             c.set_output(n)
 
     return c
+
 
 def verilog_to_circuit(verilog, name, seq_types=None):
     """
@@ -180,18 +233,19 @@ def verilog_to_circuit(verilog, name, seq_types=None):
     # handle seq
     for st in seq_types:
         # find matching insts
-        regex = rf"{st['name']}\s+[^\s(]+\s*\((.+?)\);"
+        regex = rf"{st.name}\s+[^\s(]+\s*\((.+?)\);"
         for io in re.findall(regex, module, re.DOTALL):
             # find matching pins
             pins = {}
-            for typ, name in st["io"].items():
+            for typ, name in st.io.items():
                 regex = rf".{name}\s*\((.+?)\)"
                 n = re.findall(regex, io, re.DOTALL)[0]
                 pins[typ] = n
-
+            if pins.get("d") == None:
+                print(pins)
             c.add(
                 pins.get("q", None),
-                st["type"],
+                st.seq_type,
                 fanin=pins.get("d", None),
                 clk=pins.get("clk", None),
                 r=pins.get("r", None),
@@ -293,9 +347,9 @@ def circuit_to_verilog(c, seq_types=None):
 
             # get template
             for s in seq_types:
-                if s["type"] == c.type(n):
+                if s.seq_type == c.type(n):
                     seq = s
-                    defs.add(s["def"])
+                    defs.add(s.code_def)
                     break
 
             # connect
