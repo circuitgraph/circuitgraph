@@ -856,6 +856,37 @@ class Circuit:
 
         return graph
 
+    def avg_sensitivity(self,n,approx=True):
+        """
+        Calculates the average sensitivity of node n with respect
+        to its startpoints.
+
+        Returns
+        -------
+        float
+                Average sensitivity of node n.
+
+        """
+        from circuitgraph.transform import influence
+        from circuitgraph.sat import approx_model_count,model_count
+
+        sp = self.startpoints(n)
+
+        avg_sen = 0
+        for s in sp:
+            # create influence circuit
+            i = influence(self, n, s)
+
+            # compute approximate influence
+            if approx:
+                mc = approx_model_count(i,{'sat':True})
+            else:
+                mc = model_count(i,{'sat':True})
+            infl = mc/(2**len(sp))
+            avg_sen += infl
+
+        return avg_sen
+
 
 def clog2(num: int) -> int:
     r"""Return the ceiling log base two of an integer :math:`\ge 1`.

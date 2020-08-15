@@ -2,6 +2,7 @@ import unittest
 
 import circuitgraph as cg
 from circuitgraph import clog2, int_to_bin
+from itertools import product
 
 
 class TestCircuit(unittest.TestCase):
@@ -218,3 +219,34 @@ class TestCircuit(unittest.TestCase):
 
     def test_int_to_bin(self):
         self.assertEqual(int_to_bin(5, 6), tuple(i == "1" for i in "000101"))
+
+    def test_avg_sensitivity(self):
+        c = cg.Circuit()
+        c.add('and','and')
+        c.add('in0','input',fanout='and')
+        c.add('in1','input',fanout='and')
+        self.assertEqual(c.avg_sensitivity('and'),1.0)
+
+        avg_sen = self.s27.avg_sensitivity('G17',approx=False)
+
+        # get startpoints of node
+        avg_sen_comp = 0
+        n = 'G17'
+        sp = self.s27.startpoints(n)
+        for s in sp:
+            # compute influence
+            infl = 0
+            for vs in product([False, True], repeat=len(sp)):
+                asmp = {i:v for i,v in zip(sp,vs)}
+                asmp_ns = {i:v if i!=s else not v for i,v in zip(sp,vs)}
+                r = cg.sat(self.s27,asmp)[n]
+                r_ns = cg.sat(self.s27,asmp_ns)[n]
+                if r!=r_ns:
+                    infl +=1
+            avg_sen_comp += infl/(2**len(sp))
+
+        self.assertEqual(avg_sen,avg_sen_comp)
+
+
+
+

@@ -306,6 +306,47 @@ def unroll(c, cycles):
     return u
 
 
+def influence(c, n, s):
+    """
+    Creates a circuit to compute sensitivity.
+
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to unroll.
+    n : str
+            Node to compute influence at.
+    s : str
+            Startpoint to compute influence for.
+
+    Returns
+    -------
+    Circuit
+            Influence circuit.
+
+    """
+    # check if s is in startpoints
+    sp = c.startpoints(n)
+    if s not in sp:
+        raise ValueError(f"{s} is not in startpoints of {n}")
+
+    # get input cone
+    fiNodes = c.transitive_fanin(n) | set([n])
+    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
+
+    # remove outs, convert startpoints
+    sub_c.set_output(sub_c.outputs(),False)
+    sub_c.set_type(sub_c.startpoints(),'input')
+
+    # create two copies of sub circuit
+    infl = Circuit(name=f'infl_{s}_on_{n}')
+    infl.extend(sub_c)
+    infl.extend(sub_c.relabel({g:f's1_{g}' for g in sub_c if g not in sp-set([s])}))
+    infl.add('sat','xor',fanin=[n,f's1_{n}'],output=True)
+    infl.add(f'not_{s}','not',fanin=s,fanout=f's1_{s}')
+
+    return infl
+
 def sensitivity(c, n, startpoints=None):
     """
     Creates a circuit to compute sensitivity.
