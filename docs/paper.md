@@ -8,12 +8,12 @@ tags:
   - electronic design automation
 authors:
 - name: Joseph Sweeney
-affiliation: 1
+  affiliation: 1
 - name: Ruben Purdy
-affiliation: 1
+  affiliation: 1
 affiliations:
 - name: Carnegie Mellon University
-index: 1
+  index: 1
 date: 13 August 2020
 bibliography: paper.bib
 
@@ -66,7 +66,7 @@ c2 = cg.from_lib('c17')
 
 A common issue found in similar tools is the poor expressivity of circuit construction 
 primitives. We aim to build a simple, but powerful syntax for creating and connecting nodes
-in a circuit. The ease of our syntax is enabled by the python language. 
+in a circuit. The ease of our syntax is enabled by the Python language. 
 An example of this syntax is below.
 
 ```python
@@ -78,7 +78,12 @@ c0.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
 ```	
 
 ## Synthesis
-
+We provide an interface to common synthesis tools including `yosys` and `Cadence Genus`. This allows 
+the user to run basic synthesis routines on circuits from within Python. 
+```python
+# synthesize circuit with yosys
+c_syn = cg.syn(c0, "Yosys")
+```	
 
 ## Satisfiability
 
@@ -97,9 +102,4 @@ cg.sat(c0,{'a':False})
 # get number of solutions to circuit with 'a' False
 cg.model_count(c0,{'a':False})
 ```	
-
-# Acknowledgements
-
-We acknowledge ...
-
 
