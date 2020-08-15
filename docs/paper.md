@@ -1,3 +1,4 @@
+---
 title: 'CircuitGraph: A Python package for Boolean circuits'
 tags:
   - Python
