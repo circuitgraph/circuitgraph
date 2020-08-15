@@ -13,13 +13,13 @@ class SequentialElement:
     """Defines a representation of a sequential element for reading/writing
     sequential circuits."""
 
-    def __init__(self, name, seq_type, io, code_def):
+    def __init__(self, name, type, io, code_def):
         """
         Parameters
         ----------
         name: str
                 Name of the element (the module name)
-        seq_type: str
+        type: str
                 The type of sequential element, either 'ff' or 'lat'
         io: dict of str:str
                 The mapping the 'd', 'q', 'clk', and potentially 'r', 's'
@@ -29,7 +29,7 @@ class SequentialElement:
                 to verilog
         """
         self.name = name
-        self.seq_type = seq_type
+        self.type = type
         self.io = io
         self.code_def = code_def
 
@@ -37,7 +37,7 @@ class SequentialElement:
 default_seq_types = [
     SequentialElement(
         name="fflopd",
-        seq_type="ff",
+        type="ff",
         io={"d": "D", "q": "Q", "clk": "CK"},
         code_def="module fflopd(CK, D, Q);\n"
         "  input CK, D;\n"
@@ -57,7 +57,7 @@ default_seq_types = [
     ),
     SequentialElement(
         name="latchdrs",
-        seq_type="lat",
+        type="lat",
         io={"d": "D", "q": "Q", "clk": "ENA", "r": "R", "s": "S"},
         code_def="",
     ),
@@ -69,7 +69,7 @@ cadence_seq_types = [
     # reset that always resets to 0
     SequentialElement(
         name="CDN_flop",
-        seq_type="ff",
+        type="ff",
         io={"d": "d", "q": "q", "clk": "clk", "r": "srl"},
         code_def="module CDN_flop(clk, d, srl, q);\n"
         "  input clk, d, srl;\n"
@@ -245,7 +245,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                 print(pins)
             c.add(
                 pins.get("q", None),
-                st.seq_type,
+                st.type,
                 fanin=pins.get("d", None),
                 clk=pins.get("clk", None),
                 r=pins.get("r", None),
@@ -343,7 +343,7 @@ def circuit_to_verilog(c, seq_types=None):
 
             # get template
             for s in seq_types:
-                if s.seq_type == c.type(n):
+                if s.type == c.type(n):
                     seq = s
                     defs.add(s.code_def)
                     break
@@ -352,18 +352,18 @@ def circuit_to_verilog(c, seq_types=None):
             io = []
             if c.d(n):
                 d = c.d(n)
-                io.append(f".{seq['io']['d']}({d})")
+                io.append(f".{seq.io['d']}({d})")
             if c.r(n):
                 r = c.r(n)
-                io.append(f".{seq['io']['r']}({r})")
+                io.append(f".{seq.io['r']}({r})")
             if c.s(n):
                 s = c.s(n)
-                io.append(f".{seq['io']['s']}({s})")
+                io.append(f".{seq.io['s']}({s})")
             if c.clk(n):
                 clk = c.clk(n)
-                io.append(f".{seq['io']['clk']}({clk})")
-            io.append(f".{seq['io']['q']}({n})")
-            insts.append(f"{s['name']} g_{n} ({','.join(io)})")
+                io.append(f".{seq.io['clk']}({clk})")
+            io.append(f".{seq.io['q']}({n})")
+            insts.append(f"{seq.name} g_{n} ({','.join(io)})")
 
         else:
             print(f"unknown gate type: {c.type(n)}")
