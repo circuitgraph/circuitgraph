@@ -224,7 +224,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             c.add(n, "input")
 
     # handle gates
-    regex = r"(or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);"
+    regex = r"(buf|or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);"
     for gate, net_str in re.findall(regex, module, re.DOTALL):
         # parse all nets
         nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
@@ -255,7 +255,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
     # handle assign statements (with help from pyeda)
     assign_regex = r"assign\s+(.+?)\s*=\s*(.+?);"
     for dest, expr in re.findall(assign_regex, module, re.DOTALL):
-        c.add(dest,'buf',fanin=parse_ast(boolexpr.parse(expr), c))
+        c.add(dest, "buf", fanin=parse_ast(boolexpr.parse(expr), c))
 
     # get outputs
     out_regex = r"output\s(.+?);"
