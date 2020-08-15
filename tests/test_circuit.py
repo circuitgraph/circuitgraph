@@ -1,4 +1,5 @@
 import unittest
+import shutil
 
 import circuitgraph as cg
 from circuitgraph import clog2, int_to_bin

@@ -946,7 +946,7 @@ class Circuit:
         sen = len(sp)
         s = sensitivity(c,n)
         vs = int_to_bin(sen, clog2(len(sp)))
-        while not sat(s, {f"out_{i}": v for i, v in enumerate(vs)})
+        while not sat(s, {f"out_{i}": v for i, v in enumerate(vs)}):
             sen -= 1
             vs = int_to_bin(sen, clog2(len(sp)))
 
