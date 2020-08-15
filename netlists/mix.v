@@ -1,9 +1,10 @@
-module mix(G1,G16,G17,G2,G3,G4,G5,G18,G19,G20,G21,G22,G23);
+module mix(G1,G16,G17,G2,G3,G4,G5,G18,G19,G20,G21,G22,G23,G24,G25);
   input G1,G2,G3,G4;
   input [2:0] G5;
   output G16,G17,G18,G19,G20;
   output [2:0] G21, G22;
   output [4:0] G23;
+  output G24,G25;
 
   wire G8,G9,G12,G15;
 
@@ -15,6 +16,8 @@ module mix(G1,G16,G17,G2,G3,G4,G5,G18,G19,G20,G21,G22,G23);
   nand NAND2_5(G17,G12,G15);
 
   assign G18 = G17 ^ (G1 & G5[1]);
+  assign G24 = 1'b0;
+  assign G25 = G17 | 1'b1;
   assign {G19, G20} = {G8 & G9, G12};
 
   assign G21 = {G1, G5[2], G3 ^ G4};

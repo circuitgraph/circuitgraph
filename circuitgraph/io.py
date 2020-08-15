@@ -219,6 +219,7 @@ def verilog_to_circuit(path, name, seq_types=None):
 
     ast, directives = parse([path])
     description = ast.children()[0]
+
     # FIXME: Parse multiple modules in one file
     module_def = [d for d in description.children() if d.name == name][0]
     outputs = set()
@@ -244,6 +245,7 @@ def verilog_to_circuit(path, name, seq_types=None):
                     outputs.add(ci.name)
         # FIXME: Parse instance arrays
         elif type(child) == pyverilog.vparser.ast.InstanceList:
+            # FIXME: Parse sequential elements
             for instance in child.instances:
                 gate = instance.module
                 dest = sanitize_argname(instance.portlist[0].argname)
@@ -253,15 +255,27 @@ def verilog_to_circuit(path, name, seq_types=None):
             dest = child.left.var
             if type(dest) == pyverilog.vparser.ast.Identifier:
                 dest = dest.name
-            if issubclass(type(child.right.var), pyverilog.vparser.ast.Operator):
+            else:
+                print(f"[WARNING] Cannot parse {child.left.var}")
+            if type(child.right.var) == pyverilog.vparser.ast.IntConst:
+                c.add(dest, f"1'b{child.right.var.value}")
+            elif issubclass(type(child.right.var), pyverilog.vparser.ast.Operator):
                 parse_operator(child.right.var, c, dest=dest)
-                break
+            else:
+                print(f"[WARNING] Cannot parse {child.right.var}")
             # TODO
 
+    print(c.graph.nodes["G17"])
+    print()
+    print()
+    print(c.graph.edges())
     return c
 
 
 def parse_operator(operator, circuit, dest=None):
+    if type(operator) == pyverilog.vparser.ast.IntConst:
+        circuit.add(f"const_{operator.value}", "1'b{operator.value}")
+        return f"const_{operator.value}"
     if type(operator) == pyverilog.vparser.ast.Identifier:
         return operator.name
     elif type(operator) == pyverilog.vparser.ast.Pointer:

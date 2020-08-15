@@ -8,7 +8,8 @@ class TestIO(unittest.TestCase):
         c17 = cg.from_lib("b22_C")
 
     def test_verilog_comb(self):
-        mix = cg.from_lib("mix")
+        # mix = cg.from_lib("mix")
+        mix = cg.from_lib("c1355")
 
     def test_verilog_seq(self):
         s27 = cg.from_lib("s27")
