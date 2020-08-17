@@ -64,7 +64,7 @@ class TestTransform(unittest.TestCase):
             self.assertFalse(different_output)
 
     # FIXME: This test is failing non-deterministically
-    @unittest.skip('test failing')
+    #@unittest.skip('test failing')
     def test_sensitivity(self):
         # pick random node and input value
         n = sample(self.s27.nodes() - self.s27.startpoints(), 1)[0]

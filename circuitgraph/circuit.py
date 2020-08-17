@@ -884,7 +884,7 @@ class Circuit:
 
         return graph
 
-    def avg_sensitivity(self,n,approx=True):
+    def avg_sensitivity(self,n,approx=True,e=0.9,d=0.1):
         """
         Calculates the average sensitivity (equal to total influence)
         of node n with respect to its startpoints.
@@ -895,6 +895,10 @@ class Circuit:
                 Node to compute average sensitivity for.
         approx : bool
                 Use approximate solver
+        e : float (>0)
+                epsilon of approxmc
+        d : float (0-1)
+                delta of approxmc
 
         Returns
         -------
@@ -914,7 +918,7 @@ class Circuit:
 
             # compute influence
             if approx:
-                mc = approx_model_count(i,{'sat':True})
+                mc = approx_model_count(i,{'sat':True},e,d)
             else:
                 mc = model_count(i,{'sat':True})
             infl = mc/(2**len(sp))
