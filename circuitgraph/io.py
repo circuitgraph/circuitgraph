@@ -332,12 +332,12 @@ def circuit_to_verilog(c, seq_types=None):
         if c.type(n) in ["xor", "xnor", "buf", "not", "nor", "or", "and", "nand"]:
             fanin = ",".join(p for p in c.fanin(n))
             insts.append(f"{c.type(n)} g_{n} ({n},{fanin})")
-            wires.append(n)
+            if not c.output(n):
+                wires.append(n)
         elif c.type(n) in ["0", "1"]:
             insts.append(f"assign {n} = 1'b{c.type(n)}")
         elif c.type(n) in ["input"]:
             inputs.append(n)
-            wires.append(n)
         elif c.type(n) in ["ff", "lat"]:
             wires.append(n)
 
