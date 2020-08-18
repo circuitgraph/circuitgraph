@@ -220,6 +220,7 @@ class TestCircuit(unittest.TestCase):
 
     def test_int_to_bin(self):
         self.assertEqual(int_to_bin(5, 6), tuple(i == "1" for i in "000101"))
+        self.assertEqual(int_to_bin(5, 6, True), tuple(i == "1" for i in "101000"))
 
     @unittest.skipIf(shutil.which("approxmc") == None, "Approxmc is not installed")
     def test_avg_sensitivity(self):
@@ -248,7 +249,4 @@ class TestCircuit(unittest.TestCase):
             avg_sen_comp += infl/(2**len(sp))
 
         self.assertEqual(avg_sen,avg_sen_comp)
-
-
-
 

@@ -884,7 +884,7 @@ class Circuit:
 
         return graph
 
-    def avg_sensitivity(self,n,approx=True):
+    def avg_sensitivity(self,n,approx=True,e=0.9,d=0.1):
         """
         Calculates the average sensitivity (equal to total influence)
         of node n with respect to its startpoints.
@@ -895,6 +895,10 @@ class Circuit:
                 Node to compute average sensitivity for.
         approx : bool
                 Use approximate solver
+        e : float (>0)
+                epsilon of approxmc
+        d : float (0-1)
+                delta of approxmc
 
         Returns
         -------
@@ -914,7 +918,7 @@ class Circuit:
 
             # compute influence
             if approx:
-                mc = approx_model_count(i,{'sat':True})
+                mc = approx_model_count(i,{'sat':True},e=e,d=d)
             else:
                 mc = model_count(i,{'sat':True})
             infl = mc/(2**len(sp))
@@ -945,12 +949,31 @@ class Circuit:
 
         sen = len(sp)
         s = sensitivity(c,n)
-        vs = int_to_bin(sen, clog2(len(sp)))
+        vs = int_to_bin(sen, clog2(len(sp)), True)
         while not sat(s, {f"out_{i}": v for i, v in enumerate(vs)}):
             sen -= 1
-            vs = int_to_bin(sen, clog2(len(sp)))
+            vs = int_to_bin(sen, clog2(len(sp)), True)
 
         return sen
+
+    def lint(self):
+        """
+        Checks circuit for missing connections.
+        """
+        self.type(self.nodes())
+        self.output(self.nodes())
+        for g in self.nodes(types=['buf','not']):
+            if len(self.fanin(g))!=1:
+                raise ValueError(f"buf/not {g} has incorrect fanin count")
+        for g in self.nodes(types=['input','0','1']):
+            if len(self.fanin(g))>0:
+                raise ValueError(f"0/1/input {g} has fanin")
+        for g in self.nodes(types=['ff','lat','and','nand','or','nor','xor','xnor']):
+            if len(self.fanin(g))<1:
+                raise ValueError(f"{g} has no fanin")
+        for g in self.nodes():
+            if not self.fanout(g) and not self.output(g):
+                raise ValueError(f"{g} has no fanout and is not output")
 
 
 def clog2(num: int) -> int:
@@ -975,5 +998,27 @@ def clog2(num: int) -> int:
     return accum
 
 
-def int_to_bin(i, w):
-    return tuple(v == "1" for v in bin(i)[2:].zfill(w))
+def int_to_bin(i, w, lend=False):
+    """
+    Converts integer to binary tuple.
+
+    Parameters
+    ----------
+    i : int
+            Integer to convert.
+    w : int
+            Width of conversion
+    lend : bool
+            Endianess of returned tuple, helpful for iterating.
+
+    Returns
+    -------
+    tuple of bool
+            Binary tuple.
+
+    """
+
+    if not lend:
+        return tuple(v == "1" for v in bin(i)[2:].zfill(w))
+    else:
+        return tuple(reversed(tuple(v == "1" for v in bin(i)[2:].zfill(w))))
