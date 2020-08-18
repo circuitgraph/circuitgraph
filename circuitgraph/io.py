@@ -3,6 +3,7 @@
 import re
 import os
 from glob import glob
+import tempfile
 
 from pyeda.parsing import boolexpr
 import pyverilog
@@ -178,7 +179,6 @@ def bench_to_circuit(bench, name):
         inputs = (
             input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
         )
-        c.add(net, gate.lower(), fanin=inputs)
 
     # get outputs
     in_regex = r"(?:OUTPUT|output)\s*\((.+?)\)"
@@ -212,84 +212,86 @@ def verilog_to_circuit(verilog, name, seq_types=None):
         seq_types = default_seq_types
 
     c = Circuit(name=name)
+    with tempfile.TemporaryDirectory(prefix="circuitgraph") as d:
+        codeparser = VerilogParser(outputdir=d, debug=False)
+        ast = codeparser.parse(verilog, debug=False)
+        description = ast.children()[0]
 
-    codeparser = VerilogParser(debug=False)
-    ast = codeparser.parse(verilog, debug=False)
-    description = ast.children()[0]
-
-    module_def = [d for d in description.children() if d.name == name]
-    if not module_def:
-        raise ValueError(f"Module {name} not found")
-    module_def = module_def[0]
-    outputs = set()
-    widths = dict()
-    for child in module_def.children():
-        if type(child) == ast_types.Paramlist:
-            if child.children():
-                raise ValueError(
-                    "circuitgraph cannot parse parameters " f"(line {child.lineno})"
-                )
-        # Parse portlist
-        elif type(child) == ast_types.Portlist:
-            for cip in [i for i in child.children() if type(i) == ast_types.Ioport]:
-                for ci in cip.children():
-                    parse_io(c, ci, outputs)
-        # Parse declarations
-        elif type(child) == ast_types.Decl:
-            if ast_types.Parameter in [type(i) for i in child.children()]:
-                raise ValueError(
-                    "circuitgraph cannot parse parameters " f"(line {child.lineno})"
-                )
-            for ci in [
-                i
-                for i in child.children()
-                if type(i) in [ast_types.Input, ast_types.Output]
-            ]:
-                parse_io(c, ci, outputs)
-        # Parse instances
-        elif type(child) == ast_types.InstanceList:
-            # FIXME: Parse sequential elements
-            for instance in child.instances:
-                if instance.module in [
-                    "and",
-                    "nand",
-                    "or",
-                    "nor",
-                    "xor",
-                    "xnor",
-                    "buf",
-                ]:
-                    gate = instance.module
-                    dest = parse_argument(instance.portlist[0].argname, c)
-                    sources = [
-                        parse_argument(i.argname, c) for i in instance.portlist[1:]
-                    ]
-                    c.add(dest, gate, fanin=sources, output=dest in outputs)
-                else:
+        module_def = [d for d in description.children() if d.name == name]
+        if not module_def:
+            raise ValueError(f"Module {name} not found")
+        module_def = module_def[0]
+        outputs = set()
+        widths = dict()
+        for child in module_def.children():
+            if type(child) == ast_types.Paramlist:
+                if child.children():
                     raise ValueError(
-                        "circuitgraph cannot parse instance of "
-                        f"type {instance.module} (line "
-                        f"{instance.lineno})"
+                        "circuitgraph cannot parse parameters " f"(line {child.lineno})"
                     )
-        # Parse assigns
-        elif type(child) == ast_types.Assign:
-            dest = child.left.var
-            dest = parse_argument(dest, c)
-            if type(child.right.var) == ast_types.IntConst:
-                c.add(child.right.var.value, child.right.var.value)
-                c.add(dest, "buf", fanin=child.right.var.value, output=dest in outputs)
-            elif issubclass(type(child.right.var), ast_types.Operator):
-                parse_operator(child.right.var, c, outputs, dest=dest)
-            elif issubclass(type(child.right.var), ast_types.Concat):
+            # Parse portlist
+            elif type(child) == ast_types.Portlist:
+                for cip in [i for i in child.children() if type(i) == ast_types.Ioport]:
+                    for ci in cip.children():
+                        parse_io(c, ci, outputs)
+            # Parse declarations
+            elif type(child) == ast_types.Decl:
+                if ast_types.Parameter in [type(i) for i in child.children()]:
+                    raise ValueError(
+                        "circuitgraph cannot parse parameters " f"(line {child.lineno})"
+                    )
+                for ci in [
+                    i
+                    for i in child.children()
+                    if type(i) in [ast_types.Input, ast_types.Output]
+                ]:
+                    parse_io(c, ci, outputs)
+            # Parse instances
+            elif type(child) == ast_types.InstanceList:
+                # FIXME: Parse sequential elements
+                for instance in child.instances:
+                    if instance.module in [
+                        "and",
+                        "nand",
+                        "or",
+                        "nor",
+                        "xor",
+                        "xnor",
+                        "buf",
+                    ]:
+                        gate = instance.module
+                        dest = parse_argument(instance.portlist[0].argname, c)
+                        sources = [
+                            parse_argument(i.argname, c) for i in instance.portlist[1:]
+                        ]
+                        c.add(dest, gate, fanin=sources, output=dest in outputs)
+                    else:
+                        raise ValueError(
+                            "circuitgraph cannot parse instance of "
+                            f"type {instance.module} (line "
+                            f"{instance.lineno})"
+                        )
+            # Parse assigns
+            elif type(child) == ast_types.Assign:
+                dest = child.left.var
+                dest = parse_argument(dest, c)
+                if type(child.right.var) == ast_types.IntConst:
+                    c.add(child.right.var.value, child.right.var.value)
+                    c.add(
+                        dest, "buf", fanin=child.right.var.value, output=dest in outputs
+                    )
+                elif issubclass(type(child.right.var), ast_types.Operator):
+                    parse_operator(child.right.var, c, outputs, dest=dest)
+                elif issubclass(type(child.right.var), ast_types.Concat):
+                    raise ValueError(
+                        "circuitgraph cannot parse concatenations "
+                        f"(line {child.right.var.lineno})"
+                    )
+            else:
                 raise ValueError(
-                    "circuitgraph cannot parse concatenations "
-                    f"(line {child.right.var.lineno})"
+                    "circuitgraph cannot parse statements of type "
+                    f"{type(child)} (line {child.lineno})"
                 )
-        else:
-            raise ValueError(
-                "circuitgraph cannot parse statements of type "
-                f"{type(child)} (line {child.lineno})"
-            )
 
     return c
 

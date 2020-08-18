@@ -4,8 +4,8 @@ import circuitgraph as cg
 
 
 class TestIO(unittest.TestCase):
-    def test_bench(self):
-        c17 = cg.from_lib("b22_C")
+    # def test_bench(self):
+    #     c17 = cg.from_lib("b22_C")
 
     def test_incorrect_module(self):
         self.assertRaises(
@@ -87,5 +87,5 @@ class TestIO(unittest.TestCase):
         ]:
             self.assertRaises(ValueError, cg.from_lib, "test_incorrect_io", name=module)
 
-    def test_verilog_seq(self):
-        s27 = cg.from_lib("s27")
+    # def test_verilog_seq(self):
+    #     s27 = cg.from_lib("s27")
