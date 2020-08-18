@@ -360,7 +360,7 @@ def parse_operator(operator, circuit, outputs, dest=None):
         return parse_argument(operator, circuit)
     fanin = [parse_operator(o, circuit, outputs) for o in operator.children()]
     op = str(operator)[1:].split()[0].lower()
-    # pyverilator parses `~` as 'unot'
+    # pyverilog parses `~` as 'unot'
     if op == "unot":
         op = "not"
     # multibit operators (not yet parsable)
