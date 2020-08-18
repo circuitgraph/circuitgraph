@@ -26,7 +26,7 @@ module test_module_0(G1,G2,G3,G4,G5,G17,G18,G19,G20,G21,G22);
   assign G8[1] = 1'b1;
   assign G19 = G1 & G2 & (G3 ^ G4);
   assign G20 = G17 ^ (G8[0] & G5[0]);
-  assign G22[1] = G1 & (G2 | 1'b1);
+  assign G22[1] = G1 & (~G2 | 1'b1);
   assign G21 = 1'b0;
 
 endmodule
@@ -61,9 +61,42 @@ module test_module_1(
   assign G8[1] = 1'b1;
   assign G19 = G1 & G2 & (G3 ^ G4);
   assign G20 = G17 ^ (G8[0] & G5[0]);
-  assign G22[1] = G1 & (G2 | 1'b1);
+  assign G22[1] = G1 & (~G2 | 1'b1);
   assign G21 = 1'b0;
-
 endmodule
 
+module test_module_2(clk, G0, G1, G17, G18);
+    input clk, G0, G1;
+    input [1:0] G2;
+    output [1:0] G18;
+    wire G3, G4, G5;
 
+    fflopd DFF_0_Q_reg(.CK (clk), .D (G3), .Q (G4));
+    and AND2_0(G3, G0, G1);
+    and AND2_1(G18[1], G5, G2[1]);
+    fflopd DFF_1_Q_reg(.CK (clk), .D(G2[0]), .Q(G5));
+    fflopd DFF_2_Q_reg(.CK (clk), .D(G5), .Q(G18[0]));
+endmodule
+
+module test_module_3(G0, G1, G2, G3, G4);
+    input G0, G1, G2;
+    output G3, G4;
+
+    assign G3 = G0 & ~G1;
+endmodule
+
+module fflopd(CK, D, Q);
+  input CK, D;
+  output Q;
+  wire CK, D;
+  wire Q;
+  wire next_state;
+  reg  qi;
+  assign #1 Q = qi;
+  assign next_state = D;
+  always
+    @(posedge CK)
+      qi <= next_state;
+  initial
+    qi <= 1'b0;
+endmodule

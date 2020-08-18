@@ -248,16 +248,16 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                     parse_io(c, ci, outputs)
             # Parse instances
             elif type(child) == ast_types.InstanceList:
-                # FIXME: Parse sequential elements
                 for instance in child.instances:
                     if instance.module in [
+                        "buf",
+                        "not",
                         "and",
                         "nand",
                         "or",
                         "nor",
                         "xor",
                         "xnor",
-                        "buf",
                     ]:
                         gate = instance.module
                         dest = parse_argument(instance.portlist[0].argname, c)
@@ -265,6 +265,29 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                             parse_argument(i.argname, c) for i in instance.portlist[1:]
                         ]
                         c.add(dest, gate, fanin=sources, output=dest in outputs)
+                    elif instance.module in [i.name for i in seq_types]:
+                        if instance.portlist[0].portname is None:
+                            raise ValueError(
+                                "circuitgraph can only parse "
+                                "sequential instances declared "
+                                "with port argument notation "
+                                f"(line {instance.lineno})"
+                            )
+                        seq_type = [i for i in seq_types if i.name == instance.module][
+                            0
+                        ]
+                        ports = {
+                            p.portname: parse_argument(p.argname, c)
+                            for p in instance.portlist
+                        }
+                        c.add(
+                            ports.get(seq_type.io.get("q")),
+                            seq_type.seq_type,
+                            fanin=ports.get(seq_type.io.get("d")),
+                            clk=ports.get(seq_type.io.get("clk")),
+                            r=ports.get(seq_type.io.get("r")),
+                            s=ports.get(seq_type.io.get("s")),
+                        )
                     else:
                         raise ValueError(
                             "circuitgraph cannot parse instance of "
@@ -337,6 +360,14 @@ def parse_operator(operator, circuit, outputs, dest=None):
         return parse_argument(operator, circuit)
     fanin = [parse_operator(o, circuit, outputs) for o in operator.children()]
     op = str(operator)[1:].split()[0].lower()
+    # pyverilator parses `~` as 'unot'
+    if op == "unot":
+        op = "not"
+    # multibit operators (not yet parsable)
+    if op.startswith("l"):
+        raise ValueError(
+            "circuitgraph cannot parse multibit operators " f"(line {operator.lineno})"
+        )
     if dest is None:
         dest = f"{op}_{'_'.join(fanin)}"
     circuit.add(dest, op, fanin=fanin, output=dest in outputs)
@@ -390,7 +421,7 @@ def circuit_to_verilog(c, seq_types=None):
             fanin = ",".join(p for p in c.fanin(n))
             insts.append(f"{c.type(n)} g_{n} ({n},{fanin})")
             wires.append(n)
-        elif c.type(n) in ["0", "1"]:
+        elif c.type(n) in ["1'b0", "1'b1"]:
             insts.append(f"assign {n} = 1'b{c.type(n)}")
         elif c.type(n) in ["input"]:
             inputs.append(n)
@@ -409,18 +440,18 @@ def circuit_to_verilog(c, seq_types=None):
             io = []
             if c.d(n):
                 d = c.d(n)
-                io.append(f".{seq['io']['d']}({d})")
+                io.append(f".{seq.io['d']}({d})")
             if c.r(n):
                 r = c.r(n)
-                io.append(f".{seq['io']['r']}({r})")
+                io.append(f".{seq.io['r']}({r})")
             if c.s(n):
                 s = c.s(n)
-                io.append(f".{seq['io']['s']}({s})")
+                io.append(f".{seq.io['s']}({s})")
             if c.clk(n):
                 clk = c.clk(n)
-                io.append(f".{seq['io']['clk']}({clk})")
-            io.append(f".{seq['io']['q']}({n})")
-            insts.append(f"{s['name']} g_{n} ({','.join(io)})")
+                io.append(f".{seq.io['clk']}({clk})")
+            io.append(f".{seq.io['q']}({n})")
+            insts.append(f"{s.name} g_{n} ({','.join(io)})")
 
         else:
             print(f"unknown gate type: {c.type(n)}")
