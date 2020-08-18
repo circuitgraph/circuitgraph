@@ -250,6 +250,3 @@ class TestCircuit(unittest.TestCase):
 
         self.assertEqual(avg_sen,avg_sen_comp)
 
-
-
-
