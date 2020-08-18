@@ -6,7 +6,8 @@ from glob import glob
 
 from pyeda.parsing import boolexpr
 import pyverilog
-from pyverilog.vparser.parser import parse
+from pyverilog.vparser.parser import VerilogParser
+from pyverilog.vparser import ast as ast_types
 
 from circuitgraph import Circuit
 
@@ -118,7 +119,7 @@ def from_file(path, name=None, seq_types=None):
     with open(path, "r") as f:
         netlist = f.read()
     if ext == "v":
-        return verilog_to_circuit(path, name, seq_types)
+        return verilog_to_circuit(netlist, name, seq_types)
     elif ext == "bench":
         return bench_to_circuit(netlist, name)
     else:
@@ -189,14 +190,14 @@ def bench_to_circuit(bench, name):
     return c
 
 
-def verilog_to_circuit(path, name, seq_types=None):
+def verilog_to_circuit(verilog, name, seq_types=None):
     """
     Creates a new Circuit from a verilog file.
 
     Parameters
     ----------
     path: str
-            path to the verilog file.
+            verilog code.
     name: str
             the module name.
     seq_types: list of dicts of str:str
@@ -210,81 +211,133 @@ def verilog_to_circuit(path, name, seq_types=None):
     if seq_types is None:
         seq_types = default_seq_types
 
-    def sanitize_argname(argname):
-        if type(argname) == pyverilog.vparser.ast.Pointer:
-            return f"{argname.var}[{argname.ptr}]"
-        return argname.name
-
     c = Circuit(name=name)
 
-    ast, directives = parse([path])
+    codeparser = VerilogParser(debug=False)
+    ast = codeparser.parse(verilog, debug=False)
     description = ast.children()[0]
 
-    # FIXME: Parse multiple modules in one file
-    module_def = [d for d in description.children() if d.name == name][0]
+    module_def = [d for d in description.children() if d.name == name]
+    if not module_def:
+        raise ValueError(f"Module {name} not found")
+    module_def = module_def[0]
     outputs = set()
     widths = dict()
-    # FIXME: Parse input/output decl in portlist
     for child in module_def.children():
-        if type(child) == pyverilog.vparser.ast.Decl:
-            for ci in child.children():
-                if ci.width:
-                    widths[ci.name] = (int(ci.width.lsb.value), int(ci.width.msb.value))
-                else:
-                    widths[ci.name] = None
-                if type(ci) == pyverilog.vparser.ast.Input:
-                    # Parse bus
-                    if ci.width:
-                        for i in range(
-                            int(ci.width.lsb.value), int(ci.width.msb.value) + 1
-                        ):
-                            c.add(f"{ci.name}[{i}]", "input")
-                    else:
-                        c.add(ci.name, "input")
-                elif type(ci) == pyverilog.vparser.ast.Output:
-                    outputs.add(ci.name)
-        # FIXME: Parse instance arrays
-        elif type(child) == pyverilog.vparser.ast.InstanceList:
+        if type(child) == ast_types.Paramlist:
+            if child.children():
+                raise ValueError(
+                    "circuitgraph cannot parse parameters " f"(line {child.lineno})"
+                )
+        # Parse portlist
+        elif type(child) == ast_types.Portlist:
+            for cip in [i for i in child.children() if type(i) == ast_types.Ioport]:
+                for ci in cip.children():
+                    parse_io(c, ci, outputs)
+        # Parse declarations
+        elif type(child) == ast_types.Decl:
+            if ast_types.Parameter in [type(i) for i in child.children()]:
+                raise ValueError(
+                    "circuitgraph cannot parse parameters " f"(line {child.lineno})"
+                )
+            for ci in [
+                i
+                for i in child.children()
+                if type(i) in [ast_types.Input, ast_types.Output]
+            ]:
+                parse_io(c, ci, outputs)
+        # Parse instances
+        elif type(child) == ast_types.InstanceList:
             # FIXME: Parse sequential elements
             for instance in child.instances:
-                gate = instance.module
-                dest = sanitize_argname(instance.portlist[0].argname)
-                sources = [sanitize_argname(i.argname) for i in instance.portlist[1:]]
-                c.add(dest, gate, fanin=sources, output=dest in outputs)
-        elif type(child) == pyverilog.vparser.ast.Assign:
+                if instance.module in [
+                    "and",
+                    "nand",
+                    "or",
+                    "nor",
+                    "xor",
+                    "xnor",
+                    "buf",
+                ]:
+                    gate = instance.module
+                    dest = parse_argument(instance.portlist[0].argname, c)
+                    sources = [
+                        parse_argument(i.argname, c) for i in instance.portlist[1:]
+                    ]
+                    c.add(dest, gate, fanin=sources, output=dest in outputs)
+                else:
+                    raise ValueError(
+                        "circuitgraph cannot parse instance of "
+                        f"type {instance.module} (line "
+                        f"{instance.lineno})"
+                    )
+        # Parse assigns
+        elif type(child) == ast_types.Assign:
             dest = child.left.var
-            if type(dest) == pyverilog.vparser.ast.Identifier:
-                dest = dest.name
-            else:
-                print(f"[WARNING] Cannot parse {child.left.var}")
-            if type(child.right.var) == pyverilog.vparser.ast.IntConst:
-                c.add(dest, f"1'b{child.right.var.value}")
-            elif issubclass(type(child.right.var), pyverilog.vparser.ast.Operator):
-                parse_operator(child.right.var, c, dest=dest)
-            else:
-                print(f"[WARNING] Cannot parse {child.right.var}")
-            # TODO
+            dest = parse_argument(dest, c)
+            if type(child.right.var) == ast_types.IntConst:
+                c.add(child.right.var.value, child.right.var.value)
+                c.add(dest, "buf", fanin=child.right.var.value, output=dest in outputs)
+            elif issubclass(type(child.right.var), ast_types.Operator):
+                parse_operator(child.right.var, c, outputs, dest=dest)
+            elif issubclass(type(child.right.var), ast_types.Concat):
+                raise ValueError(
+                    "circuitgraph cannot parse concatenations "
+                    f"(line {child.right.var.lineno})"
+                )
+        else:
+            raise ValueError(
+                "circuitgraph cannot parse statements of type "
+                f"{type(child)} (line {child.lineno})"
+            )
 
-    print(c.graph.nodes["G17"])
-    print()
-    print()
-    print(c.graph.edges())
     return c
 
 
-def parse_operator(operator, circuit, dest=None):
-    if type(operator) == pyverilog.vparser.ast.IntConst:
-        circuit.add(f"const_{operator.value}", "1'b{operator.value}")
-        return f"const_{operator.value}"
-    if type(operator) == pyverilog.vparser.ast.Identifier:
-        return operator.name
-    elif type(operator) == pyverilog.vparser.ast.Pointer:
-        return f"{operator.var}[{operator.ptr}]"
-    fanin = [parse_operator(o, circuit) for o in operator.children()]
+def parse_io(c, ci, outputs):
+    if ci.width:
+        cis = [
+            f"{ci.name}[{i}]"
+            for i in range(int(ci.width.lsb.value), int(ci.width.msb.value) + 1)
+        ]
+    else:
+        cis = [ci.name]
+    if type(ci) == ast_types.Input:
+        for i in cis:
+            c.add(i, "input")
+    elif type(ci) == ast_types.Output:
+        outputs.update(set(cis))
+
+
+def parse_argument(argname, circuit):
+    if type(argname) == ast_types.Pointer:
+        return f"{argname.var}[{argname.ptr}]"
+    elif type(argname) == ast_types.IntConst:
+        circuit.add(argname.value, argname.value)
+        return argname.value
+    elif issubclass(type(argname), ast_types.Concat):
+        raise ValueError(
+            "circuitgraph cannot parse concatenations " f"(line {argname.lineno})"
+        )
+    elif type(argname) == ast_types.Partselect:
+        raise ValueError(
+            "circuitgrpah cannot parse part select "
+            f"statements (line {argname.lineno})"
+        )
+    return argname.name
+
+
+def parse_operator(operator, circuit, outputs, dest=None):
+    if type(operator) == ast_types.IntConst:
+        circuit.add(operator.value, operator.value)
+        return operator.value
+    elif not issubclass(type(operator), ast_types.Operator):
+        return parse_argument(operator, circuit)
+    fanin = [parse_operator(o, circuit, outputs) for o in operator.children()]
     op = str(operator)[1:].split()[0].lower()
     if dest is None:
         dest = f"{op}_{'_'.join(fanin)}"
-    circuit.add(dest, op, fanin=fanin)
+    circuit.add(dest, op, fanin=fanin, output=dest in outputs)
     return dest
 
 

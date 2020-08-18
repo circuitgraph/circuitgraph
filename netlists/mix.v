@@ -15,18 +15,18 @@ module mix(G1,G16,G17,G2,G3,G4,G5,G18,G19,G20,G21,G22,G23,G24,G25);
   nand NAND2_4(G16,G8,G12);
   nand NAND2_5(G17,G12,G15);
 
-  assign G18 = G17 ^ (G1 & G5[1]);
-  assign G24 = 1'b0;
-  assign G25 = G17 | 1'b1;
-  assign {G19, G20} = {G8 & G9, G12};
+  assign G21[0] = G17 ^ (G1 & G5);
+  /* assign G24 = 1'b0; */
+  /* assign G25 = G17 | 1'b1; */
+  /* assign {G19, G20} = {G8 & G9, G12}; */
 
-  assign G21 = {G1, G5[2], G3 ^ G4};
-  assign G22[0] = G1 & G2;
-  nor NOR2_1(G22[1], G8, G12);
-  assign G22[2] = G22[0];
-  assign G22[2] = G22[0];
-  assign G23[0:2] = {G22[0:1], G12};
-  assign G23[3:4] = G22[1:2];
+  /* assign G21 = {G1, G5[2], G3 ^ G4}; */
+  /* assign G22[0] = G1 & G2; */
+  /* nor NOR2_1(G22[1], G8, G12); */
+  /* assign G22[2] = G22[0]; */
+  /* assign G22[2] = G22[0]; */
+  /* assign G23[0:2] = {G22[0:1], G12}; */
+  /* assign G23[3:4] = G22[1:2]; */
 
 endmodule
 
