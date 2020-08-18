@@ -884,6 +884,97 @@ class Circuit:
 
         return graph
 
+    def avg_sensitivity(self,n,approx=True,e=0.9,d=0.1):
+        """
+        Calculates the average sensitivity (equal to total influence)
+        of node n with respect to its startpoints.
+
+        Parameters
+        ----------
+        n : str
+                Node to compute average sensitivity for.
+        approx : bool
+                Use approximate solver
+        e : float (>0)
+                epsilon of approxmc
+        d : float (0-1)
+                delta of approxmc
+
+        Returns
+        -------
+        float
+                Average sensitivity of node n.
+
+        """
+        from circuitgraph.transform import influence
+        from circuitgraph.sat import approx_model_count,model_count
+
+        sp = self.startpoints(n)
+
+        avg_sen = 0
+        for s in sp:
+            # create influence circuit
+            i = influence(self, n, s)
+
+            # compute influence
+            if approx:
+                mc = approx_model_count(i,{'sat':True},e=e,d=d)
+            else:
+                mc = model_count(i,{'sat':True})
+            infl = mc/(2**len(sp))
+            avg_sen += infl
+
+        return avg_sen
+
+    def sensitivity(self,n):
+        """
+        Calculates the sensitivity of node n with respect
+        to its startpoints.
+
+        Parameters
+        ----------
+        n : str
+                Node to compute sensitivity for.
+
+        Returns
+        -------
+        int
+                Sensitivity of node n.
+
+        """
+        from circuitgraph.transform import sensitivity
+        from circuitgraph.sat import sat
+
+        sp = self.startpoints(n)
+
+        sen = len(sp)
+        s = sensitivity(c,n)
+        vs = int_to_bin(sen, clog2(len(sp)), True)
+        while not sat(s, {f"out_{i}": v for i, v in enumerate(vs)}):
+            sen -= 1
+            vs = int_to_bin(sen, clog2(len(sp)), True)
+
+        return sen
+
+    def lint(self):
+        """
+        Checks circuit for missing connections.
+        """
+        self.type(self.nodes())
+        self.output(self.nodes())
+        for g in self.nodes(types=['buf','not']):
+            if len(self.fanin(g))!=1:
+                raise ValueError(f"buf/not {g} has incorrect fanin count")
+        for g in self.nodes(types=['input','0','1']):
+            if len(self.fanin(g))>0:
+                raise ValueError(f"0/1/input {g} has fanin")
+        for g in self.nodes(types=['ff','lat','and','nand','or','nor','xor','xnor']):
+            if len(self.fanin(g))<1:
+                raise ValueError(f"{g} has no fanin")
+        for g in self.nodes():
+            if not self.fanout(g) and not self.output(g):
+                raise ValueError(f"{g} has no fanout and is not output")
+
 
 def clog2(num: int) -> int:
     r"""Return the ceiling log base two of an integer :math:`\ge 1`.
@@ -907,5 +998,27 @@ def clog2(num: int) -> int:
     return accum
 
 
-def int_to_bin(i, w):
-    return tuple(v == "1" for v in bin(i)[2:].zfill(w))
+def int_to_bin(i, w, lend=False):
+    """
+    Converts integer to binary tuple.
+
+    Parameters
+    ----------
+    i : int
+            Integer to convert.
+    w : int
+            Width of conversion
+    lend : bool
+            Endianess of returned tuple, helpful for iterating.
+
+    Returns
+    -------
+    tuple of bool
+            Binary tuple.
+
+    """
+
+    if not lend:
+        return tuple(v == "1" for v in bin(i)[2:].zfill(w))
+    else:
+        return tuple(reversed(tuple(v == "1" for v in bin(i)[2:].zfill(w))))

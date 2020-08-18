@@ -69,8 +69,6 @@ class TestTransform(unittest.TestCase):
                 os.remove(f)
             shutil.rmtree(f"{os.getcwd()}/fv")
 
-    # FIXME: This test is failing non-deterministically
-    @unittest.skip("test failing")
     def test_sensitivity(self):
         # pick random node and input value
         n = sample(self.s27.nodes() - self.s27.startpoints(), 1)[0]
@@ -102,7 +100,7 @@ class TestTransform(unittest.TestCase):
         self.assertEqual(sen_s, sen_sim)
 
         # find input with sensitivity
-        vs = cg.int_to_bin(sen_s, cg.clog2(len(nstartpoints)))
+        vs = cg.int_to_bin(sen_s, cg.clog2(len(nstartpoints)), True)
         model = sat(s, {f"out_{i}": v for i, v in enumerate(vs)})
 
         input_val = {i: model[i] for i in nstartpoints}

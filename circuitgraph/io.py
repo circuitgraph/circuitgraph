@@ -23,7 +23,7 @@ class SequentialElement:
         ----------
         name: str
                 Name of the element (the module name)
-        seq_type: str
+        type: str
                 The type of sequential element, either 'ff' or 'lat'
         io: dict of str:str
                 The mapping the 'd', 'q', 'clk', and potentially 'r', 's'
@@ -425,7 +425,6 @@ def circuit_to_verilog(c, seq_types=None):
             insts.append(f"assign {n} = 1'b{c.type(n)}")
         elif c.type(n) in ["input"]:
             inputs.append(n)
-            wires.append(n)
         elif c.type(n) in ["ff", "lat"]:
             wires.append(n)
 
@@ -451,7 +450,7 @@ def circuit_to_verilog(c, seq_types=None):
                 clk = c.clk(n)
                 io.append(f".{seq.io['clk']}({clk})")
             io.append(f".{seq.io['q']}({n})")
-            insts.append(f"{s.name} g_{n} ({','.join(io)})")
+            insts.append(f"{seq.name} g_{n} ({','.join(io)})")
 
         else:
             print(f"unknown gate type: {c.type(n)}")

@@ -87,7 +87,6 @@ def popcount(w):
     """
     c = Circuit(name="popcount")
     ps = [[c.add(f"in_{i}", "input")] for i in range(w)]
-    c.add("null", "0")
 
     i = 0
     while len(ps) > 1:
@@ -116,6 +115,10 @@ def popcount(w):
     # connect outputs
     for i, o in enumerate(ps[0]):
         c.add(f"out_{i}", "buf", fanin=o, output=True)
+
+    if 'null' in c:
+        c.set_type('null','0')
+        c.set_output('null',False)
 
     return c
 

@@ -197,7 +197,7 @@ def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
             Nodes to assume True or False.
     startpoints : iter of str
             Startpoints to use for approxmc
-    e : float (0-1)
+    e : float (>0)
             epsilon of approxmc
     d : float (0-1)
             delta of approxmc

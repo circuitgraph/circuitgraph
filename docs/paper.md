@@ -1,3 +1,4 @@
+---
 title: 'CircuitGraph: A Python package for Boolean circuits'
 tags:
   - Python
@@ -7,12 +8,12 @@ tags:
   - electronic design automation
 authors:
 - name: Joseph Sweeney
-affiliation: 1
+  affiliation: 1
 - name: Ruben Purdy
-affiliation: 1
+  affiliation: 1
 affiliations:
 - name: Carnegie Mellon University
-index: 1
+  index: 1
 date: 13 August 2020
 bibliography: paper.bib
 
@@ -23,7 +24,7 @@ bibliography: paper.bib
 A Boolean circuit is a fundamental mathematical model ubiquitous to the 
 design of modern computers. The model consists of a directed graph wherein 
 nodes are logic gates with corresponding Boolean functions and edges are wires 
-which determine the composition of the gates. `CircuitGraph` is a Python library
+which determine the composition of the gates. `CircuitGraph` is a open-source Python library
 for manipulating and analyzing Boolean circuits. 
 
 # Statement of need 
@@ -33,87 +34,72 @@ it generally is proprietary, with expensive license fees. Furthermore, these
 options suffer from poor documentation, are closed source, and typically 
 rely on Tool control language (Tcl). While simple, Tcl is slow, has limited
 libraries and supporting community, and is unecessarily verbose. These reasons
-motivate the development of our open source solution. 
+motivate the development of our open source solution. While this software will 
+directly benefit our lab as a research platform, it certainly has application 
+in other environments such as the classroom.
 
 # Functionality
 
+The functionality of `CircuitGraph` has been tailored to our research needs, however,
+the library is easily extensible to many other applications of Boolean circuits.
+
+The core of the library is the `Circuit` class, which internally uses a `networkx.DiGraph` 
+as the fundamental data structure. The class implements key Boolean circuit functionalities 
+on top of the graph. 
+
 ## Interfaces
+
+Compatibility with existing systems is a primary goal for our library. Towards this end, 
+we have built interfaces for the commonly used Boolean circuit formats: Bench and Verilog.
+Additionally, we plan on supporting BLIF. The user is able to import and export in the supported
+formats, enabling interfacing with other tools as well as conversion between formats.
+We also have provided a library of generic and benchmark circuits that can be quickly instantiated.
+
+```python
+import circuitgraph as cg
+c0 = cg.from_file('path/circuit.v')
+c1 = cg.from_file('path/circuit.bench')
+c2 = cg.from_lib('c17')
+```	
 
 ## Concise Composition
 
+A common issue found in similar tools is the poor expressivity of circuit construction 
+primitives. We aim to build a simple, but powerful syntax for creating and connecting nodes
+in a circuit. The ease of our syntax is enabled by the Python language. 
+An example of this syntax is below.
+
+```python
+# add an OR gate named 'a'
+c0.add('a','or')
+
+# create an AND with circuit inputs in a single line
+c0.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
+```	
+
+## Synthesis
+We provide an interface to common synthesis tools including `yosys` and `Cadence Genus`. This allows 
+the user to run basic synthesis routines on circuits from within Python. 
+```python
+# synthesize circuit with yosys
+c_syn = cg.syn(c0, "Yosys")
+```	
+
 ## Satisfiability
 
+Satisfiablility is an essential problem related to Boolean circuits. Suprisingly, commercial 
+synthesis tools do not directly support its use (although the open source tools yosys does). 
+We add satisfiability to our library which in turn enables a wide array of analysis including
+sensitization, sensitivity, and influence. Our implementation allows a simple interface to determine
+satisfiability of a circuit under a set of variable assignments. To develop more complex routines, the
+user can also access the underlying `pysat.solver` instance. 
+In conjunction with satisfiability, we provide interfaces to approximate and exact model count algorithms. 
 
-# Acknowledgements
+```python
+# check satisfiability assuming 'a' is False
+cg.sat(c0,{'a':False})
 
-We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
-Oh, and support from Kathryn Johnston during the genesis of this project.
+# get number of solutions to circuit with 'a' False
+cg.model_count(c0,{'a':False})
+```	
 
-# References
-
-
-`Gala` is an Astropy-affiliated Python package for galactic dynamics. Python
-enables wrapping low-level languages (e.g., C) for speed without losing
-flexibility or ease-of-use in the user-interface. The API for `Gala` was
-designed to provide a class-based and user-friendly interface to fast (C or
-Cython-optimized) implementations of common operations such as gravitational
-potential and force evaluation, orbit integration, dynamical transformations,
-and chaos indicators for nonlinear dynamics. `Gala` also relies heavily on and
-interfaces well with the implementations of physical units and astronomical
-coordinate systems in the `Astropy` package [@astropy] (`astropy.units` and
-`astropy.coordinates`).
-
-`Gala` was designed to be used by both astronomical researchers and by
-students in courses on gravitational dynamics or astronomy. It has already been
-used in a number of scientific publications [@Pearson:2017] and has also been
-used in graduate courses on Galactic dynamics to, e.g., provide interactive
-visualizations of textbook material [@Binney:2008]. The combination of speed,
-design, and support for Astropy functionality in `Gala` will enable exciting
-scientific explorations of forthcoming data releases from the *Gaia* mission
-[@gaia] by students and experts alike.
-
-# Mathematics
-
-Single dollars ($) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
-
-Double dollars make self-standing equations:
-
-$$\Theta(x) = \left\{\begin{array}{l}
-0\textrm{ if } x < 0\cr
-1\textrm{ else}
-\end{array}\right.$$
-
-You can also use plain \LaTeX for equations
-\begin{equation}\label{eq:fourier}
-\hat f(\omega) = \int_{-\infty}^{\infty} f(x) e^{i\omega x} dx
-\end{equation}
-and refer to \autoref{eq:fourier} from text.
-
-# Citations
-
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
-
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
-
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
-# Figures
-
-Figures can be included like this:
-![Caption for example figure.\label{fig:example}](figure.png)
-and referenced from text using \autoref{fig:example}.
-
-Fenced code blocks are rendered with syntax highlighting:
-
-# Acknowledgements
-
-We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
-Oh, and support from Kathryn Johnston during the genesis of this project.
-
-# References
