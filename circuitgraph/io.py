@@ -227,7 +227,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             if type(child) == ast_types.Paramlist:
                 if child.children():
                     raise ValueError(
-                        "circuitgraph cannot parse parameters " f"(line {child.lineno})"
+                        f"circuitgraph cannot parse parameters (line {child.lineno})"
                     )
             # Parse portlist
             elif type(child) == ast_types.Portlist:
@@ -238,7 +238,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             elif type(child) == ast_types.Decl:
                 if ast_types.Parameter in [type(i) for i in child.children()]:
                     raise ValueError(
-                        "circuitgraph cannot parse parameters " f"(line {child.lineno})"
+                        f"circuitgraph cannot parse parameters (line {child.lineno})"
                     )
                 for ci in [
                     i
@@ -287,6 +287,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                             clk=ports.get(seq_type.io.get("clk")),
                             r=ports.get(seq_type.io.get("r")),
                             s=ports.get(seq_type.io.get("s")),
+                            output=ports.get(seq_type.io.get("q")) in outputs,
                         )
                     else:
                         raise ValueError(
@@ -299,9 +300,12 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                 dest = child.left.var
                 dest = parse_argument(dest, c)
                 if type(child.right.var) == ast_types.IntConst:
-                    c.add(child.right.var.value, child.right.var.value)
+                    c.add(child.right.var.value[-1], child.right.var.value[-1])
                     c.add(
-                        dest, "buf", fanin=child.right.var.value, output=dest in outputs
+                        dest,
+                        "buf",
+                        fanin=child.right.var.value[-1],
+                        output=dest in outputs,
                     )
                 elif issubclass(type(child.right.var), ast_types.Operator):
                     parse_operator(child.right.var, c, outputs, dest=dest)
@@ -325,6 +329,8 @@ def parse_io(c, ci, outputs):
             f"{ci.name}[{i}]"
             for i in range(int(ci.width.lsb.value), int(ci.width.msb.value) + 1)
         ]
+        if not ci.name.startswith("\\"):
+            cis = [f"\{i}" for i in cis]
     else:
         cis = [ci.name]
     if type(ci) == ast_types.Input:
@@ -336,13 +342,16 @@ def parse_io(c, ci, outputs):
 
 def parse_argument(argname, circuit):
     if type(argname) == ast_types.Pointer:
-        return f"{argname.var}[{argname.ptr}]"
+        if argname.var.name.startswith("\\"):
+            return f"{argname.var}[{argname.ptr}]"
+        else:
+            return f"\\{argname.var}[{argname.ptr}]"
     elif type(argname) == ast_types.IntConst:
-        circuit.add(argname.value, argname.value)
-        return argname.value
+        circuit.add(argname.value[-1], argname.value[-1])
+        return argname.value[-1]
     elif issubclass(type(argname), ast_types.Concat):
         raise ValueError(
-            "circuitgraph cannot parse concatenations " f"(line {argname.lineno})"
+            f"circuitgraph cannot parse concatenations (line {argname.lineno})"
         )
     elif type(argname) == ast_types.Partselect:
         raise ValueError(
@@ -354,8 +363,8 @@ def parse_argument(argname, circuit):
 
 def parse_operator(operator, circuit, outputs, dest=None):
     if type(operator) == ast_types.IntConst:
-        circuit.add(operator.value, operator.value)
-        return operator.value
+        circuit.add(operator.value[-1], operator.value[-1])
+        return operator.value[-1]
     elif not issubclass(type(operator), ast_types.Operator):
         return parse_argument(operator, circuit)
     fanin = [parse_operator(o, circuit, outputs) for o in operator.children()]
@@ -366,10 +375,13 @@ def parse_operator(operator, circuit, outputs, dest=None):
     # multibit operators (not yet parsable)
     if op.startswith("l"):
         raise ValueError(
-            "circuitgraph cannot parse multibit operators " f"(line {operator.lineno})"
+            f"circuitgraph cannot parse multibit operators (line {operator.lineno})"
         )
     if dest is None:
         dest = f"{op}_{'_'.join(fanin)}"
+        if any(i.startswith("\\") for i in fanin):
+            dest = dest.replace("\\", "")
+            dest = f"\\{dest}"
     circuit.add(dest, op, fanin=fanin, output=dest in outputs)
     return dest
 
@@ -416,17 +428,33 @@ def circuit_to_verilog(c, seq_types=None):
     if seq_types is None:
         seq_types = default_seq_types
 
+    def sanitize_name(n):
+        if n.startswith("\\"):
+            return f"{n} "
+        return n
+
+    def sanitize_instance(n):
+        if n.startswith("\\"):
+            n_gate = n.replace("\\", "")
+            return f"\\g_{n_gate}"
+        else:
+            return f"g_{n}"
+
     for n in c.nodes():
         if c.type(n) in ["xor", "xnor", "buf", "not", "nor", "or", "and", "nand"]:
-            fanin = ",".join(p for p in c.fanin(n))
-            insts.append(f"{c.type(n)} g_{n} ({n},{fanin})")
-            wires.append(n)
-        elif c.type(n) in ["1'b0", "1'b1"]:
-            insts.append(f"assign {n} = 1'b{c.type(n)}")
+            fanin = ", ".join(sanitize_name(p) for p in c.fanin(n))
+            insts.append(
+                f"{c.type(n)} {sanitize_instance(n)} " f"({sanitize_name(n)}, {fanin})"
+            )
+            if not c.output(n):
+                wires.append(n)
+        elif c.type(n) in ["0", "1"]:
+            continue
         elif c.type(n) in ["input"]:
             inputs.append(n)
         elif c.type(n) in ["ff", "lat"]:
-            wires.append(n)
+            if not c.output(n):
+                wires.append(n)
 
             # get template
             for s in seq_types:
@@ -438,19 +466,19 @@ def circuit_to_verilog(c, seq_types=None):
             # connect
             io = []
             if c.d(n):
-                d = c.d(n)
+                d = sanitize_name(c.d(n))
                 io.append(f".{seq.io['d']}({d})")
             if c.r(n):
-                r = c.r(n)
+                r = sanitize_name(c.r(n))
                 io.append(f".{seq.io['r']}({r})")
             if c.s(n):
-                s = c.s(n)
+                s = sanitize_name(c.s(n))
                 io.append(f".{seq.io['s']}({s})")
             if c.clk(n):
-                clk = c.clk(n)
+                clk = sanitize_name(c.clk(n))
                 io.append(f".{seq.io['clk']}({clk})")
-            io.append(f".{seq.io['q']}({n})")
-            insts.append(f"{seq.name} g_{n} ({','.join(io)})")
+            io.append(f".{seq.io['q']}({sanitize_name(n)})")
+            insts.append(f"{seq.name} {sanitize_instance(n)} ({', '.join(io)})")
 
         else:
             print(f"unknown gate type: {c.type(n)}")
@@ -459,12 +487,17 @@ def circuit_to_verilog(c, seq_types=None):
         if c.output(n):
             outputs.append(n)
 
-    verilog = f"module {c.name} (" + ",".join(inputs + outputs) + ");\n"
-    verilog += "".join(f"input {inp};\n" for inp in inputs)
-    verilog += "".join(f"output {out};\n" for out in outputs)
-    verilog += "".join(f"wire {wire};\n" for wire in wires)
-    verilog += "".join(f"{inst};\n" for inst in insts)
+    verilog = f"module {c.name} ("
+    verilog += ", ".join(sanitize_name(i) for i in inputs + outputs)
+    verilog += ");\n"
+    verilog += "".join(f"  input {sanitize_name(inp)};\n" for inp in inputs)
+    verilog += "".join(f"  output {sanitize_name(out)};\n" for out in outputs)
+    verilog += "\n"
+    verilog += "".join(f"  wire {sanitize_name(wire)};\n" for wire in wires)
+    verilog += "\n"
+    verilog += "".join(f"  {inst};\n" for inst in insts)
     verilog += "endmodule\n"
+    verilog += "\n"
     verilog += "\n".join(defs)
 
     return verilog

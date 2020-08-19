@@ -843,25 +843,6 @@ class Circuit:
         else:
             return circuit_endpoints
 
-    def comb(self):
-        """
-        Creates a copy of the circuit where sequential elements are removed
-        from the circuit by making thier d ports outputs of the circuits and
-        their q ports inputs to the circuit
-
-        Returns
-        -------
-        Circuit
-            The combinational circuit.
-        """
-        c = self.copy()
-        for i in c.seq():
-            c.remove(i)
-            c.add(i, "input")
-            c.set_output(self.fanin(i).pop())
-
-        return c
-
     def seq_graph(self):
         """
         Creates a graph of the circuit's sequential elements
@@ -884,7 +865,7 @@ class Circuit:
 
         return graph
 
-    def avg_sensitivity(self,n,approx=True,e=0.9,d=0.1):
+    def avg_sensitivity(self, n, approx=True, e=0.9, d=0.1):
         """
         Calculates the average sensitivity (equal to total influence)
         of node n with respect to its startpoints.
@@ -907,7 +888,7 @@ class Circuit:
 
         """
         from circuitgraph.transform import influence
-        from circuitgraph.sat import approx_model_count,model_count
+        from circuitgraph.sat import approx_model_count, model_count
 
         sp = self.startpoints(n)
 
@@ -918,15 +899,15 @@ class Circuit:
 
             # compute influence
             if approx:
-                mc = approx_model_count(i,{'sat':True},e=e,d=d)
+                mc = approx_model_count(i, {"sat": True}, e=e, d=d)
             else:
-                mc = model_count(i,{'sat':True})
-            infl = mc/(2**len(sp))
+                mc = model_count(i, {"sat": True})
+            infl = mc / (2 ** len(sp))
             avg_sen += infl
 
         return avg_sen
 
-    def sensitivity(self,n):
+    def sensitivity(self, n):
         """
         Calculates the sensitivity of node n with respect
         to its startpoints.
@@ -948,7 +929,7 @@ class Circuit:
         sp = self.startpoints(n)
 
         sen = len(sp)
-        s = sensitivity(c,n)
+        s = sensitivity(c, n)
         vs = int_to_bin(sen, clog2(len(sp)), True)
         while not sat(s, {f"out_{i}": v for i, v in enumerate(vs)}):
             sen -= 1
@@ -962,14 +943,16 @@ class Circuit:
         """
         self.type(self.nodes())
         self.output(self.nodes())
-        for g in self.nodes(types=['buf','not']):
-            if len(self.fanin(g))!=1:
+        for g in self.nodes(types=["buf", "not"]):
+            if len(self.fanin(g)) != 1:
                 raise ValueError(f"buf/not {g} has incorrect fanin count")
-        for g in self.nodes(types=['input','0','1']):
-            if len(self.fanin(g))>0:
+        for g in self.nodes(types=["input", "0", "1"]):
+            if len(self.fanin(g)) > 0:
                 raise ValueError(f"0/1/input {g} has fanin")
-        for g in self.nodes(types=['ff','lat','and','nand','or','nor','xor','xnor']):
-            if len(self.fanin(g))<1:
+        for g in self.nodes(
+            types=["ff", "lat", "and", "nand", "or", "nor", "xor", "xnor"]
+        ):
+            if len(self.fanin(g)) < 1:
                 raise ValueError(f"{g} has no fanin")
         for g in self.nodes():
             if not self.fanout(g) and not self.output(g):

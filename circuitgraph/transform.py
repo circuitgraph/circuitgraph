@@ -167,6 +167,9 @@ def ternary(c):
             p = list(c.predecessors(n))[0]
             t.add_edge(f"{p}_x", f"{n}_x")
 
+        elif c.type(n) in ["1'b0", "1'b1"]:
+            continue
+
         else:
             print(f"unknown gate type: {c.nodes[n]['type']}")
             code.interact(local=dict(globals(), **locals()))
@@ -189,16 +192,15 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
             First circuit.
     c1 : Circuit
             Optional second circuit, if None c0 is mitered with itself.
-    startpoints : iterable of str
+    startpoints : set of str
             Nodes to be tied together, must exist in both circuits.
-    endpoints : iterable of str
+    endpoints : set of str
             Nodes to be compared, must exist in both circuits.
 
     Returns
     -------
     Circuit
             Miter circuit.
-
     """
     if not c1:
         c1 = c0
@@ -212,15 +214,17 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     m.extend(c1.relabel({n: f"c1_{n}" for n in c1.nodes() - startpoints}))
 
     # compare outputs
+    # FIXME: Make sure this is robust to corner cases
     m.add("sat", "or", output=True)
     for o in endpoints:
         if c0.type(o) in ["lat", "ff"]:
-            m.add(
-                f"miter_{o}",
-                "xor",
-                fanin=[f"c0_{c0.d(o)}", f"c1_{c1.d(o)}"],
-                fanout=["sat"],
-            )
+            if c0.d(o) not in startpoints:
+                m.add(
+                    f"miter_{o}",
+                    "xor",
+                    fanin=[f"c0_{c0.d(o)}", f"c1_{c1.d(o)}"],
+                    fanout=["sat"],
+                )
         else:
             m.add(f"miter_{o}", "xor", fanin=[f"c0_{o}", f"c1_{o}"], fanout=["sat"])
 

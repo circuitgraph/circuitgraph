@@ -78,11 +78,29 @@ module test_module_2(clk, G0, G1, G17, G18);
     fflopd DFF_2_Q_reg(.CK (clk), .D(G5), .Q(G18[0]));
 endmodule
 
-module test_module_3(G0, G1, G2, G3, G4);
-    input G0, G1, G2;
-    output G3, G4;
+module test_module_3(
+    clk,
+    I0,
+    \G0[0] ,
+    \G1[1] ,
+    \G2[0] ,
+    \G3[0]
+);
+    input clk, \G0[0] ;
+    input [1:0] I0, \G1[1] ;
+    output \G2[0] ;
+    output [2:0] \G3[0] ;
 
-    assign G3 = G0 & ~G1;
+    wire \I1[0] ;
+
+    buf b(\I1[0] , \I0[0] );
+    nand n0(\G2[0] , \G0[0] , \G1[1] [1], I0[1]);
+    nand n1(\G3[0] [0], \G0[0] , \G1[1] [0]);
+
+    fflopd(.CK(clk), .D(\I1[0] ), .Q(\G3[0] [2]));
+
+    assign \G3[0] [1] = \G0[0] & ~\G1[1] [1] | I0[0];
+
 endmodule
 
 module fflopd(CK, D, Q);

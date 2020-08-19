@@ -69,7 +69,7 @@ class TestTransform(unittest.TestCase):
                 os.remove(f)
             shutil.rmtree(f"{os.getcwd()}/fv")
 
-    @unittest.skip("Failing on Travis")
+    @unittest.skip("Failing non-deterministically")
     def test_sensitivity(self):
         # pick random node and input value
         n = sample(self.s27.nodes() - self.s27.startpoints(), 1)[0]
