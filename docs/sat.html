@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.3" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.sat API documentation</title>
 <meta name="description" content="Functions for executing SAT, #SAT, and approx-#SAT on circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -38,26 +38,8 @@ from subprocess import PIPE, run
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Cadical
 
-
-class Timeout:
-    &#34;&#34;&#34;Class to handle timeout for SAT executions&#34;&#34;&#34;
-
-    def __init__(self, seconds=1, error_message=&#34;Timeout&#34;):
-        self.seconds = seconds
-        self.error_message = error_message
-
-    def handle_timeout(self, signum, frame):
-        raise TimeoutError(self.error_message)
-
-    def __enter__(self):
-        if self.seconds:
-            signal.signal(signal.SIGALRM, self.handle_timeout)
-            signal.alarm(self.seconds)
-
-    def __exit__(self, type, value, traceback):
-        if self.seconds:
-            signal.alarm(0)
-
+def interrupt(s):
+    s.interrupt()
 
 def add_assumptions(formula, variables, assumptions):
     for n, val in assumptions.items():
@@ -183,7 +165,7 @@ def cnf(c):
         elif c.type(n) == &#34;1&#34;:
             formula.append([variables.id(n)])
         elif c.type(n) in [&#34;ff&#34;, &#34;lat&#34;, &#34;input&#34;]:
-            pass
+            formula.append([variables.id(n),-variables.id(n)])
         else:
             print(f&#34;unknown gate type: {c.type(n)}&#34;)
             code.interact(local=dict(globals(), **locals()))
@@ -191,7 +173,7 @@ def cnf(c):
     return formula, variables
 
 
-def sat(c, assumptions=None, timeout=None):
+def sat(c, assumptions=None):
     &#34;&#34;&#34;
     Trys to find satisfying assignment, with optional assumptions
 
@@ -201,8 +183,6 @@ def sat(c, assumptions=None, timeout=None):
             Input circuit.
     assumptions : dict of str:int
             Nodes to assume True or False.
-    timeout : int
-            Seconds until timeout.
 
     Returns
     -------
@@ -227,15 +207,14 @@ def sat(c, assumptions=None, timeout=None):
 
     &#34;&#34;&#34;
     solver, variables = construct_solver(c, assumptions)
-    with Timeout(seconds=timeout):
-        if solver.solve():
-            model = solver.get_model()
-            return {n: model[variables.id(n) - 1] &gt; 0 for n in c.nodes()}
-        else:
-            return False
+    if solver.solve():
+        model = solver.get_model()
+        return {n: model[variables.id(n) - 1] &gt; 0 for n in c.nodes()}
+    else:
+        return False
 
 
-def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
+def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
     &#34;&#34;&#34;
     Approximates the number of solutions to circuit
 
@@ -245,12 +224,12 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
             Input circuit.
     assumptions : dict of str:int
             Nodes to assume True or False.
-    e : float (0-1)
+    startpoints : iter of str
+            Startpoints to use for approxmc
+    e : float (&gt;0)
             epsilon of approxmc
     d : float (0-1)
             delta of approxmc
-    timeout : int
-            Seconds until timeout.
 
     Returns
     -------
@@ -258,11 +237,14 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
             Estimate.
     &#34;&#34;&#34;
 
+    if startpoints is None:
+        startpoints = c.startpoints()
+
     formula, variables = cnf(c)
     add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
-    enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in c.startpoints()])
+    enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in startpoints])
 
     # write dimacs to tmp
     with tempfile.NamedTemporaryFile() as tmp:
@@ -278,8 +260,7 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
 
         # run approxmc
         cmd = f&#34;approxmc --epsilon={e} --delta={d} {tmp.name}&#34;.split()
-        with Timeout(seconds=timeout):
-            result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
 
     # parse results
     m = re.search(r&#34;Number of solutions is: (\d+) x 2\^(\d+)&#34;, result.stdout)
@@ -287,7 +268,7 @@ def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
     return estimate
 
 
-def model_count(c, assumptions=None, timeout=None):
+def model_count(c, assumptions=None):
     &#34;&#34;&#34;
     Determines the number of solutions to circuit
 
@@ -297,8 +278,6 @@ def model_count(c, assumptions=None, timeout=None):
             Input circuit.
     assumptions : dict of str:int
             Nodes to assume True or False.
-    timeout : int
-            Seconds until timeout.
 
     Returns
     -------
@@ -308,12 +287,11 @@ def model_count(c, assumptions=None, timeout=None):
 
     startpoints = c.startpoints()
     solver, variables = construct_solver(c, assumptions)
-    with Timeout(seconds=timeout):
-        count = 0
-        while solver.solve():
-            model = solver.get_model()
-            solver.add_clause([-model[variables.id(n) - 1] for n in startpoints])
-            count += 1
+    count = 0
+    while solver.solve():
+        model = solver.get_model()
+        solver.add_clause([-model[variables.id(n) - 1] for n in startpoints])
+        count += 1
 
     return count
 
@@ -371,7 +349,7 @@ def signal_probability(c, n):
 </details>
 </dd>
 <dt id="circuitgraph.sat.approx_model_count"><code class="name flex">
-<span>def <span class="ident">approx_model_count</span></span>(<span>c, assumptions=None, e=0.9, d=0.1, timeout=None)</span>
+<span>def <span class="ident">approx_model_count</span></span>(<span>c, assumptions=None, startpoints=None, e=0.9, d=0.1)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Approximates the number of solutions to circuit</p>
@@ -381,12 +359,12 @@ def signal_probability(c, n):
 <dd>Input circuit.</dd>
 <dt><strong><code>assumptions</code></strong> :&ensp;<code>dict</code> of <code>str:int</code></dt>
 <dd>Nodes to assume True or False.</dd>
-<dt><strong><code>e</code></strong> :&ensp;<code>float (0-1)</code></dt>
+<dt><strong><code>startpoints</code></strong> :&ensp;<code>iter</code> of <code>str</code></dt>
+<dd>Startpoints to use for approxmc</dd>
+<dt><strong><code>e</code></strong> :&ensp;<code>float (&gt;0)</code></dt>
 <dd>epsilon of approxmc</dd>
 <dt><strong><code>d</code></strong> :&ensp;<code>float (0-1)</code></dt>
 <dd>delta of approxmc</dd>
-<dt><strong><code>timeout</code></strong> :&ensp;<code>int</code></dt>
-<dd>Seconds until timeout.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -397,7 +375,7 @@ def signal_probability(c, n):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def approx_model_count(c, assumptions=None, e=0.9, d=0.1, timeout=None):
+<pre><code class="python">def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
     &#34;&#34;&#34;
     Approximates the number of solutions to circuit
 
@@ -407,12 +385,12 @@ def signal_probability(c, n):
             Input circuit.
     assumptions : dict of str:int
             Nodes to assume True or False.
-    e : float (0-1)
+    startpoints : iter of str
+            Startpoints to use for approxmc
+    e : float (&gt;0)
             epsilon of approxmc
     d : float (0-1)
             delta of approxmc
-    timeout : int
-            Seconds until timeout.
 
     Returns
     -------
@@ -420,11 +398,14 @@ def signal_probability(c, n):
             Estimate.
     &#34;&#34;&#34;
 
+    if startpoints is None:
+        startpoints = c.startpoints()
+
     formula, variables = cnf(c)
     add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
-    enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in c.startpoints()])
+    enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in startpoints])
 
     # write dimacs to tmp
     with tempfile.NamedTemporaryFile() as tmp:
@@ -440,8 +421,7 @@ def signal_probability(c, n):
 
         # run approxmc
         cmd = f&#34;approxmc --epsilon={e} --delta={d} {tmp.name}&#34;.split()
-        with Timeout(seconds=timeout):
-            result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
 
     # parse results
     m = re.search(r&#34;Number of solutions is: (\d+) x 2\^(\d+)&#34;, result.stdout)
@@ -556,7 +536,7 @@ def signal_probability(c, n):
         elif c.type(n) == &#34;1&#34;:
             formula.append([variables.id(n)])
         elif c.type(n) in [&#34;ff&#34;, &#34;lat&#34;, &#34;input&#34;]:
-            pass
+            formula.append([variables.id(n),-variables.id(n)])
         else:
             print(f&#34;unknown gate type: {c.type(n)}&#34;)
             code.interact(local=dict(globals(), **locals()))
@@ -612,8 +592,21 @@ def signal_probability(c, n):
     return solver, variables</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.sat.interrupt"><code class="name flex">
+<span>def <span class="ident">interrupt</span></span>(<span>s)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def interrupt(s):
+    s.interrupt()</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.sat.model_count"><code class="name flex">
-<span>def <span class="ident">model_count</span></span>(<span>c, assumptions=None, timeout=None)</span>
+<span>def <span class="ident">model_count</span></span>(<span>c, assumptions=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the number of solutions to circuit</p>
@@ -623,8 +616,6 @@ def signal_probability(c, n):
 <dd>Input circuit.</dd>
 <dt><strong><code>assumptions</code></strong> :&ensp;<code>dict</code> of <code>str:int</code></dt>
 <dd>Nodes to assume True or False.</dd>
-<dt><strong><code>timeout</code></strong> :&ensp;<code>int</code></dt>
-<dd>Seconds until timeout.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -635,7 +626,7 @@ def signal_probability(c, n):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def model_count(c, assumptions=None, timeout=None):
+<pre><code class="python">def model_count(c, assumptions=None):
     &#34;&#34;&#34;
     Determines the number of solutions to circuit
 
@@ -645,8 +636,6 @@ def signal_probability(c, n):
             Input circuit.
     assumptions : dict of str:int
             Nodes to assume True or False.
-    timeout : int
-            Seconds until timeout.
 
     Returns
     -------
@@ -656,12 +645,11 @@ def signal_probability(c, n):
 
     startpoints = c.startpoints()
     solver, variables = construct_solver(c, assumptions)
-    with Timeout(seconds=timeout):
-        count = 0
-        while solver.solve():
-            model = solver.get_model()
-            solver.add_clause([-model[variables.id(n) - 1] for n in startpoints])
-            count += 1
+    count = 0
+    while solver.solve():
+        model = solver.get_model()
+        solver.add_clause([-model[variables.id(n) - 1] for n in startpoints])
+        count += 1
 
     return count</code></pre>
 </details>
@@ -681,7 +669,7 @@ def signal_probability(c, n):
 </details>
 </dd>
 <dt id="circuitgraph.sat.sat"><code class="name flex">
-<span>def <span class="ident">sat</span></span>(<span>c, assumptions=None, timeout=None)</span>
+<span>def <span class="ident">sat</span></span>(<span>c, assumptions=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Trys to find satisfying assignment, with optional assumptions</p>
@@ -691,8 +679,6 @@ def signal_probability(c, n):
 <dd>Input circuit.</dd>
 <dt><strong><code>assumptions</code></strong> :&ensp;<code>dict</code> of <code>str:int</code></dt>
 <dd>Nodes to assume True or False.</dd>
-<dt><strong><code>timeout</code></strong> :&ensp;<code>int</code></dt>
-<dd>Seconds until timeout.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -718,7 +704,7 @@ False
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sat(c, assumptions=None, timeout=None):
+<pre><code class="python">def sat(c, assumptions=None):
     &#34;&#34;&#34;
     Trys to find satisfying assignment, with optional assumptions
 
@@ -728,8 +714,6 @@ False
             Input circuit.
     assumptions : dict of str:int
             Nodes to assume True or False.
-    timeout : int
-            Seconds until timeout.
 
     Returns
     -------
@@ -754,12 +738,11 @@ False
 
     &#34;&#34;&#34;
     solver, variables = construct_solver(c, assumptions)
-    with Timeout(seconds=timeout):
-        if solver.solve():
-            model = solver.get_model()
-            return {n: model[variables.id(n) - 1] &gt; 0 for n in c.nodes()}
-        else:
-            return False</code></pre>
+    if solver.solve():
+        model = solver.get_model()
+        return {n: model[variables.id(n) - 1] &gt; 0 for n in c.nodes()}
+    else:
+        return False</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.sat.signal_probability"><code class="name flex">
@@ -815,55 +798,6 @@ combinations</p>
 </dl>
 </section>
 <section>
-<h2 class="section-title" id="header-classes">Classes</h2>
-<dl>
-<dt id="circuitgraph.sat.Timeout"><code class="flex name class">
-<span>class <span class="ident">Timeout</span></span>
-<span>(</span><span>seconds=1, error_message='Timeout')</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Class to handle timeout for SAT executions</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class Timeout:
-    &#34;&#34;&#34;Class to handle timeout for SAT executions&#34;&#34;&#34;
-
-    def __init__(self, seconds=1, error_message=&#34;Timeout&#34;):
-        self.seconds = seconds
-        self.error_message = error_message
-
-    def handle_timeout(self, signum, frame):
-        raise TimeoutError(self.error_message)
-
-    def __enter__(self):
-        if self.seconds:
-            signal.signal(signal.SIGALRM, self.handle_timeout)
-            signal.alarm(self.seconds)
-
-    def __exit__(self, type, value, traceback):
-        if self.seconds:
-            signal.alarm(0)</code></pre>
-</details>
-<h3>Methods</h3>
-<dl>
-<dt id="circuitgraph.sat.Timeout.handle_timeout"><code class="name flex">
-<span>def <span class="ident">handle_timeout</span></span>(<span>self, signum, frame)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def handle_timeout(self, signum, frame):
-    raise TimeoutError(self.error_message)</code></pre>
-</details>
-</dd>
-</dl>
-</dd>
-</dl>
 </section>
 </article>
 <nav id="sidebar">
@@ -887,27 +821,18 @@ combinations</p>
 <li><code><a title="circuitgraph.sat.approx_model_count" href="#circuitgraph.sat.approx_model_count">approx_model_count</a></code></li>
 <li><code><a title="circuitgraph.sat.cnf" href="#circuitgraph.sat.cnf">cnf</a></code></li>
 <li><code><a title="circuitgraph.sat.construct_solver" href="#circuitgraph.sat.construct_solver">construct_solver</a></code></li>
+<li><code><a title="circuitgraph.sat.interrupt" href="#circuitgraph.sat.interrupt">interrupt</a></code></li>
 <li><code><a title="circuitgraph.sat.model_count" href="#circuitgraph.sat.model_count">model_count</a></code></li>
 <li><code><a title="circuitgraph.sat.remap" href="#circuitgraph.sat.remap">remap</a></code></li>
 <li><code><a title="circuitgraph.sat.sat" href="#circuitgraph.sat.sat">sat</a></code></li>
 <li><code><a title="circuitgraph.sat.signal_probability" href="#circuitgraph.sat.signal_probability">signal_probability</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-classes">Classes</a></h3>
-<ul>
-<li>
-<h4><code><a title="circuitgraph.sat.Timeout" href="#circuitgraph.sat.Timeout">Timeout</a></code></h4>
-<ul class="">
-<li><code><a title="circuitgraph.sat.Timeout.handle_timeout" href="#circuitgraph.sat.Timeout.handle_timeout">handle_timeout</a></code></li>
-</ul>
-</li>
-</ul>
-</li>
 </ul>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

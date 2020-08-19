@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.3" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.transform API documentation</title>
 <meta name="description" content="Functions for transforming circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -37,6 +37,7 @@ import subprocess
 from tempfile import NamedTemporaryFile
 from random import sample
 import os
+import shutil
 
 import networkx as nx
 
@@ -65,53 +66,50 @@ def syn(c, engine, print_output=False):
     &#34;&#34;&#34;
     verilog = circuit_to_verilog(c)
 
-    # probably should write output to the tmp file
-    with NamedTemporaryFile() as tmp:
-        tmp.write(bytes(verilog, &#34;ascii&#34;))
-        tmp.flush()
-        if engine == &#34;Genus&#34;:
-            cmd = [
-                &#34;genus&#34;,
-                &#34;-no_gui&#34;,
-                &#34;-execute&#34;,
-                &#34;set_db / .library &#34;
-                f&#34;{os.environ[&#39;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#39;]};\n&#34;
-                f&#34;read_hdl -sv {tmp.name};\n&#34;
-                &#34;elaborate;\n&#34;
-                &#34;set_db syn_generic_effort high;\n&#34;
-                &#34;syn_generic;\n&#34;
-                &#34;syn_map;\n&#34;
-                &#34;syn_opt;\n&#34;
-                &#34;write_hdl -generic;\n&#34;
-                &#34;exit;&#34;,
-            ]
-            process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-            output = &#34;&#34;
-            while True:
-                line = process.stdout.readline()
-                if line == &#34;&#34; and process.poll() is not None:
-                    break
-                if line:
-                    if print_output:
-                        print(line.strip())
-                    output += line
-
-        elif engine == &#34;Yosys&#34;:
-            with NamedTemporaryFile() as tmpo:
+    with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_input&#34;) as tmp_in:
+        tmp_in.write(bytes(verilog, &#34;ascii&#34;))
+        tmp_in.flush()
+        with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_output&#34;) as tmp_out:
+            if engine == &#34;Genus&#34;:
+                cmd = [
+                    &#34;genus&#34;,
+                    &#34;-no_gui&#34;,
+                    &#34;-execute&#34;,
+                    &#34;set_db / .library &#34;
+                    f&#34;{os.environ[&#39;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#39;]};\n&#34;
+                    f&#34;read_hdl -sv {tmp_in.name};\n&#34;
+                    &#34;elaborate;\n&#34;
+                    &#34;set_db syn_generic_effort high;\n&#34;
+                    &#34;syn_generic;\n&#34;
+                    &#34;syn_map;\n&#34;
+                    &#34;syn_opt;\n&#34;
+                    f&#39;redirect {tmp_out.name} &#34;write_hdl -generic&#34;;\n&#39;
+                    &#34;exit;&#34;,
+                ]
+                process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+                while True:
+                    line = process.stdout.readline()
+                    if line == &#34;&#34; and process.poll() is not None:
+                        break
+                    if line:
+                        if print_output:
+                            print(line.strip())
+                output = tmp_out.read().decode(&#34;utf-8&#34;)
+            elif engine == &#34;Yosys&#34;:
                 cmd = [
                     &#34;yosys&#34;,
                     &#34;-p&#34;,
-                    f&#34;read_verilog {tmp.name}; &#34;
+                    f&#34;read_verilog {tmp_in.name}; &#34;
                     &#34;proc; opt; fsm; opt; memory; opt; clean; &#34;
-                    f&#34;write_verilog -noattr {tmpo.name}&#34;,
+                    f&#34;write_verilog -noattr {tmp_out.name}&#34;,
                 ]
                 subprocess.run(cmd)
-                output = tmpo.read().decode(&#34;utf-8&#34;)
+                output = tmp_out.read().decode(&#34;utf-8&#34;)
                 if print_output:
                     print(output)
 
-        else:
-            raise ValueError(&#34;synthesis engine must be Yosys or Genus&#34;)
+            else:
+                raise ValueError(&#34;synthesis engine must be Yosys or Genus&#34;)
 
     return verilog_to_circuit(output, c.name)
 
@@ -245,12 +243,15 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     # compare outputs
     m.add(&#34;sat&#34;, &#34;or&#34;, output=True)
     for o in endpoints:
-        if c0.type(o) in [&#34;lat&#34;,&#34;ff&#34;]:
-            m.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{c0.d(o)}&#34;,
-                  f&#34;c1_{c1.d(o)}&#34;], fanout=[&#34;sat&#34;])
+        if c0.type(o) in [&#34;lat&#34;, &#34;ff&#34;]:
+            m.add(
+                f&#34;miter_{o}&#34;,
+                &#34;xor&#34;,
+                fanin=[f&#34;c0_{c0.d(o)}&#34;, f&#34;c1_{c1.d(o)}&#34;],
+                fanout=[&#34;sat&#34;],
+            )
         else:
-            m.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{o}&#34;,
-                  f&#34;c1_{o}&#34;], fanout=[&#34;sat&#34;])
+            m.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{o}&#34;, f&#34;c1_{o}&#34;], fanout=[&#34;sat&#34;])
 
     return m
 
@@ -295,6 +296,7 @@ def comb(c):
 
     return c_comb
 
+
 def unroll(c, cycles):
     &#34;&#34;&#34;
     Creates combinational unrolling of the circuit.
@@ -335,7 +337,49 @@ def unroll(c, cycles):
     return u
 
 
-def sensitivity(c, n):
+def influence(c, n, s):
+    &#34;&#34;&#34;
+    Creates a circuit to compute sensitivity.
+
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to unroll.
+    n : str
+            Node to compute influence at.
+    s : str
+            Startpoint to compute influence for.
+
+    Returns
+    -------
+    Circuit
+            Influence circuit.
+
+    &#34;&#34;&#34;
+    # check if s is in startpoints
+    sp = c.startpoints(n)
+    if s not in sp:
+        raise ValueError(f&#34;{s} is not in startpoints of {n}&#34;)
+
+    # get input cone
+    fiNodes = c.transitive_fanin(n) | set([n])
+    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
+
+    # remove outs, convert startpoints
+    sub_c.set_output(sub_c.outputs(), False)
+    sub_c.set_type(sub_c.startpoints(), &#34;input&#34;)
+
+    # create two copies of sub circuit
+    infl = Circuit(name=f&#34;infl_{s}_on_{n}&#34;)
+    infl.extend(sub_c)
+    infl.extend(sub_c.relabel({g: f&#34;s1_{g}&#34; for g in sub_c if g not in sp - set([s])}))
+    infl.add(&#34;sat&#34;, &#34;xor&#34;, fanin=[n, f&#34;s1_{n}&#34;], output=True)
+    infl.add(f&#34;not_{s}&#34;, &#34;not&#34;, fanin=s, fanout=f&#34;s1_{s}&#34;)
+
+    return infl
+
+
+def sensitivity(c, n, startpoints=None):
     &#34;&#34;&#34;
     Creates a circuit to compute sensitivity.
 
@@ -345,6 +389,8 @@ def sensitivity(c, n):
             Sequential circuit to unroll.
     n : str
             Node to compute sensitivity at.
+    startpoints : iterable of str
+            startpoints of n to flip.
 
     Returns
     -------
@@ -352,58 +398,55 @@ def sensitivity(c, n):
             Sensitivity circuit.
 
     &#34;&#34;&#34;
+    # choose all startpoints if not specified
+    if startpoints is None:
+        startpoints = c.startpoints(n)
+    all_startpoints = c.startpoints(n)
 
     # get fanin cone of node
     if n in c.startpoints():
         raise ValueError(f&#34;{n} is in startpoints&#34;)
 
+    # get input cone
     fiNodes = c.transitive_fanin(n) | set([n])
-    startpoints = c.startpoints(n)
-    subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
+    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
 
-    # convert outputs to buffers
-    for o in subCircuit.outputs():
-        subCircuit.set_output(o,False)
-
-    # convert startpoints to inputs
-    for s in subCircuit.startpoints():
-        subCircuit.graph.nodes[s][&#34;type&#34;] = &#34;input&#34;
-        subCircuit.graph.remove_edges_from(
-            (p, s) for p in list(subCircuit.graph.predecessors(s))
-        )
+    # remove outs, convert startpoints
+    sub_c.set_output(sub_c.outputs(), False)
+    sub_c.set_type(sub_c.startpoints(), &#34;input&#34;)
 
     # create sensitivity circuit and add first copy of subcircuit
-    sensitivityCircuit = Circuit()
-    sensitivityCircuit.extend(subCircuit)
+    sen = Circuit()
+    sen.extend(sub_c)
 
     # instantiate population count
-
     p = popcount(len(startpoints)).strip_io()
     p = p.relabel({g: f&#34;pop_{g}&#34; for g in p})
-    sensitivityCircuit.extend(p)
+    sen.extend(p)
     for o in range(clog2(len(startpoints))):
-        sensitivityCircuit.add(f&#34;out_{o}&#34;, &#34;buf&#34;, fanin=f&#34;pop_out_{o}&#34;,
-                               output=True)
+        sen.add(f&#34;out_{o}&#34;, &#34;buf&#34;, fanin=f&#34;pop_out_{o}&#34;, output=True)
 
     # stamp out a copies of the circuit with s inverted
     for i, s in enumerate(startpoints):
         mapping = {
-            g: f&#34;sen_{s}_{g}&#34; for g in subCircuit if g not in startpoints - set([s])
+            g: f&#34;sen_{s}_{g}&#34; for g in sub_c if g not in all_startpoints - set([s])
         }
-        relabeledSubCircuit = subCircuit.relabel(mapping)
-        sensitivityCircuit.extend(relabeledSubCircuit)
+        sen.extend(sub_c.relabel(mapping))
 
         # connect inverted input
-        sensitivityCircuit.graph.nodes[f&#34;sen_{s}_{s}&#34;][&#34;type&#34;] = &#34;not&#34;
-        sensitivityCircuit.graph.add_edge(s, f&#34;sen_{s}_{s}&#34;)
+        sen.set_type(f&#34;sen_{s}_{s}&#34;, &#34;not&#34;)
+        sen.connect(s, f&#34;sen_{s}_{s}&#34;)
 
         # compare to first copy
-        sensitivityCircuit.add(
-            f&#34;difference_{s}&#34;, &#34;xor&#34;, fanin=[n, f&#34;sen_{s}_{n}&#34;],
-            fanout=f&#34;pop_in_{i}&#34;,output=True
+        sen.add(
+            f&#34;difference_{s}&#34;,
+            &#34;xor&#34;,
+            fanin=[n, f&#34;sen_{s}_{n}&#34;],
+            fanout=f&#34;pop_in_{i}&#34;,
+            output=True,
         )
 
-    return sensitivityCircuit
+    return sen
 
 
 def sensitize(c, n):
@@ -438,7 +481,7 @@ def sensitize(c, n):
     return m
 
 
-def mphf(w=30, n=800):
+def mphf(w=50, n=8000):
     &#34;&#34;&#34;
     Creates a SAT-hard circuit based on the structure of minimum perfect hash
     functions.
@@ -541,6 +584,71 @@ def mphf(w=30, n=800):
     return c_comb</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.transform.influence"><code class="name flex">
+<span>def <span class="ident">influence</span></span>(<span>c, n, s)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a circuit to compute sensitivity.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Sequential circuit to unroll.</dd>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>Node to compute influence at.</dd>
+<dt><strong><code>s</code></strong> :&ensp;<code>str</code></dt>
+<dd>Startpoint to compute influence for.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Influence circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def influence(c, n, s):
+    &#34;&#34;&#34;
+    Creates a circuit to compute sensitivity.
+
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to unroll.
+    n : str
+            Node to compute influence at.
+    s : str
+            Startpoint to compute influence for.
+
+    Returns
+    -------
+    Circuit
+            Influence circuit.
+
+    &#34;&#34;&#34;
+    # check if s is in startpoints
+    sp = c.startpoints(n)
+    if s not in sp:
+        raise ValueError(f&#34;{s} is not in startpoints of {n}&#34;)
+
+    # get input cone
+    fiNodes = c.transitive_fanin(n) | set([n])
+    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
+
+    # remove outs, convert startpoints
+    sub_c.set_output(sub_c.outputs(), False)
+    sub_c.set_type(sub_c.startpoints(), &#34;input&#34;)
+
+    # create two copies of sub circuit
+    infl = Circuit(name=f&#34;infl_{s}_on_{n}&#34;)
+    infl.extend(sub_c)
+    infl.extend(sub_c.relabel({g: f&#34;s1_{g}&#34; for g in sub_c if g not in sp - set([s])}))
+    infl.add(&#34;sat&#34;, &#34;xor&#34;, fanin=[n, f&#34;s1_{n}&#34;], output=True)
+    infl.add(f&#34;not_{s}&#34;, &#34;not&#34;, fanin=s, fanout=f&#34;s1_{s}&#34;)
+
+    return infl</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.transform.miter"><code class="name flex">
 <span>def <span class="ident">miter</span></span>(<span>c0, c1=None, startpoints=None, endpoints=None)</span>
 </code></dt>
@@ -601,18 +709,21 @@ def mphf(w=30, n=800):
     # compare outputs
     m.add(&#34;sat&#34;, &#34;or&#34;, output=True)
     for o in endpoints:
-        if c0.type(o) in [&#34;lat&#34;,&#34;ff&#34;]:
-            m.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{c0.d(o)}&#34;,
-                  f&#34;c1_{c1.d(o)}&#34;], fanout=[&#34;sat&#34;])
+        if c0.type(o) in [&#34;lat&#34;, &#34;ff&#34;]:
+            m.add(
+                f&#34;miter_{o}&#34;,
+                &#34;xor&#34;,
+                fanin=[f&#34;c0_{c0.d(o)}&#34;, f&#34;c1_{c1.d(o)}&#34;],
+                fanout=[&#34;sat&#34;],
+            )
         else:
-            m.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{o}&#34;,
-                  f&#34;c1_{o}&#34;], fanout=[&#34;sat&#34;])
+            m.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{o}&#34;, f&#34;c1_{o}&#34;], fanout=[&#34;sat&#34;])
 
     return m</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.mphf"><code class="name flex">
-<span>def <span class="ident">mphf</span></span>(<span>w=30, n=800)</span>
+<span>def <span class="ident">mphf</span></span>(<span>w=50, n=8000)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a SAT-hard circuit based on the structure of minimum perfect hash
@@ -633,7 +744,7 @@ functions.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def mphf(w=30, n=800):
+<pre><code class="python">def mphf(w=50, n=8000):
     &#34;&#34;&#34;
     Creates a SAT-hard circuit based on the structure of minimum perfect hash
     functions.
@@ -670,7 +781,7 @@ functions.</p>
 </details>
 </dd>
 <dt id="circuitgraph.transform.sensitivity"><code class="name flex">
-<span>def <span class="ident">sensitivity</span></span>(<span>c, n)</span>
+<span>def <span class="ident">sensitivity</span></span>(<span>c, n, startpoints=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a circuit to compute sensitivity.</p>
@@ -680,6 +791,8 @@ functions.</p>
 <dd>Sequential circuit to unroll.</dd>
 <dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
 <dd>Node to compute sensitivity at.</dd>
+<dt><strong><code>startpoints</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
+<dd>startpoints of n to flip.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -690,7 +803,7 @@ functions.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sensitivity(c, n):
+<pre><code class="python">def sensitivity(c, n, startpoints=None):
     &#34;&#34;&#34;
     Creates a circuit to compute sensitivity.
 
@@ -700,6 +813,8 @@ functions.</p>
             Sequential circuit to unroll.
     n : str
             Node to compute sensitivity at.
+    startpoints : iterable of str
+            startpoints of n to flip.
 
     Returns
     -------
@@ -707,58 +822,55 @@ functions.</p>
             Sensitivity circuit.
 
     &#34;&#34;&#34;
+    # choose all startpoints if not specified
+    if startpoints is None:
+        startpoints = c.startpoints(n)
+    all_startpoints = c.startpoints(n)
 
     # get fanin cone of node
     if n in c.startpoints():
         raise ValueError(f&#34;{n} is in startpoints&#34;)
 
+    # get input cone
     fiNodes = c.transitive_fanin(n) | set([n])
-    startpoints = c.startpoints(n)
-    subCircuit = Circuit(c.graph.subgraph(fiNodes).copy())
+    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
 
-    # convert outputs to buffers
-    for o in subCircuit.outputs():
-        subCircuit.set_output(o,False)
-
-    # convert startpoints to inputs
-    for s in subCircuit.startpoints():
-        subCircuit.graph.nodes[s][&#34;type&#34;] = &#34;input&#34;
-        subCircuit.graph.remove_edges_from(
-            (p, s) for p in list(subCircuit.graph.predecessors(s))
-        )
+    # remove outs, convert startpoints
+    sub_c.set_output(sub_c.outputs(), False)
+    sub_c.set_type(sub_c.startpoints(), &#34;input&#34;)
 
     # create sensitivity circuit and add first copy of subcircuit
-    sensitivityCircuit = Circuit()
-    sensitivityCircuit.extend(subCircuit)
+    sen = Circuit()
+    sen.extend(sub_c)
 
     # instantiate population count
-
     p = popcount(len(startpoints)).strip_io()
     p = p.relabel({g: f&#34;pop_{g}&#34; for g in p})
-    sensitivityCircuit.extend(p)
+    sen.extend(p)
     for o in range(clog2(len(startpoints))):
-        sensitivityCircuit.add(f&#34;out_{o}&#34;, &#34;buf&#34;, fanin=f&#34;pop_out_{o}&#34;,
-                               output=True)
+        sen.add(f&#34;out_{o}&#34;, &#34;buf&#34;, fanin=f&#34;pop_out_{o}&#34;, output=True)
 
     # stamp out a copies of the circuit with s inverted
     for i, s in enumerate(startpoints):
         mapping = {
-            g: f&#34;sen_{s}_{g}&#34; for g in subCircuit if g not in startpoints - set([s])
+            g: f&#34;sen_{s}_{g}&#34; for g in sub_c if g not in all_startpoints - set([s])
         }
-        relabeledSubCircuit = subCircuit.relabel(mapping)
-        sensitivityCircuit.extend(relabeledSubCircuit)
+        sen.extend(sub_c.relabel(mapping))
 
         # connect inverted input
-        sensitivityCircuit.graph.nodes[f&#34;sen_{s}_{s}&#34;][&#34;type&#34;] = &#34;not&#34;
-        sensitivityCircuit.graph.add_edge(s, f&#34;sen_{s}_{s}&#34;)
+        sen.set_type(f&#34;sen_{s}_{s}&#34;, &#34;not&#34;)
+        sen.connect(s, f&#34;sen_{s}_{s}&#34;)
 
         # compare to first copy
-        sensitivityCircuit.add(
-            f&#34;difference_{s}&#34;, &#34;xor&#34;, fanin=[n, f&#34;sen_{s}_{n}&#34;],
-            fanout=f&#34;pop_in_{i}&#34;,output=True
+        sen.add(
+            f&#34;difference_{s}&#34;,
+            &#34;xor&#34;,
+            fanin=[n, f&#34;sen_{s}_{n}&#34;],
+            fanout=f&#34;pop_in_{i}&#34;,
+            output=True,
         )
 
-    return sensitivityCircuit</code></pre>
+    return sen</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.sensitize"><code class="name flex">
@@ -857,53 +969,50 @@ functions.</p>
     &#34;&#34;&#34;
     verilog = circuit_to_verilog(c)
 
-    # probably should write output to the tmp file
-    with NamedTemporaryFile() as tmp:
-        tmp.write(bytes(verilog, &#34;ascii&#34;))
-        tmp.flush()
-        if engine == &#34;Genus&#34;:
-            cmd = [
-                &#34;genus&#34;,
-                &#34;-no_gui&#34;,
-                &#34;-execute&#34;,
-                &#34;set_db / .library &#34;
-                f&#34;{os.environ[&#39;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#39;]};\n&#34;
-                f&#34;read_hdl -sv {tmp.name};\n&#34;
-                &#34;elaborate;\n&#34;
-                &#34;set_db syn_generic_effort high;\n&#34;
-                &#34;syn_generic;\n&#34;
-                &#34;syn_map;\n&#34;
-                &#34;syn_opt;\n&#34;
-                &#34;write_hdl -generic;\n&#34;
-                &#34;exit;&#34;,
-            ]
-            process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-            output = &#34;&#34;
-            while True:
-                line = process.stdout.readline()
-                if line == &#34;&#34; and process.poll() is not None:
-                    break
-                if line:
-                    if print_output:
-                        print(line.strip())
-                    output += line
-
-        elif engine == &#34;Yosys&#34;:
-            with NamedTemporaryFile() as tmpo:
+    with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_input&#34;) as tmp_in:
+        tmp_in.write(bytes(verilog, &#34;ascii&#34;))
+        tmp_in.flush()
+        with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_output&#34;) as tmp_out:
+            if engine == &#34;Genus&#34;:
+                cmd = [
+                    &#34;genus&#34;,
+                    &#34;-no_gui&#34;,
+                    &#34;-execute&#34;,
+                    &#34;set_db / .library &#34;
+                    f&#34;{os.environ[&#39;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#39;]};\n&#34;
+                    f&#34;read_hdl -sv {tmp_in.name};\n&#34;
+                    &#34;elaborate;\n&#34;
+                    &#34;set_db syn_generic_effort high;\n&#34;
+                    &#34;syn_generic;\n&#34;
+                    &#34;syn_map;\n&#34;
+                    &#34;syn_opt;\n&#34;
+                    f&#39;redirect {tmp_out.name} &#34;write_hdl -generic&#34;;\n&#39;
+                    &#34;exit;&#34;,
+                ]
+                process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+                while True:
+                    line = process.stdout.readline()
+                    if line == &#34;&#34; and process.poll() is not None:
+                        break
+                    if line:
+                        if print_output:
+                            print(line.strip())
+                output = tmp_out.read().decode(&#34;utf-8&#34;)
+            elif engine == &#34;Yosys&#34;:
                 cmd = [
                     &#34;yosys&#34;,
                     &#34;-p&#34;,
-                    f&#34;read_verilog {tmp.name}; &#34;
+                    f&#34;read_verilog {tmp_in.name}; &#34;
                     &#34;proc; opt; fsm; opt; memory; opt; clean; &#34;
-                    f&#34;write_verilog -noattr {tmpo.name}&#34;,
+                    f&#34;write_verilog -noattr {tmp_out.name}&#34;,
                 ]
                 subprocess.run(cmd)
-                output = tmpo.read().decode(&#34;utf-8&#34;)
+                output = tmp_out.read().decode(&#34;utf-8&#34;)
                 if print_output:
                     print(output)
 
-        else:
-            raise ValueError(&#34;synthesis engine must be Yosys or Genus&#34;)
+            else:
+                raise ValueError(&#34;synthesis engine must be Yosys or Genus&#34;)
 
     return verilog_to_circuit(output, c.name)</code></pre>
 </details>
@@ -1105,6 +1214,7 @@ functions.</p>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="two-column">
 <li><code><a title="circuitgraph.transform.comb" href="#circuitgraph.transform.comb">comb</a></code></li>
+<li><code><a title="circuitgraph.transform.influence" href="#circuitgraph.transform.influence">influence</a></code></li>
 <li><code><a title="circuitgraph.transform.miter" href="#circuitgraph.transform.miter">miter</a></code></li>
 <li><code><a title="circuitgraph.transform.mphf" href="#circuitgraph.transform.mphf">mphf</a></code></li>
 <li><code><a title="circuitgraph.transform.sensitivity" href="#circuitgraph.transform.sensitivity">sensitivity</a></code></li>
@@ -1118,7 +1228,7 @@ functions.</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

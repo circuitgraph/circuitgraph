@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.3" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.circuit API documentation</title>
 <meta name="description" content="Class for circuit graphs …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -265,14 +265,17 @@ class Circuit:
 
         if types is None and output is None:
             return set(self.graph.nodes)
-            #return set(n for n in self.graph.nodes)
+            # return set(n for n in self.graph.nodes)
         elif types is None:
             return set(n for n in self.nodes() if self.output(n) == output)
         elif output is None:
             return set(n for n in self.nodes() if self.type(n) in types)
         else:
-            return set(n for n in self.nodes()
-                    if self.type(n) in types and self.output(n) == output)
+            return set(
+                n
+                for n in self.nodes()
+                if self.type(n) in types and self.output(n) == output
+            )
 
     def is_cyclic(self):
         &#34;&#34;&#34;
@@ -307,7 +310,9 @@ class Circuit:
         &#34;&#34;&#34;
         return self.graph.edges
 
-    def add(self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None, output=False):
+    def add(
+        self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None, output=False
+    ):
         &#34;&#34;&#34;
         Adds a new node to the circuit, optionally connecting it
 
@@ -363,13 +368,13 @@ class Circuit:
             fanout = [fanout]
 
         # raise error for invalid inputs
-        if len(fanin)&gt;1 and type in [&#34;ff&#34;, &#34;lat&#34;, &#34;buf&#34;, &#34;not&#34;]:
+        if len(fanin) &gt; 1 and type in [&#34;ff&#34;, &#34;lat&#34;, &#34;buf&#34;, &#34;not&#34;]:
             raise ValueError(f&#34;{type} cannot have more than one fanin&#34;)
         if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;input&#34;]:
             raise ValueError(f&#34;{type} cannot have fanin&#34;)
 
         # add node
-        self.graph.add_node(n, type=type,r=r,s=s,clk=clk,output=output)
+        self.graph.add_node(n, type=type, r=r, s=s, clk=clk, output=output)
 
         # connect
         self.graph.add_edges_from((n, f) for f in fanout)
@@ -412,7 +417,7 @@ class Circuit:
         &#34;&#34;&#34;
         g = self.graph.copy()
         for o in self.outputs():
-            g.nodes[o][&#39;output&#39;] = False
+            g.nodes[o][&#34;output&#34;] = False
         for i in self.inputs():
             g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
 
@@ -471,7 +476,9 @@ class Circuit:
         &#34;&#34;&#34;
         return Circuit(graph=nx.relabel_nodes(self.graph, mapping), name=self.name)
 
-    def transitive_fanout(self, ns, stopatTypes=[&#34;ff&#34;, &#34;lat&#34;], stopatNodes=[], gates=None):
+    def transitive_fanout(
+        self, ns, stopatTypes=[&#34;ff&#34;, &#34;lat&#34;], stopatNodes=[], gates=None
+    ):
         &#34;&#34;&#34;
         Computes the transitive fanout of a node.
 
@@ -619,7 +626,9 @@ class Circuit:
             if self.type(f) in [&#34;ff&#34;, &#34;lat&#34;] or f in visited:
                 depths.add(depth)
             else:
-                depths.add(self.fanout_comb_depth(f, shortest, visited.copy(), depth+1))
+                depths.add(
+                    self.fanout_comb_depth(f, shortest, visited.copy(), depth + 1)
+                )
 
         return comp(depths)
 
@@ -835,7 +844,7 @@ class Circuit:
                 Output and input nodes in circuit.
 
         &#34;&#34;&#34;
-        return self.nodes(&#34;input&#34;)|self.nodes(output=True)
+        return self.nodes(&#34;input&#34;) | self.nodes(output=True)
 
     def startpoints(self, ns=None):
         &#34;&#34;&#34;
@@ -879,6 +888,25 @@ class Circuit:
         else:
             return circuit_endpoints
 
+    def comb(self):
+        &#34;&#34;&#34;
+        Creates a copy of the circuit where sequential elements are removed
+        from the circuit by making thier d ports outputs of the circuits and
+        their q ports inputs to the circuit
+
+        Returns
+        -------
+        Circuit
+            The combinational circuit.
+        &#34;&#34;&#34;
+        c = self.copy()
+        for i in c.seq():
+            c.remove(i)
+            c.add(i, &#34;input&#34;)
+            c.set_output(self.fanin(i).pop())
+
+        return c
+
     def seq_graph(self):
         &#34;&#34;&#34;
         Creates a graph of the circuit&#39;s sequential elements
@@ -900,6 +928,97 @@ class Circuit:
             graph.add_edges_from((s, n) for s in self.startpoints(n))
 
         return graph
+
+    def avg_sensitivity(self,n,approx=True,e=0.9,d=0.1):
+        &#34;&#34;&#34;
+        Calculates the average sensitivity (equal to total influence)
+        of node n with respect to its startpoints.
+
+        Parameters
+        ----------
+        n : str
+                Node to compute average sensitivity for.
+        approx : bool
+                Use approximate solver
+        e : float (&gt;0)
+                epsilon of approxmc
+        d : float (0-1)
+                delta of approxmc
+
+        Returns
+        -------
+        float
+                Average sensitivity of node n.
+
+        &#34;&#34;&#34;
+        from circuitgraph.transform import influence
+        from circuitgraph.sat import approx_model_count,model_count
+
+        sp = self.startpoints(n)
+
+        avg_sen = 0
+        for s in sp:
+            # create influence circuit
+            i = influence(self, n, s)
+
+            # compute influence
+            if approx:
+                mc = approx_model_count(i,{&#39;sat&#39;:True},e=e,d=d)
+            else:
+                mc = model_count(i,{&#39;sat&#39;:True})
+            infl = mc/(2**len(sp))
+            avg_sen += infl
+
+        return avg_sen
+
+    def sensitivity(self,n):
+        &#34;&#34;&#34;
+        Calculates the sensitivity of node n with respect
+        to its startpoints.
+
+        Parameters
+        ----------
+        n : str
+                Node to compute sensitivity for.
+
+        Returns
+        -------
+        int
+                Sensitivity of node n.
+
+        &#34;&#34;&#34;
+        from circuitgraph.transform import sensitivity
+        from circuitgraph.sat import sat
+
+        sp = self.startpoints(n)
+
+        sen = len(sp)
+        s = sensitivity(c,n)
+        vs = int_to_bin(sen, clog2(len(sp)), True)
+        while not sat(s, {f&#34;out_{i}&#34;: v for i, v in enumerate(vs)}):
+            sen -= 1
+            vs = int_to_bin(sen, clog2(len(sp)), True)
+
+        return sen
+
+    def lint(self):
+        &#34;&#34;&#34;
+        Checks circuit for missing connections.
+        &#34;&#34;&#34;
+        self.type(self.nodes())
+        self.output(self.nodes())
+        for g in self.nodes(types=[&#39;buf&#39;,&#39;not&#39;]):
+            if len(self.fanin(g))!=1:
+                raise ValueError(f&#34;buf/not {g} has incorrect fanin count&#34;)
+        for g in self.nodes(types=[&#39;input&#39;,&#39;0&#39;,&#39;1&#39;]):
+            if len(self.fanin(g))&gt;0:
+                raise ValueError(f&#34;0/1/input {g} has fanin&#34;)
+        for g in self.nodes(types=[&#39;ff&#39;,&#39;lat&#39;,&#39;and&#39;,&#39;nand&#39;,&#39;or&#39;,&#39;nor&#39;,&#39;xor&#39;,&#39;xnor&#39;]):
+            if len(self.fanin(g))&lt;1:
+                raise ValueError(f&#34;{g} has no fanin&#34;)
+        for g in self.nodes():
+            if not self.fanout(g) and not self.output(g):
+                raise ValueError(f&#34;{g} has no fanout and is not output&#34;)
 
 
 def clog2(num: int) -&gt; int:
@@ -924,8 +1043,30 @@ def clog2(num: int) -&gt; int:
     return accum
 
 
-def int_to_bin(i, w):
-    return tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))</code></pre>
+def int_to_bin(i, w, lend=False):
+    &#34;&#34;&#34;
+    Converts integer to binary tuple.
+
+    Parameters
+    ----------
+    i : int
+            Integer to convert.
+    w : int
+            Width of conversion
+    lend : bool
+            Endianess of returned tuple, helpful for iterating.
+
+    Returns
+    -------
+    tuple of bool
+            Binary tuple.
+
+    &#34;&#34;&#34;
+
+    if not lend:
+        return tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))
+    else:
+        return tuple(reversed(tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))))</code></pre>
 </details>
 </section>
 <section>
@@ -977,16 +1118,52 @@ ValueError: expected num &gt;= 1</p></div>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.int_to_bin"><code class="name flex">
-<span>def <span class="ident">int_to_bin</span></span>(<span>i, w)</span>
+<span>def <span class="ident">int_to_bin</span></span>(<span>i, w, lend=False)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Converts integer to binary tuple.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>i</code></strong> :&ensp;<code>int</code></dt>
+<dd>Integer to convert.</dd>
+<dt><strong><code>w</code></strong> :&ensp;<code>int</code></dt>
+<dd>Width of conversion</dd>
+<dt><strong><code>lend</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Endianess of returned tuple, helpful for iterating.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code> of <code>bool</code></dt>
+<dd>Binary tuple.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def int_to_bin(i, w):
-    return tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))</code></pre>
+<pre><code class="python">def int_to_bin(i, w, lend=False):
+    &#34;&#34;&#34;
+    Converts integer to binary tuple.
+
+    Parameters
+    ----------
+    i : int
+            Integer to convert.
+    w : int
+            Width of conversion
+    lend : bool
+            Endianess of returned tuple, helpful for iterating.
+
+    Returns
+    -------
+    tuple of bool
+            Binary tuple.
+
+    &#34;&#34;&#34;
+
+    if not lend:
+        return tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))
+    else:
+        return tuple(reversed(tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))))</code></pre>
 </details>
 </dd>
 </dl>
@@ -1223,14 +1400,17 @@ ValueError: expected num &gt;= 1</p></div>
 
         if types is None and output is None:
             return set(self.graph.nodes)
-            #return set(n for n in self.graph.nodes)
+            # return set(n for n in self.graph.nodes)
         elif types is None:
             return set(n for n in self.nodes() if self.output(n) == output)
         elif output is None:
             return set(n for n in self.nodes() if self.type(n) in types)
         else:
-            return set(n for n in self.nodes()
-                    if self.type(n) in types and self.output(n) == output)
+            return set(
+                n
+                for n in self.nodes()
+                if self.type(n) in types and self.output(n) == output
+            )
 
     def is_cyclic(self):
         &#34;&#34;&#34;
@@ -1265,7 +1445,9 @@ ValueError: expected num &gt;= 1</p></div>
         &#34;&#34;&#34;
         return self.graph.edges
 
-    def add(self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None, output=False):
+    def add(
+        self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None, output=False
+    ):
         &#34;&#34;&#34;
         Adds a new node to the circuit, optionally connecting it
 
@@ -1321,13 +1503,13 @@ ValueError: expected num &gt;= 1</p></div>
             fanout = [fanout]
 
         # raise error for invalid inputs
-        if len(fanin)&gt;1 and type in [&#34;ff&#34;, &#34;lat&#34;, &#34;buf&#34;, &#34;not&#34;]:
+        if len(fanin) &gt; 1 and type in [&#34;ff&#34;, &#34;lat&#34;, &#34;buf&#34;, &#34;not&#34;]:
             raise ValueError(f&#34;{type} cannot have more than one fanin&#34;)
         if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;input&#34;]:
             raise ValueError(f&#34;{type} cannot have fanin&#34;)
 
         # add node
-        self.graph.add_node(n, type=type,r=r,s=s,clk=clk,output=output)
+        self.graph.add_node(n, type=type, r=r, s=s, clk=clk, output=output)
 
         # connect
         self.graph.add_edges_from((n, f) for f in fanout)
@@ -1370,7 +1552,7 @@ ValueError: expected num &gt;= 1</p></div>
         &#34;&#34;&#34;
         g = self.graph.copy()
         for o in self.outputs():
-            g.nodes[o][&#39;output&#39;] = False
+            g.nodes[o][&#34;output&#34;] = False
         for i in self.inputs():
             g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
 
@@ -1429,7 +1611,9 @@ ValueError: expected num &gt;= 1</p></div>
         &#34;&#34;&#34;
         return Circuit(graph=nx.relabel_nodes(self.graph, mapping), name=self.name)
 
-    def transitive_fanout(self, ns, stopatTypes=[&#34;ff&#34;, &#34;lat&#34;], stopatNodes=[], gates=None):
+    def transitive_fanout(
+        self, ns, stopatTypes=[&#34;ff&#34;, &#34;lat&#34;], stopatNodes=[], gates=None
+    ):
         &#34;&#34;&#34;
         Computes the transitive fanout of a node.
 
@@ -1577,7 +1761,9 @@ ValueError: expected num &gt;= 1</p></div>
             if self.type(f) in [&#34;ff&#34;, &#34;lat&#34;] or f in visited:
                 depths.add(depth)
             else:
-                depths.add(self.fanout_comb_depth(f, shortest, visited.copy(), depth+1))
+                depths.add(
+                    self.fanout_comb_depth(f, shortest, visited.copy(), depth + 1)
+                )
 
         return comp(depths)
 
@@ -1793,7 +1979,7 @@ ValueError: expected num &gt;= 1</p></div>
                 Output and input nodes in circuit.
 
         &#34;&#34;&#34;
-        return self.nodes(&#34;input&#34;)|self.nodes(output=True)
+        return self.nodes(&#34;input&#34;) | self.nodes(output=True)
 
     def startpoints(self, ns=None):
         &#34;&#34;&#34;
@@ -1837,6 +2023,25 @@ ValueError: expected num &gt;= 1</p></div>
         else:
             return circuit_endpoints
 
+    def comb(self):
+        &#34;&#34;&#34;
+        Creates a copy of the circuit where sequential elements are removed
+        from the circuit by making thier d ports outputs of the circuits and
+        their q ports inputs to the circuit
+
+        Returns
+        -------
+        Circuit
+            The combinational circuit.
+        &#34;&#34;&#34;
+        c = self.copy()
+        for i in c.seq():
+            c.remove(i)
+            c.add(i, &#34;input&#34;)
+            c.set_output(self.fanin(i).pop())
+
+        return c
+
     def seq_graph(self):
         &#34;&#34;&#34;
         Creates a graph of the circuit&#39;s sequential elements
@@ -1857,7 +2062,98 @@ ValueError: expected num &gt;= 1</p></div>
         for n in graph.nodes:
             graph.add_edges_from((s, n) for s in self.startpoints(n))
 
-        return graph</code></pre>
+        return graph
+
+    def avg_sensitivity(self,n,approx=True,e=0.9,d=0.1):
+        &#34;&#34;&#34;
+        Calculates the average sensitivity (equal to total influence)
+        of node n with respect to its startpoints.
+
+        Parameters
+        ----------
+        n : str
+                Node to compute average sensitivity for.
+        approx : bool
+                Use approximate solver
+        e : float (&gt;0)
+                epsilon of approxmc
+        d : float (0-1)
+                delta of approxmc
+
+        Returns
+        -------
+        float
+                Average sensitivity of node n.
+
+        &#34;&#34;&#34;
+        from circuitgraph.transform import influence
+        from circuitgraph.sat import approx_model_count,model_count
+
+        sp = self.startpoints(n)
+
+        avg_sen = 0
+        for s in sp:
+            # create influence circuit
+            i = influence(self, n, s)
+
+            # compute influence
+            if approx:
+                mc = approx_model_count(i,{&#39;sat&#39;:True},e=e,d=d)
+            else:
+                mc = model_count(i,{&#39;sat&#39;:True})
+            infl = mc/(2**len(sp))
+            avg_sen += infl
+
+        return avg_sen
+
+    def sensitivity(self,n):
+        &#34;&#34;&#34;
+        Calculates the sensitivity of node n with respect
+        to its startpoints.
+
+        Parameters
+        ----------
+        n : str
+                Node to compute sensitivity for.
+
+        Returns
+        -------
+        int
+                Sensitivity of node n.
+
+        &#34;&#34;&#34;
+        from circuitgraph.transform import sensitivity
+        from circuitgraph.sat import sat
+
+        sp = self.startpoints(n)
+
+        sen = len(sp)
+        s = sensitivity(c,n)
+        vs = int_to_bin(sen, clog2(len(sp)), True)
+        while not sat(s, {f&#34;out_{i}&#34;: v for i, v in enumerate(vs)}):
+            sen -= 1
+            vs = int_to_bin(sen, clog2(len(sp)), True)
+
+        return sen
+
+    def lint(self):
+        &#34;&#34;&#34;
+        Checks circuit for missing connections.
+        &#34;&#34;&#34;
+        self.type(self.nodes())
+        self.output(self.nodes())
+        for g in self.nodes(types=[&#39;buf&#39;,&#39;not&#39;]):
+            if len(self.fanin(g))!=1:
+                raise ValueError(f&#34;buf/not {g} has incorrect fanin count&#34;)
+        for g in self.nodes(types=[&#39;input&#39;,&#39;0&#39;,&#39;1&#39;]):
+            if len(self.fanin(g))&gt;0:
+                raise ValueError(f&#34;0/1/input {g} has fanin&#34;)
+        for g in self.nodes(types=[&#39;ff&#39;,&#39;lat&#39;,&#39;and&#39;,&#39;nand&#39;,&#39;or&#39;,&#39;nor&#39;,&#39;xor&#39;,&#39;xnor&#39;]):
+            if len(self.fanin(g))&lt;1:
+                raise ValueError(f&#34;{g} has no fanin&#34;)
+        for g in self.nodes():
+            if not self.fanout(g) and not self.output(g):
+                raise ValueError(f&#34;{g} has no fanout and is not output&#34;)</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
@@ -1907,7 +2203,9 @@ syntax.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def add(self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None, output=False):
+<pre><code class="python">def add(
+    self, n, type, fanin=None, fanout=None, clk=None, r=None, s=None, output=False
+):
     &#34;&#34;&#34;
     Adds a new node to the circuit, optionally connecting it
 
@@ -1963,19 +2261,88 @@ syntax.</p>
         fanout = [fanout]
 
     # raise error for invalid inputs
-    if len(fanin)&gt;1 and type in [&#34;ff&#34;, &#34;lat&#34;, &#34;buf&#34;, &#34;not&#34;]:
+    if len(fanin) &gt; 1 and type in [&#34;ff&#34;, &#34;lat&#34;, &#34;buf&#34;, &#34;not&#34;]:
         raise ValueError(f&#34;{type} cannot have more than one fanin&#34;)
     if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;input&#34;]:
         raise ValueError(f&#34;{type} cannot have fanin&#34;)
 
     # add node
-    self.graph.add_node(n, type=type,r=r,s=s,clk=clk,output=output)
+    self.graph.add_node(n, type=type, r=r, s=s, clk=clk, output=output)
 
     # connect
     self.graph.add_edges_from((n, f) for f in fanout)
     self.graph.add_edges_from((f, n) for f in fanin)
 
     return n</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.avg_sensitivity"><code class="name flex">
+<span>def <span class="ident">avg_sensitivity</span></span>(<span>self, n, approx=True, e=0.9, d=0.1)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculates the average sensitivity (equal to total influence)
+of node n with respect to its startpoints.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>Node to compute average sensitivity for.</dd>
+<dt><strong><code>approx</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Use approximate solver</dd>
+<dt><strong><code>e</code></strong> :&ensp;<code>float (&gt;0)</code></dt>
+<dd>epsilon of approxmc</dd>
+<dt><strong><code>d</code></strong> :&ensp;<code>float (0-1)</code></dt>
+<dd>delta of approxmc</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float</code></dt>
+<dd>Average sensitivity of node n.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def avg_sensitivity(self,n,approx=True,e=0.9,d=0.1):
+    &#34;&#34;&#34;
+    Calculates the average sensitivity (equal to total influence)
+    of node n with respect to its startpoints.
+
+    Parameters
+    ----------
+    n : str
+            Node to compute average sensitivity for.
+    approx : bool
+            Use approximate solver
+    e : float (&gt;0)
+            epsilon of approxmc
+    d : float (0-1)
+            delta of approxmc
+
+    Returns
+    -------
+    float
+            Average sensitivity of node n.
+
+    &#34;&#34;&#34;
+    from circuitgraph.transform import influence
+    from circuitgraph.sat import approx_model_count,model_count
+
+    sp = self.startpoints(n)
+
+    avg_sen = 0
+    for s in sp:
+        # create influence circuit
+        i = influence(self, n, s)
+
+        # compute influence
+        if approx:
+            mc = approx_model_count(i,{&#39;sat&#39;:True},e=e,d=d)
+        else:
+            mc = model_count(i,{&#39;sat&#39;:True})
+        infl = mc/(2**len(sp))
+        avg_sen += infl
+
+    return avg_sen</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.clk"><code class="name flex">
@@ -2018,6 +2385,42 @@ syntax.</p>
         except KeyError:
             raise KeyError(f&#34;Node {ns} does not have a clk defined.&#34;)
     return [self.clk(n) for n in ns]</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.comb"><code class="name flex">
+<span>def <span class="ident">comb</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a copy of the circuit where sequential elements are removed
+from the circuit by making thier d ports outputs of the circuits and
+their q ports inputs to the circuit</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></dt>
+<dd>The combinational circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def comb(self):
+    &#34;&#34;&#34;
+    Creates a copy of the circuit where sequential elements are removed
+    from the circuit by making thier d ports outputs of the circuits and
+    their q ports inputs to the circuit
+
+    Returns
+    -------
+    Circuit
+        The combinational circuit.
+    &#34;&#34;&#34;
+    c = self.copy()
+    for i in c.seq():
+        c.remove(i)
+        c.add(i, &#34;input&#34;)
+        c.set_output(self.fanin(i).pop())
+
+    return c</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.connect"><code class="name flex">
@@ -2463,7 +2866,9 @@ syntax.</p>
         if self.type(f) in [&#34;ff&#34;, &#34;lat&#34;] or f in visited:
             depths.add(depth)
         else:
-            depths.add(self.fanout_comb_depth(f, shortest, visited.copy(), depth+1))
+            depths.add(
+                self.fanout_comb_depth(f, shortest, visited.copy(), depth + 1)
+            )
 
     return comp(depths)</code></pre>
 </details>
@@ -2546,7 +2951,7 @@ syntax.</p>
             Output and input nodes in circuit.
 
     &#34;&#34;&#34;
-    return self.nodes(&#34;input&#34;)|self.nodes(output=True)</code></pre>
+    return self.nodes(&#34;input&#34;) | self.nodes(output=True)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.is_cyclic"><code class="name flex">
@@ -2610,6 +3015,35 @@ syntax.</p>
 
     &#34;&#34;&#34;
     return self.nodes(&#34;lat&#34;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.lint"><code class="name flex">
+<span>def <span class="ident">lint</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Checks circuit for missing connections.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lint(self):
+    &#34;&#34;&#34;
+    Checks circuit for missing connections.
+    &#34;&#34;&#34;
+    self.type(self.nodes())
+    self.output(self.nodes())
+    for g in self.nodes(types=[&#39;buf&#39;,&#39;not&#39;]):
+        if len(self.fanin(g))!=1:
+            raise ValueError(f&#34;buf/not {g} has incorrect fanin count&#34;)
+    for g in self.nodes(types=[&#39;input&#39;,&#39;0&#39;,&#39;1&#39;]):
+        if len(self.fanin(g))&gt;0:
+            raise ValueError(f&#34;0/1/input {g} has fanin&#34;)
+    for g in self.nodes(types=[&#39;ff&#39;,&#39;lat&#39;,&#39;and&#39;,&#39;nand&#39;,&#39;or&#39;,&#39;nor&#39;,&#39;xor&#39;,&#39;xnor&#39;]):
+        if len(self.fanin(g))&lt;1:
+            raise ValueError(f&#34;{g} has no fanin&#34;)
+    for g in self.nodes():
+        if not self.fanout(g) and not self.output(g):
+            raise ValueError(f&#34;{g} has no fanout and is not output&#34;)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.nodes"><code class="name flex">
@@ -2685,14 +3119,17 @@ syntax.</p>
 
     if types is None and output is None:
         return set(self.graph.nodes)
-        #return set(n for n in self.graph.nodes)
+        # return set(n for n in self.graph.nodes)
     elif types is None:
         return set(n for n in self.nodes() if self.output(n) == output)
     elif output is None:
         return set(n for n in self.nodes() if self.type(n) in types)
     else:
-        return set(n for n in self.nodes()
-                if self.type(n) in types and self.output(n) == output)</code></pre>
+        return set(
+            n
+            for n in self.nodes()
+            if self.type(n) in types and self.output(n) == output
+        )</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.output"><code class="name flex">
@@ -2923,6 +3360,57 @@ syntax.</p>
     return [self.s(n) for n in ns]</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.circuit.Circuit.sensitivity"><code class="name flex">
+<span>def <span class="ident">sensitivity</span></span>(<span>self, n)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculates the sensitivity of node n with respect
+to its startpoints.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>Node to compute sensitivity for.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>int</code></dt>
+<dd>Sensitivity of node n.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sensitivity(self,n):
+    &#34;&#34;&#34;
+    Calculates the sensitivity of node n with respect
+    to its startpoints.
+
+    Parameters
+    ----------
+    n : str
+            Node to compute sensitivity for.
+
+    Returns
+    -------
+    int
+            Sensitivity of node n.
+
+    &#34;&#34;&#34;
+    from circuitgraph.transform import sensitivity
+    from circuitgraph.sat import sat
+
+    sp = self.startpoints(n)
+
+    sen = len(sp)
+    s = sensitivity(c,n)
+    vs = int_to_bin(sen, clog2(len(sp)), True)
+    while not sat(s, {f&#34;out_{i}&#34;: v for i, v in enumerate(vs)}):
+        sen -= 1
+        vs = int_to_bin(sen, clog2(len(sp)), True)
+
+    return sen</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.circuit.Circuit.seq"><code class="name flex">
 <span>def <span class="ident">seq</span></span>(<span>self)</span>
 </code></dt>
@@ -3119,7 +3607,7 @@ syntax.</p>
     &#34;&#34;&#34;
     g = self.graph.copy()
     for o in self.outputs():
-        g.nodes[o][&#39;output&#39;] = False
+        g.nodes[o][&#34;output&#34;] = False
     for i in self.inputs():
         g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
 
@@ -3213,7 +3701,9 @@ syntax.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def transitive_fanout(self, ns, stopatTypes=[&#34;ff&#34;, &#34;lat&#34;], stopatNodes=[], gates=None):
+<pre><code class="python">def transitive_fanout(
+    self, ns, stopatTypes=[&#34;ff&#34;, &#34;lat&#34;], stopatNodes=[], gates=None
+):
     &#34;&#34;&#34;
     Computes the transitive fanout of a node.
 
@@ -3361,7 +3851,9 @@ syntax.</p>
 <h4><code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></h4>
 <ul class="two-column">
 <li><code><a title="circuitgraph.circuit.Circuit.add" href="#circuitgraph.circuit.Circuit.add">add</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.avg_sensitivity" href="#circuitgraph.circuit.Circuit.avg_sensitivity">avg_sensitivity</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.clk" href="#circuitgraph.circuit.Circuit.clk">clk</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.comb" href="#circuitgraph.circuit.Circuit.comb">comb</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.connect" href="#circuitgraph.circuit.Circuit.connect">connect</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.copy" href="#circuitgraph.circuit.Circuit.copy">copy</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.d" href="#circuitgraph.circuit.Circuit.d">d</a></code></li>
@@ -3378,6 +3870,7 @@ syntax.</p>
 <li><code><a title="circuitgraph.circuit.Circuit.io" href="#circuitgraph.circuit.Circuit.io">io</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.is_cyclic" href="#circuitgraph.circuit.Circuit.is_cyclic">is_cyclic</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.lats" href="#circuitgraph.circuit.Circuit.lats">lats</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.lint" href="#circuitgraph.circuit.Circuit.lint">lint</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.nodes" href="#circuitgraph.circuit.Circuit.nodes">nodes</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.output" href="#circuitgraph.circuit.Circuit.output">output</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.outputs" href="#circuitgraph.circuit.Circuit.outputs">outputs</a></code></li>
@@ -3385,6 +3878,7 @@ syntax.</p>
 <li><code><a title="circuitgraph.circuit.Circuit.relabel" href="#circuitgraph.circuit.Circuit.relabel">relabel</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.remove" href="#circuitgraph.circuit.Circuit.remove">remove</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.s" href="#circuitgraph.circuit.Circuit.s">s</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.sensitivity" href="#circuitgraph.circuit.Circuit.sensitivity">sensitivity</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.seq" href="#circuitgraph.circuit.Circuit.seq">seq</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.seq_graph" href="#circuitgraph.circuit.Circuit.seq_graph">seq_graph</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.set_output" href="#circuitgraph.circuit.Circuit.set_output">set_output</a></code></li>
@@ -3402,7 +3896,7 @@ syntax.</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

@@ -3,8 +3,12 @@
 import re
 import os
 from glob import glob
+import tempfile
 
 from pyeda.parsing import boolexpr
+import pyverilog
+from pyverilog.vparser.parser import VerilogParser
+from pyverilog.vparser import ast as ast_types
 
 from circuitgraph import Circuit
 
@@ -13,7 +17,7 @@ class SequentialElement:
     """Defines a representation of a sequential element for reading/writing
     sequential circuits."""
 
-    def __init__(self, name, type, io, code_def):
+    def __init__(self, name, seq_type, io, code_def):
         """
         Parameters
         ----------
@@ -29,7 +33,7 @@ class SequentialElement:
                 to verilog
         """
         self.name = name
-        self.type = type
+        self.seq_type = seq_type
         self.io = io
         self.code_def = code_def
 
@@ -37,7 +41,7 @@ class SequentialElement:
 default_seq_types = [
     SequentialElement(
         name="fflopd",
-        type="ff",
+        seq_type="ff",
         io={"d": "D", "q": "Q", "clk": "CK"},
         code_def="module fflopd(CK, D, Q);\n"
         "  input CK, D;\n"
@@ -57,7 +61,7 @@ default_seq_types = [
     ),
     SequentialElement(
         name="latchdrs",
-        type="lat",
+        seq_type="lat",
         io={"d": "D", "q": "Q", "clk": "ENA", "r": "R", "s": "S"},
         code_def="",
     ),
@@ -69,7 +73,7 @@ cadence_seq_types = [
     # reset that always resets to 0
     SequentialElement(
         name="CDN_flop",
-        type="ff",
+        seq_type="ff",
         io={"d": "d", "q": "q", "clk": "clk", "r": "srl"},
         code_def="module CDN_flop(clk, d, srl, q);\n"
         "  input clk, d, srl;\n"
@@ -175,7 +179,6 @@ def bench_to_circuit(bench, name):
         inputs = (
             input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
         )
-        c.add(net, gate.lower(), fanin=inputs)
 
     # get outputs
     in_regex = r"(?:OUTPUT|output)\s*\((.+?)\)"
@@ -189,11 +192,11 @@ def bench_to_circuit(bench, name):
 
 def verilog_to_circuit(verilog, name, seq_types=None):
     """
-    Creates a new Circuit from a verilog string.
+    Creates a new Circuit from a verilog file.
 
     Parameters
     ----------
-    verilog: str
+    path: str
             verilog code.
     name: str
             the module name.
@@ -208,82 +211,167 @@ def verilog_to_circuit(verilog, name, seq_types=None):
     if seq_types is None:
         seq_types = default_seq_types
 
-    # extract module
-    regex = rf"module\s+{name}\s*\(.*?\);(.*?)endmodule"
-    m = re.search(regex, verilog, re.DOTALL)
-    module = m.group(1)
-
-    # create circuit
     c = Circuit(name=name)
+    with tempfile.TemporaryDirectory(prefix="circuitgraph") as d:
+        codeparser = VerilogParser(outputdir=d, debug=False)
+        ast = codeparser.parse(verilog, debug=False)
+        description = ast.children()[0]
 
-    # get inputs
-    in_regex = r"input\s(.+?);"
-    for net_str in re.findall(in_regex, module, re.DOTALL):
-        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
-        for n in nets:
-            c.add(n, "input")
-
-    # handle gates
-    regex = r"(buf|or|nor|and|nand|not|xor|xnor)\s+\S+\s*\((.+?)\);"
-    for gate, net_str in re.findall(regex, module, re.DOTALL):
-        # parse all nets
-        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
-        c.add(nets[0], gate, fanin=nets[1:])
-
-    # handle seq
-    for st in seq_types:
-        # find matching insts
-        regex = rf"{st.name}\s+[^\s(]+\s*\((.+?)\);"
-        for io in re.findall(regex, module, re.DOTALL):
-            # find matching pins
-            pins = {}
-            for typ, name in st.io.items():
-                regex = rf".{name}\s*\((.+?)\)"
-                n = re.findall(regex, io, re.DOTALL)[0]
-                pins[typ] = n
-            if pins.get("d") == None:
-                print(pins)
-            c.add(
-                pins.get("q", None),
-                st.type,
-                fanin=pins.get("d", None),
-                clk=pins.get("clk", None),
-                r=pins.get("r", None),
-                s=pins.get("s", None),
-            )
-
-    # handle assign statements (with help from pyeda)
-    assign_regex = r"assign\s+(.+?)\s*=\s*(.+?);"
-    for dest, expr in re.findall(assign_regex, module, re.DOTALL):
-        c.add(dest, "buf", fanin=parse_ast(boolexpr.parse(expr), c))
-
-    # get outputs
-    out_regex = r"output\s(.+?);"
-    for net_str in re.findall(out_regex, module, re.DOTALL):
-        nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
-        c.set_output(nets)
-
-    # assign constant types
-    for n in c:
-        if "type" not in c.graph.nodes[n]:
-            if n == "1'b0":
-                c.add(n, "0")
-            elif n == "1'b1":
-                c.add(n, "1")
+        module_def = [d for d in description.children() if d.name == name]
+        if not module_def:
+            raise ValueError(f"Module {name} not found")
+        module_def = module_def[0]
+        outputs = set()
+        widths = dict()
+        for child in module_def.children():
+            if type(child) == ast_types.Paramlist:
+                if child.children():
+                    raise ValueError(
+                        "circuitgraph cannot parse parameters " f"(line {child.lineno})"
+                    )
+            # Parse portlist
+            elif type(child) == ast_types.Portlist:
+                for cip in [i for i in child.children() if type(i) == ast_types.Ioport]:
+                    for ci in cip.children():
+                        parse_io(c, ci, outputs)
+            # Parse declarations
+            elif type(child) == ast_types.Decl:
+                if ast_types.Parameter in [type(i) for i in child.children()]:
+                    raise ValueError(
+                        "circuitgraph cannot parse parameters " f"(line {child.lineno})"
+                    )
+                for ci in [
+                    i
+                    for i in child.children()
+                    if type(i) in [ast_types.Input, ast_types.Output]
+                ]:
+                    parse_io(c, ci, outputs)
+            # Parse instances
+            elif type(child) == ast_types.InstanceList:
+                for instance in child.instances:
+                    if instance.module in [
+                        "buf",
+                        "not",
+                        "and",
+                        "nand",
+                        "or",
+                        "nor",
+                        "xor",
+                        "xnor",
+                    ]:
+                        gate = instance.module
+                        dest = parse_argument(instance.portlist[0].argname, c)
+                        sources = [
+                            parse_argument(i.argname, c) for i in instance.portlist[1:]
+                        ]
+                        c.add(dest, gate, fanin=sources, output=dest in outputs)
+                    elif instance.module in [i.name for i in seq_types]:
+                        if instance.portlist[0].portname is None:
+                            raise ValueError(
+                                "circuitgraph can only parse "
+                                "sequential instances declared "
+                                "with port argument notation "
+                                f"(line {instance.lineno})"
+                            )
+                        seq_type = [i for i in seq_types if i.name == instance.module][
+                            0
+                        ]
+                        ports = {
+                            p.portname: parse_argument(p.argname, c)
+                            for p in instance.portlist
+                        }
+                        c.add(
+                            ports.get(seq_type.io.get("q")),
+                            seq_type.seq_type,
+                            fanin=ports.get(seq_type.io.get("d")),
+                            clk=ports.get(seq_type.io.get("clk")),
+                            r=ports.get(seq_type.io.get("r")),
+                            s=ports.get(seq_type.io.get("s")),
+                        )
+                    else:
+                        raise ValueError(
+                            "circuitgraph cannot parse instance of "
+                            f"type {instance.module} (line "
+                            f"{instance.lineno})"
+                        )
+            # Parse assigns
+            elif type(child) == ast_types.Assign:
+                dest = child.left.var
+                dest = parse_argument(dest, c)
+                if type(child.right.var) == ast_types.IntConst:
+                    c.add(child.right.var.value, child.right.var.value)
+                    c.add(
+                        dest, "buf", fanin=child.right.var.value, output=dest in outputs
+                    )
+                elif issubclass(type(child.right.var), ast_types.Operator):
+                    parse_operator(child.right.var, c, outputs, dest=dest)
+                elif issubclass(type(child.right.var), ast_types.Concat):
+                    raise ValueError(
+                        "circuitgraph cannot parse concatenations "
+                        f"(line {child.right.var.lineno})"
+                    )
             else:
-                raise ValueError(f"node {n} does not have a type")
+                raise ValueError(
+                    "circuitgraph cannot parse statements of type "
+                    f"{type(child)} (line {child.lineno})"
+                )
 
     return c
 
 
-def parse_ast(ast, g):
-    if ast[0] == "var":
-        return ast[1][0]
+def parse_io(c, ci, outputs):
+    if ci.width:
+        cis = [
+            f"{ci.name}[{i}]"
+            for i in range(int(ci.width.lsb.value), int(ci.width.msb.value) + 1)
+        ]
     else:
-        fanin = [parse_ast(a, g) for a in ast[1:]]
-        name = f"{ast[0]}_{'_'.join(fanin)}"
-        g.add(name, ast[0], fanin=fanin)
-        return name
+        cis = [ci.name]
+    if type(ci) == ast_types.Input:
+        for i in cis:
+            c.add(i, "input")
+    elif type(ci) == ast_types.Output:
+        outputs.update(set(cis))
+
+
+def parse_argument(argname, circuit):
+    if type(argname) == ast_types.Pointer:
+        return f"{argname.var}[{argname.ptr}]"
+    elif type(argname) == ast_types.IntConst:
+        circuit.add(argname.value, argname.value)
+        return argname.value
+    elif issubclass(type(argname), ast_types.Concat):
+        raise ValueError(
+            "circuitgraph cannot parse concatenations " f"(line {argname.lineno})"
+        )
+    elif type(argname) == ast_types.Partselect:
+        raise ValueError(
+            "circuitgrpah cannot parse part select "
+            f"statements (line {argname.lineno})"
+        )
+    return argname.name
+
+
+def parse_operator(operator, circuit, outputs, dest=None):
+    if type(operator) == ast_types.IntConst:
+        circuit.add(operator.value, operator.value)
+        return operator.value
+    elif not issubclass(type(operator), ast_types.Operator):
+        return parse_argument(operator, circuit)
+    fanin = [parse_operator(o, circuit, outputs) for o in operator.children()]
+    op = str(operator)[1:].split()[0].lower()
+    # pyverilog parses `~` as 'unot'
+    if op == "unot":
+        op = "not"
+    # multibit operators (not yet parsable)
+    if op.startswith("l"):
+        raise ValueError(
+            "circuitgraph cannot parse multibit operators " f"(line {operator.lineno})"
+        )
+    if dest is None:
+        dest = f"{op}_{'_'.join(fanin)}"
+    circuit.add(dest, op, fanin=fanin, output=dest in outputs)
+    return dest
 
 
 def to_file(c, path, seq_types=None):
@@ -332,9 +420,8 @@ def circuit_to_verilog(c, seq_types=None):
         if c.type(n) in ["xor", "xnor", "buf", "not", "nor", "or", "and", "nand"]:
             fanin = ",".join(p for p in c.fanin(n))
             insts.append(f"{c.type(n)} g_{n} ({n},{fanin})")
-            if not c.output(n):
-                wires.append(n)
-        elif c.type(n) in ["0", "1"]:
+            wires.append(n)
+        elif c.type(n) in ["1'b0", "1'b1"]:
             insts.append(f"assign {n} = 1'b{c.type(n)}")
         elif c.type(n) in ["input"]:
             inputs.append(n)
@@ -343,7 +430,7 @@ def circuit_to_verilog(c, seq_types=None):
 
             # get template
             for s in seq_types:
-                if s.type == c.type(n):
+                if s.seq_type == c.type(n):
                     seq = s
                     defs.add(s.code_def)
                     break
