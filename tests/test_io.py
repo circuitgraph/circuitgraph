@@ -42,15 +42,14 @@ class TestIO(unittest.TestCase):
                         "not_G2",
                         "xor_G3_G4",
                         "and_G1_G2",
-                        "1",
-                        "0",
+                        "tie_1",
                         "\\and_G8[0]_G5[0]",
-                        "or_not_G2_1",
+                        "or_not_G2_tie_1",
                     ]
                 ),
             )
             self.assertSetEqual(g.fanin("\\G8[0]"), set(["G1", "G3"]))
-            self.assertSetEqual(g.fanin("G17"), set(["\\G8[1]", "1"]))
+            self.assertSetEqual(g.fanin("G17"), set(["\\G8[1]", "tie_1"]))
             self.assertSetEqual(g.fanin("G18"), set(["G2", "\\G5[0]"]))
             self.assertSetEqual(g.fanin("\\G22[0]"), set(["\\G5[1]", "G4"]))
 
@@ -58,8 +57,7 @@ class TestIO(unittest.TestCase):
             self.assertEqual(g.type("G17"), "nor")
             self.assertEqual(g.type("G18"), "and")
             self.assertEqual(g.type("\\G22[0]"), "xor")
-            self.assertEqual(g.type("0"), "0")
-            self.assertEqual(g.type("1"), "1")
+            self.assertEqual(g.type("tie_1"), "1")
 
             self.assertSetEqual(g.fanin("G19"), set(["and_G1_G2", "xor_G3_G4"]))
             self.assertSetEqual(g.fanin("and_G1_G2"), set(["G1", "G2"]))
@@ -68,8 +66,8 @@ class TestIO(unittest.TestCase):
             self.assertSetEqual(
                 g.fanin("\\and_G8[0]_G5[0]"), set(["\\G8[0]", "\\G5[0]"])
             )
-            self.assertSetEqual(g.fanin("\\G22[1]"), set(["G1", "or_not_G2_1"]))
-            self.assertSetEqual(g.fanin("or_not_G2_1"), set(["not_G2", "1"]))
+            self.assertSetEqual(g.fanin("\\G22[1]"), set(["G1", "or_not_G2_tie_1"]))
+            self.assertSetEqual(g.fanin("or_not_G2_tie_1"), set(["not_G2", "tie_1"]))
             self.assertSetEqual(g.fanin("not_G2"), set(["G2"]))
 
             self.assertSetEqual(
@@ -160,4 +158,7 @@ class TestIO(unittest.TestCase):
             live = sat(m)
             self.assertTrue(live)
             different_output = sat(m, assumptions={"sat": True})
+            if different_output:
+                import code
+                code.interact(local=dict(globals(), **locals()))
             self.assertFalse(different_output)

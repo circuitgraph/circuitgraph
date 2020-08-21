@@ -327,6 +327,8 @@ class Circuit:
             raise ValueError(f"{type} cannot have more than one fanin")
         if fanin and type in ["0", "1", "input"]:
             raise ValueError(f"{type} cannot have fanin")
+        if n[0] in '0123456789':
+            raise ValueError(f"cannot add node starting with int: {n}")
 
         # add node
         self.graph.add_node(n, type=type, r=r, s=s, clk=clk, output=output)

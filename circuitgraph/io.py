@@ -300,11 +300,9 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                 dest = child.left.var
                 dest = parse_argument(dest, c)
                 if type(child.right.var) == ast_types.IntConst:
-                    c.add(child.right.var.value[-1], child.right.var.value[-1])
                     c.add(
                         dest,
-                        "buf",
-                        fanin=child.right.var.value[-1],
+                        f"{child.right.var.value[-1]}",
                         output=dest in outputs,
                     )
                 elif issubclass(type(child.right.var), ast_types.Operator):
@@ -347,8 +345,8 @@ def parse_argument(argname, circuit):
         else:
             return f"\\{argname.var}[{argname.ptr}]"
     elif type(argname) == ast_types.IntConst:
-        circuit.add(argname.value[-1], argname.value[-1])
-        return argname.value[-1]
+        circuit.add(f"tie_{argname.value[-1]}", argname.value[-1])
+        return f"tie_{argname.value[-1]}"
     elif issubclass(type(argname), ast_types.Concat):
         raise ValueError(
             f"circuitgraph cannot parse concatenations (line {argname.lineno})"
@@ -363,8 +361,8 @@ def parse_argument(argname, circuit):
 
 def parse_operator(operator, circuit, outputs, dest=None):
     if type(operator) == ast_types.IntConst:
-        circuit.add(operator.value[-1], operator.value[-1])
-        return operator.value[-1]
+        circuit.add(f"tie_{operator.value[-1]}", operator.value[-1])
+        return f"tie_{operator.value[-1]}"
     elif not issubclass(type(operator), ast_types.Operator):
         return parse_argument(operator, circuit)
     fanin = [parse_operator(o, circuit, outputs) for o in operator.children()]
@@ -449,7 +447,9 @@ def circuit_to_verilog(c, seq_types=None):
             if not c.output(n):
                 wires.append(n)
         elif c.type(n) in ["0", "1"]:
-            continue
+            insts.append(
+                f"assign {sanitize_name(n)} = 1'b{c.type(n)}"
+            )
         elif c.type(n) in ["input"]:
             inputs.append(n)
         elif c.type(n) in ["ff", "lat"]:
