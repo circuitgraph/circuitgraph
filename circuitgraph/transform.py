@@ -1,5 +1,4 @@
 """Functions for transforming circuits"""
-# TODO: this file name could change
 
 import math
 import code
@@ -12,9 +11,81 @@ import shutil
 
 import networkx as nx
 
-from circuitgraph import Circuit, clog2
+from circuitgraph import Circuit
+from circuitgraph.utils import clog2
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
 from circuitgraph.logic import popcount, comb_ff, comb_lat
+
+
+def relabel(c, mapping):
+    """
+    Returns renamed copy of a circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            circuit to rename
+    mapping : dict of str:str
+            mapping of old to new names
+
+    Returns
+    -------
+    Circuit
+            Relabeled circuit.
+
+    """
+    return Circuit(graph=nx.relabel_nodes(c.graph, mapping), name=c.name)
+
+
+def strip_io(c):
+    """
+    Removes a circuit's outputs and converts inputs to buffers for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            circuit to strip io from
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io
+    """
+    g = c.graph.copy()
+    for o in c.outputs():
+        g.nodes[o]["output"] = False
+    for i in c.inputs():
+        g.nodes[i]["type"] = "buf"
+
+    return Circuit(graph=g, name=c.name)
+
+
+def seq_graph(c):
+    """
+    Creates a graph of a circuit's sequential elements.
+
+    Parameters
+    ----------
+    c: Circuit
+    
+    Returns
+    -------
+    Circuit 
+            Sequential circuit.
+
+    """
+    graph = nx.DiGraph()
+
+    # add nodes
+    for n in c.io() | c.seq():
+        graph.add_node(n, gate=c.type(n))
+
+    # add edges
+    for n in graph.nodes:
+        graph.add_edges_from((s, n) for s in c.startpoints(n))
+
+    return Circuit(graph=graph, name=c.name)
 
 
 def syn(c, engine, print_output=False):
@@ -402,7 +473,7 @@ def sensitivity(c, n, startpoints=None):
     p = popcount(len(startpoints)).strip_io()
     p = p.relabel({g: f"pop_{g}" for g in p})
     sen.extend(p)
-    for o in range(clog2(len(startpoints)+1)):
+    for o in range(clog2(len(startpoints) + 1)):
         sen.add(f"out_{o}", "buf", fanin=f"pop_out_{o}", output=True)
 
     # stamp out a copies of the circuit with s inverted

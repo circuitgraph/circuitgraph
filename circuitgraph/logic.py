@@ -1,6 +1,9 @@
 """A collection of common logic elements as `CircuitGraph` objects"""
-from circuitgraph import Circuit, clog2
+
 from itertools import product
+
+from circuitgraph import Circuit
+from circuitgraph.utils import clog2
 
 
 def adder(w):

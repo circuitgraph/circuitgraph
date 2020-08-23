@@ -1,252 +1,282 @@
 import unittest
 import shutil
+from itertools import product
+
+import networkx as nx
 
 import circuitgraph as cg
 from circuitgraph import clog2, int_to_bin
-from itertools import product
 
 
 class TestCircuit(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.c17 = cg.from_lib("c17_gates", "c17")
-        cls.s27 = cg.from_lib("s27")
+    def test_built_ins(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "and", fanin=["a", "b"], output=True)
+        self.assertTrue("a" in c)
+        self.assertTrue(len(c) == 3)
+        self.assertListEqual(list(iter(c)), ["a", "b", "c"])
 
-    def test_fanin(self):
-        self.assertSetEqual(self.c17.fanin("G9"), set(["G3", "G4"]))
-        self.assertSetEqual(self.c17.fanin("G9"), set(["G3", "G4"]))
-        self.assertSetEqual(self.c17.fanin("G17"), set(["G12", "G15"]))
-        self.assertFalse(self.c17.fanin("G1"))
-        self.assertSetEqual(
-            self.c17.fanin(["G9", "G17"]), self.c17.fanin("G9") | self.c17.fanin("G17")
-        )
+    def test_constructor(self):
+        g = nx.DiGraph()
+        g.add_node("a", type="input")
+        g.add_node("b", type="input")
+        g.add_node("c", type="and")
+        g.add_edge("a", "c")
+        g.add_edge("b", "c")
+        c = cg.Circuit(graph=g, name="and_gate")
+        self.assertEqual(c.name, "and_gate")
+        self.assertTrue("a" in c and "b" in c and "c" in c)
 
-    def test_fanin_comb_depth(self):
-        self.assertEqual(self.s27.fanin_comb_depth("n_5"), 2)
-        self.assertEqual(self.s27.fanin_comb_depth("n_20", shortest=True), 1)
-        self.assertEqual(self.s27.fanin_comb_depth(["n_5", "n_1"]), 2)
-        self.assertEqual(self.s27.fanin_comb_depth(["n_5", "n_1"], shortest=True), 1)
+        c2 = c.copy()
+        self.assertTrue("a" in c2 and "b" in c2 and "c" in c2)
 
-    def test_fanout_comb_depth(self):
-        self.assertEqual(self.s27.fanout_comb_depth("n_10"), 2)
-        self.assertEqual(self.s27.fanout_comb_depth("n_10", shortest=True), 1)
-        self.assertEqual(self.s27.fanout_comb_depth(["n_10", "n_11"]), 2)
-        self.assertEqual(self.s27.fanout_comb_depth(["n_10", "n_11"], shortest=True), 1)
-
-    def test_fanout(self):
-        self.assertSetEqual(self.c17.fanout("G1"), set(["G8"]))
-        self.assertSetEqual(self.c17.fanout("G12"), set(["G16", "G17"]))
-        self.assertFalse(self.c17.fanout("G17"))
-        self.assertSetEqual(
-            self.c17.fanout(["G1", "G8"]), self.c17.fanout("G1") | self.c17.fanout("G8")
-        )
-
-    def test_node(self):
-        self.assertFalse(self.s27.nodes("nand") & self.c17.nodes("lat"))
-        self.assertSetEqual(self.s27.nodes("ff"), set(["G7", "G6", "G5"]))
-        self.assertSetEqual(
-            self.s27.nodes("input"), set(["clk", "G0", "G1", "G2", "G3"])
-        )
-        self.assertSetEqual(self.s27.nodes(output=True), set(["G17"]))
-
-    def test_add(self):
-        c17_c = self.c17.copy()
-        self.assertRaises(
-            ValueError, c17_c.add, "test_ff", type="ff", fanin=["N1", "N2"]
-        )
-        self.assertRaises(ValueError, c17_c.add, "test_const", type="0", fanin=["N1"])
+    def test_type(self):
+        c = cg.Circuit()
+        c.graph.add_node("a")
+        self.assertRaises(KeyError, c.type, "a")
+        c.set_type("a", "and")
+        self.assertEqual(c.type("a"), "and")
+        c.add("b", "or")
+        self.assertListEqual(c.type(["a", "b"]), ["and", "or"])
+        c.set_type(["a", "b"], "xor")
+        self.assertListEqual(c.type(["a", "b"]), ["xor", "xor"])
 
     def test_output(self):
-        s27_c = self.s27.copy()
-        s27_c.set_output("n_3")
-        self.assertSetEqual(s27_c.nodes(output=True), set(["n_3", "G17"]))
-        self.assertSetEqual(s27_c.nodes(output=True, types=["nor"]), set(["n_3"]))
-        self.assertListEqual(s27_c.output(["G5", "G17"]), [False, True])
-        s27_c.graph.add_node("test", type="or")
-        self.assertRaises(KeyError, s27_c.output, "test")
-
-    def test_contains(self):
-        self.assertFalse("adsf" in self.s27)
-        self.assertTrue("G7" in self.s27)
-
-    def test_io(self):
-        self.assertSetEqual(self.s27.io(), set(["clk", "G0", "G1", "G2", "G3", "G17"]))
-
-    def test_is_cyclic(self):
         c = cg.Circuit()
-        c.add("a", "buf")
-        c.add("b", "buf", fanin="a", fanout="a")
-        self.assertTrue(c.is_cyclic())
-        self.assertFalse(self.c17.is_cyclic())
+        c.add("a", "xor", output=True)
+        c.add("b", "xor")
+        self.assertListEqual(c.output(["a", "b"]), [True, False])
+        c.set_output("a", False)
+        self.assertEqual(c.output("a"), False)
+        c.set_output(["a", "b"])
+        self.assertListEqual(c.output(["a", "b"]), [True, True])
+        c.graph.add_node("c")
+        self.assertRaises(KeyError, c.output, "c")
 
-    def test_ff_lat(self):
-        self.assertSetEqual(self.s27.ffs(), {"G5", "G6", "G7"})
-        s27_c = self.s27.copy()
-        s27_c.add("c_t", "input")
-        s27_c.add("r_t", "input")
-        s27_c.add("s_t", "input")
-        s27_c.add("test_lat", "lat", fanin=["G5"], clk="c_t", r="r_t", s="s_t")
-        self.assertSetEqual(s27_c.lats(), {"test_lat"})
-        self.assertSetEqual(s27_c.seq(), {"G5", "G6", "G7", "test_lat"})
-        self.assertEqual(s27_c.d("test_lat"), "G5")
-        self.assertEqual(s27_c.clk("test_lat"), "c_t")
-        self.assertEqual(s27_c.r("test_lat"), "r_t")
-        self.assertEqual(s27_c.s("test_lat"), "s_t")
-        s27_c.graph.add_node("test_node", type="or")
-        self.assertRaises(KeyError, s27_c.r, ["test_node", "G5"])
-        self.assertRaises(KeyError, s27_c.s, ["test_node", "G5"])
-        self.assertRaises(KeyError, s27_c.d, ["test_node", "G5"])
-        self.assertRaises(KeyError, s27_c.clk, ["test_node", "G5"])
+    def test_nodes(self):
+        c = cg.Circuit()
+        c.add("a", "xor")
+        c.add("b", "or")
+        c.add("c", "and")
+        c.add("d", "xor", output=True)
+        self.assertSetEqual(c.nodes(), set(["a", "b", "c", "d"]))
+        self.assertSetEqual(c.nodes(types="xor"), set(["a", "d"]))
+        self.assertSetEqual(c.nodes(output=True), set(["d"]))
+        self.assertSetEqual(c.nodes(types="xor", output=True), set(["d"]))
+        self.assertSetEqual(c.nodes(types=["xor", "or"]), set(["a", "b", "d"]))
 
-    def test_seq_graph(self):
-        g = self.s27.seq_graph()
+    def test_edges(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "xor", fanin=["a", "b"])
+        self.assertSetEqual(c.edges(), set([("a", "c"), ("b", "c")]))
+
+    def test_add(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "not", fanin="a")
+        c.add("c", "xor")
+        c.add("d", "nor")
+        c.add("e", "input", fanout=["c", "d"])
+        c.add("f", "input", fanout="c")
         self.assertSetEqual(
-            set(g.nodes), set(["G1", "G3", "clk", "G5", "G6", "G0", "G2", "G7", "G17"])
+            c.edges(), set([("a", "b"), ("e", "c"), ("e", "d"), ("f", "c")])
+        )
+        self.assertRaises(ValueError, c.add, "g", "ff", fanin=["a", "b"])
+        self.assertRaises(ValueError, c.add, "g", "input", fanin="a")
+        self.assertRaises(ValueError, c.add, "0g", "input")
+
+    def test_remove(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "xor", fanin=["a", "b"])
+        self.assertSetEqual(c.nodes(), set(["a", "b", "c"]))
+        c.remove("a")
+        self.assertSetEqual(c.nodes(), set(["b", "c"]))
+        c.remove(["b", "c"])
+        self.assertSetEqual(c.nodes(), set())
+
+    def test_extend(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "not", fanin="a")
+        c2 = cg.Circuit()
+        c2.add("c", "input")
+        c2.add("d", "buf", fanin="c")
+        c.extend(c2)
+        self.assertSetEqual(c.nodes(), set(["a", "b", "c", "d"]))
+
+    def test_connect(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "xor")
+        c.add("d", "or")
+        self.assertSetEqual(c.edges(), set())
+        c.connect("a", "c")
+        c.connect("b", "c")
+        self.assertSetEqual(c.edges(), set([("a", "c"), ("b", "c")]))
+        c.connect(["a", "b"], ["d", "d"])
+        self.assertSetEqual(
+            c.edges(), set([("a", "c"), ("b", "c"), ("a", "d"), ("b", "d")])
         )
 
     def test_disconnect(self):
-        s27_c = self.s27.copy()
-        s27_c.disconnect("G5", "n_1")
-        self.assertSetEqual(s27_c.fanout("G5"), {"n_21", "n_20"})
-
-    def test_remove(self):
-        c17_c = self.c17.copy()
-        c17_c.remove("G16")
-        self.assertNotIn("G16", c17_c.nodes())
-        self.assertSetEqual(c17_c.fanout("G8"), set())
-
-    def test_edges(self):
-        self.assertSetEqual(
-            set(tuple((u, v)) for u, v in self.c17.edges()),
-            set(
-                tuple((u, v))
-                for u, v in [
-                    ("G8", "G16"),
-                    ("G1", "G8"),
-                    ("G3", "G8"),
-                    ("G3", "G9"),
-                    ("G9", "G12"),
-                    ("G9", "G15"),
-                    ("G4", "G9"),
-                    ("G12", "G16"),
-                    ("G12", "G17"),
-                    ("G2", "G12"),
-                    ("G15", "G17"),
-                    ("G5", "G15"),
-                ]
-            ),
-        )
-
-    def test_type(self):
-        self.assertTrue(self.s27.type("G7") == "ff")
-        self.assertTrue(self.s27.type("n_4") == "nand")
-        self.s27.set_type("n_4", "nor")
-        self.assertTrue(self.s27.type("n_4") == "nor")
-        self.assertListEqual(self.s27.type(["G7", "n_4"]), ["ff", "nor"])
-        s27_c = self.s27.copy()
-        s27_c.graph.add_node("temp")
-        self.assertRaises(KeyError, s27_c.type, "temp")
-
-    def test_endpoints(self):
-        self.assertSetEqual(self.s27.endpoints(), set(["G5", "G6", "G7", "G17"]))
-        self.assertSetEqual(self.s27.endpoints("n_20"), set(["G17"]))
-        self.assertSetEqual(self.s27.endpoints(["n_20", "n_11"]), set(["G17", "G5"]))
-
-    def test_startpoints(self):
-        self.assertSetEqual(
-            self.s27.startpoints(),
-            set(["G5", "G6", "G7", "clk", "G0", "G1", "G2", "G3"]),
-        )
-        self.assertSetEqual(self.s27.startpoints("n_5"), set(["G6", "G0"]))
-        self.assertSetEqual(self.s27.startpoints(["n_1", "n_2"]), set(["G5", "G0"]))
-
-    def test_transitive_fanout(self):
-        self.assertSetEqual(
-            self.s27.transitive_fanout("G5"),
-            set(["n_1", "G17", "G5", "n_12", "n_11", "n_9", "n_20", "G6", "n_21",]),
-        )
-        self.assertSetEqual(
-            self.s27.transitive_fanout("G5", stopatTypes=["not", "nor"]),
-            set(["n_1", "n_20", "n_21"]),
-        )
-        self.assertSetEqual(
-            self.s27.transitive_fanout("G5", stopatNodes=["n_21", "n_20", "n_1"]),
-            set(["n_1", "n_20", "n_21"]),
-        )
-        self.assertSetEqual(
-            self.s27.transitive_fanout(
-                "G5", stopatTypes=["not"], stopatNodes=["n_21", "n_20"]
-            ),
-            set(["n_1", "n_20", "n_21"]),
-        )
-        self.assertSetEqual(
-            self.s27.transitive_fanout(["G5", "n_3"]),
-            set(
-                [
-                    "n_6",
-                    "G7",
-                    "n_1",
-                    "G17",
-                    "G5",
-                    "n_12",
-                    "n_11",
-                    "n_9",
-                    "n_20",
-                    "G6",
-                    "n_21",
-                ]
-            ),
-        )
-
-    def test_transitive_fanin(self):
-        self.assertSetEqual(self.s27.transitive_fanin("n_4"), set(["G3", "n_0", "G1"]))
-        self.assertSetEqual(
-            self.s27.transitive_fanin("n_4", stopatTypes=["not"]), set(["G3", "n_0"])
-        )
-        self.assertSetEqual(
-            self.s27.transitive_fanin("n_4", stopatNodes=["n_0"]), set(["G3", "n_0"])
-        )
-        self.assertSetEqual(
-            self.s27.transitive_fanin("n_4", stopatTypes=["not"], stopatNodes=["n_0"]),
-            set(["n_0", "G3"]),
-        )
-        self.assertSetEqual(
-            self.s27.transitive_fanin(["n_4", "n_3"]), set(["G3", "n_0", "G7", "G1"])
-        )
-
-    def test_clog2(self):
-        self.assertEqual(clog2(9), 4)
-        self.assertRaises(ValueError, clog2, 0)
-
-    def test_int_to_bin(self):
-        self.assertEqual(int_to_bin(5, 6), tuple(i == "1" for i in "000101"))
-        self.assertEqual(int_to_bin(5, 6, True), tuple(i == "1" for i in "101000"))
-
-    @unittest.skipIf(shutil.which("approxmc") == None, "Approxmc is not installed")
-    def test_avg_sensitivity(self):
         c = cg.Circuit()
-        c.add('and','and')
-        c.add('in0','input',fanout='and')
-        c.add('in1','input',fanout='and')
-        self.assertEqual(c.avg_sensitivity('and'),1.0)
+        c.add("a", "input")
+        c.add("b", "not", fanin="a")
+        self.assertSetEqual(c.edges(), set([("a", "b")]))
+        c.disconnect("a", "b")
+        self.assertSetEqual(c.edges(), set())
+        c.add("c", "xor", fanin=["a", "b"])
+        self.assertSetEqual(c.edges(), set([("a", "c"), ("b", "c")]))
+        c.disconnect(["a", "b"], ["c", "c"])
+        self.assertSetEqual(c.edges(), set())
 
-        avg_sen = self.s27.avg_sensitivity('G17',approx=False)
+    def test_fanin_fanout(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "input")
+        c.add("d", "xor", fanin=["a", "b"])
+        c.add("e", "not", fanin="c")
+        self.assertSetEqual(c.fanin("a"), set())
+        self.assertSetEqual(c.fanin("d"), set(["a", "b"]))
+        self.assertSetEqual(c.fanin(["d", "e"]), set(["a", "b", "c"]))
+        self.assertSetEqual(c.fanout("e"), set())
+        self.assertSetEqual(c.fanout("a"), set(["d"]))
+        self.assertSetEqual(c.fanout(["b", "c"]), set(["d", "e"]))
 
-        # get startpoints of node
-        avg_sen_comp = 0
-        n = 'G17'
-        sp = self.s27.startpoints(n)
-        for s in sp:
-            # compute influence
-            infl = 0
-            for vs in product([False, True], repeat=len(sp)):
-                asmp = {i:v for i,v in zip(sp,vs)}
-                asmp_ns = {i:v if i!=s else not v for i,v in zip(sp,vs)}
-                r = cg.sat(self.s27,asmp)[n]
-                r_ns = cg.sat(self.s27,asmp_ns)[n]
-                if r!=r_ns:
-                    infl +=1
-            avg_sen_comp += infl/(2**len(sp))
+    def test_transitive_fanin_fanout(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "input")
+        c.add("d", "input")
+        c.add("e", "xor", fanin=["a", "b"])
+        c.add("f", "not", fanin="c")
+        c.add("g", "or", fanin=["c", "d"])
+        c.add("h", "and", fanin=["e", "f"])
+        c.add("i", "ff", fanin="g")
+        c.add("j", "nor", fanin=["i", "h"])
+        c.add("k", "not", fanin="i")
+        c.add("l", "buf", fanin="k")
+        self.assertSetEqual(c.transitive_fanin("a"), set())
+        self.assertSetEqual(
+            c.transitive_fanin("j"), set(["a", "b", "c", "e", "f", "h", "i"])
+        )
+        self.assertSetEqual(
+            c.transitive_fanin(["j", "l"]),
+            set(["a", "b", "c", "e", "f", "h", "i", "k"]),
+        )
+        self.assertSetEqual(
+            c.transitive_fanin(["j"], stopat_types=[]),
+            set(["a", "b", "c", "d", "e", "f", "g", "h", "i"]),
+        )
+        self.assertSetEqual(
+            c.transitive_fanin(["j"], stopat_nodes=["e", "f"]),
+            set(["e", "f", "h", "i"]),
+        )
+        self.assertSetEqual(c.transitive_fanout("l"), set())
+        self.assertSetEqual(c.transitive_fanout(["c"]), set(["f", "g", "h", "i", "j"]))
+        self.assertSetEqual(
+            c.transitive_fanout(["a", "c"]), set(["e", "f", "g", "h", "i", "j"])
+        )
+        self.assertSetEqual(
+            c.transitive_fanout(["c"], stopat_types=[]),
+            set(["f", "g", "h", "j", "i", "k", "l"]),
+        )
+        self.assertSetEqual(
+            c.transitive_fanout(["c"], stopat_nodes=["f", "g"]), set(["f", "g"])
+        )
 
-        self.assertEqual(avg_sen,avg_sen_comp)
+    def test_comb_depth(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "input")
+        c.add("d", "input")
+        c.add("e", "xor", fanin=["a", "b"])
+        c.add("f", "not", fanin="c")
+        c.add("g", "or", fanin=["c", "d"])
+        c.add("h", "and", fanin=["e", "f"])
+        c.add("i", "ff", fanin="g")
+        c.add("j", "nor", fanin=["i", "h"])
+        self.assertEqual(c.fanin_comb_depth("j"), 3)
+        self.assertEqual(c.fanin_comb_depth(["i", "j"]), 3)
+        self.assertEqual(c.fanin_comb_depth("j", shortest=True), 1)
+        # FIXME: What should be fanin_comb_depth of input or ff?
+        #        and fanout_comb_depth of output
+        # FIXME: How should this and transitive act when there's a cycle
+        self.assertEqual(c.fanout_comb_depth("c"), 3)
+        self.assertEqual(c.fanout_comb_depth(["a", "c"]), 3)
+        self.assertEqual(c.fanout_comb_depth("c", shortest=True), 1)
 
+    def test_seq(self):
+        c = cg.Circuit()
+        c.add("clk", "input")
+        c.add("rst", "input")
+        c.add("set", "input")
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "input")
+        c.add("d", "xor", fanin=["a", "b"])
+        c.add("e", "and", fanin=["c", "d"])
+        c.add("f", "ff", fanin="d", clk="clk", r="rst", s="set")
+        c.add("g", "lat", fanin="e", clk="clk", r="rst", s="set")
+        c.add("h", "output", fanin="f")
+        c.add("i", "output", fanin="g")
+        c.graph.add_node("j", type="and")
+        self.assertSetEqual(c.lats(), set("g"))
+        self.assertSetEqual(c.ffs(), set("f"))
+        self.assertSetEqual(c.seq(), set(["f", "g"]))
+        self.assertListEqual(c.r(["f", "g"]), ["rst", "rst"])
+        self.assertListEqual(c.s(["f", "g"]), ["set", "set"])
+        self.assertListEqual(c.clk(["f", "g"]), ["clk", "clk"])
+        self.assertListEqual(c.d(["f", "g"]), ["d", "e"])
+        self.assertRaises(KeyError, c.r, "j")
+        self.assertRaises(KeyError, c.s, "j")
+        self.assertRaises(KeyError, c.clk, "j")
+        self.assertRaises(KeyError, c.d, "j")
+
+    def test_io(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "xor", fanin=["a", "b"], output=True)
+        self.assertSetEqual(c.inputs(), set(["a", "b"]))
+        self.assertSetEqual(c.outputs(), set(["c"]))
+        self.assertSetEqual(c.io(), set(["a", "b", "c"]))
+
+    def test_standpoints_endpoints(self):
+        c = cg.Circuit()
+        c.add("clk", "input")
+        c.add("rst", "input")
+        c.add("set", "input")
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "input")
+        c.add("d", "xor", fanin=["a", "b"])
+        c.add("e", "and", fanin=["c", "d"])
+        c.add("f", "ff", fanin="d", clk="clk", r="rst", s="set")
+        c.add("g", "lat", fanin="e", clk="clk", r="rst", s="set")
+        c.add("h", "output", fanin="f")
+        c.add("i", "output", fanin="g")
+        self.assertSetEqual(
+            c.startpoints(), set(["clk", "rst", "set", "a", "b", "c", "f", "g"])
+        )
+        self.assertSetEqual(c.endpoints(), set(["f", "g"]))
+        self.assertSetEqual(c.startpoints("h"), set(["f"]))
+        self.assertSetEqual(c.endpoints("c"), set(["g"]))
+
+    def test_is_cyclic(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "xor", fanin="a")
+        self.assertFalse(c.is_cyclic())
+        c.connect("b", "b")
+        self.assertTrue(c.is_cyclic())
