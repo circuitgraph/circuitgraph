@@ -7,7 +7,6 @@ import circuitgraph as cg
 from circuitgraph.transform import miter, syn, sensitivity
 from circuitgraph.sat import sat
 from random import sample, randint
-import code
 
 
 class TestTransform(unittest.TestCase):
@@ -93,14 +92,11 @@ class TestTransform(unittest.TestCase):
             if neighbor_output_val != output_val:
                 sen_sim += 1
 
-        if sen_s != sen_sim:
-            code.interact(local=dict(globals(), **locals()))
-
         # check answer
         self.assertEqual(sen_s, sen_sim)
 
         # find input with sensitivity
-        vs = cg.int_to_bin(sen_s, cg.clog2(len(nstartpoints)+1), True)
+        vs = cg.int_to_bin(sen_s, cg.clog2(len(nstartpoints) + 1), True)
         model = sat(s, {f"out_{i}": v for i, v in enumerate(vs)})
 
         input_val = {i: model[i] for i in nstartpoints}

@@ -392,6 +392,7 @@ def sensitivity(c, n, startpoints=None):
     # remove outs, convert startpoints
     sub_c.set_output(sub_c.outputs(), False)
     sub_c.set_type(sub_c.startpoints(), "input")
+    sub_c.disconnect(sub_c.nodes(), sub_c.startpoints())
 
     # create sensitivity circuit and add first copy of subcircuit
     sen = Circuit()
@@ -401,7 +402,7 @@ def sensitivity(c, n, startpoints=None):
     p = popcount(len(startpoints)).strip_io()
     p = p.relabel({g: f"pop_{g}" for g in p})
     sen.extend(p)
-    for o in range(clog2(len(startpoints)+1)):
+    for o in range(clog2(len(startpoints) + 1)):
         sen.add(f"out_{o}", "buf", fanin=f"pop_out_{o}", output=True)
 
     # stamp out a copies of the circuit with s inverted
