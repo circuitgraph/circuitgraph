@@ -35,3 +35,7 @@ fv/
 
 # Verilator
 obj_dir/
+
+# Coverage
+htmlcov/
+.coverage

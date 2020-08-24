@@ -8,3 +8,6 @@ docs/index.html : circuitgraph/*
 test :
 	python -m unittest
 
+coverage:
+	coverage run -m unittest
+	coverage html

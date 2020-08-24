@@ -69,6 +69,22 @@ module test_seq(clk, G1, G2);
   fflopd DFF_0_Q_reg(clk, G3, G4);
 endmodule
 
+module test_always(clk, G1, G2);
+  input clk, G1;
+  output G2;
+
+  always@(posedge clk) begin
+    G1 = G2;
+  end
+endmodule
+
+module test_logical_operator(clk, G1, G2);
+  input G1, G2;
+  output G3;
+
+  assign G3 = G1 && G2;
+endmodule
+
 module fflopd(CK, D, Q);
   input CK, D;
   output Q;

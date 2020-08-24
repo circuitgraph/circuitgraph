@@ -281,8 +281,8 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
         endpoints = c0.endpoints() & c1.endpoints()
 
     # create miter, relabel to avoid overlap except for common startpoints
-    m = c0.relabel({n: f"c0_{n}" for n in c0.nodes() - startpoints})
-    m.extend(c1.relabel({n: f"c1_{n}" for n in c1.nodes() - startpoints}))
+    m = relabel(c0, {n: f"c0_{n}" for n in c0.nodes() - startpoints})
+    m.extend(relabel(c1, {n: f"c1_{n}" for n in c1.nodes() - startpoints}))
 
     # compare outputs
     # FIXME: Make sure this is robust to corner cases
@@ -322,7 +322,7 @@ def comb(c):
     ff_model = comb_ff()
 
     for lat in c.lats():
-        relabeled_model = lat_model.relabel({n: f"{lat}_{n}" for n in lat_model})
+        relabeled_model = relabel(lat_model, {n: f"{lat}_{n}" for n in lat_model})
         c_comb.extend(relabeled_model)
         c_comb.graph.add_edges_from(
             (f"{lat}_q", s) for s in c_comb.graph.successors(lat)
@@ -335,7 +335,7 @@ def comb(c):
         c_comb.graph.remove_node(lat)
 
     for ff in c.ffs():
-        relabeled_model = ff_model.relabel({n: f"{ff}_{n}" for n in ff_model})
+        relabeled_model = relabel(ff_model, {n: f"{ff}_{n}" for n in ff_model})
         c_comb.extend(relabeled_model)
         c_comb.graph.add_edges_from((f"{ff}_q", s) for s in c_comb.graph.successors(ff))
         c_comb.graph.add_edges_from(
@@ -422,7 +422,7 @@ def influence(c, n, s):
     # create two copies of sub circuit
     infl = Circuit(name=f"infl_{s}_on_{n}")
     infl.extend(sub_c)
-    infl.extend(sub_c.relabel({g: f"s1_{g}" for g in sub_c if g not in sp - set([s])}))
+    infl.extend(relabel(sub_c, {g: f"s1_{g}" for g in sub_c if g not in sp - set([s])}))
     infl.add("sat", "xor", fanin=[n, f"s1_{n}"], output=True)
     infl.add(f"not_{s}", "not", fanin=s, fanout=f"s1_{s}")
 
@@ -471,7 +471,7 @@ def sensitivity(c, n, startpoints=None):
 
     # instantiate population count
     p = popcount(len(startpoints)).strip_io()
-    p = p.relabel({g: f"pop_{g}" for g in p})
+    p = relabel(p, {g: f"pop_{g}" for g in p})
     sen.extend(p)
     for o in range(clog2(len(startpoints) + 1)):
         sen.add(f"out_{o}", "buf", fanin=f"pop_out_{o}", output=True)
@@ -481,7 +481,7 @@ def sensitivity(c, n, startpoints=None):
         mapping = {
             g: f"sen_{s}_{g}" for g in sub_c if g not in all_startpoints - set([s])
         }
-        sen.extend(sub_c.relabel(mapping))
+        sen.extend(relabel(sub_c, mapping))
 
         # connect inverted input
         sen.set_type(f"sen_{s}_{s}", "not")
