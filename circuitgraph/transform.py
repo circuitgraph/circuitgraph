@@ -14,7 +14,7 @@ import networkx as nx
 
 from circuitgraph import Circuit, clog2
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
-from circuitgraph.logic import popcount
+from circuitgraph.logic import popcount, comb_ff, comb_lat
 
 
 def syn(c, engine, print_output=False):
@@ -246,27 +246,31 @@ def comb(c):
 
     """
     c_comb = c.copy()
-    lat_model = gen_lat_model()
-    ff_model = gen_ff_model()
+    lat_model = comb_lat()
+    ff_model = comb_ff()
 
     for lat in c.lats():
-        relabeled_model = nx.relabel_nodes(
-            lat_model, {n: f"{lat}_{n}" for n in lat_model}
-        )
+        relabeled_model = lat_model.relabel({n: f"{lat}_{n}" for n in lat_model})
         c_comb.extend(relabeled_model)
-        c_comb.add_edges_from((f"{lat}_q", s) for s in c_comb.successors(lat))
-        c_comb.add_edges_from((p, f"{lat}_d") for p in c_comb.predecessors(lat))
-        c_comb.add_edge(c.nodes[lat]["clk"], f"{lat}_clk")
-        c_comb.add_edge(c.nodes[lat]["rst"], f"{lat}_rst")
-        c_comb.remove_node(lat)
+        c_comb.graph.add_edges_from(
+            (f"{lat}_q", s) for s in c_comb.graph.successors(lat)
+        )
+        c_comb.graph.add_edges_from(
+            (p, f"{lat}_d") for p in c_comb.graph.predecessors(lat)
+        )
+        c_comb.graph.add_edge(c.clk(lat), f"{lat}_clk")
+        c_comb.graph.add_edge(c.r(lat), f"{lat}_rst")
+        c_comb.graph.remove_node(lat)
 
     for ff in c.ffs():
-        relabeled_model = nx.relabel_nodes(ff_model, {n: f"{ff}_{n}" for n in ff_model})
+        relabeled_model = ff_model.relabel({n: f"{ff}_{n}" for n in ff_model})
         c_comb.extend(relabeled_model)
-        c_comb.add_edges_from((f"{ff}_q", s) for s in c_comb.successors(ff))
-        c_comb.add_edges_from((p, f"{ff}_d") for p in c_comb.predecessors(ff))
-        c_comb.add_edge(c.nodes[ff]["clk"], f"{ff}_clk")
-        c_comb.remove_node(ff)
+        c_comb.graph.add_edges_from((f"{ff}_q", s) for s in c_comb.graph.successors(ff))
+        c_comb.graph.add_edges_from(
+            (p, f"{ff}_d") for p in c_comb.graph.predecessors(ff)
+        )
+        c_comb.graph.add_edge(c.clk(ff), f"{ff}_clk")
+        c_comb.graph.remove_node(ff)
 
     return c_comb
 
