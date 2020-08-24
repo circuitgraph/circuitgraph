@@ -57,15 +57,6 @@ def syn(c, engine, print_output=False):
                     f'redirect {tmp_out.name} "write_hdl -generic";\n'
                     "exit;",
                 ]
-                process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-                while True:
-                    line = process.stdout.readline()
-                    if line == "" and process.poll() is not None:
-                        break
-                    if line:
-                        if print_output:
-                            print(line.strip())
-                output = tmp_out.read().decode("utf-8")
             elif engine == "Yosys":
                 cmd = [
                     "yosys",
@@ -74,13 +65,21 @@ def syn(c, engine, print_output=False):
                     "proc; opt; fsm; opt; memory; opt; clean; "
                     f"write_verilog -noattr {tmp_out.name}",
                 ]
-                subprocess.run(cmd)
-                output = tmp_out.read().decode("utf-8")
-                if print_output:
-                    print(output)
 
             else:
                 raise ValueError("synthesis engine must be Yosys or Genus")
+
+            process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+            while True:
+                line = process.stdout.readline()
+                if line == "" and process.poll() is not None:
+                    break
+                if line:
+                    if print_output:
+                        print(line.strip())
+            output = tmp_out.read().decode("utf-8")
+            if print_output:
+                print(output)
 
     return verilog_to_circuit(output, c.name)
 
