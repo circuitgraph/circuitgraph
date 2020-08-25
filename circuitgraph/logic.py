@@ -4,6 +4,7 @@ from itertools import product
 
 from circuitgraph import Circuit
 from circuitgraph.utils import clog2
+from circuitgraph.transform import strip_io, relabel
 
 
 def adder(w):
@@ -104,8 +105,8 @@ def popcount(w):
             ns += ["null"]
 
         # instantiate and connect adder
-        a = adder(aw).strip_io()
-        c.extend(a.relabel({n: f"add_{i}_{n}" for n in a.nodes()}))
+        a = strip_io(adder(aw))
+        c.extend(relabel(a, {n: f"add_{i}_{n}" for n in a.nodes()}))
         for j, (n, m) in enumerate(zip(ns, ms)):
             c.connect(n, f"add_{i}_a_{j}")
             c.connect(m, f"add_{i}_b_{j}")
@@ -129,8 +130,8 @@ def comb_lat():
     lm = Circuit(name="lat")
 
     # mux
-    m = mux(2).strip_io()
-    lm.extend(m.relabel({n: f"mux_{n}" for n in m.nodes()}))
+    m = strip_io(mux(2))
+    lm.extend(relabel(m, {n: f"mux_{n}" for n in m.nodes()}))
 
     # inputs
     lm.add("si", "input", fanout="mux_in_0")
@@ -152,8 +153,8 @@ def comb_ff():
     lm = Circuit(name="ff")
 
     # mux
-    m = mux(2).strip_io()
-    lm.extend(m.relabel({n: f"mux_{n}" for n in m.nodes()}))
+    m = strip_io(mux(2))
+    lm.extend(relabel(m, {n: f"mux_{n}" for n in m.nodes()}))
 
     # inputs
     lm.add("si", "input", fanout="mux_in_0")
@@ -169,3 +170,39 @@ def comb_ff():
     lm.add("so", "buf", fanin="q", output=True)
 
     return lm
+
+
+def mphf(w=50, n=8000):
+    """
+    Creates a SAT-hard circuit based on the structure of minimum perfect hash
+    functions.
+
+    Parameters
+    ----------
+    w : int
+            Input width.
+    n : int
+            Number of constraints.
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+
+    """
+    o = max(1, math.ceil(math.log2(w)))
+    c = Circuit()
+
+    # add inputs
+    inputs = [c.add(f"in_{i}", "input") for i in range(w)]
+
+    # add constraints
+    ors = []
+    for ni in range(n):
+        xors = [
+            c.add(f"xor_{ni}_{oi}", "xor", fanin=sample(inputs, 2)) for oi in range(o)
+        ]
+        ors.append(c.add(f"or_{ni}", "or", fanin=xors))
+    c.add("sat", "and", fanin=ors, output=True)
+
+    return c

@@ -331,7 +331,7 @@ class Circuit:
             ns = [ns]
         self.graph.remove_nodes_from(ns)
 
-    def extend(self, c):
+    def extend(self, c, mapping=None):
         """
         Adds nodes from another circuit
 
@@ -340,7 +340,13 @@ class Circuit:
         c : Circuit
                 Other circuit
         """
-        self.graph.update(c.graph)
+        if mapping is None:
+            self.graph.update(c.graph)
+        else:
+            import circuitgraph.transform as tr
+
+            cr = tr.relabel(c, mapping)
+            self.graph.update(cr.graph)
 
     def connect(self, us, vs):
         """
