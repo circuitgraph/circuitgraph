@@ -170,39 +170,3 @@ def comb_ff():
     lm.add("so", "buf", fanin="q", output=True)
 
     return lm
-
-
-def mphf(w=50, n=8000):
-    """
-    Creates a SAT-hard circuit based on the structure of minimum perfect hash
-    functions.
-
-    Parameters
-    ----------
-    w : int
-            Input width.
-    n : int
-            Number of constraints.
-
-    Returns
-    -------
-    Circuit
-            Output circuit.
-
-    """
-    o = max(1, math.ceil(math.log2(w)))
-    c = Circuit()
-
-    # add inputs
-    inputs = [c.add(f"in_{i}", "input") for i in range(w)]
-
-    # add constraints
-    ors = []
-    for ni in range(n):
-        xors = [
-            c.add(f"xor_{ni}_{oi}", "xor", fanin=sample(inputs, 2)) for oi in range(o)
-        ]
-        ors.append(c.add(f"or_{ni}", "or", fanin=xors))
-    c.add("sat", "and", fanin=ors, output=True)
-
-    return c

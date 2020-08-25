@@ -49,6 +49,32 @@ def int_to_bin(i, w, lend=False):
         return tuple(reversed(tuple(v == "1" for v in bin(i)[2:].zfill(w))))
 
 
+def bin_to_int(b, lend=False):
+    """
+    Converts binary number to integer.
+
+    Parameters
+    ----------
+    b : tuple of bool
+            Binary tuple.
+    lend : bool
+            Endianess of tuple.
+
+    Returns
+    -------
+    int
+            Value as integer.
+
+    """
+
+    if not lend:
+        s = "".join("1" if v else "0" for v in b)
+    else:
+        s = "".join("1" if v else "0" for v in reversed(b))
+
+    return int(s, 2)
+
+
 def lint(c):
     """
     Checks circuit for missing connections.
