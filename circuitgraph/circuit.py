@@ -651,6 +651,23 @@ class Circuit:
                 raise KeyError(f"Node {ns} does not have a reset defined.")
         return [self.r(n) for n in ns]
 
+    def set_r(self, ns, r):
+        """
+        Sets sequential element's reset connection
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to set reset for.
+        r : str
+                Node(s) to use as reset.
+        """
+        if isinstance(ns, str):
+            self.graph.nodes[ns]["r"] = r
+        else:
+            for n in ns:
+                self.set_r(n, r)
+
     def s(self, ns):
         """
         Returns sequential element's set connection
@@ -673,6 +690,23 @@ class Circuit:
                 raise KeyError(f"Node {ns} does not have a set defined.")
         return [self.s(n) for n in ns]
 
+    def set_s(self, ns, s):
+        """
+        Sets sequential element's set connection
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to set set for.
+        s : str
+                Node(s) to use as set.
+        """
+        if isinstance(ns, str):
+            self.graph.nodes[ns]["s"] = s
+        else:
+            for n in ns:
+                self.set_s(n, s)
+
     def clk(self, ns):
         """
         Returns sequential element's clk connection
@@ -694,6 +728,23 @@ class Circuit:
             except KeyError:
                 raise KeyError(f"Node {ns} does not have a clk defined.")
         return [self.clk(n) for n in ns]
+
+    def set_clk(self, ns, clk):
+        """
+        Sets sequential element's clk connection
+
+        Parameters
+        ----------
+        ns : str or iterable of str
+                Node(s) to set clk for.
+        clk : str
+                Node(s) to use as clk.
+        """
+        if isinstance(ns, str):
+            self.graph.nodes[ns]["clk"] = clk
+        else:
+            for n in ns:
+                self.set_clk(n, clk)
 
     def d(self, ns):
         """

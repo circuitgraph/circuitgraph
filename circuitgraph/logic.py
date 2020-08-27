@@ -13,11 +13,13 @@ def adder(w):
 
     Parameters
     ----------
-    w: the width of the adder.
+    w : int
+            Input width of adder.
 
     Returns
     -------
-    a `CircuitGraph` addder.
+    Circuit
+            Adder circuit.
     """
     c = Circuit(name="adder")
     carry = c.add("null", "0")
@@ -45,11 +47,13 @@ def mux(w):
 
     Parameters
     ----------
-    w: the width of the mux.
+    w : int
+            Input width of the mux.
 
     Returns
     -------
-    a `CircuitGraph` mux.
+    Circuit
+            Mux circuit.
     """
     c = Circuit(name="mux")
 
@@ -82,11 +86,13 @@ def popcount(w):
 
     Parameters
     ----------
-    w: the width of the adder.
+    w : int
+            Input width of the circuit.
 
     Returns
     -------
-    a `CircuitGraph` addder.
+    Circuit
+            Population count circuit.
     """
     c = Circuit(name="popcount")
     ps = [[c.add(f"in_{i}", "input")] for i in range(w)]
@@ -127,6 +133,14 @@ def popcount(w):
 
 
 def comb_lat():
+    """
+    Combinational model of a latch.
+
+    Returns
+    -------
+    Circuit
+            Latch model circuit.
+    """
     lm = Circuit(name="lat")
 
     # mux
@@ -150,23 +164,31 @@ def comb_lat():
 
 
 def comb_ff():
-    lm = Circuit(name="ff")
+    """
+    Combinational model of a flip-flop.
+
+    Returns
+    -------
+    Circuit
+            Flip-flop model circuit.
+    """
+    fm = Circuit(name="ff")
 
     # mux
     m = strip_io(mux(2))
-    lm.extend(relabel(m, {n: f"mux_{n}" for n in m.nodes()}))
+    fm.extend(relabel(m, {n: f"mux_{n}" for n in m.nodes()}))
 
     # inputs
-    lm.add("si", "input", fanout="mux_in_0")
-    lm.add("d", "input", fanout="mux_in_1")
-    lm.add("clk", "input", fanout="mux_sel_0")
-    lm.add("r", "input")
-    lm.add("s", "input")
+    fm.add("si", "input", fanout="mux_in_1")
+    fm.add("d", "input", fanout="mux_in_0")
+    fm.add("clk", "input", fanout="mux_sel_0")
+    fm.add("r", "input")
+    fm.add("s", "input")
 
     # logic
-    lm.add("r_b", "not", fanin="r")
-    lm.add("qr", "and", fanin=["mux_out", "r_b"])
-    lm.add("q", "or", fanin=["qr", "s"], output=True)
-    lm.add("so", "buf", fanin="q", output=True)
+    fm.add("r_b", "not", fanin="r")
+    fm.add("qr", "and", fanin=["si", "r_b"])
+    fm.add("q", "or", fanin=["qr", "s"], output=True)
+    fm.add("so", "buf", fanin="mux_out", output=True)
 
-    return lm
+    return fm

@@ -106,7 +106,7 @@ def strip_inputs(c):
 
 def seq_graph(c):
     """
-    Creates a graph of a circuit's sequential elements.
+    Creates a Circuit of the sequential elements and IO.
 
     Parameters
     ----------
@@ -118,17 +118,17 @@ def seq_graph(c):
             Sequential circuit.
 
     """
-    graph = nx.DiGraph()
+    s = Circuit(name=f"{c.name}_seq")
 
     # add nodes
     for n in c.io() | c.seq():
-        graph.add_node(n, gate=c.type(n))
+        s.add(n, c.type(n))
 
     # add edges
-    for n in graph.nodes:
-        graph.add_edges_from((s, n) for s in c.startpoints(n))
+    for n in s:
+        s.connect(c.startpoints(n), n)
 
-    return Circuit(graph=graph, name=c.name)
+    return s
 
 
 def syn(c, engine, print_output=False):
