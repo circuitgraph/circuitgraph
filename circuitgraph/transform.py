@@ -298,6 +298,7 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     Circuit
             Miter circuit.
     """
+    # clean inputs
     if not c1:
         c1 = c0
     if not startpoints:
@@ -305,25 +306,16 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     if not endpoints:
         endpoints = c0.endpoints() & c1.endpoints()
 
-    # create miter, relabel to avoid overlap except for common startpoints
-    m = relabel(c0, {n: f"c0_{n}" for n in c0.nodes() - startpoints})
-    m.extend(relabel(c1, {n: f"c1_{n}" for n in c1.nodes() - startpoints}))
+    # create miter, relabel
+    m = relabel(c0, {n: f"c0_{n}" for n in c0.nodes()-startpoints})
+    m.extend(relabel(c1, {n: f"c1_{n}" for n in c1.nodes()-startpoints}))
+    strip_outputs(m)
 
-    # compare outputs
-    # FIXME: Make sure this is robust to corner cases
+    # compare endpoints
     m.add("sat", "or", output=True)
-    for o in endpoints:
-        if c0.type(o) in ["lat", "ff"]:
-            if c0.d(o) not in startpoints:
-                m.add(
-                    f"miter_{o}",
-                    "xor",
-                    fanin=[f"c0_{c0.d(o)}", f"c1_{c1.d(o)}"],
-                    fanout=["sat"],
-                )
-        else:
-            m.add(f"miter_{o}", "xor", fanin=[f"c0_{o}", f"c1_{o}"], fanout=["sat"])
-
+    for o in endpoints-startpoints:
+        m.add(f"miter_{o}", "xor", fanout=["sat"],
+              fanin=[f"c0_{o}", f"c1_{o}"])
     return m
 
 
@@ -348,28 +340,16 @@ def comb(c):
     lat_model = logic.comb_lat()
     ff_model = logic.comb_ff()
 
-    for lat in c.lats():
-        relabeled_model = relabel(lat_model, {n: f"{lat}_{n}" for n in lat_model})
+    for s in c.seq():
+        model = lat_model if c.type(s) == "lat" else ff_model
+        relabeled_model = relabel(model, {n: f"{s}_{n}" for n in model})
         c_comb.extend(relabeled_model)
-        c_comb.graph.add_edges_from(
-            (f"{lat}_q", s) for s in c_comb.graph.successors(lat)
-        )
-        c_comb.graph.add_edges_from(
-            (p, f"{lat}_d") for p in c_comb.graph.predecessors(lat)
-        )
-        c_comb.graph.add_edge(c.clk(lat), f"{lat}_clk")
-        c_comb.graph.add_edge(c.r(lat), f"{lat}_rst")
-        c_comb.graph.remove_node(lat)
-
-    for ff in c.ffs():
-        relabeled_model = relabel(ff_model, {n: f"{ff}_{n}" for n in ff_model})
-        c_comb.extend(relabeled_model)
-        c_comb.graph.add_edges_from((f"{ff}_q", s) for s in c_comb.graph.successors(ff))
-        c_comb.graph.add_edges_from(
-            (p, f"{ff}_d") for p in c_comb.graph.predecessors(ff)
-        )
-        c_comb.graph.add_edge(c.clk(ff), f"{ff}_clk")
-        c_comb.graph.remove_node(ff)
+        c_comb.connect(f"{s}_q",c_comb.fanout(s))
+        c_comb.connect(c_comb.fanin(s),f"{s}_d")
+        if c.clk(s): c_comb.connect(c.clk(s), f"{s}_clk")
+        if c.r(s): c_comb.connect(c.r(s), f"{s}_rst")
+        if c.s(s): c_comb.connect(c.s(s), f"{s}_set")
+        c_comb.remove(s)
 
     return c_comb
 
@@ -410,7 +390,7 @@ def unroll(c, cycles):
     return u
 
 
-def influence(c, n, s):
+def influence_transform(c, n, s):
     """
     Creates a circuit to compute sensitivity.
 
@@ -452,7 +432,7 @@ def influence(c, n, s):
     return infl
 
 
-def sensitivity(c, n, startpoints=None):
+def sensitivity_transform(c, n, startpoints=None):
     """
     Creates a circuit to compute sensitivity.
 
@@ -525,7 +505,7 @@ def sensitivity(c, n, startpoints=None):
     return sen
 
 
-def sensitize(c, n):
+def sensitization_transform(c, n):
     """
     Creates a circuit to sensitize a node to an endpoint.
 
@@ -542,15 +522,11 @@ def sensitize(c, n):
             Output circuit.
 
     """
-    # get fanin/out cone of node
-    nodes = c.transitive_fanin(n) | c.transitive_fanout(n) | set([n])
-    subCircuit = Circuit(c.graph.subgraph(nodes).copy())
-
     # create miter
-    m = miter(subCircuit)
+    m = miter(c)
 
     # cut and invert n in one side of miter
-    m.graph.nodes[f"c1_{n}"]["type"] = "not"
+    m.set_type(f"c1_{n}","not")
     m.graph.remove_edges_from((f, f"c1_{n}") for f in m.fanin(f"c1_{n}"))
     m.graph.add_edge(f"c0_{n}", f"c1_{n}")
 

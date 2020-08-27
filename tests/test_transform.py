@@ -28,17 +28,19 @@ class TestTransform(unittest.TestCase):
         # check self equivalence
         c = strip_io(self.s27)
         self.assertTrue("input" not in c.type(c.nodes()))
-        self.assertTrue("output" not in c.type(c.nodes()))
+        self.assertFalse(any(c.output(c.nodes())))
 
     def test_strip_inputs(self):
         # check self equivalence
-        c = strip_io(self.s27)
+        c = strip_inputs(self.s27)
         self.assertTrue("input" not in c.type(c.nodes()))
+        self.assertTrue(any(c.output(c.nodes())))
 
     def test_strip_outputs(self):
         # check self equivalence
-        c = strip_io(self.s27)
-        self.assertTrue("output" not in c.type(c.nodes()))
+        c = strip_outputs(self.s27)
+        self.assertFalse("input" not in c.type(c.nodes()))
+        self.assertFalse(any(c.output(c.nodes())))
 
     def test_seq_graph(self):
         g = seq_graph(self.s27)
@@ -130,14 +132,14 @@ class TestTransform(unittest.TestCase):
         self.assertTrue(result)
         self.assertTrue(all(result[f"{n}_x"] for n in self.s27))
 
-    def test_sensitivity(self):
+    def test_sensitivity_transform(self):
         # pick random node and input value
         n = sample(self.s27.nodes() - self.s27.startpoints(), 1)[0]
         nstartpoints = self.s27.startpoints(n)
         input_val = {i: randint(0, 1) for i in nstartpoints}
 
         # build sensitivity circuit
-        s = sensitivity(self.s27, n)
+        s = sensitivity_transform(self.s27, n)
 
         # find sensitivity at an input
         model = sat(s, input_val)

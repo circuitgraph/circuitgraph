@@ -209,13 +209,14 @@ class TestIO(unittest.TestCase):
         ]:
             g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name)
             m = miter(g, g2)
-            live = sat(m)
+            #live = sat(m)
+            try:
+                live = sat(m)
+            except:
+                import code
+                code.interact(local=dict(globals(), **locals()))
             self.assertTrue(live)
             different_output = sat(m, assumptions={"sat": True})
-            if different_output:
-                import code
-
-                code.interact(local=dict(globals(), **locals()))
             self.assertFalse(different_output)
 
         seq_types = [
@@ -238,14 +239,9 @@ class TestIO(unittest.TestCase):
         g2 = cg.verilog_to_circuit(
             cg.circuit_to_verilog(g, seq_types=seq_types), g.name, seq_types=seq_types
         )
-        m = miter(g, g2)
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})
-        if different_output:
-            import code
-
-            code.interact(local=dict(globals(), **locals()))
         self.assertFalse(different_output)
 
     def test_verilog_incorrect_output(self):

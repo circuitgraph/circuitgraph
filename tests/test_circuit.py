@@ -269,9 +269,11 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(
             c.startpoints(), set(["clk", "rst", "set", "a", "b", "c", "f", "g"])
         )
-        self.assertSetEqual(c.endpoints(), set(["f", "g"]))
+        self.assertSetEqual(c.endpoints(), set(["d", "e"]))
         self.assertSetEqual(c.startpoints("h"), set(["f"]))
-        self.assertSetEqual(c.endpoints("c"), set(["g"]))
+        self.assertSetEqual(c.endpoints("c"), set(["e"]))
+        self.assertSetEqual(c.startpoints("c"), set(["c"]))
+        self.assertSetEqual(c.endpoints("e"), set(["e"]))
 
     def test_is_cyclic(self):
         c = cg.Circuit()

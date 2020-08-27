@@ -819,9 +819,12 @@ class Circuit:
                 Startpoints of ns.
 
         """
+        if isinstance(ns, str):
+            ns = [ns]
+
         circuit_startpoints = self.inputs() | self.seq()
         if ns:
-            return self.transitive_fanin(ns) & circuit_startpoints
+            return (set(ns) | self.transitive_fanin(ns)) & circuit_startpoints
         else:
             return circuit_startpoints
 
@@ -840,9 +843,12 @@ class Circuit:
                 Endpoints of ns.
 
         """
-        circuit_endpoints = self.outputs() | self.seq()
+        if isinstance(ns, str):
+            ns = [ns]
+
+        circuit_endpoints = self.outputs() | set(self.d(self.seq()))
         if ns:
-            return self.transitive_fanout(ns) & circuit_endpoints
+            return (set(ns) | self.transitive_fanout(ns)) & circuit_endpoints
         else:
             return circuit_endpoints
 
