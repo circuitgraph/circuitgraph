@@ -14,7 +14,7 @@ class TestTransform(unittest.TestCase):
         self.s27 = cg.from_lib("s27")
 
         # incorrect copy of s27
-        self.s27m = self.s27.copy()
+        self.s27m = cg.copy(self.s27)
         self.s27m.graph.nodes["n_11"]["type"] = "buf"
 
     def test_relabel(self):

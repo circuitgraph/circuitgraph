@@ -16,6 +16,24 @@ from circuitgraph.utils import clog2, lint
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
 
 
+def copy(c):
+    """
+    Returns copy of a circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            circuit to rename
+
+    Returns
+    -------
+    Circuit
+            Relabeled circuit.
+
+    """
+    return Circuit(graph=c.graph.copy(), name=c.name)
+
+
 def relabel(c, mapping):
     """
     Returns renamed copy of a circuit.
@@ -122,7 +140,7 @@ def seq_graph(c):
 
     # add nodes
     for n in c.io() | c.seq():
-        s.add(n, c.type(n))
+        s.add(n, c.type(n), output=c.output(n))
 
     # add edges
     for n in s:
@@ -213,7 +231,7 @@ def ternary(c):
             Encoded circuit.
 
     """
-    t = c.copy()
+    t = copy(c)
 
     # add dual nodes
     for n in c:
@@ -307,15 +325,14 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
         endpoints = c0.endpoints() & c1.endpoints()
 
     # create miter, relabel
-    m = relabel(c0, {n: f"c0_{n}" for n in c0.nodes()-startpoints})
-    m.extend(relabel(c1, {n: f"c1_{n}" for n in c1.nodes()-startpoints}))
+    m = relabel(c0, {n: f"c0_{n}" for n in c0.nodes() - startpoints})
+    m.extend(relabel(c1, {n: f"c1_{n}" for n in c1.nodes() - startpoints}))
     strip_outputs(m)
 
     # compare endpoints
     m.add("sat", "or", output=True)
-    for o in endpoints-startpoints:
-        m.add(f"miter_{o}", "xor", fanout=["sat"],
-              fanin=[f"c0_{o}", f"c1_{o}"])
+    for o in endpoints - startpoints:
+        m.add(f"miter_{o}", "xor", fanout=["sat"], fanin=[f"c0_{o}", f"c1_{o}"])
     return m
 
 
@@ -336,7 +353,7 @@ def comb(c):
     """
     import circuitgraph.logic as logic
 
-    c_comb = c.copy()
+    c_comb = copy(c)
     lat_model = logic.comb_lat()
     ff_model = logic.comb_ff()
 
@@ -344,11 +361,14 @@ def comb(c):
         model = lat_model if c.type(s) == "lat" else ff_model
         relabeled_model = relabel(model, {n: f"{s}_{n}" for n in model})
         c_comb.extend(relabeled_model)
-        c_comb.connect(f"{s}_q",c_comb.fanout(s))
-        c_comb.connect(c_comb.fanin(s),f"{s}_d")
-        if c.clk(s): c_comb.connect(c.clk(s), f"{s}_clk")
-        if c.r(s): c_comb.connect(c.r(s), f"{s}_rst")
-        if c.s(s): c_comb.connect(c.s(s), f"{s}_set")
+        c_comb.connect(f"{s}_q", c_comb.fanout(s))
+        c_comb.connect(c_comb.fanin(s), f"{s}_d")
+        if c.clk(s):
+            c_comb.connect(c.clk(s), f"{s}_clk")
+        if c.r(s):
+            c_comb.connect(c.r(s), f"{s}_rst")
+        if c.s(s):
+            c_comb.connect(c.s(s), f"{s}_set")
         c_comb.remove(s)
 
     return c_comb
@@ -522,12 +542,25 @@ def sensitization_transform(c, n):
             Output circuit.
 
     """
-    # create miter
-    m = miter(c)
+    # create miter, relabel
+    s = copy(c)
+    s.extend(relabel(c, {n: f"c1_{n}" for n in c}))
+    strip_outputs(s)
 
-    # cut and invert n in one side of miter
-    m.set_type(f"c1_{n}","not")
-    m.graph.remove_edges_from((f, f"c1_{n}") for f in m.fanin(f"c1_{n}"))
-    m.graph.add_edge(f"c0_{n}", f"c1_{n}")
+    # connect startpoints
+    for g in c.startpoints():
+        s.set_type(f"c1_{g}", "buf")
+        s.disconnect(s.fanin(f"c1_{g}"), f"c1_{g}")
+        s.connect(g, f"c1_{g}")
 
-    return m
+    # compare endpoints
+    s.add("sat", "or", output=True)
+    for o in c.endpoints():
+        s.add(f"miter_{o}", "xor", fanout=["sat"], fanin=[o, f"c1_{o}"])
+
+    # flip node in c1
+    s.disconnect(s.fanin(f"c1_{n}"), f"c1_{n}")
+    s.set_type(f"c1_{n}", "not")
+    s.connect(n, f"c1_{n}")
+
+    return s

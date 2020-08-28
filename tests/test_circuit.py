@@ -29,7 +29,7 @@ class TestCircuit(unittest.TestCase):
         self.assertEqual(c.name, "and_gate")
         self.assertTrue("a" in c and "b" in c and "c" in c)
 
-        c2 = c.copy()
+        c2 = cg.copy(c)
         self.assertTrue("a" in c2 and "b" in c2 and "c" in c2)
 
     def test_type(self):

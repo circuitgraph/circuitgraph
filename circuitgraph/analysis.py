@@ -1,4 +1,8 @@
-from circuitgraph.transform import sensitivity_transform, influence_transform, sensitization_transform
+from circuitgraph.transform import (
+    sensitivity_transform,
+    influence_transform,
+    sensitization_transform,
+)
 from circuitgraph.sat import sat, approx_model_count, model_count
 from circuitgraph.utils import clog2, int_to_bin
 
@@ -96,13 +100,12 @@ def sensitize(c, n, assumptions):
     """
     # setup circuit
     s = sensitization_transform(c, n)
-    remapped_assumptions = {f"c0_{g}":v for g,v in assumptions.items()}
 
     # find a senstizing input
-    result = sat(s, {'sat':True, **remapped_assumptions})
+    result = sat(s, {"sat": True, **assumptions})
     if not result:
         return None
-    return {g:result[g] for g in s.startpoints()}
+    return {g: result[g] for g in s.startpoints()}
 
 
 def signal_probability(c, n, approx=True, e=0.9, d=0.1):

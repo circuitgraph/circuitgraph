@@ -69,9 +69,6 @@ class Circuit:
     def __contains__(self, n):
         return self.graph.__contains__(n)
 
-    def copy(self):
-        return Circuit(graph=self.graph.copy(), name=self.name)
-
     def __len__(self):
         return self.graph.__len__()
 
