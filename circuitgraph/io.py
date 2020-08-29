@@ -310,6 +310,10 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                         "circuitgraph cannot parse concatenations "
                         f"(line {child.right.var.lineno})"
                     )
+                elif type(child.right.var) == ast_types.Identifier:
+                    c.add(
+                        dest, "buf", output=dest in outputs, fanin=child.right.var.name
+                    )
             else:
                 raise ValueError(
                     "circuitgraph cannot parse statements of type "

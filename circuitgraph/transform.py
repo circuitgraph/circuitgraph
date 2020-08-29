@@ -139,12 +139,17 @@ def seq_graph(c):
     s = Circuit(name=f"{c.name}_seq")
 
     # add nodes
-    for n in c.io() | c.seq():
+    for n in c.inputs() | c.seq():
         s.add(n, c.type(n), output=c.output(n))
 
     # add edges
+    for n in c.seq():
+        s.connect(c.startpoints(c.d(n)), n)
+
+    # add outputs
     for n in s:
-        s.connect(c.startpoints(n), n)
+        if c.endpoints(n) & c.outputs():
+            s.set_output(n, True)
 
     return s
 

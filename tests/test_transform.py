@@ -45,9 +45,12 @@ class TestTransform(unittest.TestCase):
     def test_seq_graph(self):
         g = seq_graph(self.s27)
         self.assertSetEqual(
-            set(g.nodes()),
-            set(["G1", "G3", "clk", "G5", "G6", "G0", "G2", "G7", "G17"]),
+            set(g.nodes()), set(["G1", "G3", "clk", "G5", "G6", "G0", "G2", "G7"]),
         )
+        for n in ["G1", "G3", "G5", "G6", "G0", "G7"]:
+            self.assertTrue(g.output(n))
+        for n in ["G2", "clk"]:
+            self.assertFalse(g.output(n))
 
     def test_unroll(self):
         u = unroll(self.s27, 3)

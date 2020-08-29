@@ -5,6 +5,7 @@ from tempfile import NamedTemporaryFile
 import pyverilator
 
 from circuitgraph.io import circuit_to_verilog
+from circuitgraph.transform import copy
 
 
 def construct_simulator(c):
@@ -21,8 +22,10 @@ def construct_simulator(c):
     PyVerilator
             Simulation instance.
     """
-
-    verilog = circuit_to_verilog(c)
+    # make all nodes outputs for PyVerilator interfacing
+    c_out = copy(c)
+    c_out.set_output(c_out.nodes() - c_out.inputs(), True)
+    verilog = circuit_to_verilog(c_out)
 
     with NamedTemporaryFile(suffix=".v") as tmp:
         tmp.write(bytes(verilog, "ascii"))
@@ -32,7 +35,7 @@ def construct_simulator(c):
     return sim
 
 
-def sim(c, forced):
+def sim(c, vectors):
     """
     Simulates circuit with given values
 
@@ -40,17 +43,18 @@ def sim(c, forced):
     ----------
     c : Circuit
             Circuit to simulate.
-    forced : dict of str:bool
-            Values to force in the simulation.
+    vectors : iter of dict of str:bool
+            Iterable of values to force in the simulation.
 
     Returns
     -------
-    dict of str:bool
+    iter of dict of str:bool
             Output values.
     """
     sim = construct_simulator(c)
 
-    for n, v in forced.items():
-        sim[n] = v
-
-    return {n: sim[n.replace("output[", "")[:-1]] for n in c.outputs()}
+    for vector in vectors:
+        for n, v in vector.items():
+            sim[n] = v
+        outs = {n: sim[n] for n in c.nodes() - c.inputs()}
+        yield {**outs, **vector}

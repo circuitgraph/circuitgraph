@@ -821,7 +821,8 @@ class Circuit:
 
         circuit_startpoints = self.inputs() | self.seq()
         if ns:
-            return (set(ns) | self.transitive_fanin(ns)) & circuit_startpoints
+            non_start = set(ns) - circuit_startpoints
+            return (set(ns) | self.transitive_fanin(non_start)) & circuit_startpoints
         else:
             return circuit_startpoints
 
