@@ -28,13 +28,23 @@ The documentation can be found [here](https://circuitgraph.github.io/circuitgrap
 
 ## Installation
 
-CircuitGraph requires Python3. CircuitGraph is still in the pre-release stage, so for now installation must be done by cloning this repository as such:
+CircuitGraph requires Python3. 
+The easiest way to install is via PyPi:
+```shell
+pip install circuitgraph
+```
+To install from the release, download and:
+```shell
+pip install circuitgraph-<release>.tar.gz
+```
 
+Finally, to install in-place with the source, use:
 ```shell
 cd <install location>
 git clone https://github.com/circuitgraph/circuitgraph.git
+cd circuitgraph
 pip install -r requirements.txt
-pip install .
+pip install -e .
 ```
 ### Optional Packages
 
