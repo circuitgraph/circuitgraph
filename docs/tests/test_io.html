@@ -27,6 +27,7 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import unittest
+import os
 
 import circuitgraph as cg
 from circuitgraph.transform import miter
@@ -36,14 +37,14 @@ from circuitgraph.sat import sat
 class TestIO(unittest.TestCase):
     @unittest.skip(&#34;bench parsing is not working&#34;)
     def test_bench(self):
-        g = cg.from_file(&#34;netlists/b17_C.bench&#34;)
+        g = cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/b17_C.bench&#34;)
         print(g.nodes())
 
     def test_verilog_comb(self):
         for g in [
             cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_correct_io&#34;),
             cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_1&#34;),
-            cg.from_file(&#34;netlists/test_correct_io.v&#34;),
+            cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;),
         ]:
             self.assertSetEqual(
                 g.nodes(),
@@ -131,7 +132,7 @@ class TestIO(unittest.TestCase):
 
     def test_verilog_custom_seq(self):
         c = cg.from_file(
-            &#34;netlists/test_correct_io.v&#34;,
+            f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
             name=&#34;test_module_4&#34;,
             seq_types=[
                 cg.SequentialElement(
@@ -207,7 +208,7 @@ class TestIO(unittest.TestCase):
         self.assertSetEqual(g.fanin(&#34;\\G3[0][0]&#34;), set([&#34;\\G0[0]&#34;, &#34;\\G1[1][0]&#34;]))
 
     def test_incorrect_verilog(self):
-        with open(&#34;netlists/test_incorrect_io.v&#34;) as f:
+        with open(f&#34;{os.path.dirname(__file__)}/../netlists/test_incorrect_io.v&#34;) as f:
             verilog = f.read()
             for module in [
                 &#34;test_part_select_inst_0&#34;,
@@ -237,11 +238,12 @@ class TestIO(unittest.TestCase):
         ]:
             g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name)
             m = miter(g, g2)
-            #live = sat(m)
+            # live = sat(m)
             try:
                 live = sat(m)
             except:
                 import code
+
                 code.interact(local=dict(globals(), **locals()))
             self.assertTrue(live)
             different_output = sat(m, assumptions={&#34;sat&#34;: True})
@@ -262,7 +264,9 @@ class TestIO(unittest.TestCase):
             )
         ]
         g = cg.from_file(
-            &#34;netlists/test_correct_io.v&#34;, name=&#34;test_module_4&#34;, seq_types=seq_types
+            f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
+            name=&#34;test_module_4&#34;,
+            seq_types=seq_types,
         )
         g2 = cg.verilog_to_circuit(
             cg.circuit_to_verilog(g, seq_types=seq_types), g.name, seq_types=seq_types
@@ -329,14 +333,14 @@ not have a method with the specified name.</p></div>
 <pre><code class="python">class TestIO(unittest.TestCase):
     @unittest.skip(&#34;bench parsing is not working&#34;)
     def test_bench(self):
-        g = cg.from_file(&#34;netlists/b17_C.bench&#34;)
+        g = cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/b17_C.bench&#34;)
         print(g.nodes())
 
     def test_verilog_comb(self):
         for g in [
             cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_correct_io&#34;),
             cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_1&#34;),
-            cg.from_file(&#34;netlists/test_correct_io.v&#34;),
+            cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;),
         ]:
             self.assertSetEqual(
                 g.nodes(),
@@ -424,7 +428,7 @@ not have a method with the specified name.</p></div>
 
     def test_verilog_custom_seq(self):
         c = cg.from_file(
-            &#34;netlists/test_correct_io.v&#34;,
+            f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
             name=&#34;test_module_4&#34;,
             seq_types=[
                 cg.SequentialElement(
@@ -500,7 +504,7 @@ not have a method with the specified name.</p></div>
         self.assertSetEqual(g.fanin(&#34;\\G3[0][0]&#34;), set([&#34;\\G0[0]&#34;, &#34;\\G1[1][0]&#34;]))
 
     def test_incorrect_verilog(self):
-        with open(&#34;netlists/test_incorrect_io.v&#34;) as f:
+        with open(f&#34;{os.path.dirname(__file__)}/../netlists/test_incorrect_io.v&#34;) as f:
             verilog = f.read()
             for module in [
                 &#34;test_part_select_inst_0&#34;,
@@ -530,11 +534,12 @@ not have a method with the specified name.</p></div>
         ]:
             g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name)
             m = miter(g, g2)
-            #live = sat(m)
+            # live = sat(m)
             try:
                 live = sat(m)
             except:
                 import code
+
                 code.interact(local=dict(globals(), **locals()))
             self.assertTrue(live)
             different_output = sat(m, assumptions={&#34;sat&#34;: True})
@@ -555,7 +560,9 @@ not have a method with the specified name.</p></div>
             )
         ]
         g = cg.from_file(
-            &#34;netlists/test_correct_io.v&#34;, name=&#34;test_module_4&#34;, seq_types=seq_types
+            f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
+            name=&#34;test_module_4&#34;,
+            seq_types=seq_types,
         )
         g2 = cg.verilog_to_circuit(
             cg.circuit_to_verilog(g, seq_types=seq_types), g.name, seq_types=seq_types
@@ -589,7 +596,7 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">@unittest.skip(&#34;bench parsing is not working&#34;)
 def test_bench(self):
-    g = cg.from_file(&#34;netlists/b17_C.bench&#34;)
+    g = cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/b17_C.bench&#34;)
     print(g.nodes())</code></pre>
 </details>
 </dd>
@@ -616,7 +623,7 @@ def test_bench(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def test_incorrect_verilog(self):
-    with open(&#34;netlists/test_incorrect_io.v&#34;) as f:
+    with open(f&#34;{os.path.dirname(__file__)}/../netlists/test_incorrect_io.v&#34;) as f:
         verilog = f.read()
         for module in [
             &#34;test_part_select_inst_0&#34;,
@@ -649,7 +656,7 @@ def test_bench(self):
     for g in [
         cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_correct_io&#34;),
         cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_1&#34;),
-        cg.from_file(&#34;netlists/test_correct_io.v&#34;),
+        cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;),
     ]:
         self.assertSetEqual(
             g.nodes(),
@@ -721,7 +728,7 @@ def test_bench(self):
 </summary>
 <pre><code class="python">def test_verilog_custom_seq(self):
     c = cg.from_file(
-        &#34;netlists/test_correct_io.v&#34;,
+        f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
         name=&#34;test_module_4&#34;,
         seq_types=[
             cg.SequentialElement(
@@ -815,11 +822,12 @@ def test_bench(self):
     ]:
         g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name)
         m = miter(g, g2)
-        #live = sat(m)
+        # live = sat(m)
         try:
             live = sat(m)
         except:
             import code
+
             code.interact(local=dict(globals(), **locals()))
         self.assertTrue(live)
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
@@ -840,7 +848,9 @@ def test_bench(self):
         )
     ]
     g = cg.from_file(
-        &#34;netlists/test_correct_io.v&#34;, name=&#34;test_module_4&#34;, seq_types=seq_types
+        f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
+        name=&#34;test_module_4&#34;,
+        seq_types=seq_types,
     )
     g2 = cg.verilog_to_circuit(
         cg.circuit_to_verilog(g, seq_types=seq_types), g.name, seq_types=seq_types

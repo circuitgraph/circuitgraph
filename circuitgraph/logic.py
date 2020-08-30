@@ -1,4 +1,4 @@
-"""A collection of common logic elements as `CircuitGraph` objects"""
+"""A collection of common logic elements as `Circuit` objects"""
 
 from itertools import product
 

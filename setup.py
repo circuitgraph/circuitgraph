@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="circuitgraph",
-    version="0.0.6",
+    version="0.0.1",
     author="Ruben Purdy, Joseph Sweeney",
     author_email="rpurdy@andrew.cmu.edu, joesweeney@cmu.edu",
     description="Tools for working with Boolean circuits as graphs.",
@@ -14,15 +14,16 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/circuitgraph/circuitgraph",
     project_urls={
-        'Documentation': 'https://circuitgraph.github.io/circuitgraph/',
-        'Source': 'https://github.com/circuitgraph/circuitgraph'
+        "Documentation": "https://circuitgraph.github.io/circuitgraph/",
+        "Source": "https://github.com/circuitgraph/circuitgraph",
     },
     include_package_data=True,
-    packages=['circuitgraph','circuitgraph.tests'],
+    packages=["circuitgraph", "circuitgraph.tests"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires=">=3.6",
+    install_requires=["pyeda", "python-sat", "PyVerilator", "pyverilog", "networkx",],
 )

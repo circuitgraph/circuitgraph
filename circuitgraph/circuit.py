@@ -12,6 +12,7 @@ an associated name and gate type. The supported types are:
     ['ff','lat']
 
 Additionally, nodes have the following attributes:
+
 - Labeling node as an output
     ['output']
 - Tracking sequential element connections

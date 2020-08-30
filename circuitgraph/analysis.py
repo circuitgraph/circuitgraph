@@ -1,3 +1,5 @@
+"""Functions for analysis of Boolean properties"""
+
 from circuitgraph.transform import (
     sensitivity_transform,
     influence_transform,

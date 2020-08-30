@@ -12,6 +12,8 @@ Features include:
 - SAT,#SAT, and approx-#SAT solver integration via `pysat` and `approxmc`
 - implementations of common circuit transformations
 
+Look at the examples in `circuitgraph.circuit.Circuit` for a quickstart guide.
+
 """
 
 from circuitgraph.circuit import *
