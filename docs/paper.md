@@ -54,9 +54,8 @@ on top of the graph as we describe below.
 ## Interfaces
 
 Compatibility with existing systems is a primary goal for our library. Towards this end, 
-we have built interfaces for Bench and Verilog, commonly used Boolean circuit formats.
-Additionally, we plan on supporting BLIF. The user is able to import and export in the supported
-formats, enabling interfacing with other tools as well as conversion between formats.
+we have built interfaces for Verilog, the most commonly used Boolean circuit format.
+Additionally, we plan on supporting the BLIF and Bench formats. 
 We also have provided a library of generic and benchmark circuits that can be quickly instantiated.
 
 ```python
