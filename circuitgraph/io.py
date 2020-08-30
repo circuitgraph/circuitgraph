@@ -129,7 +129,7 @@ def from_file(path, name=None, seq_types=None):
 
 def from_lib(circuit, name=None):
     """
-    Creates a new `Circuit` from a netlist in the `../netlists`
+    Creates a new `Circuit` from a netlist in the `netlists`
     folder
 
     Parameters
@@ -142,7 +142,7 @@ def from_lib(circuit, name=None):
     Circuit
             the parsed circuit.
     """
-    path = glob(f"{os.path.dirname(__file__)}/../netlists/{circuit}.*")[0]
+    path = glob(f"{os.path.dirname(__file__)}/netlists/{circuit}.*")[0]
     return from_file(path, name)
 
 
