@@ -340,8 +340,9 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                         f&#34;(line {child.right.var.lineno})&#34;
                     )
                 elif type(child.right.var) == ast_types.Identifier:
-                    c.add(dest, &#34;buf&#34;, output=dest in outputs,
-                          fanin=child.right.var.name)
+                    c.add(
+                        dest, &#34;buf&#34;, output=dest in outputs, fanin=child.right.var.name
+                    )
             else:
                 raise ValueError(
                     &#34;circuitgraph cannot parse statements of type &#34;
@@ -1082,8 +1083,9 @@ name: the module name, if different from the netlist name.</p>
                         f&#34;(line {child.right.var.lineno})&#34;
                     )
                 elif type(child.right.var) == ast_types.Identifier:
-                    c.add(dest, &#34;buf&#34;, output=dest in outputs,
-                          fanin=child.right.var.name)
+                    c.add(
+                        dest, &#34;buf&#34;, output=dest in outputs, fanin=child.right.var.name
+                    )
             else:
                 raise ValueError(
                     &#34;circuitgraph cannot parse statements of type &#34;
@@ -1152,8 +1154,8 @@ to verilog</p></div>
 </article>
 <nav id="sidebar">
 <header>
-<img src="circuitgraph.png" alt="">
-<a class="github-button" href="https://github.com/circuitgraph/circuitgraph">GitHub</a>
+<img src="circuitgraph.png" alt="" style="margin-bottom: 31px;">
+<a class="github-button" href="https://github.com/circuitgraph/circuitgraph"><b>GitHub</b></a>
 </header>
 <h1>Index</h1>
 <div class="toc">

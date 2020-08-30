@@ -1,8 +1,6 @@
-codecov==2.1.8
-coverage==5.2.1
-networkx==2.4
-pdoc3==0.8.4
 pyeda==0.28.0
-python-sat==0.1.6.dev4
 PyVerilator==0.1.0
+networkx==2.4
+python_sat==0.1.6.dev5
 pyverilog==1.2.1
+pysat==2.2.1
