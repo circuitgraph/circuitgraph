@@ -6,14 +6,19 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="circuitgraph",
-    version="1.0.0",
+    version="0.0.6",
     author="Ruben Purdy, Joseph Sweeney",
     author_email="rpurdy@andrew.cmu.edu, joesweeney@cmu.edu",
-    description="Tools for working with circuits as graphs.",
+    description="Tools for working with Boolean circuits as graphs.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/circuitgraph/circuitgraph",
-    packages=setuptools.find_packages(),
+    project_urls={
+        'Documentation': 'https://circuitgraph.github.io/circuitgraph/',
+        'Source': 'https://github.com/circuitgraph/circuitgraph'
+    },
+    include_package_data=True,
+    packages=['circuitgraph','circuitgraph.tests'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

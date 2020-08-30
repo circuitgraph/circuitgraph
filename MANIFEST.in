@@ -1,0 +1,6 @@
+include README.md
+include circuitgraph/netlists/*
+include docs/*
+include requirements.txt
+include LICENSE
+recursive-include tests *.py

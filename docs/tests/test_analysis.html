@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.8.3" />
+<title>circuitgraph.tests.test_analysis API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js" integrity="sha256-eOgo0OtLL4cdq7RdwRUiGKLX9XsIJ7nGhWEKbohmVAQ=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>circuitgraph.tests.test_analysis</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import unittest
+
+import circuitgraph as cg
+from circuitgraph.analysis import *
+from circuitgraph.sat import sat
+from random import sample, randint
+from itertools import product
+
+
+class TestAnalysis(unittest.TestCase):
+    def setUp(self):
+        self.s27 = cg.from_lib(&#34;s27&#34;)
+
+    def test_avg_sensitivity(self):
+        c = cg.Circuit()
+        c.add(&#34;and&#34;, &#34;and&#34;)
+        c.add(&#34;in0&#34;, &#34;input&#34;, fanout=&#34;and&#34;)
+        c.add(&#34;in1&#34;, &#34;input&#34;, fanout=&#34;and&#34;)
+        self.assertEqual(avg_sensitivity(c, &#34;and&#34;, approx=False), 1.0)
+
+        avg_sen = avg_sensitivity(self.s27, &#34;G17&#34;, approx=False)
+
+        # get startpoints of node
+        avg_sen_comp = 0
+        n = &#34;G17&#34;
+        sp = self.s27.startpoints(n)
+        for s in sp:
+            # compute influence
+            infl = 0
+            for vs in product([False, True], repeat=len(sp)):
+                asmp = {i: v for i, v in zip(sp, vs)}
+                asmp_ns = {i: v if i != s else not v for i, v in zip(sp, vs)}
+                r = cg.sat(self.s27, asmp)[n]
+                r_ns = cg.sat(self.s27, asmp_ns)[n]
+                if r != r_ns:
+                    infl += 1
+            avg_sen_comp += infl / (2 ** len(sp))
+
+        self.assertEqual(avg_sen, avg_sen_comp)
+
+    def test_sensitivity(self):
+        # pick random node and input value
+        n = sample(self.s27.nodes(), 1)[0]
+        sp = self.s27.startpoints(n)
+
+        # find sensitivity
+        sen = sensitivity(self.s27, n)
+
+        # check
+        sen_sim = 0
+        for vs in product([False, True], repeat=len(sp)):
+            input_sen = 0
+            input_val = {i: v for i, v in zip(sp, vs)}
+            n_val = cg.sat(self.s27, input_val)[n]
+            for s in sp:
+                flip_input_val = {i: v if i != s else not v for i, v in zip(sp, vs)}
+                flip_n_val = cg.sat(self.s27, flip_input_val)[n]
+                if flip_n_val != n_val:
+                    input_sen += 1
+            sen_sim = max(sen_sim, input_sen)
+
+        # check answer
+        self.assertEqual(sen, sen_sim)
+
+    def test_sensitize(self):
+        # pick random node
+        nr = sample(self.s27.nodes() - set([&#34;clk&#34;]), 1)[0]
+
+        # pick startpoint
+        ns = sample(self.s27.startpoints() - set([&#34;clk&#34;]), 1)[0]
+
+        # pick endpoint
+        ne = sample(self.s27.endpoints() - set([&#34;clk&#34;]), 1)[0]
+
+        for n in [nr, ns, ne]:
+            # get input
+            input_val = sensitize(self.s27, n, {n: True})
+
+            # simulate input
+            result = sat(self.s27, input_val)
+            self.assertTrue(result[n])
+
+            # remove constrained input
+            if n in input_val:
+                input_val.pop(n)
+
+            # simulate on faulty circuit
+            c_f = cg.copy(self.s27)
+            c_f.disconnect(c_f.fanin(n), n)
+            c_f.set_type(n, &#34;input&#34;)
+            result_f = sat(c_f, {**input_val, n: False})
+            self.assertFalse(result_f[n])
+            self.assertTrue(
+                any(result_f[e] != result[e] for e in self.s27.endpoints(n))
+            )
+
+    def test_signal_probability(self):
+        # pick random node
+        n = sample(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints(), 1)[
+            0
+        ]
+        sp = self.s27.startpoints(n)
+
+        # get signal prob
+        p = signal_probability(self.s27, n, approx=False)
+
+        # compute prob
+        m = 0
+        for vs in product([False, True], repeat=len(sp)):
+            asmp = {i: v for i, v in zip(sp, vs)}
+            m += cg.sat(self.s27, asmp)[n]
+        if m / (2 ** len(sp)) != p:
+            import code
+
+            code.interact(local=dict(globals(), **locals()))
+        self.assertEqual(m / (2 ** len(sp)), p)</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="circuitgraph.tests.test_analysis.TestAnalysis"><code class="flex name class">
+<span>class <span class="ident">TestAnalysis</span></span>
+<span>(</span><span>methodName='runTest')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A class whose instances are single test cases.</p>
+<p>By default, the test code itself should be placed in a method named
+'runTest'.</p>
+<p>If the fixture may be used for many test cases, create as
+many test methods as are needed. When instantiating such a TestCase
+subclass, specify in the constructor arguments the name of the test method
+that the instance is to execute.</p>
+<p>Test authors should subclass TestCase for their own tests. Construction
+and deconstruction of the test's environment ('fixture') can be
+implemented by overriding the 'setUp' and 'tearDown' methods respectively.</p>
+<p>If it is necessary to override the <strong>init</strong> method, the base class
+<strong>init</strong> method must always be called. It is important that subclasses
+should not change the signature of their <strong>init</strong> method, since instances
+of the classes are instantiated automatically by parts of the framework
+in order to be run.</p>
+<p>When subclassing TestCase, you can set these attributes:
+* failureException: determines which exception will be raised when
+the instance's assertion methods fail; test methods raising this
+exception will be deemed to have 'failed' rather than 'errored'.
+* longMessage: determines whether long messages (including repr of
+objects used in assert methods) will be printed on failure in <em>addition</em>
+to any explicit message passed.
+* maxDiff: sets the maximum length of a diff in failure messages
+by assert methods using difflib. It is looked up as an instance
+attribute so can be configured by individual tests if required.</p>
+<p>Create an instance of the class that will use the named test
+method when executed. Raises a ValueError if the instance does
+not have a method with the specified name.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class TestAnalysis(unittest.TestCase):
+    def setUp(self):
+        self.s27 = cg.from_lib(&#34;s27&#34;)
+
+    def test_avg_sensitivity(self):
+        c = cg.Circuit()
+        c.add(&#34;and&#34;, &#34;and&#34;)
+        c.add(&#34;in0&#34;, &#34;input&#34;, fanout=&#34;and&#34;)
+        c.add(&#34;in1&#34;, &#34;input&#34;, fanout=&#34;and&#34;)
+        self.assertEqual(avg_sensitivity(c, &#34;and&#34;, approx=False), 1.0)
+
+        avg_sen = avg_sensitivity(self.s27, &#34;G17&#34;, approx=False)
+
+        # get startpoints of node
+        avg_sen_comp = 0
+        n = &#34;G17&#34;
+        sp = self.s27.startpoints(n)
+        for s in sp:
+            # compute influence
+            infl = 0
+            for vs in product([False, True], repeat=len(sp)):
+                asmp = {i: v for i, v in zip(sp, vs)}
+                asmp_ns = {i: v if i != s else not v for i, v in zip(sp, vs)}
+                r = cg.sat(self.s27, asmp)[n]
+                r_ns = cg.sat(self.s27, asmp_ns)[n]
+                if r != r_ns:
+                    infl += 1
+            avg_sen_comp += infl / (2 ** len(sp))
+
+        self.assertEqual(avg_sen, avg_sen_comp)
+
+    def test_sensitivity(self):
+        # pick random node and input value
+        n = sample(self.s27.nodes(), 1)[0]
+        sp = self.s27.startpoints(n)
+
+        # find sensitivity
+        sen = sensitivity(self.s27, n)
+
+        # check
+        sen_sim = 0
+        for vs in product([False, True], repeat=len(sp)):
+            input_sen = 0
+            input_val = {i: v for i, v in zip(sp, vs)}
+            n_val = cg.sat(self.s27, input_val)[n]
+            for s in sp:
+                flip_input_val = {i: v if i != s else not v for i, v in zip(sp, vs)}
+                flip_n_val = cg.sat(self.s27, flip_input_val)[n]
+                if flip_n_val != n_val:
+                    input_sen += 1
+            sen_sim = max(sen_sim, input_sen)
+
+        # check answer
+        self.assertEqual(sen, sen_sim)
+
+    def test_sensitize(self):
+        # pick random node
+        nr = sample(self.s27.nodes() - set([&#34;clk&#34;]), 1)[0]
+
+        # pick startpoint
+        ns = sample(self.s27.startpoints() - set([&#34;clk&#34;]), 1)[0]
+
+        # pick endpoint
+        ne = sample(self.s27.endpoints() - set([&#34;clk&#34;]), 1)[0]
+
+        for n in [nr, ns, ne]:
+            # get input
+            input_val = sensitize(self.s27, n, {n: True})
+
+            # simulate input
+            result = sat(self.s27, input_val)
+            self.assertTrue(result[n])
+
+            # remove constrained input
+            if n in input_val:
+                input_val.pop(n)
+
+            # simulate on faulty circuit
+            c_f = cg.copy(self.s27)
+            c_f.disconnect(c_f.fanin(n), n)
+            c_f.set_type(n, &#34;input&#34;)
+            result_f = sat(c_f, {**input_val, n: False})
+            self.assertFalse(result_f[n])
+            self.assertTrue(
+                any(result_f[e] != result[e] for e in self.s27.endpoints(n))
+            )
+
+    def test_signal_probability(self):
+        # pick random node
+        n = sample(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints(), 1)[
+            0
+        ]
+        sp = self.s27.startpoints(n)
+
+        # get signal prob
+        p = signal_probability(self.s27, n, approx=False)
+
+        # compute prob
+        m = 0
+        for vs in product([False, True], repeat=len(sp)):
+            asmp = {i: v for i, v in zip(sp, vs)}
+            m += cg.sat(self.s27, asmp)[n]
+        if m / (2 ** len(sp)) != p:
+            import code
+
+            code.interact(local=dict(globals(), **locals()))
+        self.assertEqual(m / (2 ** len(sp)), p)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>unittest.case.TestCase</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="circuitgraph.tests.test_analysis.TestAnalysis.setUp"><code class="name flex">
+<span>def <span class="ident">setUp</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Hook method for setting up the test fixture before exercising it.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def setUp(self):
+    self.s27 = cg.from_lib(&#34;s27&#34;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_analysis.TestAnalysis.test_avg_sensitivity"><code class="name flex">
+<span>def <span class="ident">test_avg_sensitivity</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_avg_sensitivity(self):
+    c = cg.Circuit()
+    c.add(&#34;and&#34;, &#34;and&#34;)
+    c.add(&#34;in0&#34;, &#34;input&#34;, fanout=&#34;and&#34;)
+    c.add(&#34;in1&#34;, &#34;input&#34;, fanout=&#34;and&#34;)
+    self.assertEqual(avg_sensitivity(c, &#34;and&#34;, approx=False), 1.0)
+
+    avg_sen = avg_sensitivity(self.s27, &#34;G17&#34;, approx=False)
+
+    # get startpoints of node
+    avg_sen_comp = 0
+    n = &#34;G17&#34;
+    sp = self.s27.startpoints(n)
+    for s in sp:
+        # compute influence
+        infl = 0
+        for vs in product([False, True], repeat=len(sp)):
+            asmp = {i: v for i, v in zip(sp, vs)}
+            asmp_ns = {i: v if i != s else not v for i, v in zip(sp, vs)}
+            r = cg.sat(self.s27, asmp)[n]
+            r_ns = cg.sat(self.s27, asmp_ns)[n]
+            if r != r_ns:
+                infl += 1
+        avg_sen_comp += infl / (2 ** len(sp))
+
+    self.assertEqual(avg_sen, avg_sen_comp)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_analysis.TestAnalysis.test_sensitivity"><code class="name flex">
+<span>def <span class="ident">test_sensitivity</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_sensitivity(self):
+    # pick random node and input value
+    n = sample(self.s27.nodes(), 1)[0]
+    sp = self.s27.startpoints(n)
+
+    # find sensitivity
+    sen = sensitivity(self.s27, n)
+
+    # check
+    sen_sim = 0
+    for vs in product([False, True], repeat=len(sp)):
+        input_sen = 0
+        input_val = {i: v for i, v in zip(sp, vs)}
+        n_val = cg.sat(self.s27, input_val)[n]
+        for s in sp:
+            flip_input_val = {i: v if i != s else not v for i, v in zip(sp, vs)}
+            flip_n_val = cg.sat(self.s27, flip_input_val)[n]
+            if flip_n_val != n_val:
+                input_sen += 1
+        sen_sim = max(sen_sim, input_sen)
+
+    # check answer
+    self.assertEqual(sen, sen_sim)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_analysis.TestAnalysis.test_sensitize"><code class="name flex">
+<span>def <span class="ident">test_sensitize</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_sensitize(self):
+    # pick random node
+    nr = sample(self.s27.nodes() - set([&#34;clk&#34;]), 1)[0]
+
+    # pick startpoint
+    ns = sample(self.s27.startpoints() - set([&#34;clk&#34;]), 1)[0]
+
+    # pick endpoint
+    ne = sample(self.s27.endpoints() - set([&#34;clk&#34;]), 1)[0]
+
+    for n in [nr, ns, ne]:
+        # get input
+        input_val = sensitize(self.s27, n, {n: True})
+
+        # simulate input
+        result = sat(self.s27, input_val)
+        self.assertTrue(result[n])
+
+        # remove constrained input
+        if n in input_val:
+            input_val.pop(n)
+
+        # simulate on faulty circuit
+        c_f = cg.copy(self.s27)
+        c_f.disconnect(c_f.fanin(n), n)
+        c_f.set_type(n, &#34;input&#34;)
+        result_f = sat(c_f, {**input_val, n: False})
+        self.assertFalse(result_f[n])
+        self.assertTrue(
+            any(result_f[e] != result[e] for e in self.s27.endpoints(n))
+        )</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_analysis.TestAnalysis.test_signal_probability"><code class="name flex">
+<span>def <span class="ident">test_signal_probability</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_signal_probability(self):
+    # pick random node
+    n = sample(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints(), 1)[
+        0
+    ]
+    sp = self.s27.startpoints(n)
+
+    # get signal prob
+    p = signal_probability(self.s27, n, approx=False)
+
+    # compute prob
+    m = 0
+    for vs in product([False, True], repeat=len(sp)):
+        asmp = {i: v for i, v in zip(sp, vs)}
+        m += cg.sat(self.s27, asmp)[n]
+    if m / (2 ** len(sp)) != p:
+        import code
+
+        code.interact(local=dict(globals(), **locals()))
+    self.assertEqual(m / (2 ** len(sp)), p)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<header>
+<img src="circuitgraph.png" alt="" style="margin-bottom: 31px;">
+<a class="github-button" href="https://github.com/circuitgraph/circuitgraph"><b>GitHub</b></a>
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="circuitgraph.tests" href="index.html">circuitgraph.tests</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="circuitgraph.tests.test_analysis.TestAnalysis" href="#circuitgraph.tests.test_analysis.TestAnalysis">TestAnalysis</a></code></h4>
+<ul class="">
+<li><code><a title="circuitgraph.tests.test_analysis.TestAnalysis.setUp" href="#circuitgraph.tests.test_analysis.TestAnalysis.setUp">setUp</a></code></li>
+<li><code><a title="circuitgraph.tests.test_analysis.TestAnalysis.test_avg_sensitivity" href="#circuitgraph.tests.test_analysis.TestAnalysis.test_avg_sensitivity">test_avg_sensitivity</a></code></li>
+<li><code><a title="circuitgraph.tests.test_analysis.TestAnalysis.test_sensitivity" href="#circuitgraph.tests.test_analysis.TestAnalysis.test_sensitivity">test_sensitivity</a></code></li>
+<li><code><a title="circuitgraph.tests.test_analysis.TestAnalysis.test_sensitize" href="#circuitgraph.tests.test_analysis.TestAnalysis.test_sensitize">test_sensitize</a></code></li>
+<li><code><a title="circuitgraph.tests.test_analysis.TestAnalysis.test_signal_probability" href="#circuitgraph.tests.test_analysis.TestAnalysis.test_signal_probability">test_signal_probability</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
+</footer>
+</body>
+</html>

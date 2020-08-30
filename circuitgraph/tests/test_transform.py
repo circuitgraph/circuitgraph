@@ -4,7 +4,7 @@ import shutil
 import glob
 
 import circuitgraph as cg
-from circuitgraph.transform import miter, syn, sensitivity
+from circuitgraph.transform import *
 from circuitgraph.sat import sat
 from random import sample, randint
 
@@ -14,8 +14,46 @@ class TestTransform(unittest.TestCase):
         self.s27 = cg.from_lib("s27")
 
         # incorrect copy of s27
-        self.s27m = self.s27.copy()
+        self.s27m = cg.copy(self.s27)
         self.s27m.graph.nodes["n_11"]["type"] = "buf"
+
+    def test_relabel(self):
+        # check self equivalence
+        c = self.s27
+        cr = relabel(c, {n: f"test_{n}" for n in c})
+        crr = relabel(cr, {n: n.replace("test_", "") for n in cr})
+        self.assertSetEqual(c.nodes(), crr.nodes())
+
+    def test_strip_io(self):
+        # check self equivalence
+        c = strip_io(self.s27)
+        self.assertTrue("input" not in c.type(c.nodes()))
+        self.assertFalse(any(c.output(c.nodes())))
+
+    def test_strip_inputs(self):
+        # check self equivalence
+        c = strip_inputs(self.s27)
+        self.assertTrue("input" not in c.type(c.nodes()))
+        self.assertTrue(any(c.output(c.nodes())))
+
+    def test_strip_outputs(self):
+        # check self equivalence
+        c = strip_outputs(self.s27)
+        self.assertFalse("input" not in c.type(c.nodes()))
+        self.assertFalse(any(c.output(c.nodes())))
+
+    def test_seq_graph(self):
+        g = seq_graph(self.s27)
+        self.assertSetEqual(
+            set(g.nodes()), set(["G1", "G3", "clk", "G5", "G6", "G0", "G2", "G7"]),
+        )
+        for n in ["G1", "G3", "G5", "G6", "G0", "G7"]:
+            self.assertTrue(g.output(n))
+        for n in ["G2", "clk"]:
+            self.assertFalse(g.output(n))
+
+    def test_unroll(self):
+        u = unroll(self.s27, 3)
 
     def test_miter(self):
         # check self equivalence
@@ -68,14 +106,43 @@ class TestTransform(unittest.TestCase):
                 os.remove(f)
             shutil.rmtree(f"{os.getcwd()}/fv")
 
-    def test_sensitivity(self):
+    def test_ternary(self):
+        # encode circuit
+        t = ternary(self.s27)
+
+        # check that x propagates
+        result = cg.sat(t, {"n_11_x": True})
+        self.assertTrue(result)
+        self.assertTrue(result["n_12_x"])
+
+        result = cg.sat(t, {"n_11_x": False})
+        self.assertTrue(result)
+        self.assertFalse(result["n_12_x"])
+
+        result = cg.sat(t, {"n_2_x": True, "n_5_x": False})
+        self.assertTrue(result)
+        self.assertFalse(result["G6_x"])
+
+        # if no x in startpoint, no x
+        ass = {f"{s}_x": False for s in self.s27.startpoints()}
+        result = cg.sat(t, ass)
+        self.assertTrue(result)
+        self.assertFalse(any(result[f"{n}_x"] for n in self.s27))
+
+        # if all x in startpoint, all x
+        ass = {f"{s}_x": True for s in self.s27.startpoints()}
+        result = cg.sat(t, ass)
+        self.assertTrue(result)
+        self.assertTrue(all(result[f"{n}_x"] for n in self.s27))
+
+    def test_sensitivity_transform(self):
         # pick random node and input value
         n = sample(self.s27.nodes() - self.s27.startpoints(), 1)[0]
         nstartpoints = self.s27.startpoints(n)
         input_val = {i: randint(0, 1) for i in nstartpoints}
 
         # build sensitivity circuit
-        s = sensitivity(self.s27, n)
+        s = sensitivity_transform(self.s27, n)
 
         # find sensitivity at an input
         model = sat(s, input_val)

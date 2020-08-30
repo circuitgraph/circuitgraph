@@ -129,7 +129,7 @@ def from_file(path, name=None, seq_types=None):
 
 def from_lib(circuit, name=None):
     """
-    Creates a new `Circuit` from a netlist in the `../netlists`
+    Creates a new `Circuit` from a netlist in the `netlists`
     folder
 
     Parameters
@@ -142,7 +142,7 @@ def from_lib(circuit, name=None):
     Circuit
             the parsed circuit.
     """
-    path = glob(f"{os.path.dirname(__file__)}/../netlists/{circuit}.*")[0]
+    path = glob(f"{os.path.dirname(__file__)}/netlists/{circuit}.*")[0]
     return from_file(path, name)
 
 
@@ -301,9 +301,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                 dest = parse_argument(dest, c)
                 if type(child.right.var) == ast_types.IntConst:
                     c.add(
-                        dest,
-                        f"{child.right.var.value[-1]}",
-                        output=dest in outputs,
+                        dest, f"{child.right.var.value[-1]}", output=dest in outputs,
                     )
                 elif issubclass(type(child.right.var), ast_types.Operator):
                     parse_operator(child.right.var, c, outputs, dest=dest)
@@ -311,6 +309,10 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                     raise ValueError(
                         "circuitgraph cannot parse concatenations "
                         f"(line {child.right.var.lineno})"
+                    )
+                elif type(child.right.var) == ast_types.Identifier:
+                    c.add(
+                        dest, "buf", output=dest in outputs, fanin=child.right.var.name
                     )
             else:
                 raise ValueError(
@@ -447,9 +449,7 @@ def circuit_to_verilog(c, seq_types=None):
             if not c.output(n):
                 wires.append(n)
         elif c.type(n) in ["0", "1"]:
-            insts.append(
-                f"assign {sanitize_name(n)} = 1'b{c.type(n)}"
-            )
+            insts.append(f"assign {sanitize_name(n)} = 1'b{c.type(n)}")
         elif c.type(n) in ["input"]:
             inputs.append(n)
         elif c.type(n) in ["ff", "lat"]:
@@ -481,8 +481,7 @@ def circuit_to_verilog(c, seq_types=None):
             insts.append(f"{seq.name} {sanitize_instance(n)} ({', '.join(io)})")
 
         else:
-            print(f"unknown gate type: {c.type(n)}")
-            return
+            raise ValueError(f"unknown gate type: {c.type(n)}")
 
         if c.output(n):
             outputs.append(n)

@@ -1,24 +1,22 @@
 import unittest
+import os
 
 import circuitgraph as cg
-from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
 from circuitgraph.transform import miter
 from circuitgraph.sat import sat
 
 
 class TestIO(unittest.TestCase):
-    # def test_bench(self):
-    #     c17 = cg.from_lib("b22_C")
-
-    def test_incorrect_module(self):
-        self.assertRaises(
-            ValueError, cg.from_lib, "test_correct_io", name="incorrect_name"
-        )
+    @unittest.skip("bench parsing is not working")
+    def test_bench(self):
+        g = cg.from_file(f"{os.path.dirname(__file__)}/../netlists/b17_C.bench")
+        print(g.nodes())
 
     def test_verilog_comb(self):
         for g in [
-            cg.from_lib("test_correct_io", name="test_module_0"),
+            cg.from_lib("test_correct_io", name="test_correct_io"),
             cg.from_lib("test_correct_io", name="test_module_1"),
+            cg.from_file(f"{os.path.dirname(__file__)}/../netlists/test_correct_io.v"),
         ]:
             self.assertSetEqual(
                 g.nodes(),
@@ -104,6 +102,56 @@ class TestIO(unittest.TestCase):
         self.assertEqual(g.d("G4"), "G3")
         self.assertSetEqual(set(g.type(["G4", "G5", "\\G18[0]"])), set(["ff"]))
 
+    def test_verilog_custom_seq(self):
+        c = cg.from_file(
+            f"{os.path.dirname(__file__)}/../netlists/test_correct_io.v",
+            name="test_module_4",
+            seq_types=[
+                cg.SequentialElement(
+                    "custom_flop",
+                    "ff",
+                    {
+                        "d": "data_in",
+                        "q": "data_out",
+                        "clk": "clock",
+                        "r": "reset",
+                        "s": "set",
+                    },
+                    "",
+                )
+            ],
+        )
+        self.assertEqual(c.d("b"), "a")
+        self.assertEqual(c.r("b"), "rst")
+        self.assertEqual(c.s("b"), "set")
+        self.assertEqual(c.clk("b"), "clk")
+
+    def test_verilog_seq(self):
+        g = cg.from_lib("test_correct_io", name="test_module_2")
+        self.assertSetEqual(
+            g.nodes(),
+            set(
+                [
+                    "clk",
+                    "G0",
+                    "G1",
+                    "\\G2[0]",
+                    "\\G2[1]",
+                    "\\G18[0]",
+                    "\\G18[1]",
+                    "G3",
+                    "G4",
+                    "G5",
+                ]
+            ),
+        )
+        self.assertSetEqual(g.fanin("G4"), set(["G3"]))
+        self.assertSetEqual(g.fanin("G5"), set(["\\G2[0]"]))
+        self.assertSetEqual(g.fanin("\\G18[0]"), set(["G5"]))
+        self.assertSetEqual(set(g.clk(["G4", "G5", "\\G18[0]"])), set(["clk"]))
+        self.assertEqual(g.d("G4"), "G3")
+        self.assertSetEqual(set(g.type(["G4", "G5", "\\G18[0]"])), set(["ff"]))
+
     def test_verilog_escaped_names(self):
         g = cg.from_lib("test_correct_io", name="test_module_3")
         self.assertSetEqual(
@@ -132,33 +180,77 @@ class TestIO(unittest.TestCase):
         self.assertSetEqual(g.fanin("\\G3[0][0]"), set(["\\G0[0]", "\\G1[1][0]"]))
 
     def test_incorrect_verilog(self):
-        for module in [
-            "test_part_select_inst_0",
-            "test_part_select_inst_1",
-            "test_part_select_assign_0",
-            "test_part_select_assign_1",
-            "test_parameter_0",
-            "test_parameter_1",
-            "test_concat_0",
-            "test_concat_1",
-            "test_instance",
-            "test_seq",
-        ]:
-            self.assertRaises(ValueError, cg.from_lib, "test_incorrect_io", name=module)
+        with open(f"{os.path.dirname(__file__)}/../netlists/test_incorrect_io.v") as f:
+            verilog = f.read()
+            for module in [
+                "test_part_select_inst_0",
+                "test_part_select_inst_1",
+                "test_part_select_assign_0",
+                "test_part_select_assign_1",
+                "test_parameter_0",
+                "test_parameter_1",
+                "test_concat_0",
+                "test_concat_1",
+                "test_instance",
+                "test_seq",
+                "test_always",
+                "test_logical_operator",
+                "incorrect_module_name",
+            ]:
+                self.assertRaises(ValueError, cg.verilog_to_circuit, verilog, module)
+
+    def test_incorrect_file_type(self):
+        self.assertRaises(ValueError, cg.from_file, "setup.py")
 
     def test_verilog_output(self):
         for g in [
-            cg.from_lib("test_correct_io", name="test_module_0"),
             cg.from_lib("test_correct_io", name="test_module_1"),
             cg.from_lib("test_correct_io", name="test_module_2"),
             cg.from_lib("test_correct_io", name="test_module_3"),
         ]:
-            g2 = verilog_to_circuit(circuit_to_verilog(g), g.name)
+            g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name)
             m = miter(g, g2)
-            live = sat(m)
+            # live = sat(m)
+            try:
+                live = sat(m)
+            except:
+                import code
+
+                code.interact(local=dict(globals(), **locals()))
             self.assertTrue(live)
             different_output = sat(m, assumptions={"sat": True})
-            if different_output:
-                import code
-                code.interact(local=dict(globals(), **locals()))
             self.assertFalse(different_output)
+
+        seq_types = [
+            cg.SequentialElement(
+                "custom_flop",
+                "ff",
+                {
+                    "d": "data_in",
+                    "q": "data_out",
+                    "clk": "clock",
+                    "r": "reset",
+                    "s": "set",
+                },
+                "",
+            )
+        ]
+        g = cg.from_file(
+            f"{os.path.dirname(__file__)}/../netlists/test_correct_io.v",
+            name="test_module_4",
+            seq_types=seq_types,
+        )
+        g2 = cg.verilog_to_circuit(
+            cg.circuit_to_verilog(g, seq_types=seq_types), g.name, seq_types=seq_types
+        )
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+
+    def test_verilog_incorrect_output(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "fake_gate", fanin=["a", "b"], output=True)
+        self.assertRaises(ValueError, cg.circuit_to_verilog, c)

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.8.3" />
 <title>circuitgraph.logic API documentation</title>
 <meta name="description" content="A collection of common logic elements as `CircuitGraph` objects" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -28,8 +28,12 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;A collection of common logic elements as `CircuitGraph` objects&#34;&#34;&#34;
-from circuitgraph import Circuit, clog2
+
 from itertools import product
+
+from circuitgraph import Circuit
+from circuitgraph.utils import clog2
+from circuitgraph.transform import strip_io, relabel
 
 
 def adder(w):
@@ -38,11 +42,13 @@ def adder(w):
 
     Parameters
     ----------
-    w: the width of the adder.
+    w : int
+            Input width of adder.
 
     Returns
     -------
-    a `CircuitGraph` addder.
+    Circuit
+            Adder circuit.
     &#34;&#34;&#34;
     c = Circuit(name=&#34;adder&#34;)
     carry = c.add(&#34;null&#34;, &#34;0&#34;)
@@ -50,8 +56,7 @@ def adder(w):
         # sum
         c.add(f&#34;a_{i}&#34;, &#34;input&#34;)
         c.add(f&#34;b_{i}&#34;, &#34;input&#34;)
-        c.add(f&#34;out_{i}&#34;, &#34;xor&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;, carry],
-              output=True)
+        c.add(f&#34;out_{i}&#34;, &#34;xor&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;, carry], output=True)
 
         # carry
         c.add(f&#34;and_ab_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;])
@@ -71,11 +76,13 @@ def mux(w):
 
     Parameters
     ----------
-    w: the width of the mux.
+    w : int
+            Input width of the mux.
 
     Returns
     -------
-    a `CircuitGraph` mux.
+    Circuit
+            Mux circuit.
     &#34;&#34;&#34;
     c = Circuit(name=&#34;mux&#34;)
 
@@ -108,11 +115,13 @@ def popcount(w):
 
     Parameters
     ----------
-    w: the width of the adder.
+    w : int
+            Input width of the circuit.
 
     Returns
     -------
-    a `CircuitGraph` addder.
+    Circuit
+            Population count circuit.
     &#34;&#34;&#34;
     c = Circuit(name=&#34;popcount&#34;)
     ps = [[c.add(f&#34;in_{i}&#34;, &#34;input&#34;)] for i in range(w)]
@@ -131,8 +140,8 @@ def popcount(w):
             ns += [&#34;null&#34;]
 
         # instantiate and connect adder
-        a = adder(aw).strip_io()
-        c.extend(a.relabel({n: f&#34;add_{i}_{n}&#34; for n in a.nodes()}))
+        a = strip_io(adder(aw))
+        c.extend(relabel(a, {n: f&#34;add_{i}_{n}&#34; for n in a.nodes()}))
         for j, (n, m) in enumerate(zip(ns, ms)):
             c.connect(n, f&#34;add_{i}_a_{j}&#34;)
             c.connect(m, f&#34;add_{i}_b_{j}&#34;)
@@ -145,18 +154,27 @@ def popcount(w):
     for i, o in enumerate(ps[0]):
         c.add(f&#34;out_{i}&#34;, &#34;buf&#34;, fanin=o, output=True)
 
-    if &#39;null&#39; in c:
-        c.set_type(&#39;null&#39;,&#39;0&#39;)
-        c.set_output(&#39;null&#39;,False)
+    if &#34;null&#34; in c:
+        c.set_type(&#34;null&#34;, &#34;0&#34;)
+        c.set_output(&#34;null&#34;, False)
 
     return c
 
+
 def comb_lat():
-    lm = Circuit(name=&#39;lat&#39;)
+    &#34;&#34;&#34;
+    Combinational model of a latch.
+
+    Returns
+    -------
+    Circuit
+            Latch model circuit.
+    &#34;&#34;&#34;
+    lm = Circuit(name=&#34;lat&#34;)
 
     # mux
-    m = logic.mux(2).strip_io()
-    lm.extend(m.relabel({n: f&#39;mux_{n}&#39; for n in m.nodes()}))
+    m = strip_io(mux(2))
+    lm.extend(relabel(m, {n: f&#34;mux_{n}&#34; for n in m.nodes()}))
 
     # inputs
     lm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
@@ -167,35 +185,42 @@ def comb_lat():
 
     # logic
     lm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
-    lm.add_node(&#34;qr&#34;, gate=&#34;and&#34;, fanin=[&#34;mux_out&#34;,&#34;r_b&#34;])
-    lm.add_node(&#34;q&#34;, gate=&#34;or&#34;, fanin=[&#34;qr&#34;,&#34;s&#34;],
-                output=True)
-    lm.add_node(&#34;so&#34;, gate=&#34;buf&#34;, fanin=&#34;q&#34;, output=True)
+    lm.add(&#34;qr&#34;, &#34;and&#34;, fanin=[&#34;mux_out&#34;, &#34;r_b&#34;])
+    lm.add(&#34;q&#34;, &#34;or&#34;, fanin=[&#34;qr&#34;, &#34;s&#34;], output=True)
+    lm.add(&#34;so&#34;, &#34;buf&#34;, fanin=&#34;q&#34;, output=True)
 
     return lm
 
+
 def comb_ff():
-    lm = Circuit(name=&#39;ff&#39;)
+    &#34;&#34;&#34;
+    Combinational model of a flip-flop.
+
+    Returns
+    -------
+    Circuit
+            Flip-flop model circuit.
+    &#34;&#34;&#34;
+    fm = Circuit(name=&#34;ff&#34;)
 
     # mux
-    m = logic.mux(2).strip_io()
-    lm.extend(m.relabel({n: f&#39;mux_{n}&#39; for n in m.nodes()}))
+    m = strip_io(mux(2))
+    fm.extend(relabel(m, {n: f&#34;mux_{n}&#34; for n in m.nodes()}))
 
     # inputs
-    lm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
-    lm.add(&#34;d&#34;, &#34;input&#34;, fanout=&#34;mux_in_1&#34;)
-    lm.add(&#34;clk&#34;, &#34;input&#34;, fanout=&#34;mux_sel_0&#34;)
-    lm.add(&#34;r&#34;, &#34;input&#34;)
-    lm.add(&#34;s&#34;, &#34;input&#34;)
+    fm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_1&#34;)
+    fm.add(&#34;d&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
+    fm.add(&#34;clk&#34;, &#34;input&#34;, fanout=&#34;mux_sel_0&#34;)
+    fm.add(&#34;r&#34;, &#34;input&#34;)
+    fm.add(&#34;s&#34;, &#34;input&#34;)
 
     # logic
-    lm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
-    lm.add_node(&#34;qr&#34;, gate=&#34;and&#34;, fanin=[&#34;mux_out&#34;,&#34;r_b&#34;])
-    lm.add_node(&#34;q&#34;, gate=&#34;or&#34;, fanin=[&#34;qr&#34;,&#34;s&#34;],
-                output=True)
-    lm.add_node(&#34;so&#34;, gate=&#34;buf&#34;, fanin=&#34;q&#34;, output=True)
+    fm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
+    fm.add(&#34;qr&#34;, &#34;and&#34;, fanin=[&#34;si&#34;, &#34;r_b&#34;])
+    fm.add(&#34;q&#34;, &#34;or&#34;, fanin=[&#34;qr&#34;, &#34;s&#34;], output=True)
+    fm.add(&#34;so&#34;, &#34;buf&#34;, fanin=&#34;mux_out&#34;, output=True)
 
-    return lm</code></pre>
+    return fm</code></pre>
 </details>
 </section>
 <section>
@@ -211,9 +236,15 @@ def comb_ff():
 <dd>
 <div class="desc"><p>Create an adder.</p>
 <h2 id="parameters">Parameters</h2>
-<p>w: the width of the adder.</p>
+<dl>
+<dt><strong><code>w</code></strong> :&ensp;<code>int</code></dt>
+<dd>Input width of adder.</dd>
+</dl>
 <h2 id="returns">Returns</h2>
-<p>a <code>CircuitGraph</code> addder.</p></div>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Adder circuit.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -224,11 +255,13 @@ def comb_ff():
 
     Parameters
     ----------
-    w: the width of the adder.
+    w : int
+            Input width of adder.
 
     Returns
     -------
-    a `CircuitGraph` addder.
+    Circuit
+            Adder circuit.
     &#34;&#34;&#34;
     c = Circuit(name=&#34;adder&#34;)
     carry = c.add(&#34;null&#34;, &#34;0&#34;)
@@ -236,8 +269,7 @@ def comb_ff():
         # sum
         c.add(f&#34;a_{i}&#34;, &#34;input&#34;)
         c.add(f&#34;b_{i}&#34;, &#34;input&#34;)
-        c.add(f&#34;out_{i}&#34;, &#34;xor&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;, carry],
-              output=True)
+        c.add(f&#34;out_{i}&#34;, &#34;xor&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;, carry], output=True)
 
         # carry
         c.add(f&#34;and_ab_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;])
@@ -255,50 +287,75 @@ def comb_ff():
 <span>def <span class="ident">comb_ff</span></span>(<span>)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Combinational model of a flip-flop.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Flip-flop model circuit.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def comb_ff():
-    lm = Circuit(name=&#39;ff&#39;)
+    &#34;&#34;&#34;
+    Combinational model of a flip-flop.
+
+    Returns
+    -------
+    Circuit
+            Flip-flop model circuit.
+    &#34;&#34;&#34;
+    fm = Circuit(name=&#34;ff&#34;)
 
     # mux
-    m = logic.mux(2).strip_io()
-    lm.extend(m.relabel({n: f&#39;mux_{n}&#39; for n in m.nodes()}))
+    m = strip_io(mux(2))
+    fm.extend(relabel(m, {n: f&#34;mux_{n}&#34; for n in m.nodes()}))
 
     # inputs
-    lm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
-    lm.add(&#34;d&#34;, &#34;input&#34;, fanout=&#34;mux_in_1&#34;)
-    lm.add(&#34;clk&#34;, &#34;input&#34;, fanout=&#34;mux_sel_0&#34;)
-    lm.add(&#34;r&#34;, &#34;input&#34;)
-    lm.add(&#34;s&#34;, &#34;input&#34;)
+    fm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_1&#34;)
+    fm.add(&#34;d&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
+    fm.add(&#34;clk&#34;, &#34;input&#34;, fanout=&#34;mux_sel_0&#34;)
+    fm.add(&#34;r&#34;, &#34;input&#34;)
+    fm.add(&#34;s&#34;, &#34;input&#34;)
 
     # logic
-    lm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
-    lm.add_node(&#34;qr&#34;, gate=&#34;and&#34;, fanin=[&#34;mux_out&#34;,&#34;r_b&#34;])
-    lm.add_node(&#34;q&#34;, gate=&#34;or&#34;, fanin=[&#34;qr&#34;,&#34;s&#34;],
-                output=True)
-    lm.add_node(&#34;so&#34;, gate=&#34;buf&#34;, fanin=&#34;q&#34;, output=True)
+    fm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
+    fm.add(&#34;qr&#34;, &#34;and&#34;, fanin=[&#34;si&#34;, &#34;r_b&#34;])
+    fm.add(&#34;q&#34;, &#34;or&#34;, fanin=[&#34;qr&#34;, &#34;s&#34;], output=True)
+    fm.add(&#34;so&#34;, &#34;buf&#34;, fanin=&#34;mux_out&#34;, output=True)
 
-    return lm</code></pre>
+    return fm</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.logic.comb_lat"><code class="name flex">
 <span>def <span class="ident">comb_lat</span></span>(<span>)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Combinational model of a latch.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Latch model circuit.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def comb_lat():
-    lm = Circuit(name=&#39;lat&#39;)
+    &#34;&#34;&#34;
+    Combinational model of a latch.
+
+    Returns
+    -------
+    Circuit
+            Latch model circuit.
+    &#34;&#34;&#34;
+    lm = Circuit(name=&#34;lat&#34;)
 
     # mux
-    m = logic.mux(2).strip_io()
-    lm.extend(m.relabel({n: f&#39;mux_{n}&#39; for n in m.nodes()}))
+    m = strip_io(mux(2))
+    lm.extend(relabel(m, {n: f&#34;mux_{n}&#34; for n in m.nodes()}))
 
     # inputs
     lm.add(&#34;si&#34;, &#34;input&#34;, fanout=&#34;mux_in_0&#34;)
@@ -309,10 +366,9 @@ def comb_ff():
 
     # logic
     lm.add(&#34;r_b&#34;, &#34;not&#34;, fanin=&#34;r&#34;)
-    lm.add_node(&#34;qr&#34;, gate=&#34;and&#34;, fanin=[&#34;mux_out&#34;,&#34;r_b&#34;])
-    lm.add_node(&#34;q&#34;, gate=&#34;or&#34;, fanin=[&#34;qr&#34;,&#34;s&#34;],
-                output=True)
-    lm.add_node(&#34;so&#34;, gate=&#34;buf&#34;, fanin=&#34;q&#34;, output=True)
+    lm.add(&#34;qr&#34;, &#34;and&#34;, fanin=[&#34;mux_out&#34;, &#34;r_b&#34;])
+    lm.add(&#34;q&#34;, &#34;or&#34;, fanin=[&#34;qr&#34;, &#34;s&#34;], output=True)
+    lm.add(&#34;so&#34;, &#34;buf&#34;, fanin=&#34;q&#34;, output=True)
 
     return lm</code></pre>
 </details>
@@ -323,9 +379,15 @@ def comb_ff():
 <dd>
 <div class="desc"><p>Create a mux.</p>
 <h2 id="parameters">Parameters</h2>
-<p>w: the width of the mux.</p>
+<dl>
+<dt><strong><code>w</code></strong> :&ensp;<code>int</code></dt>
+<dd>Input width of the mux.</dd>
+</dl>
 <h2 id="returns">Returns</h2>
-<p>a <code>CircuitGraph</code> mux.</p></div>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Mux circuit.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -336,11 +398,13 @@ def comb_ff():
 
     Parameters
     ----------
-    w: the width of the mux.
+    w : int
+            Input width of the mux.
 
     Returns
     -------
-    a `CircuitGraph` mux.
+    Circuit
+            Mux circuit.
     &#34;&#34;&#34;
     c = Circuit(name=&#34;mux&#34;)
 
@@ -373,9 +437,15 @@ def comb_ff():
 <dd>
 <div class="desc"><p>Create a population count circuit.</p>
 <h2 id="parameters">Parameters</h2>
-<p>w: the width of the adder.</p>
+<dl>
+<dt><strong><code>w</code></strong> :&ensp;<code>int</code></dt>
+<dd>Input width of the circuit.</dd>
+</dl>
 <h2 id="returns">Returns</h2>
-<p>a <code>CircuitGraph</code> addder.</p></div>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Population count circuit.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -386,11 +456,13 @@ def comb_ff():
 
     Parameters
     ----------
-    w: the width of the adder.
+    w : int
+            Input width of the circuit.
 
     Returns
     -------
-    a `CircuitGraph` addder.
+    Circuit
+            Population count circuit.
     &#34;&#34;&#34;
     c = Circuit(name=&#34;popcount&#34;)
     ps = [[c.add(f&#34;in_{i}&#34;, &#34;input&#34;)] for i in range(w)]
@@ -409,8 +481,8 @@ def comb_ff():
             ns += [&#34;null&#34;]
 
         # instantiate and connect adder
-        a = adder(aw).strip_io()
-        c.extend(a.relabel({n: f&#34;add_{i}_{n}&#34; for n in a.nodes()}))
+        a = strip_io(adder(aw))
+        c.extend(relabel(a, {n: f&#34;add_{i}_{n}&#34; for n in a.nodes()}))
         for j, (n, m) in enumerate(zip(ns, ms)):
             c.connect(n, f&#34;add_{i}_a_{j}&#34;)
             c.connect(m, f&#34;add_{i}_b_{j}&#34;)
@@ -423,9 +495,9 @@ def comb_ff():
     for i, o in enumerate(ps[0]):
         c.add(f&#34;out_{i}&#34;, &#34;buf&#34;, fanin=o, output=True)
 
-    if &#39;null&#39; in c:
-        c.set_type(&#39;null&#39;,&#39;0&#39;)
-        c.set_output(&#39;null&#39;,False)
+    if &#34;null&#34; in c:
+        c.set_type(&#34;null&#34;, &#34;0&#34;)
+        c.set_output(&#34;null&#34;, False)
 
     return c</code></pre>
 </details>
@@ -437,8 +509,8 @@ def comb_ff():
 </article>
 <nav id="sidebar">
 <header>
-<img src="circuitgraph.png" alt="">
-<a class="github-button" href="https://github.com/circuitgraph/circuitgraph">GitHub</a>
+<img src="circuitgraph.png" alt="" style="margin-bottom: 31px;">
+<a class="github-button" href="https://github.com/circuitgraph/circuitgraph"><b>GitHub</b></a>
 </header>
 <h1>Index</h1>
 <div class="toc">
@@ -463,7 +535,7 @@ def comb_ff():
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
 </footer>
 </body>
 </html>

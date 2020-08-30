@@ -1,53 +1,45 @@
 import unittest
 
-from circuitgraph import logic
+import circuitgraph as cg
+from circuitgraph.logic import *
 from circuitgraph.sat import sat
+from random import randint
 
 
 class TestLogic(unittest.TestCase):
     def test_adder(self):
-        a = logic.adder(5)
+        w = randint(1, 66)
+        add = adder(w)
 
-        assumptions = {
-            "a_0": True,
-            "a_1": False,
-            "a_2": False,
-            "a_3": False,
-            "a_4": False,
-            "b_0": True,
-            "b_1": True,
-            "b_2": False,
-            "b_3": False,
-            "b_4": False,
-        }
+        a = randint(0, 2 ** w - 1)
+        b = randint(0, 2 ** w - 1)
 
-        result = sat(a, assumptions)
-        self.assertFalse(result["out_0"])
-        self.assertFalse(result["out_1"])
-        self.assertTrue(result["out_2"])
-        self.assertFalse(result["out_3"])
-        self.assertFalse(result["out_4"])
-        self.assertFalse(result["out_5"])
+        enc_a = {f"a_{i}": v for i, v in enumerate(cg.int_to_bin(a, w, lend=True))}
+        enc_b = {f"b_{i}": v for i, v in enumerate(cg.int_to_bin(b, w, lend=True))}
+
+        result = sat(add, {**enc_a, **enc_b})
+        self.assertTrue(result)
+
+        enc_out = [result[f"out_{i}"] for i in range(w + 1)]
+        out = cg.bin_to_int(enc_out, lend=True)
+        self.assertEqual(a + b, out)
 
     def test_popcount(self):
-        p = logic.popcount(5)
+        w = randint(1, 66)
+        p = popcount(w)
 
-        assumptions = {
-            "in_0": True,
-            "in_1": False,
-            "in_2": False,
-            "in_3": True,
-            "in_4": False,
-        }
+        ins = [randint(0, 1) for i in range(w)]
+        enc_ins = {f"in_{i}": n for i, n in enumerate(ins)}
 
-        result = sat(p, assumptions)
-        self.assertFalse(result["out_0"])
-        self.assertTrue(result["out_1"])
-        self.assertFalse(result["out_2"])
-        self.assertFalse(result["out_3"])
+        result = sat(p, enc_ins)
+        self.assertTrue(result)
+
+        enc_out = [result[f"out_{i}"] for i in range(clog2(w + 1))]
+        c = cg.bin_to_int(enc_out, lend=True)
+        self.assertEqual(c, sum(ins))
 
     def test_mux(self):
-        p = logic.mux(5)
+        p = mux(5)
         assumptions = {
             "in_0": True,
             "in_1": False,

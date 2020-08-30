@@ -1,5 +1,4 @@
 """Functions for transforming circuits"""
-# TODO: this file name could change
 
 import math
 import code
@@ -12,9 +11,147 @@ import shutil
 
 import networkx as nx
 
-from circuitgraph import Circuit, clog2
+from circuitgraph import Circuit
+from circuitgraph.utils import clog2, lint
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
-from circuitgraph.logic import popcount, comb_ff, comb_lat
+
+
+def copy(c):
+    """
+    Returns copy of a circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            circuit to rename
+
+    Returns
+    -------
+    Circuit
+            Relabeled circuit.
+
+    """
+    return Circuit(graph=c.graph.copy(), name=c.name)
+
+
+def relabel(c, mapping):
+    """
+    Returns renamed copy of a circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            circuit to rename
+    mapping : dict of str:str
+            mapping of old to new names
+
+    Returns
+    -------
+    Circuit
+            Relabeled circuit.
+
+    """
+    return Circuit(graph=nx.relabel_nodes(c.graph, mapping), name=c.name)
+
+
+def strip_io(c):
+    """
+    Removes a circuit's outputs and converts inputs to buffers for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            circuit to strip io from
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io
+    """
+    g = c.graph.copy()
+    for o in c.outputs():
+        g.nodes[o]["output"] = False
+    for i in c.inputs():
+        g.nodes[i]["type"] = "buf"
+
+    return Circuit(graph=g, name=c.name)
+
+
+def strip_outputs(c):
+    """
+    Removes a circuit's outputs for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            circuit to strip io from
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io
+    """
+    g = c.graph.copy()
+    for o in c.outputs():
+        g.nodes[o]["output"] = False
+
+    return Circuit(graph=g, name=c.name)
+
+
+def strip_inputs(c):
+    """
+    Converts inputs to buffers for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            circuit to strip inputs from
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io
+    """
+    g = c.graph.copy()
+    for i in c.inputs():
+        g.nodes[i]["type"] = "buf"
+
+    return Circuit(graph=g, name=c.name)
+
+
+def seq_graph(c):
+    """
+    Creates a Circuit of the sequential elements and IO.
+
+    Parameters
+    ----------
+    c: Circuit
+
+    Returns
+    -------
+    Circuit
+            Sequential circuit.
+
+    """
+    s = Circuit(name=f"{c.name}_seq")
+
+    # add nodes
+    for n in c.inputs() | c.seq():
+        s.add(n, c.type(n), output=c.output(n))
+
+    # add edges
+    for n in c.seq():
+        s.connect(c.startpoints(c.d(n)), n)
+
+    # add outputs
+    for n in s:
+        if c.endpoints(n) & c.outputs():
+            s.set_output(n, True)
+
+    return s
 
 
 def syn(c, engine, print_output=False):
@@ -99,84 +236,67 @@ def ternary(c):
             Encoded circuit.
 
     """
-    t = c.copy()
+    t = copy(c)
 
     # add dual nodes
     for n in c:
         if c.type(n) in ["and", "nand"]:
-            t.add_node(f"{n}_x", gate="and", output=c.nodes[n]["output"])
-            t.add_node(f"{n}_x_in_fi", gate="or", output=False)
-            t.add_node(f"{n}_0_not_in_fi", gate="nor", output=False)
-            t.add_edges_from(
-                [(f"{n}_x_in_fi", f"{n}_x"), (f"{n}_0_not_in_fi", f"{n}_x")]
+            t.add(f"{n}_x", "and", output=c.output(n))
+            t.add(
+                f"{n}_x_in_fi",
+                "or",
+                fanout=f"{n}_x",
+                fanin=[f"{p}_x" for p in c.fanin(n)],
             )
-            t.add_edges_from((f"{p}_x", f"{n}_x_in_fi") for p in c.predecessors(n))
-            for p in c.predecessors(n):
-                t.add_node(f"{p}_is_0", gate="nor", output=False)
-                t.add_edge(f"{p}_is_0", f"{n}_0_not_in_fi")
-                t.add_edge(f"{p}_x", f"{p}_is_0")
-                t.add_edge(p, f"{p}_is_0")
+            t.add(f"{n}_0_not_in_fi", "nor", fanout=f"{n}_x")
+
+            for p in c.fanin(n):
+                t.add(
+                    f"{p}_is_0", "nor", fanout=f"{n}_0_not_in_fi", fanin=[p, f"{p}_x"]
+                )
 
         elif c.type(n) in ["or", "nor"]:
-            t.add_node(f"{n}_x", gate="and", output=c.nodes[n]["output"])
-            t.add_node(f"{n}_x_in_fi", gate="or", output=False)
-            t.add_node(f"{n}_1_not_in_fi", gate="nor", output=False)
-            t.add_edges_from(
-                [(f"{n}_x_in_fi", f"{n}_x"), (f"{n}_1_not_in_fi", f"{n}_x")]
+            t.add(f"{n}_x", "and", output=c.output(n))
+            t.add(
+                f"{n}_x_in_fi",
+                "or",
+                fanout=f"{n}_x",
+                fanin=[f"{p}_x" for p in c.fanin(n)],
             )
-            t.add_edges_from((f"{p}_x", f"{n}_x_in_fi") for p in c.predecessors(n))
-            for p in c.predecessors(n):
-                t.add_node(f"{p}_is_1", gate="and", output=False)
-                t.add_edge(f"{p}_is_1", f"{n}_1_not_in_fi")
-                t.add_node(f"{p}_not_x", gate="not", output=False)
-                t.add_edge(f"{p}_x", f"{p}_not_x")
-                t.add_edge(f"{p}_not_x", f"{p}_is_1")
-                t.add_edge(p, f"{p}_is_1")
+            t.add(f"{n}_1_not_in_fi", "nor", fanout=f"{n}_x")
+
+            for p in c.fanin(n):
+                t.add(f"{p}_is_1", "and", fanout=f"{n}_1_not_in_fi", fanin=p)
+                t.add(f"{p}_not_x", "not", fanout=f"{p}_is_1", fanin=f"{p}_x")
 
         elif c.type(n) in ["buf", "not"]:
-            t.add_node(f"{n}_x", gate="buf", output=c.nodes[n]["output"])
-            p = list(c.predecessors(n))[0]
-            t.add_edge(f"{p}_x", f"{n}_x")
+            p = c.fanin(n).pop()
+            t.add(f"{n}_x", "buf", output=c.output(n), fanin=f"{p}_x")
 
         elif c.type(n) in ["xor", "xnor"]:
-            t.add_node(f"{n}_x", gate="or", output=c.nodes[n]["output"])
-            t.add_edges_from((f"{p}_x", f"{n}_x") for p in c.predecessors(n))
+            t.add(
+                f"{n}_x", "or", output=c.output(n), fanin=(f"{p}_x" for p in c.fanin(n))
+            )
 
         elif c.type(n) in ["0", "1"]:
-            t.add_node(f"{n}_x", gate="0", output=c.nodes[n]["output"])
+            t.add(f"{n}_x", "0", output=c.output(n))
 
         elif c.type(n) in ["input"]:
-            t.add_node(f"{n}_x", gate="input", output=c.nodes[n]["output"])
+            t.add(f"{n}_x", "input", output=c.output(n))
 
-        elif c.type(n) in ["dff"]:
-            t.add_node(
-                f"{n}_x", gate="dff", output=c.nodes[n]["output"], clk=c.nodes[n]["clk"]
-            )
-            p = list(c.predecessors(n))[0]
-            t.add_edge(f"{p}_x", f"{n}_x")
-
-        elif c.type(n) in ["lat"]:
-            t.add_node(
+        elif c.type(n) in ["ff", "lat"]:
+            t.add(
                 f"{n}_x",
-                gate="lat",
-                output=c.nodes[n]["output"],
-                clk=c.nodes[n]["clk"],
-                rst=c.nodes[n]["rst"],
+                c.type(n),
+                output=c.output(n),
+                clk=f"{c.clk(n)}_x",
+                r=f"{c.r(n)}_x",
+                s=f"{c.s(n)}_x",
+                fanin=f"{c.fanin(n).pop()}_x",
             )
-            p = list(c.predecessors(n))[0]
-            t.add_edge(f"{p}_x", f"{n}_x")
 
-        elif c.type(n) in ["1'b0", "1'b1"]:
+        elif c.type(n) in ["0", "1"]:
             continue
-
-        else:
-            print(f"unknown gate type: {c.nodes[n]['type']}")
-            code.interact(local=dict(globals(), **locals()))
-
-    for n in t:
-        if "type" not in t.nodes[n]:
-            print(f"empty gate type: {n}")
-            code.interact(local=dict(globals(), **locals()))
 
     return t
 
@@ -201,6 +321,7 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     Circuit
             Miter circuit.
     """
+    # clean inputs
     if not c1:
         c1 = c0
     if not startpoints:
@@ -208,25 +329,15 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     if not endpoints:
         endpoints = c0.endpoints() & c1.endpoints()
 
-    # create miter, relabel to avoid overlap except for common startpoints
-    m = c0.relabel({n: f"c0_{n}" for n in c0.nodes() - startpoints})
-    m.extend(c1.relabel({n: f"c1_{n}" for n in c1.nodes() - startpoints}))
+    # create miter, relabel
+    m = relabel(c0, {n: f"c0_{n}" for n in c0.nodes() - startpoints})
+    m.extend(relabel(c1, {n: f"c1_{n}" for n in c1.nodes() - startpoints}))
+    strip_outputs(m)
 
-    # compare outputs
-    # FIXME: Make sure this is robust to corner cases
+    # compare endpoints
     m.add("sat", "or", output=True)
-    for o in endpoints:
-        if c0.type(o) in ["lat", "ff"]:
-            if c0.d(o) not in startpoints:
-                m.add(
-                    f"miter_{o}",
-                    "xor",
-                    fanin=[f"c0_{c0.d(o)}", f"c1_{c1.d(o)}"],
-                    fanout=["sat"],
-                )
-        else:
-            m.add(f"miter_{o}", "xor", fanin=[f"c0_{o}", f"c1_{o}"], fanout=["sat"])
-
+    for o in endpoints - startpoints:
+        m.add(f"miter_{o}", "xor", fanout=["sat"], fanin=[f"c0_{o}", f"c1_{o}"])
     return m
 
 
@@ -245,32 +356,25 @@ def comb(c):
             Combinational circuit.
 
     """
-    c_comb = c.copy()
-    lat_model = comb_lat()
-    ff_model = comb_ff()
+    import circuitgraph.logic as logic
 
-    for lat in c.lats():
-        relabeled_model = lat_model.relabel({n: f"{lat}_{n}" for n in lat_model})
-        c_comb.extend(relabeled_model)
-        c_comb.graph.add_edges_from(
-            (f"{lat}_q", s) for s in c_comb.graph.successors(lat)
-        )
-        c_comb.graph.add_edges_from(
-            (p, f"{lat}_d") for p in c_comb.graph.predecessors(lat)
-        )
-        c_comb.graph.add_edge(c.clk(lat), f"{lat}_clk")
-        c_comb.graph.add_edge(c.r(lat), f"{lat}_rst")
-        c_comb.graph.remove_node(lat)
+    c_comb = copy(c)
+    lat_model = logic.comb_lat()
+    ff_model = logic.comb_ff()
 
-    for ff in c.ffs():
-        relabeled_model = ff_model.relabel({n: f"{ff}_{n}" for n in ff_model})
+    for s in c.seq():
+        model = lat_model if c.type(s) == "lat" else ff_model
+        relabeled_model = relabel(model, {n: f"{s}_{n}" for n in model})
         c_comb.extend(relabeled_model)
-        c_comb.graph.add_edges_from((f"{ff}_q", s) for s in c_comb.graph.successors(ff))
-        c_comb.graph.add_edges_from(
-            (p, f"{ff}_d") for p in c_comb.graph.predecessors(ff)
-        )
-        c_comb.graph.add_edge(c.clk(ff), f"{ff}_clk")
-        c_comb.graph.remove_node(ff)
+        c_comb.connect(f"{s}_q", c_comb.fanout(s))
+        c_comb.connect(c_comb.fanin(s), f"{s}_d")
+        if c.clk(s):
+            c_comb.connect(c.clk(s), f"{s}_clk")
+        if c.r(s):
+            c_comb.connect(c.r(s), f"{s}_rst")
+        if c.s(s):
+            c_comb.connect(c.s(s), f"{s}_set")
+        c_comb.remove(s)
 
     return c_comb
 
@@ -292,30 +396,26 @@ def unroll(c, cycles):
             Unrolled circuit.
 
     """
-    u = nx.DiGraph()
+    u = Circuit()
     c_comb = comb(c)
     for i in range(cycles):
-        c_comb_i = nx.relabel_nodes(c_comb, {n: f"{n}_{i}" for n in c_comb})
-        u.extend(c_comb_i)
+        u.extend(c_comb, {n: f"{n}_{i}" for n in c_comb})
         if i == 0:
             # convert si to inputs
             for n in c:
-                if c.nodes[n]["gate"] in ["lat", "dff"]:
-                    u.nodes[f"{n}_si_{i}"]["gate"] = "input"
+                if c.type(n) in ["lat", "ff"]:
+                    u.set_type(f"{n}_si_{i}", "input")
 
         else:
             # connect prev si
             for n in c:
-                if c.nodes[n]["gate"] in ["lat", "dff"]:
-                    u.add_edge(f"{n}_si_{i-1}", f"{n}_si_{i}")
-        for n in u:
-            if "gate" not in u.nodes[n]:
-                print(n)
+                if c.type(n) in ["lat", "ff"]:
+                    u.connect(f"{n}_si_{i-1}", f"{n}_si_{i}")
 
     return u
 
 
-def influence(c, n, s):
+def influence_transform(c, n, s):
     """
     Creates a circuit to compute sensitivity.
 
@@ -350,14 +450,14 @@ def influence(c, n, s):
     # create two copies of sub circuit
     infl = Circuit(name=f"infl_{s}_on_{n}")
     infl.extend(sub_c)
-    infl.extend(sub_c.relabel({g: f"s1_{g}" for g in sub_c if g not in sp - set([s])}))
+    infl.extend(relabel(sub_c, {g: f"s1_{g}" for g in sub_c if g not in sp - set([s])}))
     infl.add("sat", "xor", fanin=[n, f"s1_{n}"], output=True)
     infl.add(f"not_{s}", "not", fanin=s, fanout=f"s1_{s}")
 
     return infl
 
 
-def sensitivity(c, n, startpoints=None):
+def sensitivity_transform(c, n, startpoints=None):
     """
     Creates a circuit to compute sensitivity.
 
@@ -376,6 +476,8 @@ def sensitivity(c, n, startpoints=None):
             Sensitivity circuit.
 
     """
+    import circuitgraph.logic as logic
+
     # choose all startpoints if not specified
     if startpoints is None:
         startpoints = c.startpoints(n)
@@ -399,8 +501,8 @@ def sensitivity(c, n, startpoints=None):
     sen.extend(sub_c)
 
     # instantiate population count
-    p = popcount(len(startpoints)).strip_io()
-    p = p.relabel({g: f"pop_{g}" for g in p})
+    p = strip_io(logic.popcount(len(startpoints)))
+    p = relabel(p, {g: f"pop_{g}" for g in p})
     sen.extend(p)
     for o in range(clog2(len(startpoints) + 1)):
         sen.add(f"out_{o}", "buf", fanin=f"pop_out_{o}", output=True)
@@ -410,7 +512,7 @@ def sensitivity(c, n, startpoints=None):
         mapping = {
             g: f"sen_{s}_{g}" for g in sub_c if g not in all_startpoints - set([s])
         }
-        sen.extend(sub_c.relabel(mapping))
+        sen.extend(relabel(sub_c, mapping))
 
         # connect inverted input
         sen.set_type(f"sen_{s}_{s}", "not")
@@ -428,7 +530,7 @@ def sensitivity(c, n, startpoints=None):
     return sen
 
 
-def sensitize(c, n):
+def sensitization_transform(c, n):
     """
     Creates a circuit to sensitize a node to an endpoint.
 
@@ -445,52 +547,25 @@ def sensitize(c, n):
             Output circuit.
 
     """
-    # get fanin/out cone of node
-    nodes = c.transitive_fanin(n) | c.transitive_fanout(n) | set([n])
-    subCircuit = Circuit(c.graph.subgraph(nodes).copy())
+    # create miter, relabel
+    s = copy(c)
+    s.extend(relabel(c, {n: f"c1_{n}" for n in c}))
+    strip_outputs(s)
 
-    # create miter
-    m = miter(subCircuit)
+    # connect startpoints
+    for g in c.startpoints():
+        s.set_type(f"c1_{g}", "buf")
+        s.disconnect(s.fanin(f"c1_{g}"), f"c1_{g}")
+        s.connect(g, f"c1_{g}")
 
-    # cut and invert n in one side of miter
-    m.graph.nodes[f"c1_{n}"]["type"] = "not"
-    m.graph.remove_edges_from((f, f"c1_{n}") for f in m.fanin(f"c1_{n}"))
-    m.graph.add_edge(f"c0_{n}", f"c1_{n}")
+    # compare endpoints
+    s.add("sat", "or", output=True)
+    for o in c.endpoints():
+        s.add(f"miter_{o}", "xor", fanout=["sat"], fanin=[o, f"c1_{o}"])
 
-    return m
+    # flip node in c1
+    s.disconnect(s.fanin(f"c1_{n}"), f"c1_{n}")
+    s.set_type(f"c1_{n}", "not")
+    s.connect(n, f"c1_{n}")
 
-
-def mphf(w=50, n=8000):
-    """
-    Creates a SAT-hard circuit based on the structure of minimum perfect hash
-    functions.
-
-    Parameters
-    ----------
-    w : int
-            Input width.
-    n : int
-            Number of constraints.
-
-    Returns
-    -------
-    Circuit
-            Output circuit.
-
-    """
-    o = max(1, math.ceil(math.log2(w)))
-    c = Circuit()
-
-    # add inputs
-    inputs = [c.add(f"in_{i}", "input") for i in range(w)]
-
-    # add constraints
-    ors = []
-    for ni in range(n):
-        xors = [
-            c.add(f"xor_{ni}_{oi}", "xor", fanin=sample(inputs, 2)) for oi in range(o)
-        ]
-        ors.append(c.add(f"or_{ni}", "or", fanin=xors))
-    c.add("sat", "and", fanin=ors, output=True)
-
-    return c
+    return s

@@ -8,7 +8,7 @@ endmodule
 /* Comments Outside
 Of a Module 
 */
-module test_module_0(G1,G2,G3,G4,G5,G17,G18,G19,G20,G21,G22);
+module test_correct_io(G1,G2,G3,G4,G5,G17,G18,G19,G20,G21,G22);
   // Comments Inside Module
   input G1,G2,G3,G4;
   /* Comments Inside Module */
@@ -117,4 +117,28 @@ module fflopd(CK, D, Q);
       qi <= next_state;
   initial
     qi <= 1'b0;
+endmodule
+
+module test_module_4(
+    clk,
+    set,
+    rst,
+    a,
+    b
+);
+    input clk, set, rst, a;
+    output b;
+
+    custom_flop(.clock(clk), .data_in(a), .data_out(b), .set(set), .reset(rst));
+endmodule
+
+module custom_flop(clock, set, reset, data_in, data_out);
+  input clock, set, reset, data_in;
+  output reg data_out;
+  always@(posedge clock) begin
+    if (reset)
+      data_out <= 0;
+    else if (set)
+      data_out <= data_in;
+  end
 endmodule

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.8.3" />
 <title>circuitgraph.io API documentation</title>
 <meta name="description" content="Functions for reading/writing CircuitGraphs" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -256,7 +256,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             if type(child) == ast_types.Paramlist:
                 if child.children():
                     raise ValueError(
-                        &#34;circuitgraph cannot parse parameters &#34; f&#34;(line {child.lineno})&#34;
+                        f&#34;circuitgraph cannot parse parameters (line {child.lineno})&#34;
                     )
             # Parse portlist
             elif type(child) == ast_types.Portlist:
@@ -267,7 +267,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             elif type(child) == ast_types.Decl:
                 if ast_types.Parameter in [type(i) for i in child.children()]:
                     raise ValueError(
-                        &#34;circuitgraph cannot parse parameters &#34; f&#34;(line {child.lineno})&#34;
+                        f&#34;circuitgraph cannot parse parameters (line {child.lineno})&#34;
                     )
                 for ci in [
                     i
@@ -316,6 +316,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                             clk=ports.get(seq_type.io.get(&#34;clk&#34;)),
                             r=ports.get(seq_type.io.get(&#34;r&#34;)),
                             s=ports.get(seq_type.io.get(&#34;s&#34;)),
+                            output=ports.get(seq_type.io.get(&#34;q&#34;)) in outputs,
                         )
                     else:
                         raise ValueError(
@@ -328,9 +329,8 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                 dest = child.left.var
                 dest = parse_argument(dest, c)
                 if type(child.right.var) == ast_types.IntConst:
-                    c.add(child.right.var.value, child.right.var.value)
                     c.add(
-                        dest, &#34;buf&#34;, fanin=child.right.var.value, output=dest in outputs
+                        dest, f&#34;{child.right.var.value[-1]}&#34;, output=dest in outputs,
                     )
                 elif issubclass(type(child.right.var), ast_types.Operator):
                     parse_operator(child.right.var, c, outputs, dest=dest)
@@ -338,6 +338,10 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                     raise ValueError(
                         &#34;circuitgraph cannot parse concatenations &#34;
                         f&#34;(line {child.right.var.lineno})&#34;
+                    )
+                elif type(child.right.var) == ast_types.Identifier:
+                    c.add(
+                        dest, &#34;buf&#34;, output=dest in outputs, fanin=child.right.var.name
                     )
             else:
                 raise ValueError(
@@ -354,6 +358,8 @@ def parse_io(c, ci, outputs):
             f&#34;{ci.name}[{i}]&#34;
             for i in range(int(ci.width.lsb.value), int(ci.width.msb.value) + 1)
         ]
+        if not ci.name.startswith(&#34;\\&#34;):
+            cis = [f&#34;\{i}&#34; for i in cis]
     else:
         cis = [ci.name]
     if type(ci) == ast_types.Input:
@@ -365,13 +371,16 @@ def parse_io(c, ci, outputs):
 
 def parse_argument(argname, circuit):
     if type(argname) == ast_types.Pointer:
-        return f&#34;{argname.var}[{argname.ptr}]&#34;
+        if argname.var.name.startswith(&#34;\\&#34;):
+            return f&#34;{argname.var}[{argname.ptr}]&#34;
+        else:
+            return f&#34;\\{argname.var}[{argname.ptr}]&#34;
     elif type(argname) == ast_types.IntConst:
-        circuit.add(argname.value, argname.value)
-        return argname.value
+        circuit.add(f&#34;tie_{argname.value[-1]}&#34;, argname.value[-1])
+        return f&#34;tie_{argname.value[-1]}&#34;
     elif issubclass(type(argname), ast_types.Concat):
         raise ValueError(
-            &#34;circuitgraph cannot parse concatenations &#34; f&#34;(line {argname.lineno})&#34;
+            f&#34;circuitgraph cannot parse concatenations (line {argname.lineno})&#34;
         )
     elif type(argname) == ast_types.Partselect:
         raise ValueError(
@@ -383,8 +392,8 @@ def parse_argument(argname, circuit):
 
 def parse_operator(operator, circuit, outputs, dest=None):
     if type(operator) == ast_types.IntConst:
-        circuit.add(operator.value, operator.value)
-        return operator.value
+        circuit.add(f&#34;tie_{operator.value[-1]}&#34;, operator.value[-1])
+        return f&#34;tie_{operator.value[-1]}&#34;
     elif not issubclass(type(operator), ast_types.Operator):
         return parse_argument(operator, circuit)
     fanin = [parse_operator(o, circuit, outputs) for o in operator.children()]
@@ -395,10 +404,13 @@ def parse_operator(operator, circuit, outputs, dest=None):
     # multibit operators (not yet parsable)
     if op.startswith(&#34;l&#34;):
         raise ValueError(
-            &#34;circuitgraph cannot parse multibit operators &#34; f&#34;(line {operator.lineno})&#34;
+            f&#34;circuitgraph cannot parse multibit operators (line {operator.lineno})&#34;
         )
     if dest is None:
         dest = f&#34;{op}_{&#39;_&#39;.join(fanin)}&#34;
+        if any(i.startswith(&#34;\\&#34;) for i in fanin):
+            dest = dest.replace(&#34;\\&#34;, &#34;&#34;)
+            dest = f&#34;\\{dest}&#34;
     circuit.add(dest, op, fanin=fanin, output=dest in outputs)
     return dest
 
@@ -445,17 +457,33 @@ def circuit_to_verilog(c, seq_types=None):
     if seq_types is None:
         seq_types = default_seq_types
 
+    def sanitize_name(n):
+        if n.startswith(&#34;\\&#34;):
+            return f&#34;{n} &#34;
+        return n
+
+    def sanitize_instance(n):
+        if n.startswith(&#34;\\&#34;):
+            n_gate = n.replace(&#34;\\&#34;, &#34;&#34;)
+            return f&#34;\\g_{n_gate}&#34;
+        else:
+            return f&#34;g_{n}&#34;
+
     for n in c.nodes():
         if c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;, &#34;buf&#34;, &#34;not&#34;, &#34;nor&#34;, &#34;or&#34;, &#34;and&#34;, &#34;nand&#34;]:
-            fanin = &#34;,&#34;.join(p for p in c.fanin(n))
-            insts.append(f&#34;{c.type(n)} g_{n} ({n},{fanin})&#34;)
-            wires.append(n)
-        elif c.type(n) in [&#34;1&#39;b0&#34;, &#34;1&#39;b1&#34;]:
-            insts.append(f&#34;assign {n} = 1&#39;b{c.type(n)}&#34;)
+            fanin = &#34;, &#34;.join(sanitize_name(p) for p in c.fanin(n))
+            insts.append(
+                f&#34;{c.type(n)} {sanitize_instance(n)} &#34; f&#34;({sanitize_name(n)}, {fanin})&#34;
+            )
+            if not c.output(n):
+                wires.append(n)
+        elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
+            insts.append(f&#34;assign {sanitize_name(n)} = 1&#39;b{c.type(n)}&#34;)
         elif c.type(n) in [&#34;input&#34;]:
             inputs.append(n)
         elif c.type(n) in [&#34;ff&#34;, &#34;lat&#34;]:
-            wires.append(n)
+            if not c.output(n):
+                wires.append(n)
 
             # get template
             for s in seq_types:
@@ -467,33 +495,37 @@ def circuit_to_verilog(c, seq_types=None):
             # connect
             io = []
             if c.d(n):
-                d = c.d(n)
+                d = sanitize_name(c.d(n))
                 io.append(f&#34;.{seq.io[&#39;d&#39;]}({d})&#34;)
             if c.r(n):
-                r = c.r(n)
+                r = sanitize_name(c.r(n))
                 io.append(f&#34;.{seq.io[&#39;r&#39;]}({r})&#34;)
             if c.s(n):
-                s = c.s(n)
+                s = sanitize_name(c.s(n))
                 io.append(f&#34;.{seq.io[&#39;s&#39;]}({s})&#34;)
             if c.clk(n):
-                clk = c.clk(n)
+                clk = sanitize_name(c.clk(n))
                 io.append(f&#34;.{seq.io[&#39;clk&#39;]}({clk})&#34;)
-            io.append(f&#34;.{seq.io[&#39;q&#39;]}({n})&#34;)
-            insts.append(f&#34;{seq.name} g_{n} ({&#39;,&#39;.join(io)})&#34;)
+            io.append(f&#34;.{seq.io[&#39;q&#39;]}({sanitize_name(n)})&#34;)
+            insts.append(f&#34;{seq.name} {sanitize_instance(n)} ({&#39;, &#39;.join(io)})&#34;)
 
         else:
-            print(f&#34;unknown gate type: {c.type(n)}&#34;)
-            return
+            raise ValueError(f&#34;unknown gate type: {c.type(n)}&#34;)
 
         if c.output(n):
             outputs.append(n)
 
-    verilog = f&#34;module {c.name} (&#34; + &#34;,&#34;.join(inputs + outputs) + &#34;);\n&#34;
-    verilog += &#34;&#34;.join(f&#34;input {inp};\n&#34; for inp in inputs)
-    verilog += &#34;&#34;.join(f&#34;output {out};\n&#34; for out in outputs)
-    verilog += &#34;&#34;.join(f&#34;wire {wire};\n&#34; for wire in wires)
-    verilog += &#34;&#34;.join(f&#34;{inst};\n&#34; for inst in insts)
+    verilog = f&#34;module {c.name} (&#34;
+    verilog += &#34;, &#34;.join(sanitize_name(i) for i in inputs + outputs)
+    verilog += &#34;);\n&#34;
+    verilog += &#34;&#34;.join(f&#34;  input {sanitize_name(inp)};\n&#34; for inp in inputs)
+    verilog += &#34;&#34;.join(f&#34;  output {sanitize_name(out)};\n&#34; for out in outputs)
+    verilog += &#34;\n&#34;
+    verilog += &#34;&#34;.join(f&#34;  wire {sanitize_name(wire)};\n&#34; for wire in wires)
+    verilog += &#34;\n&#34;
+    verilog += &#34;&#34;.join(f&#34;  {inst};\n&#34; for inst in insts)
     verilog += &#34;endmodule\n&#34;
+    verilog += &#34;\n&#34;
     verilog += &#34;\n&#34;.join(defs)
 
     return verilog</code></pre>
@@ -617,17 +649,33 @@ def circuit_to_verilog(c, seq_types=None):
     if seq_types is None:
         seq_types = default_seq_types
 
+    def sanitize_name(n):
+        if n.startswith(&#34;\\&#34;):
+            return f&#34;{n} &#34;
+        return n
+
+    def sanitize_instance(n):
+        if n.startswith(&#34;\\&#34;):
+            n_gate = n.replace(&#34;\\&#34;, &#34;&#34;)
+            return f&#34;\\g_{n_gate}&#34;
+        else:
+            return f&#34;g_{n}&#34;
+
     for n in c.nodes():
         if c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;, &#34;buf&#34;, &#34;not&#34;, &#34;nor&#34;, &#34;or&#34;, &#34;and&#34;, &#34;nand&#34;]:
-            fanin = &#34;,&#34;.join(p for p in c.fanin(n))
-            insts.append(f&#34;{c.type(n)} g_{n} ({n},{fanin})&#34;)
-            wires.append(n)
-        elif c.type(n) in [&#34;1&#39;b0&#34;, &#34;1&#39;b1&#34;]:
-            insts.append(f&#34;assign {n} = 1&#39;b{c.type(n)}&#34;)
+            fanin = &#34;, &#34;.join(sanitize_name(p) for p in c.fanin(n))
+            insts.append(
+                f&#34;{c.type(n)} {sanitize_instance(n)} &#34; f&#34;({sanitize_name(n)}, {fanin})&#34;
+            )
+            if not c.output(n):
+                wires.append(n)
+        elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
+            insts.append(f&#34;assign {sanitize_name(n)} = 1&#39;b{c.type(n)}&#34;)
         elif c.type(n) in [&#34;input&#34;]:
             inputs.append(n)
         elif c.type(n) in [&#34;ff&#34;, &#34;lat&#34;]:
-            wires.append(n)
+            if not c.output(n):
+                wires.append(n)
 
             # get template
             for s in seq_types:
@@ -639,33 +687,37 @@ def circuit_to_verilog(c, seq_types=None):
             # connect
             io = []
             if c.d(n):
-                d = c.d(n)
+                d = sanitize_name(c.d(n))
                 io.append(f&#34;.{seq.io[&#39;d&#39;]}({d})&#34;)
             if c.r(n):
-                r = c.r(n)
+                r = sanitize_name(c.r(n))
                 io.append(f&#34;.{seq.io[&#39;r&#39;]}({r})&#34;)
             if c.s(n):
-                s = c.s(n)
+                s = sanitize_name(c.s(n))
                 io.append(f&#34;.{seq.io[&#39;s&#39;]}({s})&#34;)
             if c.clk(n):
-                clk = c.clk(n)
+                clk = sanitize_name(c.clk(n))
                 io.append(f&#34;.{seq.io[&#39;clk&#39;]}({clk})&#34;)
-            io.append(f&#34;.{seq.io[&#39;q&#39;]}({n})&#34;)
-            insts.append(f&#34;{seq.name} g_{n} ({&#39;,&#39;.join(io)})&#34;)
+            io.append(f&#34;.{seq.io[&#39;q&#39;]}({sanitize_name(n)})&#34;)
+            insts.append(f&#34;{seq.name} {sanitize_instance(n)} ({&#39;, &#39;.join(io)})&#34;)
 
         else:
-            print(f&#34;unknown gate type: {c.type(n)}&#34;)
-            return
+            raise ValueError(f&#34;unknown gate type: {c.type(n)}&#34;)
 
         if c.output(n):
             outputs.append(n)
 
-    verilog = f&#34;module {c.name} (&#34; + &#34;,&#34;.join(inputs + outputs) + &#34;);\n&#34;
-    verilog += &#34;&#34;.join(f&#34;input {inp};\n&#34; for inp in inputs)
-    verilog += &#34;&#34;.join(f&#34;output {out};\n&#34; for out in outputs)
-    verilog += &#34;&#34;.join(f&#34;wire {wire};\n&#34; for wire in wires)
-    verilog += &#34;&#34;.join(f&#34;{inst};\n&#34; for inst in insts)
+    verilog = f&#34;module {c.name} (&#34;
+    verilog += &#34;, &#34;.join(sanitize_name(i) for i in inputs + outputs)
+    verilog += &#34;);\n&#34;
+    verilog += &#34;&#34;.join(f&#34;  input {sanitize_name(inp)};\n&#34; for inp in inputs)
+    verilog += &#34;&#34;.join(f&#34;  output {sanitize_name(out)};\n&#34; for out in outputs)
+    verilog += &#34;\n&#34;
+    verilog += &#34;&#34;.join(f&#34;  wire {sanitize_name(wire)};\n&#34; for wire in wires)
+    verilog += &#34;\n&#34;
+    verilog += &#34;&#34;.join(f&#34;  {inst};\n&#34; for inst in insts)
     verilog += &#34;endmodule\n&#34;
+    verilog += &#34;\n&#34;
     verilog += &#34;\n&#34;.join(defs)
 
     return verilog</code></pre>
@@ -773,13 +825,16 @@ name: the module name, if different from the netlist name.</p>
 </summary>
 <pre><code class="python">def parse_argument(argname, circuit):
     if type(argname) == ast_types.Pointer:
-        return f&#34;{argname.var}[{argname.ptr}]&#34;
+        if argname.var.name.startswith(&#34;\\&#34;):
+            return f&#34;{argname.var}[{argname.ptr}]&#34;
+        else:
+            return f&#34;\\{argname.var}[{argname.ptr}]&#34;
     elif type(argname) == ast_types.IntConst:
-        circuit.add(argname.value, argname.value)
-        return argname.value
+        circuit.add(f&#34;tie_{argname.value[-1]}&#34;, argname.value[-1])
+        return f&#34;tie_{argname.value[-1]}&#34;
     elif issubclass(type(argname), ast_types.Concat):
         raise ValueError(
-            &#34;circuitgraph cannot parse concatenations &#34; f&#34;(line {argname.lineno})&#34;
+            f&#34;circuitgraph cannot parse concatenations (line {argname.lineno})&#34;
         )
     elif type(argname) == ast_types.Partselect:
         raise ValueError(
@@ -804,6 +859,8 @@ name: the module name, if different from the netlist name.</p>
             f&#34;{ci.name}[{i}]&#34;
             for i in range(int(ci.width.lsb.value), int(ci.width.msb.value) + 1)
         ]
+        if not ci.name.startswith(&#34;\\&#34;):
+            cis = [f&#34;\{i}&#34; for i in cis]
     else:
         cis = [ci.name]
     if type(ci) == ast_types.Input:
@@ -824,8 +881,8 @@ name: the module name, if different from the netlist name.</p>
 </summary>
 <pre><code class="python">def parse_operator(operator, circuit, outputs, dest=None):
     if type(operator) == ast_types.IntConst:
-        circuit.add(operator.value, operator.value)
-        return operator.value
+        circuit.add(f&#34;tie_{operator.value[-1]}&#34;, operator.value[-1])
+        return f&#34;tie_{operator.value[-1]}&#34;
     elif not issubclass(type(operator), ast_types.Operator):
         return parse_argument(operator, circuit)
     fanin = [parse_operator(o, circuit, outputs) for o in operator.children()]
@@ -836,10 +893,13 @@ name: the module name, if different from the netlist name.</p>
     # multibit operators (not yet parsable)
     if op.startswith(&#34;l&#34;):
         raise ValueError(
-            &#34;circuitgraph cannot parse multibit operators &#34; f&#34;(line {operator.lineno})&#34;
+            f&#34;circuitgraph cannot parse multibit operators (line {operator.lineno})&#34;
         )
     if dest is None:
         dest = f&#34;{op}_{&#39;_&#39;.join(fanin)}&#34;
+        if any(i.startswith(&#34;\\&#34;) for i in fanin):
+            dest = dest.replace(&#34;\\&#34;, &#34;&#34;)
+            dest = f&#34;\\{dest}&#34;
     circuit.add(dest, op, fanin=fanin, output=dest in outputs)
     return dest</code></pre>
 </details>
@@ -939,7 +999,7 @@ name: the module name, if different from the netlist name.</p>
             if type(child) == ast_types.Paramlist:
                 if child.children():
                     raise ValueError(
-                        &#34;circuitgraph cannot parse parameters &#34; f&#34;(line {child.lineno})&#34;
+                        f&#34;circuitgraph cannot parse parameters (line {child.lineno})&#34;
                     )
             # Parse portlist
             elif type(child) == ast_types.Portlist:
@@ -950,7 +1010,7 @@ name: the module name, if different from the netlist name.</p>
             elif type(child) == ast_types.Decl:
                 if ast_types.Parameter in [type(i) for i in child.children()]:
                     raise ValueError(
-                        &#34;circuitgraph cannot parse parameters &#34; f&#34;(line {child.lineno})&#34;
+                        f&#34;circuitgraph cannot parse parameters (line {child.lineno})&#34;
                     )
                 for ci in [
                     i
@@ -999,6 +1059,7 @@ name: the module name, if different from the netlist name.</p>
                             clk=ports.get(seq_type.io.get(&#34;clk&#34;)),
                             r=ports.get(seq_type.io.get(&#34;r&#34;)),
                             s=ports.get(seq_type.io.get(&#34;s&#34;)),
+                            output=ports.get(seq_type.io.get(&#34;q&#34;)) in outputs,
                         )
                     else:
                         raise ValueError(
@@ -1011,9 +1072,8 @@ name: the module name, if different from the netlist name.</p>
                 dest = child.left.var
                 dest = parse_argument(dest, c)
                 if type(child.right.var) == ast_types.IntConst:
-                    c.add(child.right.var.value, child.right.var.value)
                     c.add(
-                        dest, &#34;buf&#34;, fanin=child.right.var.value, output=dest in outputs
+                        dest, f&#34;{child.right.var.value[-1]}&#34;, output=dest in outputs,
                     )
                 elif issubclass(type(child.right.var), ast_types.Operator):
                     parse_operator(child.right.var, c, outputs, dest=dest)
@@ -1021,6 +1081,10 @@ name: the module name, if different from the netlist name.</p>
                     raise ValueError(
                         &#34;circuitgraph cannot parse concatenations &#34;
                         f&#34;(line {child.right.var.lineno})&#34;
+                    )
+                elif type(child.right.var) == ast_types.Identifier:
+                    c.add(
+                        dest, &#34;buf&#34;, output=dest in outputs, fanin=child.right.var.name
                     )
             else:
                 raise ValueError(
@@ -1090,8 +1154,8 @@ to verilog</p></div>
 </article>
 <nav id="sidebar">
 <header>
-<img src="circuitgraph.png" alt="">
-<a class="github-button" href="https://github.com/circuitgraph/circuitgraph">GitHub</a>
+<img src="circuitgraph.png" alt="" style="margin-bottom: 31px;">
+<a class="github-button" href="https://github.com/circuitgraph/circuitgraph"><b>GitHub</b></a>
 </header>
 <h1>Index</h1>
 <div class="toc">
@@ -1127,7 +1191,7 @@ to verilog</p></div>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.3</a>.</p>
 </footer>
 </body>
 </html>

@@ -3,7 +3,6 @@ import shutil
 
 import circuitgraph as cg
 from circuitgraph.sat import sat, model_count, approx_model_count
-from circuitgraph.transform import mphf
 
 
 class TestSat(unittest.TestCase):
@@ -75,18 +74,22 @@ class TestSat(unittest.TestCase):
     def test_model_count(self):
         # allow 3 inputs free
         startpoints = self.s27.startpoints()
+
         startpoints.pop()
         self.assertEqual(
             model_count(self.s27, assumptions={s: True for s in startpoints}), 2
         )
+
         startpoints.pop()
         self.assertEqual(
             model_count(self.s27, assumptions={s: True for s in startpoints}), 4
         )
+
         startpoints.pop()
         self.assertEqual(
             model_count(self.s27, assumptions={s: True for s in startpoints}), 8
         )
+
         startpoints.pop()
         self.assertEqual(
             model_count(self.s27, assumptions={s: True for s in startpoints}), 16
@@ -96,18 +99,22 @@ class TestSat(unittest.TestCase):
     def test_approx_model_count(self):
         # approxmc seems to be accurate in this range
         startpoints = self.s27.startpoints()
+
         startpoints.pop()
         self.assertEqual(
             approx_model_count(self.s27, assumptions={s: True for s in startpoints}), 2
         )
+
         startpoints.pop()
         self.assertEqual(
             approx_model_count(self.s27, assumptions={s: True for s in startpoints}), 4
         )
+
         startpoints.pop()
         self.assertEqual(
             approx_model_count(self.s27, assumptions={s: True for s in startpoints}), 8
         )
+
         startpoints.pop()
         self.assertEqual(
             approx_model_count(self.s27, assumptions={s: True for s in startpoints}), 16
