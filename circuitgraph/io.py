@@ -5,7 +5,6 @@ import os
 from glob import glob
 import tempfile
 
-from pyeda.parsing import boolexpr
 import pyverilog
 from pyverilog.vparser.parser import VerilogParser
 from pyverilog.vparser import ast as ast_types
@@ -450,6 +449,8 @@ def circuit_to_verilog(c, seq_types=None):
                 wires.append(n)
         elif c.type(n) in ["0", "1"]:
             insts.append(f"assign {sanitize_name(n)} = 1'b{c.type(n)}")
+            if not c.output(n):
+                wires.append(n)
         elif c.type(n) in ["input"]:
             inputs.append(n)
         elif c.type(n) in ["ff", "lat"]:
