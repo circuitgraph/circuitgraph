@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.0.3] - 2020-09-08
+### Fixed
+- Image link in README is external so that it will appear in pypi
+
 ## [0.0.2] - 2020-09-08
 ### Fixed
 - Constant valued nodes are now written to verilog
