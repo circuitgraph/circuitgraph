@@ -1,4 +1,4 @@
-<img src="https://github.com/circuitgraph/circuitgraph/blob/master/docs/circuitgraph.png" width="300">
+<img src="https://raw.githubusercontent.com/circuitgraph/circuitgraph/master/docs/circuitgraph.png" width="300">
 
 # CircuitGraph
 
