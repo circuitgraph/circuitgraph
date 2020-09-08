@@ -19,7 +19,6 @@ Look at the examples in `circuitgraph.circuit.Circuit` for a quickstart guide.
 from circuitgraph.circuit import *
 from circuitgraph.io import *
 from circuitgraph.sat import *
-from circuitgraph.sim import *
 from circuitgraph.transform import *
 from circuitgraph.logic import *
 from circuitgraph.utils import *
