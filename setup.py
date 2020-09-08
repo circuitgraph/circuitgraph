@@ -6,10 +6,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="circuitgraph",
-    version="0.0.1",
+    version="0.0.2",
     author="Ruben Purdy, Joseph Sweeney",
     author_email="rpurdy@andrew.cmu.edu, joesweeney@cmu.edu",
-    description="Tools for working with Boolean circuits as graphs.",
+    description="Tools for working with boolean circuits as graphs.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/circuitgraph/circuitgraph",
@@ -25,5 +25,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
-    install_requires=["pyeda", "python-sat", "PyVerilator", "pyverilog", "networkx",],
+    install_requires=["python-sat", "pyverilog", "networkx",],
 )

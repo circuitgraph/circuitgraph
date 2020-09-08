@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 - pyverilator support, because it breaks installation on python distributions built without tkinter
+- pyeda dependency because it is no longer needed for parsing
 
 ## [0.0.1] - 2020-08-30
 Initial release
