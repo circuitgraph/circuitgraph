@@ -33,6 +33,8 @@ for manipulating and analyzing Boolean circuits.
 
 # Statement of need 
 
+Analysis, manipulation, and generation of Boolean circuits is fundamental to many aspects of
+digital hardware design, cryptography, constraint solving, and other areas. 
 Highly optimized software for processing Boolean circuits exists. Unfortunately
 it generally is proprietary, with expensive license fees. Furthermore, these
 options suffer from poor documentation, are closed source, and typically 
@@ -40,12 +42,13 @@ rely on Tool control language (Tcl). While simple, Tcl is slow, has limited
 libraries and supporting community, and is unnecessarily verbose. These reasons
 motivate the development of our open source solution. While this software will 
 directly benefit our lab as a research platform, it certainly has application 
-in other environments such as the classroom.
+in other environments such as the classroom. 
 
 # Functionality
 
 The functionality of `CircuitGraph` has been tailored to our research needs, however,
-the library is easily extensible to many other applications of Boolean circuits.
+the library is easily extensible to many other applications of Boolean circuits. In the 
+following sub sections, we highlight some of the library's key features.
 
 The core of the library is the `Circuit` class, which internally uses a `networkx.DiGraph` 
 data structure from [@SciPyProceedings_11]. The class implements key Boolean circuit functionalities 
@@ -105,5 +108,10 @@ cg.sat(c0,{'a':False})
 # get number of solutions to circuit with 'a' False
 cg.model_count(c0,{'a':False})
 ```
+
+# Requirements
+
+As previously mentioned, `CircuitGraph` relies on the `networkx` and `pysat` libraries. Additionally, it uses `pyverilog`
+to parse verilog netlists. 
 
 # References
