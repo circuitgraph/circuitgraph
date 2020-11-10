@@ -57,7 +57,15 @@ on top of the graph as we describe below.
 ## Interfaces
 
 Compatibility with existing systems is a primary goal for our library. Towards this end, 
-we have built interfaces for Verilog, the most commonly used Boolean circuit format.
+we have built interfaces for a subset of Verilog, the most commonly used Boolean circuit format.
+This library supports generic stuctural Verilog which is the typical output of synthesis tools. 
+Specifically, the library can parse combinational gates in the following forms. 
+
+```verilog
+assign a = b|(c^d);
+xor(e,f,g);
+```
+
 Additionally, we plan on supporting the BLIF and Bench formats. 
 We also have provided a library of generic and benchmark circuits that can be quickly instantiated.
 
