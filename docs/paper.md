@@ -59,15 +59,14 @@ on top of the graph as we describe below.
 Compatibility with existing systems is a primary goal for our library. Towards this end, 
 we have built interfaces for a subset of Verilog, the most commonly used Boolean circuit format.
 This library supports generic stuctural Verilog which is the typical output of synthesis tools. 
-Specifically, the library can parse combinational gates in the following forms. 
+Specifically, the library can parse combinational gates in the following forms. We also provide an interface 
+to parse sequential elements. 
 
 ```verilog
 assign a = b|(c^d);
 xor(e,f,g);
 ```
-
-Additionally, we plan on supporting the BLIF and Bench formats. 
-We also have provided a library of generic and benchmark circuits that can be quickly instantiated.
+Additionally, we have provided a library of generic and benchmark circuits that can be quickly instantiated.
 
 ```python
 import circuitgraph as cg
@@ -87,7 +86,7 @@ An example of this syntax is below.
 # add an OR gate named 'a'
 c0.add('a','or')
 
-# create an AND with circuit inputs in a single line
+# create an AND gate with circuit inputs in a single line. Input connections to the gate can be spcified with the fanin argument, output connections with fanout. 
 c0.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
 ```
 
@@ -116,6 +115,9 @@ cg.sat(c0,{'a':False})
 # get number of solutions to circuit with 'a' False
 cg.model_count(c0,{'a':False})
 ```
+
+# Future Work
+We plan on adding support for the BLIF and Bench formats. Additionally, we may expand the compatibility with Verilog standards if a need is shown. Other improvements could interfaces to open source simulation and Automatic Test Pattern Generation (ATPG) tools. 
 
 # Requirements
 
