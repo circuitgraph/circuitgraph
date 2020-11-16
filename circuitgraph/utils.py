@@ -34,7 +34,7 @@ def int_to_bin(i, w, lend=False):
     w : int
             Width of conversion
     lend : bool
-            Endianess of returned tuple, helpful for iterating.
+            Endianness of returned tuple, helpful for iterating.
 
     Returns
     -------
@@ -58,7 +58,7 @@ def bin_to_int(b, lend=False):
     b : tuple of bool
             Binary tuple.
     lend : bool
-            Endianess of tuple.
+            Endianness of tuple.
 
     Returns
     -------

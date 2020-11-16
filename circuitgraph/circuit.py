@@ -1,6 +1,6 @@
 """Class for circuit graphs
 
-The Circuit class can be constructed from a generic verilog file or
+The Circuit class can be constructed from a generic Verilog file or
 existing graph. Each node in the graph represents a logic gate and has
 an associated name and gate type. The supported types are:
 

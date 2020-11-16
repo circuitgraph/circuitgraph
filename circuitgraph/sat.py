@@ -97,7 +97,7 @@ def cnf(c):
                 formula.append([variables.id(n), -variables.id(f)])
                 formula.append([-variables.id(n), variables.id(f)])
         elif c.type(n) in ["xor", "xnor"]:
-            # break into heirarchical xors
+            # break into hierarchical xors
             nets = list(c.fanin(n))
 
             # xor gen

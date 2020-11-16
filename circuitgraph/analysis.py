@@ -17,7 +17,7 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1):
     Parameters
     ----------
     c: Circuit
-            Circuit to compute average sensitivy for.
+            Circuit to compute average sensitivity for.
     n : str
             Node to compute average sensitivity for.
     approx : bool
@@ -103,7 +103,7 @@ def sensitize(c, n, assumptions):
     # setup circuit
     s = sensitization_transform(c, n)
 
-    # find a senstizing input
+    # find a sensitizing input
     result = sat(s, {"sat": True, **assumptions})
     if not result:
         return None

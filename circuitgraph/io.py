@@ -28,7 +28,7 @@ class SequentialElement:
                 ports to the names of the ports on the module
         code_def:
                 The code defining the module, used for writing the circuit
-                to verilog
+                to Verilog
         """
         self.name = name
         self.seq_type = seq_type
@@ -96,7 +96,7 @@ cadence_seq_types = [
 
 def from_file(path, name=None, seq_types=None):
     """
-    Creates a new `Circuit` from a verilog file.
+    Creates a new `Circuit` from a Verilog file.
 
     Parameters
     ----------
@@ -191,12 +191,12 @@ def bench_to_circuit(bench, name):
 
 def verilog_to_circuit(verilog, name, seq_types=None):
     """
-    Creates a new Circuit from a verilog file.
+    Creates a new Circuit from a Verilog file.
 
     Parameters
     ----------
     path: str
-            verilog code.
+            Verilog code.
     name: str
             the module name.
     seq_types: list of dicts of str:str
@@ -227,7 +227,7 @@ def verilog_to_circuit(verilog, name, seq_types=None):
                     raise ValueError(
                         f"circuitgraph cannot parse parameters (line {child.lineno})"
                     )
-            # Parse portlist
+            # Parse port list
             elif type(child) == ast_types.Portlist:
                 for cip in [i for i in child.children() if type(i) == ast_types.Ioport]:
                     for ci in cip.children():
@@ -370,7 +370,7 @@ def parse_operator(operator, circuit, outputs, dest=None):
     # pyverilog parses `~` as 'unot'
     if op == "unot":
         op = "not"
-    # multibit operators (not yet parsable)
+    # multi-bit operators (not yet parsable)
     if op.startswith("l"):
         raise ValueError(
             f"circuitgraph cannot parse multibit operators (line {operator.lineno})"
@@ -386,7 +386,7 @@ def parse_operator(operator, circuit, outputs, dest=None):
 
 def to_file(c, path, seq_types=None):
     """
-    Writes a `Circuit` to a verilog file.
+    Writes a `Circuit` to a Verilog file.
 
     Parameters
     ----------
@@ -403,19 +403,19 @@ def to_file(c, path, seq_types=None):
 
 def circuit_to_verilog(c, seq_types=None):
     """
-    Generates a str of verilog code from a `CircuitGraph`.
+    Generates a str of Verilog code from a `CircuitGraph`.
 
     Parameters
     ----------
     c: Circuit
-            the circuit to turn into verilog.
+            the circuit to turn into Verilog.
     seq_types: list of dicts of str:str
             the sequential element types.
 
     Returns
     -------
     str
-        verilog code.
+        Verilog code.
     """
     inputs = []
     outputs = []
