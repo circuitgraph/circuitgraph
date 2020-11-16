@@ -55,7 +55,10 @@ If you would like to perform simulation you can install [Verilator](https://www.
 If you would like to perform synthesis you can install either Cadence Genus or [Yosys](http://www.clifford.at/yosys/). If you're going to use Genus, you must provide the path to a synthesis library to use by setting the `CIRCUITGRAPH_GENUS_LIBRARY_PATH` variable. 
 
 
-## Developing
+## Contributing
+
+If you have ideas on how to improve this library we'd love to hear your suggestions. Please open an issue. 
+If you want to develop the improvement yourself, please consider the information below.
 
 CI Testing and coverage is setup using [Travis CI](https://travis-ci.org/) and [Codecov](https://codecov.io). 
  If you would like to generate coverage information locally, install coverage and codecov.
