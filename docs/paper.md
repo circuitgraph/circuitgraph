@@ -92,7 +92,7 @@ c0.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
 
 ## Synthesis
 We provide an interface to common synthesis tools including `yosys` from [@wolf2019yosys] and `Cadence Genus`. This allows 
-the user to run basic synthesis routines on circuits from within Python. 
+the user to run basic synthesis routines on circuits from within Python. Specifically, we support the generic synthesis routines of both tools. 
 ```python
 # synthesize circuit with yosys
 c_syn = cg.syn(c0, "Yosys")
@@ -117,7 +117,8 @@ cg.model_count(c0,{'a':False})
 ```
 
 # Future Work
-We plan on adding support for the BLIF and Bench formats. Additionally, we may expand the compatibility with Verilog standards if a need is shown. Other improvements could interfaces to open source simulation and Automatic Test Pattern Generation (ATPG) tools. 
+We plan on adding support for the BLIF and Bench formats. Additionally, we may expand the compatibility with Verilog standards if a need is shown. Support for timing-based synthesis may be useful in some scenarios. Other improvements could interfaces to open source simulation and Automatic Test Pattern Generation (ATPG) tools. 
+
 
 # Requirements
 
