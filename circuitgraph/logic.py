@@ -34,7 +34,7 @@ def adder(w):
         c.add(f"and_ac_{i}", "and", fanin=[f"a_{i}", carry])
         c.add(f"and_bc_{i}", "and", fanin=[f"b_{i}", carry])
         carry = c.add(
-            f"carry_{i}", "or", fanin=[f"and_ab_{i}", f"and_ac_{i}", f"and_bc_{i}",]
+            f"carry_{i}", "or", fanin=[f"and_ab_{i}", f"and_ac_{i}", f"and_bc_{i}",],
         )
 
     c.add(f"out_{w}", "buf", fanin=carry, output=True)

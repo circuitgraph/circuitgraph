@@ -8,8 +8,10 @@ from subprocess import PIPE, run
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Cadical
 
+
 def interrupt(s):
     s.interrupt()
+
 
 def add_assumptions(formula, variables, assumptions):
     for n, val in assumptions.items():
@@ -135,7 +137,7 @@ def cnf(c):
         elif c.type(n) == "1":
             formula.append([variables.id(n)])
         elif c.type(n) in ["ff", "lat", "input"]:
-            formula.append([variables.id(n),-variables.id(n)])
+            formula.append([variables.id(n), -variables.id(n)])
         else:
             print(f"unknown gate type: {c.type(n)}")
             code.interact(local=dict(globals(), **locals()))

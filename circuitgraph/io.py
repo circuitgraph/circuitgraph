@@ -177,7 +177,7 @@ def bench_to_circuit(bench, name):
         inputs = (
             input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
         )
-        c.add(net,gate,fanin=inputs)
+        c.add(net, gate, fanin=inputs)
 
     # get outputs
     in_regex = r"(?:OUTPUT|output)\s*\((.+?)\)"
