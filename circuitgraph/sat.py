@@ -1,6 +1,5 @@
 """Functions for executing SAT, #SAT, and approx-#SAT on circuits"""
 
-import signal
 import tempfile
 import re
 import code

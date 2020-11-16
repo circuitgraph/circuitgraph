@@ -1,18 +1,13 @@
 """Functions for transforming circuits"""
 
-import math
-import code
 from subprocess import PIPE, Popen
-import subprocess
 from tempfile import NamedTemporaryFile
-from random import sample
 import os
-import shutil
 
 import networkx as nx
 
 from circuitgraph import Circuit
-from circuitgraph.utils import clog2, lint
+from circuitgraph.utils import clog2
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
 
 

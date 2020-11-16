@@ -5,7 +5,6 @@ import os
 from glob import glob
 import tempfile
 
-import pyverilog
 from pyverilog.vparser.parser import VerilogParser
 from pyverilog.vparser import ast as ast_types
 
@@ -178,6 +177,7 @@ def bench_to_circuit(bench, name):
         inputs = (
             input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
         )
+        c.add(net,gate,fanin=inputs)
 
     # get outputs
     in_regex = r"(?:OUTPUT|output)\s*\((.+?)\)"
@@ -221,7 +221,6 @@ def verilog_to_circuit(verilog, name, seq_types=None):
             raise ValueError(f"Module {name} not found")
         module_def = module_def[0]
         outputs = set()
-        widths = dict()
         for child in module_def.children():
             if type(child) == ast_types.Paramlist:
                 if child.children():
