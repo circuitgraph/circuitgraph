@@ -380,7 +380,20 @@ def parse_operator(operator, circuit, outputs, dest=None):
         if any(i.startswith("\\") for i in fanin):
             dest = dest.replace("\\", "")
             dest = f"\\{dest}"
-    circuit.add(dest, op, fanin=fanin, output=dest in outputs)
+    if op == "cond":
+        circuit.add(f"not_{fanin[0]}", "not", fanin=fanin[0])
+        circuit.add(
+            f"{dest}_sel_{fanin[2]}", "and", fanin=[f"not_{fanin[0]}", fanin[2]]
+        )
+        circuit.add(f"{dest}_sel_{fanin[1]}", "and", fanin=[fanin[0], fanin[1]])
+        circuit.add(
+            dest,
+            "or",
+            fanin=[f"{dest}_sel_{fanin[1]}", f"{dest}_sel_{fanin[2]}"],
+            output=dest in outputs,
+        )
+    else:
+        circuit.add(dest, op, fanin=fanin, output=dest in outputs)
     return dest
 
 

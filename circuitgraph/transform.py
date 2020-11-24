@@ -149,7 +149,7 @@ def seq_graph(c):
     return s
 
 
-def syn(c, engine, print_output=False):
+def syn(c, engine="Yosys", print_output=False):
     """
     Synthesizes the circuit using Genus.
 
@@ -194,7 +194,7 @@ def syn(c, engine, print_output=False):
                     "yosys",
                     "-p",
                     f"read_verilog {tmp_in.name}; "
-                    "proc; opt; fsm; opt; memory; opt; clean; "
+                    "synth; "
                     f"write_verilog -noattr {tmp_out.name}",
                 ]
 

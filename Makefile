@@ -6,7 +6,7 @@ docs/index.html : circuitgraph/* docs/templates/*
 	cp -r html/circuitgraph/* docs
 
 test :
-	python -m unittest
+	python3 -m unittest
 
 coverage :
 	coverage run -m unittest
