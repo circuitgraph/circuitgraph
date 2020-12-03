@@ -25,7 +25,7 @@ bibliography: paper.bib
 
 # Summary
 
-A Boolean circuit is a fundamental mathematical model ubiquitous to the 
+A Boolean circuit is a fundamental mathematical model ubiquitous in the 
 design of modern computers. The model consists of a directed graph wherein 
 nodes are logic gates with corresponding Boolean functions and edges are wires 
 which determine the composition of the gates. `CircuitGraph` is a open-source Python library
@@ -92,7 +92,7 @@ c0.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
 
 ## Synthesis
 We provide an interface to common synthesis tools including `yosys` from [@wolf2019yosys] and `Cadence Genus`. This allows 
-the user to run basic synthesis routines on circuits from within Python. Specifically, we support the generic synthesis routines of both tools. 
+the user to run basic synthesis routines on circuits from within Python. Specifically, we support the generic multi-level synthesis routines of both tools. 
 ```python
 # synthesize circuit with yosys
 c_syn = cg.syn(c0, "Yosys")
