@@ -51,7 +51,7 @@ the library is easily extensible to many other applications of Boolean circuits.
 following sub sections, we highlight some of the library's key features.
 
 The core of the library is the `Circuit` class, which internally uses a `networkx.DiGraph` 
-data structure from [@SciPyProceedings_11]. The class implements key Boolean circuit functionalities 
+data structure from @SciPyProceedings_11. The class implements key Boolean circuit functionalities 
 on top of the graph as we describe below.
 
 ## Interfaces
@@ -91,7 +91,7 @@ c0.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
 ```
 
 ## Synthesis
-We provide an interface to common synthesis tools including `yosys` from [@wolf2019yosys] and `Cadence Genus`. This allows 
+We provide an interface to common synthesis tools including `yosys` from @wolf2019yosys and `Cadence Genus`. This allows 
 the user to run basic synthesis routines on circuits from within Python. Specifically, we support the generic multi-level synthesis routines of both tools. 
 ```python
 # synthesize circuit with yosys
@@ -103,7 +103,7 @@ c_syn = cg.syn(c0, "Yosys")
 Satisfiability is an essential problem related to Boolean circuits. Surprisingly, commercial 
 synthesis tools do not directly support its use (although the open source tools yosys does). 
 We add satisfiability to our library which in turn enables a wide array of analysis including
-sensitization, sensitivity, and influence. Our implementation utilizes `pysat` from [@imms-sat18]. 
+sensitization, sensitivity, and influence. Our implementation utilizes `pysat` from @imms-sat18. 
 The main interface is simple allowing the user to determine
 satisfiability of a circuit under a set of variable assignments. To develop more complex routines, the user can also access the underlying `pysat.solver` instance. 
 In conjunction with satisfiability, we provide interfaces to approximate and exact model count algorithms. 
