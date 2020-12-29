@@ -90,6 +90,7 @@ pre-commit install
 If you use this software for your research, we ask you cite this publication:
 https://joss.theoj.org/papers/10.21105/joss.02646
 
+```
 @article{sweeney2020circuitgraph,
   title={CircuitGraph: A Python package for Boolean circuits},
   author={Sweeney, Joseph and Purdy, Ruben and Blanton, Ronald D and Pileggi, Lawrence},
@@ -99,3 +100,4 @@ https://joss.theoj.org/papers/10.21105/joss.02646
   pages={2646},
   year={2020}
 }
+```
