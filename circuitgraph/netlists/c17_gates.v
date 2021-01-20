@@ -1,4 +1,4 @@
-module c17(G1,G16,G17,G2,G3,G4,G5);
+module c17_gates(G1,G16,G17,G2,G3,G4,G5);
 input G1,G2,G3,G4,G5;
 output G16,G17;
 

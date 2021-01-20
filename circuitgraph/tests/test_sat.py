@@ -8,7 +8,7 @@ from circuitgraph.sat import sat, model_count, approx_model_count
 class TestSat(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.c17 = cg.from_lib("c17_gates", "c17")
+        cls.c17 = cg.from_lib("c17_gates")
         cls.s27 = cg.from_lib("s27")
 
     def test_sat(self):

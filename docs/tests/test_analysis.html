@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.tests.test_analysis API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -31,13 +31,13 @@
 import circuitgraph as cg
 from circuitgraph.analysis import *
 from circuitgraph.sat import sat
-from random import sample, randint
+from random import choice, randint
 from itertools import product
 
 
 class TestAnalysis(unittest.TestCase):
     def setUp(self):
-        self.s27 = cg.from_lib(&#34;s27&#34;)
+        self.s27 = cg.strip_blackboxes(cg.from_lib(&#34;s27&#34;))
 
     def test_avg_sensitivity(self):
         c = cg.Circuit()
@@ -68,8 +68,11 @@ class TestAnalysis(unittest.TestCase):
 
     def test_sensitivity(self):
         # pick random node and input value
-        n = sample(self.s27.nodes(), 1)[0]
+        n = choice(tuple(self.s27.nodes()))
         sp = self.s27.startpoints(n)
+        while len(sp) &lt; 1:
+            n = choice(tuple(self.s27.nodes()))
+            sp = self.s27.startpoints(n)
 
         # find sensitivity
         sen = sensitivity(self.s27, n)
@@ -88,24 +91,31 @@ class TestAnalysis(unittest.TestCase):
             sen_sim = max(sen_sim, input_sen)
 
         # check answer
+        if sen!=sen_sim:
+            import code; code.interact(local=dict(**globals(),**locals()))
         self.assertEqual(sen, sen_sim)
 
     def test_sensitize(self):
         # pick random node
-        nr = sample(self.s27.nodes() - set([&#34;clk&#34;]), 1)[0]
+        nr = choice(tuple(self.s27.nodes()
+            - set([&#34;clk&#34;]) - self.s27.filter_type([&#34;0&#34;, &#34;1&#34;])))
 
         # pick startpoint
-        ns = sample(self.s27.startpoints() - set([&#34;clk&#34;]), 1)[0]
+        ns = choice(tuple(self.s27.startpoints() - set([&#34;clk&#34;])))
 
         # pick endpoint
-        ne = sample(self.s27.endpoints() - set([&#34;clk&#34;]), 1)[0]
+        ne = choice(tuple(self.s27.endpoints() - set([&#34;clk&#34;])))
 
         for n in [nr, ns, ne]:
             # get input
-            input_val = sensitize(self.s27, n, {n: True})
+            input_val = sensitize(self.s27, n, {f&#39;c0_{n}&#39;: True})
+            if not input_val:
+                import code; code.interact(local=dict(**globals(),**locals()))
 
             # simulate input
             result = sat(self.s27, input_val)
+            if not result[n]:
+                import code; code.interact(local=dict(**globals(),**locals()))
             self.assertTrue(result[n])
 
             # remove constrained input
@@ -124,9 +134,7 @@ class TestAnalysis(unittest.TestCase):
 
     def test_signal_probability(self):
         # pick random node
-        n = sample(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints(), 1)[
-            0
-        ]
+        n = choice(tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints()))
         sp = self.s27.startpoints(n)
 
         # get signal prob
@@ -192,7 +200,7 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">class TestAnalysis(unittest.TestCase):
     def setUp(self):
-        self.s27 = cg.from_lib(&#34;s27&#34;)
+        self.s27 = cg.strip_blackboxes(cg.from_lib(&#34;s27&#34;))
 
     def test_avg_sensitivity(self):
         c = cg.Circuit()
@@ -223,8 +231,11 @@ not have a method with the specified name.</p></div>
 
     def test_sensitivity(self):
         # pick random node and input value
-        n = sample(self.s27.nodes(), 1)[0]
+        n = choice(tuple(self.s27.nodes()))
         sp = self.s27.startpoints(n)
+        while len(sp) &lt; 1:
+            n = choice(tuple(self.s27.nodes()))
+            sp = self.s27.startpoints(n)
 
         # find sensitivity
         sen = sensitivity(self.s27, n)
@@ -243,24 +254,31 @@ not have a method with the specified name.</p></div>
             sen_sim = max(sen_sim, input_sen)
 
         # check answer
+        if sen!=sen_sim:
+            import code; code.interact(local=dict(**globals(),**locals()))
         self.assertEqual(sen, sen_sim)
 
     def test_sensitize(self):
         # pick random node
-        nr = sample(self.s27.nodes() - set([&#34;clk&#34;]), 1)[0]
+        nr = choice(tuple(self.s27.nodes()
+            - set([&#34;clk&#34;]) - self.s27.filter_type([&#34;0&#34;, &#34;1&#34;])))
 
         # pick startpoint
-        ns = sample(self.s27.startpoints() - set([&#34;clk&#34;]), 1)[0]
+        ns = choice(tuple(self.s27.startpoints() - set([&#34;clk&#34;])))
 
         # pick endpoint
-        ne = sample(self.s27.endpoints() - set([&#34;clk&#34;]), 1)[0]
+        ne = choice(tuple(self.s27.endpoints() - set([&#34;clk&#34;])))
 
         for n in [nr, ns, ne]:
             # get input
-            input_val = sensitize(self.s27, n, {n: True})
+            input_val = sensitize(self.s27, n, {f&#39;c0_{n}&#39;: True})
+            if not input_val:
+                import code; code.interact(local=dict(**globals(),**locals()))
 
             # simulate input
             result = sat(self.s27, input_val)
+            if not result[n]:
+                import code; code.interact(local=dict(**globals(),**locals()))
             self.assertTrue(result[n])
 
             # remove constrained input
@@ -279,9 +297,7 @@ not have a method with the specified name.</p></div>
 
     def test_signal_probability(self):
         # pick random node
-        n = sample(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints(), 1)[
-            0
-        ]
+        n = choice(tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints()))
         sp = self.s27.startpoints(n)
 
         # get signal prob
@@ -314,7 +330,7 @@ not have a method with the specified name.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def setUp(self):
-    self.s27 = cg.from_lib(&#34;s27&#34;)</code></pre>
+    self.s27 = cg.strip_blackboxes(cg.from_lib(&#34;s27&#34;))</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_analysis.TestAnalysis.test_avg_sensitivity"><code class="name flex">
@@ -365,8 +381,11 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">def test_sensitivity(self):
     # pick random node and input value
-    n = sample(self.s27.nodes(), 1)[0]
+    n = choice(tuple(self.s27.nodes()))
     sp = self.s27.startpoints(n)
+    while len(sp) &lt; 1:
+        n = choice(tuple(self.s27.nodes()))
+        sp = self.s27.startpoints(n)
 
     # find sensitivity
     sen = sensitivity(self.s27, n)
@@ -385,6 +404,8 @@ not have a method with the specified name.</p></div>
         sen_sim = max(sen_sim, input_sen)
 
     # check answer
+    if sen!=sen_sim:
+        import code; code.interact(local=dict(**globals(),**locals()))
     self.assertEqual(sen, sen_sim)</code></pre>
 </details>
 </dd>
@@ -399,20 +420,25 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">def test_sensitize(self):
     # pick random node
-    nr = sample(self.s27.nodes() - set([&#34;clk&#34;]), 1)[0]
+    nr = choice(tuple(self.s27.nodes()
+        - set([&#34;clk&#34;]) - self.s27.filter_type([&#34;0&#34;, &#34;1&#34;])))
 
     # pick startpoint
-    ns = sample(self.s27.startpoints() - set([&#34;clk&#34;]), 1)[0]
+    ns = choice(tuple(self.s27.startpoints() - set([&#34;clk&#34;])))
 
     # pick endpoint
-    ne = sample(self.s27.endpoints() - set([&#34;clk&#34;]), 1)[0]
+    ne = choice(tuple(self.s27.endpoints() - set([&#34;clk&#34;])))
 
     for n in [nr, ns, ne]:
         # get input
-        input_val = sensitize(self.s27, n, {n: True})
+        input_val = sensitize(self.s27, n, {f&#39;c0_{n}&#39;: True})
+        if not input_val:
+            import code; code.interact(local=dict(**globals(),**locals()))
 
         # simulate input
         result = sat(self.s27, input_val)
+        if not result[n]:
+            import code; code.interact(local=dict(**globals(),**locals()))
         self.assertTrue(result[n])
 
         # remove constrained input
@@ -441,9 +467,7 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">def test_signal_probability(self):
     # pick random node
-    n = sample(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints(), 1)[
-        0
-    ]
+    n = choice(tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints()))
     sp = self.s27.startpoints(n)
 
     # get signal prob
@@ -499,7 +523,7 @@ not have a method with the specified name.</p></div>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

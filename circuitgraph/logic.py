@@ -4,7 +4,6 @@ from itertools import product
 
 from circuitgraph import Circuit
 from circuitgraph.utils import clog2
-from circuitgraph.transform import strip_io, relabel
 
 
 def adder(w):
@@ -27,17 +26,18 @@ def adder(w):
         # sum
         c.add(f"a_{i}", "input")
         c.add(f"b_{i}", "input")
-        c.add(f"out_{i}", "xor", fanin=[f"a_{i}", f"b_{i}", carry], output=True)
+        c.add(f"sum_{i}", "xor", fanin=[f"a_{i}", f"b_{i}", carry])
+        c.add(f"out_{i}", "output", fanin=f"sum_{i}")
 
         # carry
         c.add(f"and_ab_{i}", "and", fanin=[f"a_{i}", f"b_{i}"])
         c.add(f"and_ac_{i}", "and", fanin=[f"a_{i}", carry])
         c.add(f"and_bc_{i}", "and", fanin=[f"b_{i}", carry])
         carry = c.add(
-            f"carry_{i}", "or", fanin=[f"and_ab_{i}", f"and_ac_{i}", f"and_bc_{i}",],
+            f"carry_{i}", "or", fanin=[f"and_ab_{i}", f"and_ac_{i}", f"and_bc_{i}"],
         )
 
-    c.add(f"out_{w}", "buf", fanin=carry, output=True)
+    c.add(f"out_{w}", "output", fanin=carry)
     return c
 
 
@@ -67,11 +67,12 @@ def mux(w):
         sels.append([f"not_sel_{i}", f"sel_{i}"])
 
     # create output or
-    c.add("out", "or", output=True)
+    c.add("or", "or")
+    c.add("out", "output", fanin="or")
 
     i = 0
     for sel in product(*sels[::-1]):
-        c.add(f"and_{i}", "and", fanin=[*sel, f"in_{i}"], fanout="out")
+        c.add(f"and_{i}", "and", fanin=[*sel, f"in_{i}"], fanout="or")
 
         i += 1
         if i == w:
@@ -111,8 +112,7 @@ def popcount(w):
             ns += ["null"]
 
         # instantiate and connect adder
-        a = strip_io(adder(aw))
-        c.extend(relabel(a, {n: f"add_{i}_{n}" for n in a.nodes()}))
+        c.add_subcircuit(adder(aw), f"add_{i}")
         for j, (n, m) in enumerate(zip(ns, ms)):
             c.connect(n, f"add_{i}_a_{j}")
             c.connect(m, f"add_{i}_b_{j}")
@@ -123,72 +123,71 @@ def popcount(w):
 
     # connect outputs
     for i, o in enumerate(ps[0]):
-        c.add(f"out_{i}", "buf", fanin=o, output=True)
+        c.add(f"out_{i}", "output", fanin=o)
 
     if "null" in c:
         c.set_type("null", "0")
-        c.set_output("null", False)
 
     return c
 
 
-def comb_lat():
-    """
-    Combinational model of a latch.
-
-    Returns
-    -------
-    Circuit
-            Latch model circuit.
-    """
-    lm = Circuit(name="lat")
-
-    # mux
-    m = strip_io(mux(2))
-    lm.extend(relabel(m, {n: f"mux_{n}" for n in m.nodes()}))
-
-    # inputs
-    lm.add("si", "input", fanout="mux_in_0")
-    lm.add("d", "input", fanout="mux_in_1")
-    lm.add("clk", "input", fanout="mux_sel_0")
-    lm.add("r", "input")
-    lm.add("s", "input")
-
-    # logic
-    lm.add("r_b", "not", fanin="r")
-    lm.add("qr", "and", fanin=["mux_out", "r_b"])
-    lm.add("q", "or", fanin=["qr", "s"], output=True)
-    lm.add("so", "buf", fanin="q", output=True)
-
-    return lm
-
-
-def comb_ff():
-    """
-    Combinational model of a flip-flop.
-
-    Returns
-    -------
-    Circuit
-            Flip-flop model circuit.
-    """
-    fm = Circuit(name="ff")
-
-    # mux
-    m = strip_io(mux(2))
-    fm.extend(relabel(m, {n: f"mux_{n}" for n in m.nodes()}))
-
-    # inputs
-    fm.add("si", "input", fanout="mux_in_1")
-    fm.add("d", "input", fanout="mux_in_0")
-    fm.add("clk", "input", fanout="mux_sel_0")
-    fm.add("r", "input")
-    fm.add("s", "input")
-
-    # logic
-    fm.add("r_b", "not", fanin="r")
-    fm.add("qr", "and", fanin=["si", "r_b"])
-    fm.add("q", "or", fanin=["qr", "s"], output=True)
-    fm.add("so", "buf", fanin="mux_out", output=True)
-
-    return fm
+# def comb_lat():
+#    """
+#    Combinational model of a latch.
+#
+#    Returns
+#    -------
+#    Circuit
+#            Latch model circuit.
+#    """
+#    lm = Circuit(name="lat")
+#
+#    # mux
+#    m = strip_io(mux(2))
+#    lm.extend(m, {n: f"mux_{n}" for n in m.nodes()})
+#
+#    # inputs
+#    lm.add("si", "input", fanout="mux_in_0")
+#    lm.add("d", "input", fanout="mux_in_1")
+#    lm.add("clk", "input", fanout="mux_sel_0")
+#    lm.add("r", "input")
+#    lm.add("s", "input")
+#
+#    # logic
+#    lm.add("r_b", "not", fanin="r")
+#    lm.add("qr", "and", fanin=["mux_out", "r_b"])
+#    lm.add("q", "or", fanin=["qr", "s"], output=True)
+#    lm.add("so", "buf", fanin="q", output=True)
+#
+#    return lm
+#
+#
+# def comb_ff():
+#    """
+#    Combinational model of a flip-flop.
+#
+#    Returns
+#    -------
+#    Circuit
+#            Flip-flop model circuit.
+#    """
+#    fm = Circuit(name="ff")
+#
+#    # mux
+#    m = strip_io(mux(2))
+#    fm.extend(m, {n: f"mux_{n}" for n in m.nodes()})
+#
+#    # inputs
+#    fm.add("si", "input", fanout="mux_in_1")
+#    fm.add("d", "input", fanout="mux_in_0")
+#    fm.add("clk", "input", fanout="mux_sel_0")
+#    fm.add("r", "input")
+#    fm.add("s", "input")
+#
+#    # logic
+#    fm.add("r_b", "not", fanin="r")
+#    fm.add("qr", "and", fanin=["si", "r_b"])
+#    fm.add("q", "or", fanin=["qr", "s"], output=True)
+#    fm.add("so", "buf", fanin="mux_out", output=True)
+#
+#    return fm

@@ -13,10 +13,11 @@ class TestCircuit(unittest.TestCase):
         c = cg.Circuit()
         c.add("a", "input")
         c.add("b", "input")
-        c.add("c", "and", fanin=["a", "b"], output=True)
+        c.add("c", "and", fanin=["a", "b"])
+        c.add("co", "output", fanin="c")
         self.assertTrue("a" in c)
-        self.assertTrue(len(c) == 3)
-        self.assertListEqual(list(iter(c)), ["a", "b", "c"])
+        self.assertTrue(len(c) == 4)
+        self.assertSetEqual(c.nodes(), set(["a", "b", "c", "co"]))
 
     def test_constructor(self):
         g = nx.DiGraph()
@@ -43,29 +44,13 @@ class TestCircuit(unittest.TestCase):
         c.set_type(["a", "b"], "xor")
         self.assertListEqual(c.type(["a", "b"]), ["xor", "xor"])
 
-    def test_output(self):
-        c = cg.Circuit()
-        c.add("a", "xor", output=True)
-        c.add("b", "xor")
-        self.assertListEqual(c.output(["a", "b"]), [True, False])
-        c.set_output("a", False)
-        self.assertEqual(c.output("a"), False)
-        c.set_output(["a", "b"])
-        self.assertListEqual(c.output(["a", "b"]), [True, True])
-        c.graph.add_node("c")
-        self.assertRaises(KeyError, c.output, "c")
-
     def test_nodes(self):
         c = cg.Circuit()
         c.add("a", "xor")
         c.add("b", "or")
         c.add("c", "and")
-        c.add("d", "xor", output=True)
+        c.add("d", "xor")
         self.assertSetEqual(c.nodes(), set(["a", "b", "c", "d"]))
-        self.assertSetEqual(c.nodes(types="xor"), set(["a", "d"]))
-        self.assertSetEqual(c.nodes(output=True), set(["d"]))
-        self.assertSetEqual(c.nodes(types="xor", output=True), set(["d"]))
-        self.assertSetEqual(c.nodes(types=["xor", "or"]), set(["a", "b", "d"]))
 
     def test_edges(self):
         c = cg.Circuit()
@@ -85,7 +70,6 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(
             c.edges(), set([("a", "b"), ("e", "c"), ("e", "d"), ("f", "c")])
         )
-        self.assertRaises(ValueError, c.add, "g", "ff", fanin=["a", "b"])
         self.assertRaises(ValueError, c.add, "g", "input", fanin="a")
         self.assertRaises(ValueError, c.add, "0g", "input")
 
@@ -99,16 +83,6 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(c.nodes(), set(["b", "c"]))
         c.remove(["b", "c"])
         self.assertSetEqual(c.nodes(), set())
-
-    def test_extend(self):
-        c = cg.Circuit()
-        c.add("a", "input")
-        c.add("b", "not", fanin="a")
-        c2 = cg.Circuit()
-        c2.add("c", "input")
-        c2.add("d", "buf", fanin="c")
-        c.extend(c2)
-        self.assertSetEqual(c.nodes(), set(["a", "b", "c", "d"]))
 
     def test_connect(self):
         c = cg.Circuit()
@@ -161,62 +135,60 @@ class TestCircuit(unittest.TestCase):
         c.add("f", "not", fanin="c")
         c.add("g", "or", fanin=["c", "d"])
         c.add("h", "and", fanin=["e", "f"])
-        c.add("i", "ff", fanin="g")
-        c.add("j", "nor", fanin=["i", "h"])
-        c.add("k", "not", fanin="i")
+
+        ff = cg.BlackBox("ff", ["CK", "D"], ["Q"])
+        c.add_blackbox(ff, "ff0", {"CK": "clk", "D": "a", "Q": "d"})
+        c.add_blackbox(ff, "ff1", {"CK": "clk", "D": "g"})
+
+        c.add("j", "nor", fanin=["ff1.Q", "h"])
+        c.add("k", "not", fanin="ff1.Q")
         c.add("l", "buf", fanin="k")
+
         self.assertSetEqual(c.transitive_fanin("a"), set())
         self.assertSetEqual(
-            c.transitive_fanin("j"), set(["a", "b", "c", "e", "f", "h", "i"])
+            c.transitive_fanin("j"), set(["a", "b", "c", "e", "f", "h", "ff1.Q"])
         )
         self.assertSetEqual(
             c.transitive_fanin(["j", "l"]),
-            set(["a", "b", "c", "e", "f", "h", "i", "k"]),
-        )
-        self.assertSetEqual(
-            c.transitive_fanin(["j"], stopat_types=[]),
-            set(["a", "b", "c", "d", "e", "f", "g", "h", "i"]),
-        )
-        self.assertSetEqual(
-            c.transitive_fanin(["j"], stopat_nodes=["e", "f"]),
-            set(["e", "f", "h", "i"]),
+            set(["a", "b", "c", "e", "f", "h", "ff1.Q", "k"]),
         )
         self.assertSetEqual(c.transitive_fanout("l"), set())
-        self.assertSetEqual(c.transitive_fanout(["c"]), set(["f", "g", "h", "i", "j"]))
         self.assertSetEqual(
-            c.transitive_fanout(["a", "c"]), set(["e", "f", "g", "h", "i", "j"])
+            c.transitive_fanout(["c"]), set(["f", "g", "h", "ff1.D", "j"])
         )
         self.assertSetEqual(
-            c.transitive_fanout(["c"], stopat_types=[]),
-            set(["f", "g", "h", "j", "i", "k", "l"]),
-        )
-        self.assertSetEqual(
-            c.transitive_fanout(["c"], stopat_nodes=["f", "g"]), set(["f", "g"])
+            c.transitive_fanout(["a", "c"]),
+            set(["e", "f", "g", "h", "ff1.D", "j", "ff0.D"]),
         )
 
     def test_comb_depth(self):
         c = cg.Circuit()
         c.add("a", "input")
         c.add("b", "input")
-        c.add("c", "input")
-        c.add("d", "input")
-        c.add("e", "xor", fanin=["a", "b"])
-        c.add("f", "not", fanin="c")
-        c.add("g", "or", fanin=["c", "d"])
-        c.add("h", "and", fanin=["e", "f"])
-        c.add("i", "ff", fanin="g")
-        c.add("j", "nor", fanin=["i", "h"])
-        self.assertEqual(c.fanin_comb_depth("j"), 3)
-        self.assertEqual(c.fanin_comb_depth(["i", "j"]), 3)
-        self.assertEqual(c.fanin_comb_depth("j", shortest=True), 1)
-        # FIXME: What should be fanin_comb_depth of input or ff?
-        #        and fanout_comb_depth of output
-        # FIXME: How should this and transitive act when there's a cycle
-        self.assertEqual(c.fanout_comb_depth("c"), 3)
-        self.assertEqual(c.fanout_comb_depth(["a", "c"]), 3)
-        self.assertEqual(c.fanout_comb_depth("c", shortest=True), 1)
+        c.add("c", "xor", fanin=["a", "b"])
+        c.add("d", "buf", fanin=["a"])
+        c.add("e", "not", fanin=["c"])
+        c.add("f", "not", fanin=["c"])
+        c.add("g", "buf", fanin="d")
+        c.add("h", "output", fanin="d")
+        c.add("i", "buf", fanin="e")
+        c.add("j", "input")
+        c.add("k", "and", fanin=["i", "j", "f"])
+        c.add("l", "and", fanin=["k", "g"])
+        c.add("m", "output", fanin="l")
 
-    def test_seq(self):
+        self.assertEqual(c.fanout_depth("e"), 4)
+        self.assertEqual(c.fanout_depth(["e", "g"]), 4)
+        self.assertEqual(c.fanout_depth("a"), 6)
+
+        self.assertEqual(c.fanin_depth("m"), 6)
+        self.assertEqual(c.fanin_depth(["f", "m"]), 6)
+        self.assertEqual(c.fanin_depth("g"), 2)
+
+        c.connect("f", "c")
+        self.assertRaises(ValueError, c.fanout_depth, "a")
+
+    def test_blackbox(self):
         c = cg.Circuit()
         c.add("clk", "input")
         c.add("rst", "input")
@@ -226,31 +198,22 @@ class TestCircuit(unittest.TestCase):
         c.add("c", "input")
         c.add("d", "xor", fanin=["a", "b"])
         c.add("e", "and", fanin=["c", "d"])
-        c.add("f", "ff", fanin="d", clk="clk", r="rst", s="set")
-        c.add("g", "lat", fanin="e", clk="clk", r="rst", s="set")
+
+        ff = cg.BlackBox("ff", ["CK", "D"], ["Q"])
+        c.add_blackbox(ff, "ff0", {"CK": "clk", "D": "a", "Q": "d"})
+
         c.add("h", "output", fanin="f")
         c.add("i", "output", fanin="g")
-        c.graph.add_node("j", type="and")
-        self.assertSetEqual(c.lats(), set("g"))
-        self.assertSetEqual(c.ffs(), set("f"))
-        self.assertSetEqual(c.seq(), set(["f", "g"]))
-        self.assertListEqual(c.r(["f", "g"]), ["rst", "rst"])
-        self.assertListEqual(c.s(["f", "g"]), ["set", "set"])
-        self.assertListEqual(c.clk(["f", "g"]), ["clk", "clk"])
-        self.assertListEqual(c.d(["f", "g"]), ["d", "e"])
-        self.assertRaises(KeyError, c.r, "j")
-        self.assertRaises(KeyError, c.s, "j")
-        self.assertRaises(KeyError, c.clk, "j")
-        self.assertRaises(KeyError, c.d, "j")
 
     def test_io(self):
         c = cg.Circuit()
         c.add("a", "input")
         c.add("b", "input")
-        c.add("c", "xor", fanin=["a", "b"], output=True)
+        c.add("c", "xor", fanin=["a", "b"])
+        c.add("co", "output", fanin="c")
         self.assertSetEqual(c.inputs(), set(["a", "b"]))
-        self.assertSetEqual(c.outputs(), set(["c"]))
-        self.assertSetEqual(c.io(), set(["a", "b", "c"]))
+        self.assertSetEqual(c.outputs(), set(["co"]))
+        self.assertSetEqual(c.io(), set(["a", "b", "co"]))
 
     def test_standpoints_endpoints(self):
         c = cg.Circuit()
@@ -262,18 +225,24 @@ class TestCircuit(unittest.TestCase):
         c.add("c", "input")
         c.add("d", "xor", fanin=["a", "b"])
         c.add("e", "and", fanin=["c", "d"])
-        c.add("f", "ff", fanin="d", clk="clk", r="rst", s="set")
-        c.add("g", "lat", fanin="e", clk="clk", r="rst", s="set")
-        c.add("h", "output", fanin="f")
-        c.add("i", "output", fanin="g")
+
+        ff = cg.BlackBox("ff", ["CK", "D"], ["Q"])
+        c.add_blackbox(ff, "ff0", {"CK": "clk", "D": "d", "Q": "d"})
+        c.add_blackbox(ff, "ff1", {"CK": "clk", "D": "e", "Q": "d"})
+
+        c.add("h", "output", fanin="ff0.Q")
+        c.add("i", "output", fanin="ff1.Q")
+
         self.assertSetEqual(
-            c.startpoints(), set(["clk", "rst", "set", "a", "b", "c", "f", "g"])
+            c.startpoints(), set(["clk", "rst", "set", "a", "b", "c", "ff0.Q", "ff1.Q"])
         )
-        self.assertSetEqual(c.endpoints(), set(["d", "e"]))
-        self.assertSetEqual(c.startpoints("h"), set(["f"]))
-        self.assertSetEqual(c.endpoints("c"), set(["e"]))
+        self.assertSetEqual(
+            c.endpoints(), set(["ff1.D", "ff0.D", "ff0.CK", "ff1.CK", "h", "i"])
+        )
+        self.assertSetEqual(c.startpoints("h"), set(["ff0.Q"]))
+        self.assertSetEqual(c.endpoints("c"), set(["ff1.D"]))
         self.assertSetEqual(c.startpoints("c"), set(["c"]))
-        self.assertSetEqual(c.endpoints("e"), set(["e"]))
+        self.assertSetEqual(c.endpoints("e"), set(["ff1.D"]))
 
     def test_is_cyclic(self):
         c = cg.Circuit()
@@ -282,3 +251,10 @@ class TestCircuit(unittest.TestCase):
         self.assertFalse(c.is_cyclic())
         c.connect("b", "b")
         self.assertTrue(c.is_cyclic())
+
+    def test_relabel(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "xor", fanin="a")
+        c.relabel({"a": "n"})
+        self.assertSetEqual(c.nodes(), set(["b", "n"]))

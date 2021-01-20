@@ -8,6 +8,9 @@ docs/index.html : circuitgraph/* docs/templates/*
 test :
 	python3 -m unittest
 
+test_% :
+	python3 -m unittest circuitgraph/tests/test_$*.py
+
 coverage :
 	coverage run -m unittest
 	coverage html
@@ -20,3 +23,6 @@ upload : dist
 	python3 -m twine upload dist/*
 	# test repo
 	#python3 -m twine upload --repository testpypi dist/*
+
+install_editable :
+	pip3 install -e .

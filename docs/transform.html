@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.transform API documentation</title>
 <meta name="description" content="Functions for transforming circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -29,21 +29,16 @@
 </summary>
 <pre><code class="python">&#34;&#34;&#34;Functions for transforming circuits&#34;&#34;&#34;
 
-import math
-import code
 from subprocess import PIPE, Popen
-import subprocess
 from tempfile import NamedTemporaryFile
-from random import sample
 import os
-import shutil
 
 import networkx as nx
 
 from circuitgraph import Circuit
-from circuitgraph.utils import clog2, lint
+from circuitgraph.utils import clog2
+from circuitgraph.logic import popcount
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
-
 
 def copy(c):
     &#34;&#34;&#34;
@@ -51,47 +46,30 @@ def copy(c):
 
     Parameters
     ----------
-    c: Circuit
-            circuit to rename
+    c : Circuit
+            Input circuit.
 
     Returns
     -------
     Circuit
-            Relabeled circuit.
+            Circuit copy.
 
     &#34;&#34;&#34;
-    return Circuit(graph=c.graph.copy(), name=c.name)
-
-
-def relabel(c, mapping):
-    &#34;&#34;&#34;
-    Returns renamed copy of a circuit.
-
-    Parameters
-    ----------
-    c: Circuit
-            circuit to rename
-    mapping : dict of str:str
-            mapping of old to new names
-
-    Returns
-    -------
-    Circuit
-            Relabeled circuit.
-
-    &#34;&#34;&#34;
-    return Circuit(graph=nx.relabel_nodes(c.graph, mapping), name=c.name)
-
+    return Circuit(
+        graph=c.graph.copy(),
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )
 
 def strip_io(c):
     &#34;&#34;&#34;
-    Removes a circuit&#39;s outputs and converts inputs to buffers for easy
+    Removes circuit&#39;s outputs and converts inputs to buffers for easy
     instantiation.
 
     Parameters
     ----------
     c : Circuit
-            circuit to strip io from
+            Input circuit.
 
     Returns
     -------
@@ -99,12 +77,14 @@ def strip_io(c):
             Circuit with removed io
     &#34;&#34;&#34;
     g = c.graph.copy()
-    for o in c.outputs():
-        g.nodes[o][&#34;output&#34;] = False
-    for i in c.inputs():
-        g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
+    for o in c.io():
+        g.nodes[o][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(graph=g, name=c.name)
+    return Circuit(
+        graph=g,
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )
 
 
 def strip_outputs(c):
@@ -115,7 +95,7 @@ def strip_outputs(c):
     Parameters
     ----------
     c : Circuit
-            circuit to strip io from
+            Input circuit.
 
     Returns
     -------
@@ -124,9 +104,13 @@ def strip_outputs(c):
     &#34;&#34;&#34;
     g = c.graph.copy()
     for o in c.outputs():
-        g.nodes[o][&#34;output&#34;] = False
+        g.nodes[o][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(graph=g, name=c.name)
+    return Circuit(
+        graph=g,
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )
 
 
 def strip_inputs(c):
@@ -137,7 +121,7 @@ def strip_inputs(c):
     Parameters
     ----------
     c : Circuit
-            circuit to strip inputs from
+            Input circuit.
 
     Returns
     -------
@@ -148,42 +132,101 @@ def strip_inputs(c):
     for i in c.inputs():
         g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(graph=g, name=c.name)
+    return Circuit(
+        graph=g,
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )
 
 
-def seq_graph(c):
+def strip_blackboxes(c):
     &#34;&#34;&#34;
-    Creates a Circuit of the sequential elements and IO.
+    Converts blackboxes to io.
 
     Parameters
     ----------
-    c: Circuit
+    c : Circuit
+            Input circuit.
 
     Returns
     -------
     Circuit
-            Sequential circuit.
-
+            Circuit with removed blackboxes.
     &#34;&#34;&#34;
-    s = Circuit(name=f&#34;{c.name}_seq&#34;)
+    g = c.graph.copy()
+    bb_pins = []
+    for n in c.filter_type(&#34;bb_input&#34;):
+        g.nodes[n][&#34;type&#34;] = &#34;output&#34;
+        bb_pins.append(n)
+    for n in c.filter_type(&#34;bb_output&#34;):
+        g.nodes[n][&#34;type&#34;] = &#34;input&#34;
+        bb_pins.append(n)
 
-    # add nodes
-    for n in c.inputs() | c.seq():
-        s.add(n, c.type(n), output=c.output(n))
+    # rename nodes
+    mapping = {n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in bb_pins}
+    for k in mapping.values():
+        if k in g: raise ValueError(f&#34;Overlapping blackbox name: {k}&#34;)
+    nx.relabel_nodes(g, mapping, copy=False)
 
-    # add edges
-    for n in c.seq():
-        s.connect(c.startpoints(c.d(n)), n)
-
-    # add outputs
-    for n in s:
-        if c.endpoints(n) &amp; c.outputs():
-            s.set_output(n, True)
-
-    return s
+    return Circuit(graph=g, name=c.name)
 
 
-def syn(c, engine, print_output=False):
+def relabel(c):
+    &#34;&#34;&#34;
+    Builds copy with relabeled nodes.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    mapping : dict of str:str
+            Relabeling of nodes.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed blackboxes.
+    &#34;&#34;&#34;
+    g = nx.relabel_nodes(g, mapping)
+    return Circuit(
+        graph=g,
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )
+
+#def seq_graph(c):
+#    &#34;&#34;&#34;
+#    Creates a Circuit of the sequential elements and IO.
+#
+#    Parameters
+#    ----------
+#    c: Circuit
+#
+#    Returns
+#    -------
+#    Circuit
+#            Sequential circuit.
+#
+#    &#34;&#34;&#34;
+#    s = Circuit(name=f&#34;{c.name}_seq&#34;)
+#
+#    # add nodes
+#    for n in c.inputs() | c.seq():
+#        s.add(n, c.type(n), output=c.output(n))
+#
+#    # add edges
+#    for n in c.seq():
+#        s.connect(c.startpoints(c.d(n)), n)
+#
+#    # add outputs
+#    for n in s:
+#        if c.endpoints(n) &amp; c.outputs():
+#            s.set_output(n, True)
+#
+#    return s
+
+
+def syn(c, engine=&#34;yosys&#34;, print_output=False):
     &#34;&#34;&#34;
     Synthesizes the circuit using Genus.
 
@@ -192,7 +235,7 @@ def syn(c, engine, print_output=False):
     c : Circuit
             Circuit to synthesize.
     engine : str
-            Synthesis tool to use (&#39;Genus&#39; or &#39;Yosys&#39;)
+            Synthesis tool to use (&#39;genus&#39; or &#39;yosys&#39;)
     print_output : bool
             Option to print synthesis log
 
@@ -207,7 +250,7 @@ def syn(c, engine, print_output=False):
         tmp_in.write(bytes(verilog, &#34;ascii&#34;))
         tmp_in.flush()
         with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_output&#34;) as tmp_out:
-            if engine == &#34;Genus&#34;:
+            if engine == &#34;genus&#34;:
                 cmd = [
                     &#34;genus&#34;,
                     &#34;-no_gui&#34;,
@@ -223,17 +266,17 @@ def syn(c, engine, print_output=False):
                     f&#39;redirect {tmp_out.name} &#34;write_hdl -generic&#34;;\n&#39;
                     &#34;exit;&#34;,
                 ]
-            elif engine == &#34;Yosys&#34;:
+            elif engine == &#34;yosys&#34;:
                 cmd = [
                     &#34;yosys&#34;,
                     &#34;-p&#34;,
                     f&#34;read_verilog {tmp_in.name}; &#34;
-                    &#34;proc; opt; fsm; opt; memory; opt; clean; &#34;
+                    &#34;synth; &#34;
                     f&#34;write_verilog -noattr {tmp_out.name}&#34;,
                 ]
 
             else:
-                raise ValueError(&#34;synthesis engine must be Yosys or Genus&#34;)
+                raise ValueError(&#34;synthesis engine must be yosys or genus&#34;)
 
             process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
             while True:
@@ -265,12 +308,14 @@ def ternary(c):
             Encoded circuit.
 
     &#34;&#34;&#34;
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
     t = copy(c)
 
     # add dual nodes
     for n in c:
         if c.type(n) in [&#34;and&#34;, &#34;nand&#34;]:
-            t.add(f&#34;{n}_x&#34;, &#34;and&#34;, output=c.output(n))
+            t.add(f&#34;{n}_x&#34;, &#34;and&#34;)
             t.add(
                 f&#34;{n}_x_in_fi&#34;,
                 &#34;or&#34;,
@@ -285,7 +330,7 @@ def ternary(c):
                 )
 
         elif c.type(n) in [&#34;or&#34;, &#34;nor&#34;]:
-            t.add(f&#34;{n}_x&#34;, &#34;and&#34;, output=c.output(n))
+            t.add(f&#34;{n}_x&#34;, &#34;and&#34;)
             t.add(
                 f&#34;{n}_x_in_fi&#34;,
                 &#34;or&#34;,
@@ -300,32 +345,25 @@ def ternary(c):
 
         elif c.type(n) in [&#34;buf&#34;, &#34;not&#34;]:
             p = c.fanin(n).pop()
-            t.add(f&#34;{n}_x&#34;, &#34;buf&#34;, output=c.output(n), fanin=f&#34;{p}_x&#34;)
+            t.add(f&#34;{n}_x&#34;, &#34;buf&#34;, fanin=f&#34;{p}_x&#34;)
+
+        elif c.type(n) in [&#34;output&#34;]:
+            p = c.fanin(n).pop()
+            t.add(f&#34;{n}_x&#34;, &#34;output&#34;, fanin=f&#34;{p}_x&#34;)
 
         elif c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;]:
             t.add(
-                f&#34;{n}_x&#34;, &#34;or&#34;, output=c.output(n), fanin=(f&#34;{p}_x&#34; for p in c.fanin(n))
+                f&#34;{n}_x&#34;, &#34;or&#34;, fanin=(f&#34;{p}_x&#34; for p in c.fanin(n))
             )
 
         elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
-            t.add(f&#34;{n}_x&#34;, &#34;0&#34;, output=c.output(n))
+            t.add(f&#34;{n}_x&#34;, &#34;0&#34;)
 
         elif c.type(n) in [&#34;input&#34;]:
-            t.add(f&#34;{n}_x&#34;, &#34;input&#34;, output=c.output(n))
+            t.add(f&#34;{n}_x&#34;, &#34;input&#34;)
 
-        elif c.type(n) in [&#34;ff&#34;, &#34;lat&#34;]:
-            t.add(
-                f&#34;{n}_x&#34;,
-                c.type(n),
-                output=c.output(n),
-                clk=f&#34;{c.clk(n)}_x&#34;,
-                r=f&#34;{c.r(n)}_x&#34;,
-                s=f&#34;{c.s(n)}_x&#34;,
-                fanin=f&#34;{c.fanin(n).pop()}_x&#34;,
-            )
-
-        elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
-            continue
+        else:
+            raise ValueError(f&#34;Node {n} has unrecognized type: {c.type(n)}&#34;)
 
     return t
 
@@ -350,6 +388,12 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     Circuit
             Miter circuit.
     &#34;&#34;&#34;
+    # check for blackboxes
+    if c0.blackboxes:
+        raise ValueError(f&#34;{c0.name} contains a blackbox&#34;)
+    if c1 and c1.blackboxes:
+        raise ValueError(f&#34;{c1.name} contains a blackbox&#34;)
+
     # clean inputs
     if not c1:
         c1 = c0
@@ -359,89 +403,95 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
         endpoints = c0.endpoints() &amp; c1.endpoints()
 
     # create miter, relabel
-    m = relabel(c0, {n: f&#34;c0_{n}&#34; for n in c0.nodes() - startpoints})
-    m.extend(relabel(c1, {n: f&#34;c1_{n}&#34; for n in c1.nodes() - startpoints}))
-    strip_outputs(m)
+    m = Circuit(name=f&#34;miter_{c0.name}_{c1.name}&#34;)
+    m.add_subcircuit(c0, &#34;c0&#34;)
+    m.add_subcircuit(c1, &#34;c1&#34;)
 
-    # compare endpoints
-    m.add(&#34;sat&#34;, &#34;or&#34;, output=True)
-    for o in endpoints - startpoints:
-        m.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanout=[&#34;sat&#34;], fanin=[f&#34;c0_{o}&#34;, f&#34;c1_{o}&#34;])
+    # tie inputs
+    for n in startpoints:
+        m.add(n, &#34;input&#34;, fanout=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;])
+
+    # compare outputs
+    m.add(&#34;miter&#34;, &#34;or&#34;)
+    m.add(&#34;sat&#34;, &#34;output&#34;, fanin=&#34;miter&#34;)
+    for n in endpoints:
+        m.add(f&#34;dif_{n}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;], fanout=&#34;miter&#34;)
+
     return m
 
 
-def comb(c):
-    &#34;&#34;&#34;
-    Creates combinational version of the circuit.
+#def comb(c):
+#    &#34;&#34;&#34;
+#    Creates combinational version of the circuit.
+#
+#    Parameters
+#    ----------
+#    c : Circuit
+#            Sequential circuit to make combinational.
+#
+#    Returns
+#    -------
+#    Circuit
+#            Combinational circuit.
+#
+#    &#34;&#34;&#34;
+#    import circuitgraph.logic as logic
+#
+#    c_comb = copy(c)
+#    lat_model = logic.comb_lat()
+#    ff_model = logic.comb_ff()
+#
+#    for s in c.seq():
+#        model = lat_model if c.type(s) == &#34;lat&#34; else ff_model
+#        relabeled_model = relabel(model, {n: f&#34;{s}_{n}&#34; for n in model})
+#        c_comb.extend(relabeled_model)
+#        c_comb.connect(f&#34;{s}_q&#34;, c_comb.fanout(s))
+#        c_comb.connect(c_comb.fanin(s), f&#34;{s}_d&#34;)
+#        if c.clk(s):
+#            c_comb.connect(c.clk(s), f&#34;{s}_clk&#34;)
+#        if c.r(s):
+#            c_comb.connect(c.r(s), f&#34;{s}_rst&#34;)
+#        if c.s(s):
+#            c_comb.connect(c.s(s), f&#34;{s}_set&#34;)
+#        c_comb.remove(s)
+#
+#    return c_comb
 
-    Parameters
-    ----------
-    c : Circuit
-            Sequential circuit to make combinational.
 
-    Returns
-    -------
-    Circuit
-            Combinational circuit.
-
-    &#34;&#34;&#34;
-    import circuitgraph.logic as logic
-
-    c_comb = copy(c)
-    lat_model = logic.comb_lat()
-    ff_model = logic.comb_ff()
-
-    for s in c.seq():
-        model = lat_model if c.type(s) == &#34;lat&#34; else ff_model
-        relabeled_model = relabel(model, {n: f&#34;{s}_{n}&#34; for n in model})
-        c_comb.extend(relabeled_model)
-        c_comb.connect(f&#34;{s}_q&#34;, c_comb.fanout(s))
-        c_comb.connect(c_comb.fanin(s), f&#34;{s}_d&#34;)
-        if c.clk(s):
-            c_comb.connect(c.clk(s), f&#34;{s}_clk&#34;)
-        if c.r(s):
-            c_comb.connect(c.r(s), f&#34;{s}_rst&#34;)
-        if c.s(s):
-            c_comb.connect(c.s(s), f&#34;{s}_set&#34;)
-        c_comb.remove(s)
-
-    return c_comb
-
-
-def unroll(c, cycles):
-    &#34;&#34;&#34;
-    Creates combinational unrolling of the circuit.
-
-    Parameters
-    ----------
-    c : Circuit
-            Sequential circuit to unroll.
-    cycles : int
-            Number of cycles to unroll
-
-    Returns
-    -------
-    Circuit
-            Unrolled circuit.
-
-    &#34;&#34;&#34;
-    u = Circuit()
-    c_comb = comb(c)
-    for i in range(cycles):
-        u.extend(c_comb, {n: f&#34;{n}_{i}&#34; for n in c_comb})
-        if i == 0:
-            # convert si to inputs
-            for n in c:
-                if c.type(n) in [&#34;lat&#34;, &#34;ff&#34;]:
-                    u.set_type(f&#34;{n}_si_{i}&#34;, &#34;input&#34;)
-
-        else:
-            # connect prev si
-            for n in c:
-                if c.type(n) in [&#34;lat&#34;, &#34;ff&#34;]:
-                    u.connect(f&#34;{n}_si_{i-1}&#34;, f&#34;{n}_si_{i}&#34;)
-
-    return u
+#def unroll(c, cycles):
+#    &#34;&#34;&#34;
+#    Creates combinational unrolling of the circuit.
+#
+#    Parameters
+#    ----------
+#    c : Circuit
+#            Sequential circuit to unroll.
+#    cycles : int
+#            Number of cycles to unroll
+#
+#    Returns
+#    -------
+#    Circuit
+#            Unrolled circuit.
+#
+#    &#34;&#34;&#34;
+#    u = Circuit()
+#    c_comb = comb(c)
+#    for i in range(cycles):
+#        u.extend(c_comb, {n: f&#34;{n}_{i}&#34; for n in c_comb})
+#        if i == 0:
+#            # convert si to inputs
+#            for n in c:
+#                if c.type(n) in [&#34;lat&#34;, &#34;ff&#34;]:
+#                    u.set_type(f&#34;{n}_si_{i}&#34;, &#34;input&#34;)
+#
+#        else:
+#            # connect prev si
+#            for n in c:
+#                if c.type(n) in [&#34;lat&#34;, &#34;ff&#34;]:
+#                    u.connect(f&#34;{n}_si_{i-1}&#34;, f&#34;{n}_si_{i}&#34;)
+#
+#    return u
 
 
 def influence_transform(c, n, s):
@@ -463,30 +513,36 @@ def influence_transform(c, n, s):
             Influence circuit.
 
     &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+
     # check if s is in startpoints
     sp = c.startpoints(n)
     if s not in sp:
         raise ValueError(f&#34;{s} is not in startpoints of {n}&#34;)
 
     # get input cone
-    fiNodes = c.transitive_fanin(n) | set([n])
-    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
+    fi_nodes = c.transitive_fanin(n) | set([n])
+    sub_c = Circuit(&#34;sub_cone&#34;,c.graph.subgraph(fi_nodes).copy())
 
-    # remove outs, convert startpoints
-    sub_c.set_output(sub_c.outputs(), False)
-    sub_c.set_type(sub_c.startpoints(), &#34;input&#34;)
-
-    # create two copies of sub circuit
+    # create two copies of sub circuit, share inputs except s
     infl = Circuit(name=f&#34;infl_{s}_on_{n}&#34;)
-    infl.extend(sub_c)
-    infl.extend(relabel(sub_c, {g: f&#34;s1_{g}&#34; for g in sub_c if g not in sp - set([s])}))
-    infl.add(&#34;sat&#34;, &#34;xor&#34;, fanin=[n, f&#34;s1_{n}&#34;], output=True)
-    infl.add(f&#34;not_{s}&#34;, &#34;not&#34;, fanin=s, fanout=f&#34;s1_{s}&#34;)
+    infl.add_subcircuit(sub_c, &#34;c0&#34;)
+    infl.add_subcircuit(sub_c, &#34;c1&#34;)
+    for g in sp:
+        if g != s:
+            infl.add(g, &#34;input&#34;, fanout=[f&#34;c0_{g}&#34;, f&#34;c1_{g}&#34;])
+        else:
+            infl.add(f&#34;not_{g}&#34;, &#34;not&#34;, fanout=f&#34;c1_{s}&#34;)
+            infl.add(g, &#34;input&#34;, fanout=[f&#34;c0_{g}&#34;, f&#34;not_{g}&#34;])
+    infl.add(&#34;dif&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;])
+    infl.add(&#34;sat&#34;, &#34;output&#34;, fanin=&#34;dif&#34;)
 
     return infl
 
 
-def sensitivity_transform(c, n, startpoints=None):
+def sensitivity_transform(c, n):
     &#34;&#34;&#34;
     Creates a circuit to compute sensitivity.
 
@@ -496,8 +552,6 @@ def sensitivity_transform(c, n, startpoints=None):
             Sequential circuit to unroll.
     n : str
             Node to compute sensitivity at.
-    startpoints : iterable of str
-            startpoints of n to flip.
 
     Returns
     -------
@@ -505,56 +559,53 @@ def sensitivity_transform(c, n, startpoints=None):
             Sensitivity circuit.
 
     &#34;&#34;&#34;
-    import circuitgraph.logic as logic
 
-    # choose all startpoints if not specified
-    if startpoints is None:
-        startpoints = c.startpoints(n)
-    all_startpoints = c.startpoints(n)
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
 
-    # get fanin cone of node
-    if n in c.startpoints():
-        raise ValueError(f&#34;{n} is in startpoints&#34;)
+    # check for startpoints
+    startpoints = c.startpoints(n)
+    if len(startpoints) &lt; 1:
+        raise ValueError(f&#34;{n} has no startpoints&#34;)
 
     # get input cone
-    fiNodes = c.transitive_fanin(n) | set([n])
-    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
+    fi_nodes = c.transitive_fanin(n) | set([n])
+    sub_c = Circuit(graph=c.graph.subgraph(fi_nodes).copy())
 
-    # remove outs, convert startpoints
-    sub_c.set_output(sub_c.outputs(), False)
-    sub_c.set_type(sub_c.startpoints(), &#34;input&#34;)
-    sub_c.disconnect(sub_c.nodes(), sub_c.startpoints())
-
-    # create sensitivity circuit and add first copy of subcircuit
+    # create sensitivity circuit
     sen = Circuit()
-    sen.extend(sub_c)
+    sen.add_subcircuit(sub_c, &#34;orig&#34;)
+    for s in startpoints:
+        sen.add(s, &#34;input&#34;, fanout=f&#34;orig_{s}&#34;)
+
+    # add popcount
+    sen.add_subcircuit(popcount(len(startpoints)), &#34;pc&#34;)
+
+    # add inverted input copies
+    for i,s0 in enumerate(startpoints):
+        sen.add_subcircuit(sub_c, f&#34;inv_{s0}&#34;)
+
+        # connect inputs
+        for s1 in startpoints:
+            if s0 != s1:
+                sen.connect(s1, f&#34;inv_{s0}_{s1}&#34;)
+            else:
+                # connect inverted input
+                sen.set_type(f&#34;inv_{s0}_{s1}&#34;, &#34;not&#34;)
+                sen.connect(s0, f&#34;inv_{s0}_{s1}&#34;)
+
+        # compare to orig
+        sen.add(
+            f&#34;dif_{s0}&#34;, &#34;xor&#34;,
+            fanin=[f&#34;orig_{n}&#34;, f&#34;inv_{s0}_{n}&#34;],
+            fanout=f&#34;pc_in_{i}&#34;
+        )
+        sen.add(f&#34;dif_out_{s0}&#34;, &#34;output&#34;, fanin=f&#34;dif_{s0}&#34;)
 
     # instantiate population count
-    p = strip_io(logic.popcount(len(startpoints)))
-    p = relabel(p, {g: f&#34;pop_{g}&#34; for g in p})
-    sen.extend(p)
     for o in range(clog2(len(startpoints) + 1)):
-        sen.add(f&#34;out_{o}&#34;, &#34;buf&#34;, fanin=f&#34;pop_out_{o}&#34;, output=True)
-
-    # stamp out a copies of the circuit with s inverted
-    for i, s in enumerate(startpoints):
-        mapping = {
-            g: f&#34;sen_{s}_{g}&#34; for g in sub_c if g not in all_startpoints - set([s])
-        }
-        sen.extend(relabel(sub_c, mapping))
-
-        # connect inverted input
-        sen.set_type(f&#34;sen_{s}_{s}&#34;, &#34;not&#34;)
-        sen.connect(s, f&#34;sen_{s}_{s}&#34;)
-
-        # compare to first copy
-        sen.add(
-            f&#34;difference_{s}&#34;,
-            &#34;xor&#34;,
-            fanin=[n, f&#34;sen_{s}_{n}&#34;],
-            fanout=f&#34;pop_in_{i}&#34;,
-            output=True,
-        )
+        sen.add(f&#34;sen_out_{o}&#34;, &#34;output&#34;, fanin=f&#34;pc_out_{o}&#34;)
 
     return sen
 
@@ -576,28 +627,16 @@ def sensitization_transform(c, n):
             Output circuit.
 
     &#34;&#34;&#34;
-    # create miter, relabel
-    s = copy(c)
-    s.extend(relabel(c, {n: f&#34;c1_{n}&#34; for n in c}))
-    strip_outputs(s)
-
-    # connect startpoints
-    for g in c.startpoints():
-        s.set_type(f&#34;c1_{g}&#34;, &#34;buf&#34;)
-        s.disconnect(s.fanin(f&#34;c1_{g}&#34;), f&#34;c1_{g}&#34;)
-        s.connect(g, f&#34;c1_{g}&#34;)
-
-    # compare endpoints
-    s.add(&#34;sat&#34;, &#34;or&#34;, output=True)
-    for o in c.endpoints():
-        s.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanout=[&#34;sat&#34;], fanin=[o, f&#34;c1_{o}&#34;])
+    # create miter
+    m = miter(c)
+    m.name = f&#34;{c.name}_sensitized_{n}&#34;
 
     # flip node in c1
-    s.disconnect(s.fanin(f&#34;c1_{n}&#34;), f&#34;c1_{n}&#34;)
-    s.set_type(f&#34;c1_{n}&#34;, &#34;not&#34;)
-    s.connect(n, f&#34;c1_{n}&#34;)
+    m.disconnect(m.fanin(f&#34;c1_{n}&#34;), f&#34;c1_{n}&#34;)
+    m.set_type(f&#34;c1_{n}&#34;, &#34;not&#34;)
+    m.connect(f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;)
 
-    return s</code></pre>
+    return m</code></pre>
 </details>
 </section>
 <section>
@@ -607,63 +646,6 @@ def sensitization_transform(c, n):
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="circuitgraph.transform.comb"><code class="name flex">
-<span>def <span class="ident">comb</span></span>(<span>c)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Creates combinational version of the circuit.</p>
-<h2 id="parameters">Parameters</h2>
-<dl>
-<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>Sequential circuit to make combinational.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>Circuit</code></dt>
-<dd>Combinational circuit.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def comb(c):
-    &#34;&#34;&#34;
-    Creates combinational version of the circuit.
-
-    Parameters
-    ----------
-    c : Circuit
-            Sequential circuit to make combinational.
-
-    Returns
-    -------
-    Circuit
-            Combinational circuit.
-
-    &#34;&#34;&#34;
-    import circuitgraph.logic as logic
-
-    c_comb = copy(c)
-    lat_model = logic.comb_lat()
-    ff_model = logic.comb_ff()
-
-    for s in c.seq():
-        model = lat_model if c.type(s) == &#34;lat&#34; else ff_model
-        relabeled_model = relabel(model, {n: f&#34;{s}_{n}&#34; for n in model})
-        c_comb.extend(relabeled_model)
-        c_comb.connect(f&#34;{s}_q&#34;, c_comb.fanout(s))
-        c_comb.connect(c_comb.fanin(s), f&#34;{s}_d&#34;)
-        if c.clk(s):
-            c_comb.connect(c.clk(s), f&#34;{s}_clk&#34;)
-        if c.r(s):
-            c_comb.connect(c.r(s), f&#34;{s}_rst&#34;)
-        if c.s(s):
-            c_comb.connect(c.s(s), f&#34;{s}_set&#34;)
-        c_comb.remove(s)
-
-    return c_comb</code></pre>
-</details>
-</dd>
 <dt id="circuitgraph.transform.copy"><code class="name flex">
 <span>def <span class="ident">copy</span></span>(<span>c)</span>
 </code></dt>
@@ -672,12 +654,12 @@ def sensitization_transform(c, n):
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>circuit to rename</dd>
+<dd>Input circuit.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>Circuit</code></dt>
-<dd>Relabeled circuit.</dd>
+<dd>Circuit copy.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -689,16 +671,20 @@ def sensitization_transform(c, n):
 
     Parameters
     ----------
-    c: Circuit
-            circuit to rename
+    c : Circuit
+            Input circuit.
 
     Returns
     -------
     Circuit
-            Relabeled circuit.
+            Circuit copy.
 
     &#34;&#34;&#34;
-    return Circuit(graph=c.graph.copy(), name=c.name)</code></pre>
+    return Circuit(
+        graph=c.graph.copy(),
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.influence_transform"><code class="name flex">
@@ -743,25 +729,31 @@ def sensitization_transform(c, n):
             Influence circuit.
 
     &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+
     # check if s is in startpoints
     sp = c.startpoints(n)
     if s not in sp:
         raise ValueError(f&#34;{s} is not in startpoints of {n}&#34;)
 
     # get input cone
-    fiNodes = c.transitive_fanin(n) | set([n])
-    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
+    fi_nodes = c.transitive_fanin(n) | set([n])
+    sub_c = Circuit(&#34;sub_cone&#34;,c.graph.subgraph(fi_nodes).copy())
 
-    # remove outs, convert startpoints
-    sub_c.set_output(sub_c.outputs(), False)
-    sub_c.set_type(sub_c.startpoints(), &#34;input&#34;)
-
-    # create two copies of sub circuit
+    # create two copies of sub circuit, share inputs except s
     infl = Circuit(name=f&#34;infl_{s}_on_{n}&#34;)
-    infl.extend(sub_c)
-    infl.extend(relabel(sub_c, {g: f&#34;s1_{g}&#34; for g in sub_c if g not in sp - set([s])}))
-    infl.add(&#34;sat&#34;, &#34;xor&#34;, fanin=[n, f&#34;s1_{n}&#34;], output=True)
-    infl.add(f&#34;not_{s}&#34;, &#34;not&#34;, fanin=s, fanout=f&#34;s1_{s}&#34;)
+    infl.add_subcircuit(sub_c, &#34;c0&#34;)
+    infl.add_subcircuit(sub_c, &#34;c1&#34;)
+    for g in sp:
+        if g != s:
+            infl.add(g, &#34;input&#34;, fanout=[f&#34;c0_{g}&#34;, f&#34;c1_{g}&#34;])
+        else:
+            infl.add(f&#34;not_{g}&#34;, &#34;not&#34;, fanout=f&#34;c1_{s}&#34;)
+            infl.add(g, &#34;input&#34;, fanout=[f&#34;c0_{g}&#34;, f&#34;not_{g}&#34;])
+    infl.add(&#34;dif&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;])
+    infl.add(&#34;sat&#34;, &#34;output&#34;, fanin=&#34;dif&#34;)
 
     return infl</code></pre>
 </details>
@@ -811,6 +803,12 @@ def sensitization_transform(c, n):
     Circuit
             Miter circuit.
     &#34;&#34;&#34;
+    # check for blackboxes
+    if c0.blackboxes:
+        raise ValueError(f&#34;{c0.name} contains a blackbox&#34;)
+    if c1 and c1.blackboxes:
+        raise ValueError(f&#34;{c1.name} contains a blackbox&#34;)
+
     # clean inputs
     if not c1:
         c1 = c0
@@ -820,60 +818,70 @@ def sensitization_transform(c, n):
         endpoints = c0.endpoints() &amp; c1.endpoints()
 
     # create miter, relabel
-    m = relabel(c0, {n: f&#34;c0_{n}&#34; for n in c0.nodes() - startpoints})
-    m.extend(relabel(c1, {n: f&#34;c1_{n}&#34; for n in c1.nodes() - startpoints}))
-    strip_outputs(m)
+    m = Circuit(name=f&#34;miter_{c0.name}_{c1.name}&#34;)
+    m.add_subcircuit(c0, &#34;c0&#34;)
+    m.add_subcircuit(c1, &#34;c1&#34;)
 
-    # compare endpoints
-    m.add(&#34;sat&#34;, &#34;or&#34;, output=True)
-    for o in endpoints - startpoints:
-        m.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanout=[&#34;sat&#34;], fanin=[f&#34;c0_{o}&#34;, f&#34;c1_{o}&#34;])
+    # tie inputs
+    for n in startpoints:
+        m.add(n, &#34;input&#34;, fanout=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;])
+
+    # compare outputs
+    m.add(&#34;miter&#34;, &#34;or&#34;)
+    m.add(&#34;sat&#34;, &#34;output&#34;, fanin=&#34;miter&#34;)
+    for n in endpoints:
+        m.add(f&#34;dif_{n}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;], fanout=&#34;miter&#34;)
+
     return m</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.relabel"><code class="name flex">
-<span>def <span class="ident">relabel</span></span>(<span>c, mapping)</span>
+<span>def <span class="ident">relabel</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Returns renamed copy of a circuit.</p>
+<div class="desc"><p>Builds copy with relabeled nodes.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>circuit to rename</dd>
+<dd>Input circuit.</dd>
 <dt><strong><code>mapping</code></strong> :&ensp;<code>dict</code> of <code>str:str</code></dt>
-<dd>mapping of old to new names</dd>
+<dd>Relabeling of nodes.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>Circuit</code></dt>
-<dd>Relabeled circuit.</dd>
+<dd>Circuit with removed blackboxes.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def relabel(c, mapping):
+<pre><code class="python">def relabel(c):
     &#34;&#34;&#34;
-    Returns renamed copy of a circuit.
+    Builds copy with relabeled nodes.
 
     Parameters
     ----------
-    c: Circuit
-            circuit to rename
+    c : Circuit
+            Input circuit.
     mapping : dict of str:str
-            mapping of old to new names
+            Relabeling of nodes.
 
     Returns
     -------
     Circuit
-            Relabeled circuit.
-
+            Circuit with removed blackboxes.
     &#34;&#34;&#34;
-    return Circuit(graph=nx.relabel_nodes(c.graph, mapping), name=c.name)</code></pre>
+    g = nx.relabel_nodes(g, mapping)
+    return Circuit(
+        graph=g,
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.sensitivity_transform"><code class="name flex">
-<span>def <span class="ident">sensitivity_transform</span></span>(<span>c, n, startpoints=None)</span>
+<span>def <span class="ident">sensitivity_transform</span></span>(<span>c, n)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a circuit to compute sensitivity.</p>
@@ -883,8 +891,6 @@ def sensitization_transform(c, n):
 <dd>Sequential circuit to unroll.</dd>
 <dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
 <dd>Node to compute sensitivity at.</dd>
-<dt><strong><code>startpoints</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
-<dd>startpoints of n to flip.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -895,7 +901,7 @@ def sensitization_transform(c, n):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sensitivity_transform(c, n, startpoints=None):
+<pre><code class="python">def sensitivity_transform(c, n):
     &#34;&#34;&#34;
     Creates a circuit to compute sensitivity.
 
@@ -905,8 +911,6 @@ def sensitization_transform(c, n):
             Sequential circuit to unroll.
     n : str
             Node to compute sensitivity at.
-    startpoints : iterable of str
-            startpoints of n to flip.
 
     Returns
     -------
@@ -914,56 +918,53 @@ def sensitization_transform(c, n):
             Sensitivity circuit.
 
     &#34;&#34;&#34;
-    import circuitgraph.logic as logic
 
-    # choose all startpoints if not specified
-    if startpoints is None:
-        startpoints = c.startpoints(n)
-    all_startpoints = c.startpoints(n)
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
 
-    # get fanin cone of node
-    if n in c.startpoints():
-        raise ValueError(f&#34;{n} is in startpoints&#34;)
+    # check for startpoints
+    startpoints = c.startpoints(n)
+    if len(startpoints) &lt; 1:
+        raise ValueError(f&#34;{n} has no startpoints&#34;)
 
     # get input cone
-    fiNodes = c.transitive_fanin(n) | set([n])
-    sub_c = Circuit(c.graph.subgraph(fiNodes).copy())
+    fi_nodes = c.transitive_fanin(n) | set([n])
+    sub_c = Circuit(graph=c.graph.subgraph(fi_nodes).copy())
 
-    # remove outs, convert startpoints
-    sub_c.set_output(sub_c.outputs(), False)
-    sub_c.set_type(sub_c.startpoints(), &#34;input&#34;)
-    sub_c.disconnect(sub_c.nodes(), sub_c.startpoints())
-
-    # create sensitivity circuit and add first copy of subcircuit
+    # create sensitivity circuit
     sen = Circuit()
-    sen.extend(sub_c)
+    sen.add_subcircuit(sub_c, &#34;orig&#34;)
+    for s in startpoints:
+        sen.add(s, &#34;input&#34;, fanout=f&#34;orig_{s}&#34;)
+
+    # add popcount
+    sen.add_subcircuit(popcount(len(startpoints)), &#34;pc&#34;)
+
+    # add inverted input copies
+    for i,s0 in enumerate(startpoints):
+        sen.add_subcircuit(sub_c, f&#34;inv_{s0}&#34;)
+
+        # connect inputs
+        for s1 in startpoints:
+            if s0 != s1:
+                sen.connect(s1, f&#34;inv_{s0}_{s1}&#34;)
+            else:
+                # connect inverted input
+                sen.set_type(f&#34;inv_{s0}_{s1}&#34;, &#34;not&#34;)
+                sen.connect(s0, f&#34;inv_{s0}_{s1}&#34;)
+
+        # compare to orig
+        sen.add(
+            f&#34;dif_{s0}&#34;, &#34;xor&#34;,
+            fanin=[f&#34;orig_{n}&#34;, f&#34;inv_{s0}_{n}&#34;],
+            fanout=f&#34;pc_in_{i}&#34;
+        )
+        sen.add(f&#34;dif_out_{s0}&#34;, &#34;output&#34;, fanin=f&#34;dif_{s0}&#34;)
 
     # instantiate population count
-    p = strip_io(logic.popcount(len(startpoints)))
-    p = relabel(p, {g: f&#34;pop_{g}&#34; for g in p})
-    sen.extend(p)
     for o in range(clog2(len(startpoints) + 1)):
-        sen.add(f&#34;out_{o}&#34;, &#34;buf&#34;, fanin=f&#34;pop_out_{o}&#34;, output=True)
-
-    # stamp out a copies of the circuit with s inverted
-    for i, s in enumerate(startpoints):
-        mapping = {
-            g: f&#34;sen_{s}_{g}&#34; for g in sub_c if g not in all_startpoints - set([s])
-        }
-        sen.extend(relabel(sub_c, mapping))
-
-        # connect inverted input
-        sen.set_type(f&#34;sen_{s}_{s}&#34;, &#34;not&#34;)
-        sen.connect(s, f&#34;sen_{s}_{s}&#34;)
-
-        # compare to first copy
-        sen.add(
-            f&#34;difference_{s}&#34;,
-            &#34;xor&#34;,
-            fanin=[n, f&#34;sen_{s}_{n}&#34;],
-            fanout=f&#34;pop_in_{i}&#34;,
-            output=True,
-        )
+        sen.add(f&#34;sen_out_{o}&#34;, &#34;output&#34;, fanin=f&#34;pc_out_{o}&#34;)
 
     return sen</code></pre>
 </details>
@@ -1006,79 +1007,67 @@ def sensitization_transform(c, n):
             Output circuit.
 
     &#34;&#34;&#34;
-    # create miter, relabel
-    s = copy(c)
-    s.extend(relabel(c, {n: f&#34;c1_{n}&#34; for n in c}))
-    strip_outputs(s)
-
-    # connect startpoints
-    for g in c.startpoints():
-        s.set_type(f&#34;c1_{g}&#34;, &#34;buf&#34;)
-        s.disconnect(s.fanin(f&#34;c1_{g}&#34;), f&#34;c1_{g}&#34;)
-        s.connect(g, f&#34;c1_{g}&#34;)
-
-    # compare endpoints
-    s.add(&#34;sat&#34;, &#34;or&#34;, output=True)
-    for o in c.endpoints():
-        s.add(f&#34;miter_{o}&#34;, &#34;xor&#34;, fanout=[&#34;sat&#34;], fanin=[o, f&#34;c1_{o}&#34;])
+    # create miter
+    m = miter(c)
+    m.name = f&#34;{c.name}_sensitized_{n}&#34;
 
     # flip node in c1
-    s.disconnect(s.fanin(f&#34;c1_{n}&#34;), f&#34;c1_{n}&#34;)
-    s.set_type(f&#34;c1_{n}&#34;, &#34;not&#34;)
-    s.connect(n, f&#34;c1_{n}&#34;)
+    m.disconnect(m.fanin(f&#34;c1_{n}&#34;), f&#34;c1_{n}&#34;)
+    m.set_type(f&#34;c1_{n}&#34;, &#34;not&#34;)
+    m.connect(f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;)
 
-    return s</code></pre>
+    return m</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.transform.seq_graph"><code class="name flex">
-<span>def <span class="ident">seq_graph</span></span>(<span>c)</span>
+<dt id="circuitgraph.transform.strip_blackboxes"><code class="name flex">
+<span>def <span class="ident">strip_blackboxes</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a Circuit of the sequential elements and IO.</p>
+<div class="desc"><p>Converts blackboxes to io.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>&nbsp;</dd>
+<dd>Input circuit.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>Circuit</code></dt>
-<dd>Sequential circuit.</dd>
+<dd>Circuit with removed blackboxes.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def seq_graph(c):
+<pre><code class="python">def strip_blackboxes(c):
     &#34;&#34;&#34;
-    Creates a Circuit of the sequential elements and IO.
+    Converts blackboxes to io.
 
     Parameters
     ----------
-    c: Circuit
+    c : Circuit
+            Input circuit.
 
     Returns
     -------
     Circuit
-            Sequential circuit.
-
+            Circuit with removed blackboxes.
     &#34;&#34;&#34;
-    s = Circuit(name=f&#34;{c.name}_seq&#34;)
+    g = c.graph.copy()
+    bb_pins = []
+    for n in c.filter_type(&#34;bb_input&#34;):
+        g.nodes[n][&#34;type&#34;] = &#34;output&#34;
+        bb_pins.append(n)
+    for n in c.filter_type(&#34;bb_output&#34;):
+        g.nodes[n][&#34;type&#34;] = &#34;input&#34;
+        bb_pins.append(n)
 
-    # add nodes
-    for n in c.inputs() | c.seq():
-        s.add(n, c.type(n), output=c.output(n))
+    # rename nodes
+    mapping = {n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in bb_pins}
+    for k in mapping.values():
+        if k in g: raise ValueError(f&#34;Overlapping blackbox name: {k}&#34;)
+    nx.relabel_nodes(g, mapping, copy=False)
 
-    # add edges
-    for n in c.seq():
-        s.connect(c.startpoints(c.d(n)), n)
-
-    # add outputs
-    for n in s:
-        if c.endpoints(n) &amp; c.outputs():
-            s.set_output(n, True)
-
-    return s</code></pre>
+    return Circuit(graph=g, name=c.name)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.strip_inputs"><code class="name flex">
@@ -1090,7 +1079,7 @@ instantiation.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>circuit to strip inputs from</dd>
+<dd>Input circuit.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1109,7 +1098,7 @@ instantiation.</p>
     Parameters
     ----------
     c : Circuit
-            circuit to strip inputs from
+            Input circuit.
 
     Returns
     -------
@@ -1120,19 +1109,23 @@ instantiation.</p>
     for i in c.inputs():
         g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(graph=g, name=c.name)</code></pre>
+    return Circuit(
+        graph=g,
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.strip_io"><code class="name flex">
 <span>def <span class="ident">strip_io</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Removes a circuit's outputs and converts inputs to buffers for easy
+<div class="desc"><p>Removes circuit's outputs and converts inputs to buffers for easy
 instantiation.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>circuit to strip io from</dd>
+<dd>Input circuit.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1145,13 +1138,13 @@ instantiation.</p>
 </summary>
 <pre><code class="python">def strip_io(c):
     &#34;&#34;&#34;
-    Removes a circuit&#39;s outputs and converts inputs to buffers for easy
+    Removes circuit&#39;s outputs and converts inputs to buffers for easy
     instantiation.
 
     Parameters
     ----------
     c : Circuit
-            circuit to strip io from
+            Input circuit.
 
     Returns
     -------
@@ -1159,12 +1152,14 @@ instantiation.</p>
             Circuit with removed io
     &#34;&#34;&#34;
     g = c.graph.copy()
-    for o in c.outputs():
-        g.nodes[o][&#34;output&#34;] = False
-    for i in c.inputs():
-        g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
+    for o in c.io():
+        g.nodes[o][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(graph=g, name=c.name)</code></pre>
+    return Circuit(
+        graph=g,
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.strip_outputs"><code class="name flex">
@@ -1176,7 +1171,7 @@ instantiation.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>circuit to strip io from</dd>
+<dd>Input circuit.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1195,7 +1190,7 @@ instantiation.</p>
     Parameters
     ----------
     c : Circuit
-            circuit to strip io from
+            Input circuit.
 
     Returns
     -------
@@ -1204,13 +1199,17 @@ instantiation.</p>
     &#34;&#34;&#34;
     g = c.graph.copy()
     for o in c.outputs():
-        g.nodes[o][&#34;output&#34;] = False
+        g.nodes[o][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(graph=g, name=c.name)</code></pre>
+    return Circuit(
+        graph=g,
+        name=c.name,
+        blackboxes=c.blackboxes.copy()
+    )</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.syn"><code class="name flex">
-<span>def <span class="ident">syn</span></span>(<span>c, engine, print_output=False)</span>
+<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', print_output=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Synthesizes the circuit using Genus.</p>
@@ -1219,7 +1218,7 @@ instantiation.</p>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>Circuit to synthesize.</dd>
 <dt><strong><code>engine</code></strong> :&ensp;<code>str</code></dt>
-<dd>Synthesis tool to use ('Genus' or 'Yosys')</dd>
+<dd>Synthesis tool to use ('genus' or 'yosys')</dd>
 <dt><strong><code>print_output</code></strong> :&ensp;<code>bool</code></dt>
 <dd>Option to print synthesis log</dd>
 </dl>
@@ -1232,7 +1231,7 @@ instantiation.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def syn(c, engine, print_output=False):
+<pre><code class="python">def syn(c, engine=&#34;yosys&#34;, print_output=False):
     &#34;&#34;&#34;
     Synthesizes the circuit using Genus.
 
@@ -1241,7 +1240,7 @@ instantiation.</p>
     c : Circuit
             Circuit to synthesize.
     engine : str
-            Synthesis tool to use (&#39;Genus&#39; or &#39;Yosys&#39;)
+            Synthesis tool to use (&#39;genus&#39; or &#39;yosys&#39;)
     print_output : bool
             Option to print synthesis log
 
@@ -1256,7 +1255,7 @@ instantiation.</p>
         tmp_in.write(bytes(verilog, &#34;ascii&#34;))
         tmp_in.flush()
         with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_output&#34;) as tmp_out:
-            if engine == &#34;Genus&#34;:
+            if engine == &#34;genus&#34;:
                 cmd = [
                     &#34;genus&#34;,
                     &#34;-no_gui&#34;,
@@ -1272,17 +1271,17 @@ instantiation.</p>
                     f&#39;redirect {tmp_out.name} &#34;write_hdl -generic&#34;;\n&#39;
                     &#34;exit;&#34;,
                 ]
-            elif engine == &#34;Yosys&#34;:
+            elif engine == &#34;yosys&#34;:
                 cmd = [
                     &#34;yosys&#34;,
                     &#34;-p&#34;,
                     f&#34;read_verilog {tmp_in.name}; &#34;
-                    &#34;proc; opt; fsm; opt; memory; opt; clean; &#34;
+                    &#34;synth; &#34;
                     f&#34;write_verilog -noattr {tmp_out.name}&#34;,
                 ]
 
             else:
-                raise ValueError(&#34;synthesis engine must be Yosys or Genus&#34;)
+                raise ValueError(&#34;synthesis engine must be yosys or genus&#34;)
 
             process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
             while True:
@@ -1333,12 +1332,14 @@ instantiation.</p>
             Encoded circuit.
 
     &#34;&#34;&#34;
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
     t = copy(c)
 
     # add dual nodes
     for n in c:
         if c.type(n) in [&#34;and&#34;, &#34;nand&#34;]:
-            t.add(f&#34;{n}_x&#34;, &#34;and&#34;, output=c.output(n))
+            t.add(f&#34;{n}_x&#34;, &#34;and&#34;)
             t.add(
                 f&#34;{n}_x_in_fi&#34;,
                 &#34;or&#34;,
@@ -1353,7 +1354,7 @@ instantiation.</p>
                 )
 
         elif c.type(n) in [&#34;or&#34;, &#34;nor&#34;]:
-            t.add(f&#34;{n}_x&#34;, &#34;and&#34;, output=c.output(n))
+            t.add(f&#34;{n}_x&#34;, &#34;and&#34;)
             t.add(
                 f&#34;{n}_x_in_fi&#34;,
                 &#34;or&#34;,
@@ -1368,91 +1369,27 @@ instantiation.</p>
 
         elif c.type(n) in [&#34;buf&#34;, &#34;not&#34;]:
             p = c.fanin(n).pop()
-            t.add(f&#34;{n}_x&#34;, &#34;buf&#34;, output=c.output(n), fanin=f&#34;{p}_x&#34;)
+            t.add(f&#34;{n}_x&#34;, &#34;buf&#34;, fanin=f&#34;{p}_x&#34;)
+
+        elif c.type(n) in [&#34;output&#34;]:
+            p = c.fanin(n).pop()
+            t.add(f&#34;{n}_x&#34;, &#34;output&#34;, fanin=f&#34;{p}_x&#34;)
 
         elif c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;]:
             t.add(
-                f&#34;{n}_x&#34;, &#34;or&#34;, output=c.output(n), fanin=(f&#34;{p}_x&#34; for p in c.fanin(n))
+                f&#34;{n}_x&#34;, &#34;or&#34;, fanin=(f&#34;{p}_x&#34; for p in c.fanin(n))
             )
 
         elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
-            t.add(f&#34;{n}_x&#34;, &#34;0&#34;, output=c.output(n))
+            t.add(f&#34;{n}_x&#34;, &#34;0&#34;)
 
         elif c.type(n) in [&#34;input&#34;]:
-            t.add(f&#34;{n}_x&#34;, &#34;input&#34;, output=c.output(n))
-
-        elif c.type(n) in [&#34;ff&#34;, &#34;lat&#34;]:
-            t.add(
-                f&#34;{n}_x&#34;,
-                c.type(n),
-                output=c.output(n),
-                clk=f&#34;{c.clk(n)}_x&#34;,
-                r=f&#34;{c.r(n)}_x&#34;,
-                s=f&#34;{c.s(n)}_x&#34;,
-                fanin=f&#34;{c.fanin(n).pop()}_x&#34;,
-            )
-
-        elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
-            continue
-
-    return t</code></pre>
-</details>
-</dd>
-<dt id="circuitgraph.transform.unroll"><code class="name flex">
-<span>def <span class="ident">unroll</span></span>(<span>c, cycles)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Creates combinational unrolling of the circuit.</p>
-<h2 id="parameters">Parameters</h2>
-<dl>
-<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>Sequential circuit to unroll.</dd>
-<dt><strong><code>cycles</code></strong> :&ensp;<code>int</code></dt>
-<dd>Number of cycles to unroll</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>Circuit</code></dt>
-<dd>Unrolled circuit.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def unroll(c, cycles):
-    &#34;&#34;&#34;
-    Creates combinational unrolling of the circuit.
-
-    Parameters
-    ----------
-    c : Circuit
-            Sequential circuit to unroll.
-    cycles : int
-            Number of cycles to unroll
-
-    Returns
-    -------
-    Circuit
-            Unrolled circuit.
-
-    &#34;&#34;&#34;
-    u = Circuit()
-    c_comb = comb(c)
-    for i in range(cycles):
-        u.extend(c_comb, {n: f&#34;{n}_{i}&#34; for n in c_comb})
-        if i == 0:
-            # convert si to inputs
-            for n in c:
-                if c.type(n) in [&#34;lat&#34;, &#34;ff&#34;]:
-                    u.set_type(f&#34;{n}_si_{i}&#34;, &#34;input&#34;)
+            t.add(f&#34;{n}_x&#34;, &#34;input&#34;)
 
         else:
-            # connect prev si
-            for n in c:
-                if c.type(n) in [&#34;lat&#34;, &#34;ff&#34;]:
-                    u.connect(f&#34;{n}_si_{i-1}&#34;, f&#34;{n}_si_{i}&#34;)
+            raise ValueError(f&#34;Node {n} has unrecognized type: {c.type(n)}&#34;)
 
-    return u</code></pre>
+    return t</code></pre>
 </details>
 </dd>
 </dl>
@@ -1477,27 +1414,25 @@ instantiation.</p>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="circuitgraph.transform.comb" href="#circuitgraph.transform.comb">comb</a></code></li>
 <li><code><a title="circuitgraph.transform.copy" href="#circuitgraph.transform.copy">copy</a></code></li>
 <li><code><a title="circuitgraph.transform.influence_transform" href="#circuitgraph.transform.influence_transform">influence_transform</a></code></li>
 <li><code><a title="circuitgraph.transform.miter" href="#circuitgraph.transform.miter">miter</a></code></li>
 <li><code><a title="circuitgraph.transform.relabel" href="#circuitgraph.transform.relabel">relabel</a></code></li>
 <li><code><a title="circuitgraph.transform.sensitivity_transform" href="#circuitgraph.transform.sensitivity_transform">sensitivity_transform</a></code></li>
 <li><code><a title="circuitgraph.transform.sensitization_transform" href="#circuitgraph.transform.sensitization_transform">sensitization_transform</a></code></li>
-<li><code><a title="circuitgraph.transform.seq_graph" href="#circuitgraph.transform.seq_graph">seq_graph</a></code></li>
+<li><code><a title="circuitgraph.transform.strip_blackboxes" href="#circuitgraph.transform.strip_blackboxes">strip_blackboxes</a></code></li>
 <li><code><a title="circuitgraph.transform.strip_inputs" href="#circuitgraph.transform.strip_inputs">strip_inputs</a></code></li>
 <li><code><a title="circuitgraph.transform.strip_io" href="#circuitgraph.transform.strip_io">strip_io</a></code></li>
 <li><code><a title="circuitgraph.transform.strip_outputs" href="#circuitgraph.transform.strip_outputs">strip_outputs</a></code></li>
 <li><code><a title="circuitgraph.transform.syn" href="#circuitgraph.transform.syn">syn</a></code></li>
 <li><code><a title="circuitgraph.transform.ternary" href="#circuitgraph.transform.ternary">ternary</a></code></li>
-<li><code><a title="circuitgraph.transform.unroll" href="#circuitgraph.transform.unroll">unroll</a></code></li>
 </ul>
 </li>
 </ul>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

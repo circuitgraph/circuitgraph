@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.tests.test_transform API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -34,54 +34,48 @@ import glob
 import circuitgraph as cg
 from circuitgraph.transform import *
 from circuitgraph.sat import sat
-from random import sample, randint
+from random import choice, randint
 
 
 class TestTransform(unittest.TestCase):
     def setUp(self):
-        self.s27 = cg.from_lib(&#34;s27&#34;)
+        self.s27 = cg.strip_blackboxes(cg.from_lib(&#34;s27&#34;))
+        self.s27bb = cg.from_lib(&#34;s27&#34;)
 
         # incorrect copy of s27
         self.s27m = cg.copy(self.s27)
-        self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;buf&#34;
-
-    def test_relabel(self):
-        # check self equivalence
-        c = self.s27
-        cr = relabel(c, {n: f&#34;test_{n}&#34; for n in c})
-        crr = relabel(cr, {n: n.replace(&#34;test_&#34;, &#34;&#34;) for n in cr})
-        self.assertSetEqual(c.nodes(), crr.nodes())
+        self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;and&#34;
 
     def test_strip_io(self):
         # check self equivalence
-        c = strip_io(self.s27)
+        c = cg.strip_io(self.s27)
         self.assertTrue(&#34;input&#34; not in c.type(c.nodes()))
-        self.assertFalse(any(c.output(c.nodes())))
+        self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))
 
     def test_strip_inputs(self):
         # check self equivalence
-        c = strip_inputs(self.s27)
+        c = cg.strip_inputs(self.s27)
         self.assertTrue(&#34;input&#34; not in c.type(c.nodes()))
-        self.assertTrue(any(c.output(c.nodes())))
+        self.assertFalse(&#34;output&#34; not in c.type(c.nodes()))
 
     def test_strip_outputs(self):
         # check self equivalence
-        c = strip_outputs(self.s27)
+        c = cg.strip_outputs(self.s27)
         self.assertFalse(&#34;input&#34; not in c.type(c.nodes()))
-        self.assertFalse(any(c.output(c.nodes())))
+        self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))
 
-    def test_seq_graph(self):
-        g = seq_graph(self.s27)
-        self.assertSetEqual(
-            set(g.nodes()), set([&#34;G1&#34;, &#34;G3&#34;, &#34;clk&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G2&#34;, &#34;G7&#34;]),
-        )
-        for n in [&#34;G1&#34;, &#34;G3&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G7&#34;]:
-            self.assertTrue(g.output(n))
-        for n in [&#34;G2&#34;, &#34;clk&#34;]:
-            self.assertFalse(g.output(n))
+    #def test_seq_graph(self):
+    #    g = seq_graph(self.s27)
+    #    self.assertSetEqual(
+    #        set(g.nodes()), set([&#34;G1&#34;, &#34;G3&#34;, &#34;clk&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G2&#34;, &#34;G7&#34;]),
+    #    )
+    #    for n in [&#34;G1&#34;, &#34;G3&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G7&#34;]:
+    #        self.assertTrue(g.output(n))
+    #    for n in [&#34;G2&#34;, &#34;clk&#34;]:
+    #        self.assertFalse(g.output(n))
 
-    def test_unroll(self):
-        u = unroll(self.s27, 3)
+    #def test_unroll(self):
+    #    u = unroll(self.s27, 3)
 
     def test_miter(self):
         # check self equivalence
@@ -90,6 +84,7 @@ class TestTransform(unittest.TestCase):
         self.assertTrue(live)
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
         self.assertFalse(different_output)
+
 
         # check equivalence with incorrect copy
         m = miter(self.s27, self.s27m)
@@ -110,7 +105,7 @@ class TestTransform(unittest.TestCase):
     @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
     def test_syn_yosys(self):
         # synthesize and check equiv
-        s = syn(self.s27, &#34;Yosys&#34;, print_output=False)
+        s = syn(self.s27, &#34;yosys&#34;, print_output=False)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
@@ -134,39 +129,42 @@ class TestTransform(unittest.TestCase):
                 os.remove(f)
             shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
 
-    def test_ternary(self):
-        # encode circuit
-        t = ternary(self.s27)
+    #def test_ternary(self):
+    #    # encode circuit
+    #    t = ternary(self.s27)
 
-        # check that x propagates
-        result = cg.sat(t, {&#34;n_11_x&#34;: True})
-        self.assertTrue(result)
-        self.assertTrue(result[&#34;n_12_x&#34;])
+    #    # check that x propagates
+    #    result = cg.sat(t, {&#34;n_11_x&#34;: True})
+    #    self.assertTrue(result)
+    #    self.assertTrue(result[&#34;n_12_x&#34;])
 
-        result = cg.sat(t, {&#34;n_11_x&#34;: False})
-        self.assertTrue(result)
-        self.assertFalse(result[&#34;n_12_x&#34;])
+    #    result = cg.sat(t, {&#34;n_11_x&#34;: False})
+    #    self.assertTrue(result)
+    #    self.assertFalse(result[&#34;n_12_x&#34;])
 
-        result = cg.sat(t, {&#34;n_2_x&#34;: True, &#34;n_5_x&#34;: False})
-        self.assertTrue(result)
-        self.assertFalse(result[&#34;G6_x&#34;])
+    #    result = cg.sat(t, {&#34;n_2_x&#34;: True, &#34;n_5_x&#34;: False})
+    #    self.assertTrue(result)
+    #    self.assertFalse(result[&#34;G6_x&#34;])
 
-        # if no x in startpoint, no x
-        ass = {f&#34;{s}_x&#34;: False for s in self.s27.startpoints()}
-        result = cg.sat(t, ass)
-        self.assertTrue(result)
-        self.assertFalse(any(result[f&#34;{n}_x&#34;] for n in self.s27))
+    #    # if no x in startpoint, no x
+    #    ass = {f&#34;{s}_x&#34;: False for s in self.s27.startpoints()}
+    #    result = cg.sat(t, ass)
+    #    self.assertTrue(result)
+    #    self.assertFalse(any(result[f&#34;{n}_x&#34;] for n in self.s27))
 
-        # if all x in startpoint, all x
-        ass = {f&#34;{s}_x&#34;: True for s in self.s27.startpoints()}
-        result = cg.sat(t, ass)
-        self.assertTrue(result)
-        self.assertTrue(all(result[f&#34;{n}_x&#34;] for n in self.s27))
+    #    # if all x in startpoint, all x
+    #    ass = {f&#34;{s}_x&#34;: True for s in self.s27.startpoints()}
+    #    result = cg.sat(t, ass)
+    #    self.assertTrue(result)
+    #    self.assertTrue(all(result[f&#34;{n}_x&#34;] for n in self.s27))
 
     def test_sensitivity_transform(self):
         # pick random node and input value
-        n = sample(self.s27.nodes() - self.s27.startpoints(), 1)[0]
+        n = choice(tuple(self.s27.nodes() - self.s27.startpoints()))
         nstartpoints = self.s27.startpoints(n)
+        while len(nstartpoints) &lt; 1:
+            n = choice(tuple(self.s27.nodes() - self.s27.startpoints()))
+            nstartpoints = self.s27.startpoints(n)
         input_val = {i: randint(0, 1) for i in nstartpoints}
 
         # build sensitivity circuit
@@ -174,7 +172,7 @@ class TestTransform(unittest.TestCase):
 
         # find sensitivity at an input
         model = sat(s, input_val)
-        sen_s = sum(model[o] for o in s.outputs() if &#34;difference&#34; in o)
+        sen_s = sum(model[o] for o in s.outputs() if &#34;dif_out&#34; in o)
 
         # try inputs Hamming distance 1 away
         output_val = sat(self.s27, input_val)[n]
@@ -192,7 +190,7 @@ class TestTransform(unittest.TestCase):
 
         # find input with sensitivity
         vs = cg.int_to_bin(sen_s, cg.clog2(len(nstartpoints) + 1), True)
-        model = sat(s, {f&#34;out_{i}&#34;: v for i, v in enumerate(vs)})
+        model = sat(s, {f&#34;sen_out_{i}&#34;: v for i, v in enumerate(vs)})
 
         input_val = {i: model[i] for i in nstartpoints}
 
@@ -259,49 +257,43 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">class TestTransform(unittest.TestCase):
     def setUp(self):
-        self.s27 = cg.from_lib(&#34;s27&#34;)
+        self.s27 = cg.strip_blackboxes(cg.from_lib(&#34;s27&#34;))
+        self.s27bb = cg.from_lib(&#34;s27&#34;)
 
         # incorrect copy of s27
         self.s27m = cg.copy(self.s27)
-        self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;buf&#34;
-
-    def test_relabel(self):
-        # check self equivalence
-        c = self.s27
-        cr = relabel(c, {n: f&#34;test_{n}&#34; for n in c})
-        crr = relabel(cr, {n: n.replace(&#34;test_&#34;, &#34;&#34;) for n in cr})
-        self.assertSetEqual(c.nodes(), crr.nodes())
+        self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;and&#34;
 
     def test_strip_io(self):
         # check self equivalence
-        c = strip_io(self.s27)
+        c = cg.strip_io(self.s27)
         self.assertTrue(&#34;input&#34; not in c.type(c.nodes()))
-        self.assertFalse(any(c.output(c.nodes())))
+        self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))
 
     def test_strip_inputs(self):
         # check self equivalence
-        c = strip_inputs(self.s27)
+        c = cg.strip_inputs(self.s27)
         self.assertTrue(&#34;input&#34; not in c.type(c.nodes()))
-        self.assertTrue(any(c.output(c.nodes())))
+        self.assertFalse(&#34;output&#34; not in c.type(c.nodes()))
 
     def test_strip_outputs(self):
         # check self equivalence
-        c = strip_outputs(self.s27)
+        c = cg.strip_outputs(self.s27)
         self.assertFalse(&#34;input&#34; not in c.type(c.nodes()))
-        self.assertFalse(any(c.output(c.nodes())))
+        self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))
 
-    def test_seq_graph(self):
-        g = seq_graph(self.s27)
-        self.assertSetEqual(
-            set(g.nodes()), set([&#34;G1&#34;, &#34;G3&#34;, &#34;clk&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G2&#34;, &#34;G7&#34;]),
-        )
-        for n in [&#34;G1&#34;, &#34;G3&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G7&#34;]:
-            self.assertTrue(g.output(n))
-        for n in [&#34;G2&#34;, &#34;clk&#34;]:
-            self.assertFalse(g.output(n))
+    #def test_seq_graph(self):
+    #    g = seq_graph(self.s27)
+    #    self.assertSetEqual(
+    #        set(g.nodes()), set([&#34;G1&#34;, &#34;G3&#34;, &#34;clk&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G2&#34;, &#34;G7&#34;]),
+    #    )
+    #    for n in [&#34;G1&#34;, &#34;G3&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G7&#34;]:
+    #        self.assertTrue(g.output(n))
+    #    for n in [&#34;G2&#34;, &#34;clk&#34;]:
+    #        self.assertFalse(g.output(n))
 
-    def test_unroll(self):
-        u = unroll(self.s27, 3)
+    #def test_unroll(self):
+    #    u = unroll(self.s27, 3)
 
     def test_miter(self):
         # check self equivalence
@@ -310,6 +302,7 @@ not have a method with the specified name.</p></div>
         self.assertTrue(live)
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
         self.assertFalse(different_output)
+
 
         # check equivalence with incorrect copy
         m = miter(self.s27, self.s27m)
@@ -330,7 +323,7 @@ not have a method with the specified name.</p></div>
     @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
     def test_syn_yosys(self):
         # synthesize and check equiv
-        s = syn(self.s27, &#34;Yosys&#34;, print_output=False)
+        s = syn(self.s27, &#34;yosys&#34;, print_output=False)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
@@ -354,39 +347,42 @@ not have a method with the specified name.</p></div>
                 os.remove(f)
             shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
 
-    def test_ternary(self):
-        # encode circuit
-        t = ternary(self.s27)
+    #def test_ternary(self):
+    #    # encode circuit
+    #    t = ternary(self.s27)
 
-        # check that x propagates
-        result = cg.sat(t, {&#34;n_11_x&#34;: True})
-        self.assertTrue(result)
-        self.assertTrue(result[&#34;n_12_x&#34;])
+    #    # check that x propagates
+    #    result = cg.sat(t, {&#34;n_11_x&#34;: True})
+    #    self.assertTrue(result)
+    #    self.assertTrue(result[&#34;n_12_x&#34;])
 
-        result = cg.sat(t, {&#34;n_11_x&#34;: False})
-        self.assertTrue(result)
-        self.assertFalse(result[&#34;n_12_x&#34;])
+    #    result = cg.sat(t, {&#34;n_11_x&#34;: False})
+    #    self.assertTrue(result)
+    #    self.assertFalse(result[&#34;n_12_x&#34;])
 
-        result = cg.sat(t, {&#34;n_2_x&#34;: True, &#34;n_5_x&#34;: False})
-        self.assertTrue(result)
-        self.assertFalse(result[&#34;G6_x&#34;])
+    #    result = cg.sat(t, {&#34;n_2_x&#34;: True, &#34;n_5_x&#34;: False})
+    #    self.assertTrue(result)
+    #    self.assertFalse(result[&#34;G6_x&#34;])
 
-        # if no x in startpoint, no x
-        ass = {f&#34;{s}_x&#34;: False for s in self.s27.startpoints()}
-        result = cg.sat(t, ass)
-        self.assertTrue(result)
-        self.assertFalse(any(result[f&#34;{n}_x&#34;] for n in self.s27))
+    #    # if no x in startpoint, no x
+    #    ass = {f&#34;{s}_x&#34;: False for s in self.s27.startpoints()}
+    #    result = cg.sat(t, ass)
+    #    self.assertTrue(result)
+    #    self.assertFalse(any(result[f&#34;{n}_x&#34;] for n in self.s27))
 
-        # if all x in startpoint, all x
-        ass = {f&#34;{s}_x&#34;: True for s in self.s27.startpoints()}
-        result = cg.sat(t, ass)
-        self.assertTrue(result)
-        self.assertTrue(all(result[f&#34;{n}_x&#34;] for n in self.s27))
+    #    # if all x in startpoint, all x
+    #    ass = {f&#34;{s}_x&#34;: True for s in self.s27.startpoints()}
+    #    result = cg.sat(t, ass)
+    #    self.assertTrue(result)
+    #    self.assertTrue(all(result[f&#34;{n}_x&#34;] for n in self.s27))
 
     def test_sensitivity_transform(self):
         # pick random node and input value
-        n = sample(self.s27.nodes() - self.s27.startpoints(), 1)[0]
+        n = choice(tuple(self.s27.nodes() - self.s27.startpoints()))
         nstartpoints = self.s27.startpoints(n)
+        while len(nstartpoints) &lt; 1:
+            n = choice(tuple(self.s27.nodes() - self.s27.startpoints()))
+            nstartpoints = self.s27.startpoints(n)
         input_val = {i: randint(0, 1) for i in nstartpoints}
 
         # build sensitivity circuit
@@ -394,7 +390,7 @@ not have a method with the specified name.</p></div>
 
         # find sensitivity at an input
         model = sat(s, input_val)
-        sen_s = sum(model[o] for o in s.outputs() if &#34;difference&#34; in o)
+        sen_s = sum(model[o] for o in s.outputs() if &#34;dif_out&#34; in o)
 
         # try inputs Hamming distance 1 away
         output_val = sat(self.s27, input_val)[n]
@@ -412,7 +408,7 @@ not have a method with the specified name.</p></div>
 
         # find input with sensitivity
         vs = cg.int_to_bin(sen_s, cg.clog2(len(nstartpoints) + 1), True)
-        model = sat(s, {f&#34;out_{i}&#34;: v for i, v in enumerate(vs)})
+        model = sat(s, {f&#34;sen_out_{i}&#34;: v for i, v in enumerate(vs)})
 
         input_val = {i: model[i] for i in nstartpoints}
 
@@ -446,11 +442,12 @@ not have a method with the specified name.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def setUp(self):
-    self.s27 = cg.from_lib(&#34;s27&#34;)
+    self.s27 = cg.strip_blackboxes(cg.from_lib(&#34;s27&#34;))
+    self.s27bb = cg.from_lib(&#34;s27&#34;)
 
     # incorrect copy of s27
     self.s27m = cg.copy(self.s27)
-    self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;buf&#34;</code></pre>
+    self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;and&#34;</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_miter"><code class="name flex">
@@ -470,6 +467,7 @@ not have a method with the specified name.</p></div>
     different_output = sat(m, assumptions={&#34;sat&#34;: True})
     self.assertFalse(different_output)
 
+
     # check equivalence with incorrect copy
     m = miter(self.s27, self.s27m)
     live = sat(m)
@@ -487,23 +485,6 @@ not have a method with the specified name.</p></div>
     self.assertTrue(different_output)</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.tests.test_transform.TestTransform.test_relabel"><code class="name flex">
-<span>def <span class="ident">test_relabel</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def test_relabel(self):
-    # check self equivalence
-    c = self.s27
-    cr = relabel(c, {n: f&#34;test_{n}&#34; for n in c})
-    crr = relabel(cr, {n: n.replace(&#34;test_&#34;, &#34;&#34;) for n in cr})
-    self.assertSetEqual(c.nodes(), crr.nodes())</code></pre>
-</details>
-</dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_sensitivity_transform"><code class="name flex">
 <span>def <span class="ident">test_sensitivity_transform</span></span>(<span>self)</span>
 </code></dt>
@@ -515,8 +496,11 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">def test_sensitivity_transform(self):
     # pick random node and input value
-    n = sample(self.s27.nodes() - self.s27.startpoints(), 1)[0]
+    n = choice(tuple(self.s27.nodes() - self.s27.startpoints()))
     nstartpoints = self.s27.startpoints(n)
+    while len(nstartpoints) &lt; 1:
+        n = choice(tuple(self.s27.nodes() - self.s27.startpoints()))
+        nstartpoints = self.s27.startpoints(n)
     input_val = {i: randint(0, 1) for i in nstartpoints}
 
     # build sensitivity circuit
@@ -524,7 +508,7 @@ not have a method with the specified name.</p></div>
 
     # find sensitivity at an input
     model = sat(s, input_val)
-    sen_s = sum(model[o] for o in s.outputs() if &#34;difference&#34; in o)
+    sen_s = sum(model[o] for o in s.outputs() if &#34;dif_out&#34; in o)
 
     # try inputs Hamming distance 1 away
     output_val = sat(self.s27, input_val)[n]
@@ -542,7 +526,7 @@ not have a method with the specified name.</p></div>
 
     # find input with sensitivity
     vs = cg.int_to_bin(sen_s, cg.clog2(len(nstartpoints) + 1), True)
-    model = sat(s, {f&#34;out_{i}&#34;: v for i, v in enumerate(vs)})
+    model = sat(s, {f&#34;sen_out_{i}&#34;: v for i, v in enumerate(vs)})
 
     input_val = {i: model[i] for i in nstartpoints}
 
@@ -561,26 +545,6 @@ not have a method with the specified name.</p></div>
     self.assertEqual(sen_s, sen_sim)</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.tests.test_transform.TestTransform.test_seq_graph"><code class="name flex">
-<span>def <span class="ident">test_seq_graph</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def test_seq_graph(self):
-    g = seq_graph(self.s27)
-    self.assertSetEqual(
-        set(g.nodes()), set([&#34;G1&#34;, &#34;G3&#34;, &#34;clk&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G2&#34;, &#34;G7&#34;]),
-    )
-    for n in [&#34;G1&#34;, &#34;G3&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G7&#34;]:
-        self.assertTrue(g.output(n))
-    for n in [&#34;G2&#34;, &#34;clk&#34;]:
-        self.assertFalse(g.output(n))</code></pre>
-</details>
-</dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_strip_inputs"><code class="name flex">
 <span>def <span class="ident">test_strip_inputs</span></span>(<span>self)</span>
 </code></dt>
@@ -592,9 +556,9 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">def test_strip_inputs(self):
     # check self equivalence
-    c = strip_inputs(self.s27)
+    c = cg.strip_inputs(self.s27)
     self.assertTrue(&#34;input&#34; not in c.type(c.nodes()))
-    self.assertTrue(any(c.output(c.nodes())))</code></pre>
+    self.assertFalse(&#34;output&#34; not in c.type(c.nodes()))</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_strip_io"><code class="name flex">
@@ -608,9 +572,9 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">def test_strip_io(self):
     # check self equivalence
-    c = strip_io(self.s27)
+    c = cg.strip_io(self.s27)
     self.assertTrue(&#34;input&#34; not in c.type(c.nodes()))
-    self.assertFalse(any(c.output(c.nodes())))</code></pre>
+    self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_strip_outputs"><code class="name flex">
@@ -624,9 +588,9 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">def test_strip_outputs(self):
     # check self equivalence
-    c = strip_outputs(self.s27)
+    c = cg.strip_outputs(self.s27)
     self.assertFalse(&#34;input&#34; not in c.type(c.nodes()))
-    self.assertFalse(any(c.output(c.nodes())))</code></pre>
+    self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_syn_genus"><code class="name flex">
@@ -668,64 +632,12 @@ def test_syn_genus(self):
 <pre><code class="python">@unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
 def test_syn_yosys(self):
     # synthesize and check equiv
-    s = syn(self.s27, &#34;Yosys&#34;, print_output=False)
+    s = syn(self.s27, &#34;yosys&#34;, print_output=False)
     m = miter(self.s27, s)
     live = sat(m)
     self.assertTrue(live)
     different_output = sat(m, assumptions={&#34;sat&#34;: True})
     self.assertFalse(different_output)</code></pre>
-</details>
-</dd>
-<dt id="circuitgraph.tests.test_transform.TestTransform.test_ternary"><code class="name flex">
-<span>def <span class="ident">test_ternary</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def test_ternary(self):
-    # encode circuit
-    t = ternary(self.s27)
-
-    # check that x propagates
-    result = cg.sat(t, {&#34;n_11_x&#34;: True})
-    self.assertTrue(result)
-    self.assertTrue(result[&#34;n_12_x&#34;])
-
-    result = cg.sat(t, {&#34;n_11_x&#34;: False})
-    self.assertTrue(result)
-    self.assertFalse(result[&#34;n_12_x&#34;])
-
-    result = cg.sat(t, {&#34;n_2_x&#34;: True, &#34;n_5_x&#34;: False})
-    self.assertTrue(result)
-    self.assertFalse(result[&#34;G6_x&#34;])
-
-    # if no x in startpoint, no x
-    ass = {f&#34;{s}_x&#34;: False for s in self.s27.startpoints()}
-    result = cg.sat(t, ass)
-    self.assertTrue(result)
-    self.assertFalse(any(result[f&#34;{n}_x&#34;] for n in self.s27))
-
-    # if all x in startpoint, all x
-    ass = {f&#34;{s}_x&#34;: True for s in self.s27.startpoints()}
-    result = cg.sat(t, ass)
-    self.assertTrue(result)
-    self.assertTrue(all(result[f&#34;{n}_x&#34;] for n in self.s27))</code></pre>
-</details>
-</dd>
-<dt id="circuitgraph.tests.test_transform.TestTransform.test_unroll"><code class="name flex">
-<span>def <span class="ident">test_unroll</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def test_unroll(self):
-    u = unroll(self.s27, 3)</code></pre>
 </details>
 </dd>
 </dl>
@@ -755,16 +667,12 @@ def test_syn_yosys(self):
 <ul class="">
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.setUp" href="#circuitgraph.tests.test_transform.TestTransform.setUp">setUp</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_miter" href="#circuitgraph.tests.test_transform.TestTransform.test_miter">test_miter</a></code></li>
-<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_relabel" href="#circuitgraph.tests.test_transform.TestTransform.test_relabel">test_relabel</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_sensitivity_transform" href="#circuitgraph.tests.test_transform.TestTransform.test_sensitivity_transform">test_sensitivity_transform</a></code></li>
-<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_seq_graph" href="#circuitgraph.tests.test_transform.TestTransform.test_seq_graph">test_seq_graph</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_inputs" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_inputs">test_strip_inputs</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_io" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_io">test_strip_io</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_outputs" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_outputs">test_strip_outputs</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_genus" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_genus">test_syn_genus</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_yosys" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_yosys">test_syn_yosys</a></code></li>
-<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_ternary" href="#circuitgraph.tests.test_transform.TestTransform.test_ternary">test_ternary</a></code></li>
-<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_unroll" href="#circuitgraph.tests.test_transform.TestTransform.test_unroll">test_unroll</a></code></li>
 </ul>
 </li>
 </ul>
@@ -773,7 +681,7 @@ def test_syn_yosys(self):
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

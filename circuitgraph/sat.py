@@ -93,7 +93,7 @@ def cnf(c):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), variables.id(f)])
                 formula.append([-variables.id(n), -variables.id(f)])
-        elif c.type(n) == "buf":
+        elif c.type(n) in ["buf", "output", "bb_input"]:
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), -variables.id(f)])
@@ -136,7 +136,7 @@ def cnf(c):
             formula.append([-variables.id(n)])
         elif c.type(n) == "1":
             formula.append([variables.id(n)])
-        elif c.type(n) in ["ff", "lat", "input"]:
+        elif c.type(n) in ["bb_output", "input"]:
             formula.append([variables.id(n), -variables.id(n)])
         else:
             print(f"unknown gate type: {c.type(n)}")

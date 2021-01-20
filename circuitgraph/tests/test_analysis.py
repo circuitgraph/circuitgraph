@@ -3,13 +3,13 @@ import unittest
 import circuitgraph as cg
 from circuitgraph.analysis import *
 from circuitgraph.sat import sat
-from random import sample, randint
+from random import choice, randint
 from itertools import product
 
 
 class TestAnalysis(unittest.TestCase):
     def setUp(self):
-        self.s27 = cg.from_lib("s27")
+        self.s27 = cg.strip_blackboxes(cg.from_lib("s27"))
 
     def test_avg_sensitivity(self):
         c = cg.Circuit()
@@ -40,8 +40,11 @@ class TestAnalysis(unittest.TestCase):
 
     def test_sensitivity(self):
         # pick random node and input value
-        n = sample(self.s27.nodes(), 1)[0]
+        n = choice(tuple(self.s27.nodes()))
         sp = self.s27.startpoints(n)
+        while len(sp) < 1:
+            n = choice(tuple(self.s27.nodes()))
+            sp = self.s27.startpoints(n)
 
         # find sensitivity
         sen = sensitivity(self.s27, n)
@@ -60,24 +63,38 @@ class TestAnalysis(unittest.TestCase):
             sen_sim = max(sen_sim, input_sen)
 
         # check answer
+        if sen != sen_sim:
+            import code
+
+            code.interact(local=dict(**globals(), **locals()))
         self.assertEqual(sen, sen_sim)
 
     def test_sensitize(self):
         # pick random node
-        nr = sample(self.s27.nodes() - set(["clk"]), 1)[0]
+        nr = choice(
+            tuple(self.s27.nodes() - set(["clk"]) - self.s27.filter_type(["0", "1"]))
+        )
 
         # pick startpoint
-        ns = sample(self.s27.startpoints() - set(["clk"]), 1)[0]
+        ns = choice(tuple(self.s27.startpoints() - set(["clk"])))
 
         # pick endpoint
-        ne = sample(self.s27.endpoints() - set(["clk"]), 1)[0]
+        ne = choice(tuple(self.s27.endpoints() - set(["clk"])))
 
         for n in [nr, ns, ne]:
             # get input
-            input_val = sensitize(self.s27, n, {n: True})
+            input_val = sensitize(self.s27, n, {f"c0_{n}": True})
+            if not input_val:
+                import code
+
+                code.interact(local=dict(**globals(), **locals()))
 
             # simulate input
             result = sat(self.s27, input_val)
+            if not result[n]:
+                import code
+
+                code.interact(local=dict(**globals(), **locals()))
             self.assertTrue(result[n])
 
             # remove constrained input
@@ -96,9 +113,9 @@ class TestAnalysis(unittest.TestCase):
 
     def test_signal_probability(self):
         # pick random node
-        n = sample(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints(), 1)[
-            0
-        ]
+        n = choice(
+            tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints())
+        )
         sp = self.s27.startpoints(n)
 
         # get signal prob

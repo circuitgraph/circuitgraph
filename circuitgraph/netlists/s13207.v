@@ -387,72 +387,72 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   assign g1015 = 1'b0;
   assign g1006 = 1'b0;
   not g28242 (g7048, n__944);
-  fflopd gggg405gggggg(.CK (clk), .D (n_n_904), .Q (n__944));
+  ff gggg405gggggg(.CK (clk), .D (n_n_904), .Q (n__944));
   wire w;
   nand g28244gg2398 (n_n_904, w, n_n_2852);
   or g (w, n__943, n_n_287);
-  fflopd gggg605gggggg(.CK (clk), .D (n_n_903), .Q (n__943));
+  ff gggg605gggggg(.CK (clk), .D (n_n_903), .Q (n__943));
   wire w0;
   nand g28248gg5107 (n_n_903, w0, n_n_2349);
   not g0 (w0, n_3916);
-  fflopd gggg232gggggg(.CK (clk), .D (n_n_900), .Q (n__954));
+  ff gggg232gggggg(.CK (clk), .D (n_n_900), .Q (n__954));
   wire w1;
   nand g28259gg4319 (n_n_900, w1, n_n_2349);
   not g4 (w1, n_3917);
-  fflopd gggg410gggggg(.CK (clk), .D (n_n_895), .Q (n__953));
+  ff gggg410gggggg(.CK (clk), .D (n_n_895), .Q (n__953));
   wire w2;
   nand g28288gg5526 (n_n_895, w2, n_n_2349);
   not g5 (w2, n_3918);
-  fflopd gggg354gggggg(.CK (clk), .D (n_3985), .Q (n__887));
-  fflopd gggg112gggggg(.CK (clk), .D (n_n_2026), .Q
+  ff gggg354gggggg(.CK (clk), .D (n_3985), .Q (n__887));
+  ff gggg112gggggg(.CK (clk), .D (n_n_2026), .Q
        (n__889));
   wire w3, w4, w5;
   nand g28254gg1617 (n_n_892, w3, w5);
   nand g8 (w5, w4, g1817);
   not g7 (w4, n_n_886);
   or g6 (w3, n_n_842, g1817);
-  fflopd gggg395gggggg(.CK (clk), .D (n_n_3655), .Q
+  ff gggg395gggggg(.CK (clk), .D (n_n_3655), .Q
        (n__1462));
-  fflopd gggg222gggggg(.CK (clk), .D (n_n_883), .Q (n__952));
-  fflopd gggg86gggggg(.CK (clk), .D (n_n_885), .Q (n__1296));
-  fflopd gggg210gggggg(.CK (clk), .D (n_n_1442), .Q
+  ff gggg222gggggg(.CK (clk), .D (n_n_883), .Q (n__952));
+  ff gggg86gggggg(.CK (clk), .D (n_n_885), .Q (n__1296));
+  ff gggg210gggggg(.CK (clk), .D (n_n_1442), .Q
        (n__1467));
-  fflopd gggg581gggggg(.CK (clk), .D (n_n_2731), .Q
+  ff gggg581gggggg(.CK (clk), .D (n_n_2731), .Q
        (n__1057));
-  fflopd gggg526gggggg(.CK (clk), .D (n_n_2732), .Q
+  ff gggg526gggggg(.CK (clk), .D (n_n_2732), .Q
        (n__1061));
   nand g28261gg7098 (n_n_886, g1824, g1829, g1810, n_n_861);
   nor g28264gg6131 (n_n_885, n__1304, n_n_2971);
-  fflopd gggg138gggggg(.CK (clk), .D (n_n_873), .Q
+  ff gggg138gggggg(.CK (clk), .D (n_n_873), .Q
        (n__1504));
-  fflopd gggg532gggggg(.CK (clk), .D (n_n_872), .Q
+  ff gggg532gggggg(.CK (clk), .D (n_n_872), .Q
        (n__1514));
-  fflopd gggg276gggggg(.CK (clk), .D (n_n_864), .Q
+  ff gggg276gggggg(.CK (clk), .D (n_n_864), .Q
        (n__1472));
   wire w6;
   nand g28364gg5115 (n_n_883, w6, n_n_2349);
   not g12 (w6, n_3919);
-  fflopd gggg206gggggg(.CK (clk), .D (n_n_1832), .Q
+  ff gggg206gggggg(.CK (clk), .D (n_n_1832), .Q
        (n__1509));
-  fflopd gggg230gggggg(.CK (clk), .D (n_n_1361), .Q
+  ff gggg230gggggg(.CK (clk), .D (n_n_1361), .Q
        (n__1041));
-  fflopd gggg420gggggg(.CK (clk), .D (n_n_3848), .Q
+  ff gggg420gggggg(.CK (clk), .D (n_n_3848), .Q
        (n__1069));
-  fflopd gggg588gggggg(.CK (clk), .D (n_n_870), .Q
+  ff gggg588gggggg(.CK (clk), .D (n_n_870), .Q
        (n__1519));
-  fflopd gggg457gggggg(.CK (clk), .D (n_3960), .Q (n__1065));
-  fflopd gggg463gggggg(.CK (clk), .D (n_n_849), .Q
+  ff gggg457gggggg(.CK (clk), .D (n_3960), .Q (n__1065));
+  ff gggg463gggggg(.CK (clk), .D (n_n_849), .Q
        (n__1033));
-  fflopd gggg501gggggg(.CK (clk), .D (n_n_3614), .Q
+  ff gggg501gggggg(.CK (clk), .D (n_n_3614), .Q
        (n__1149));
-  fflopd gggg280gggggg(.CK (clk), .D (n_n_848), .Q (g6425));
-  fflopd gggg610gggggg(.CK (clk), .D (n_n_2591), .Q
+  ff gggg280gggggg(.CK (clk), .D (n_n_848), .Q (g6425));
+  ff gggg610gggggg(.CK (clk), .D (n_n_2591), .Q
        (n__1300));
-  fflopd gggg418gggggg(.CK (clk), .D (n_n_1868), .Q
+  ff gggg418gggggg(.CK (clk), .D (n_n_1868), .Q
        (n__1073));
-  fflopd gggg79gggggg(.CK (clk), .D (n_n_1869), .Q
+  ff gggg79gggggg(.CK (clk), .D (n_n_1869), .Q
        (n__1037));
-  fflopd gggg153gggggg(.CK (clk), .D (n_n_1871), .Q
+  ff gggg153gggggg(.CK (clk), .D (n_n_1871), .Q
        (n__1045));
   wire w7, w8;
   nand g28284gg1666 (n_n_873, w7, w8);
@@ -466,21 +466,21 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nand g28294gg6417 (n_n_870, w11, w12);
   or g33 (w12, n_n_482, n_n_2041);
   or g20 (w11, n_n_2042, n_n_3517);
-  fflopd gggg628gggggg(.CK (clk), .D (n_3981), .Q (n__1494));
-  fflopd gggg599gggggg(.CK (clk), .D (n_n_2594), .Q
+  ff gggg628gggggg(.CK (clk), .D (n_3981), .Q (n__1494));
+  ff gggg599gggggg(.CK (clk), .D (n_n_2594), .Q
        (n__1284));
-  fflopd gggg623gggggg(.CK (clk), .D (n_n_833), .Q
+  ff gggg623gggggg(.CK (clk), .D (n_n_833), .Q
        (n__1134));
   wire w13;
   nand g28296gg6260 (n_n_864, w13, n_n_2040);
   or g34 (w13, n_n_462, n_n_2042, n_n_858);
-  fflopd gggg121gggggg(.CK (clk), .D (n_n_840), .Q
+  ff gggg121gggggg(.CK (clk), .D (n_n_840), .Q
        (n__1049));
-  fflopd gggg316gggggg(.CK (clk), .D (n_n_835), .Q
+  ff gggg316gggggg(.CK (clk), .D (n_n_835), .Q
        (n__1053));
-  fflopd gggg110gggggg(.CK (clk), .D (n_n_837), .Q
+  ff gggg110gggggg(.CK (clk), .D (n_n_837), .Q
        (n__1138));
-  fflopd gggg558gggggg(.CK (clk), .D (n_n_3890), .Q
+  ff gggg558gggggg(.CK (clk), .D (n_n_3890), .Q
        (n__1130));
   wire w14;
   and g28305gg5526 (n_n_861, w14, g1783);
@@ -491,10 +491,10 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   wire w16;
   nor g28334gg7098 (n_n_848, w16, n_n_266);
   and g46 (w16, n_n_90, n_n_1064);
-  fflopd gggg331gggggg(.CK (clk), .D (n_n_2598), .Q
+  ff gggg331gggggg(.CK (clk), .D (n_n_2598), .Q
        (n__1292));
-  fflopd gggg14gggggg(.CK (clk), .D (n_n_806), .Q (n__1092));
-  fflopd gggg137gggggg(.CK (clk), .D (n_3905), .Q (n__1486));
+  ff gggg14gggggg(.CK (clk), .D (n_n_806), .Q (n__1092));
+  ff gggg137gggggg(.CK (clk), .D (n_3905), .Q (n__1486));
   or g28325gg5115 (n_n_842, n__852, n_n_831);
   wire w17, w18;
   nand g28395gg4733 (n_n_840, w17, w18);
@@ -520,41 +520,41 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   wire w26;
   and g28416gg5107 (g4663, w26, n__1397);
   not g63 (w26, n__1398);
-  fflopd gggg414gggggg(.CK (clk), .D (n_n_3435), .Q
+  ff gggg414gggggg(.CK (clk), .D (n_n_3435), .Q
        (n__1405));
-  fflopd gggg96gggggg(.CK (clk), .D (n_n_3444), .Q
+  ff gggg96gggggg(.CK (clk), .D (n_n_3444), .Q
        (n__1412));
   nand g28409gg8428 (n_n_821, n_n_3626, n_n_3549);
   nand g28329gg5526 (n_n_819, n__852, g1798, g1804, n__849);
-  fflopd gggg241gggggg(.CK (clk), .D (n_n_769), .Q (n__951));
+  ff gggg241gggggg(.CK (clk), .D (n_n_769), .Q (n__951));
   wire w27;
   nand g28444gg5115 (n_n_806, w27, n_n_765);
   or g67 (w27, n_n_100, n_n_1911);
   nand g28436gg4733 (n_n_803, n_n_2705, n_n_2077, n_n_1909);
   not g28338 (n_n_800, n_n_2042);
-  fflopd gggg30gggggg(.CK (clk), .D (n_n_3322), .Q
+  ff gggg30gggggg(.CK (clk), .D (n_n_3322), .Q
        (n__1077));
-  fflopd gggg524gggggg(.CK (clk), .D (n_n_778), .Q
+  ff gggg524gggggg(.CK (clk), .D (n_n_778), .Q
        (n__1280));
-  fflopd gggg42gggggg(.CK (clk), .D (n_n_767), .Q (n__1499));
-  fflopd gggg67gggggg(.CK (clk), .D (n_n_2695), .Q
+  ff gggg42gggggg(.CK (clk), .D (n_n_767), .Q (n__1499));
+  ff gggg67gggggg(.CK (clk), .D (n_n_2695), .Q
        (n__1288));
-  fflopd gggg378gggggg(.CK (clk), .D (n_n_3542), .Q
+  ff gggg378gggggg(.CK (clk), .D (n_n_3542), .Q
        (n__1489));
-  fflopd gggg490gggggg(.CK (clk), .D (n__1399), .Q
+  ff gggg490gggggg(.CK (clk), .D (n__1399), .Q
        (n__1401));
-  fflopd gggg536gggggg(.CK (clk), .D (n__1390), .Q
+  ff gggg536gggggg(.CK (clk), .D (n__1390), .Q
        (n__1391));
-  fflopd gggg502gggggg(.CK (clk), .D (n__1396), .Q
+  ff gggg502gggggg(.CK (clk), .D (n__1396), .Q
        (n__1398));
   nand g28437gg2883 (n_n_795, n_n_793, n_n_3627, n_n_1909);
-  fflopd gggg9gggggg(.CK (clk), .D (n_3970), .Q (n__1153));
+  ff gggg9gggggg(.CK (clk), .D (n_3970), .Q (n__1153));
   wire w28;
   and g28373gg5107 (g4661, w28, n__1394);
   not g68 (w28, n__1395);
   nand g28368gg6260 (n_n_831, n_n_594, n_n_720, n_n_760);
-  fflopd gggg315gggggg(.CK (clk), .D (n_3951), .Q (n__1432));
-  fflopd gggg334gggggg(.CK (clk), .D (n_n_3584), .Q
+  ff gggg315gggggg(.CK (clk), .D (n_3951), .Q (n__1432));
+  ff gggg334gggggg(.CK (clk), .D (n_n_3584), .Q
        (n__1439));
   nor g28285gg1617 (n_n_778, n__1304, n_n_957);
   wire w29;
@@ -565,48 +565,48 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nand g80 (w31, n_n_1905, n_n_766);
   or g74 (w30, n_n_1905, n_n_766);
   nand g28475gg9315 (n_n_765, n_n_100, n_n_2728);
-  fflopd gggg362gggggg(.CK (clk), .D (n_n_3103), .Q
+  ff gggg362gggggg(.CK (clk), .D (n_n_3103), .Q
        (n__1435));
-  fflopd gggg476gggggg(.CK (clk), .D (n_n_3155), .Q
+  ff gggg476gggggg(.CK (clk), .D (n_n_3155), .Q
        (n__1481));
-  fflopd gggg475gggggg(.CK (clk), .D (n_n_2670), .Q (g1944));
-  fflopd gggg336gggggg(.CK (clk), .D (n_n_3684), .Q
+  ff gggg475gggggg(.CK (clk), .D (n_n_2670), .Q (g1944));
+  ff gggg336gggggg(.CK (clk), .D (n_n_3684), .Q
        (n__1276));
   wire w32, w33;
   nand g28442gg2883 (n_n_763, w32, w33);
   nand g82 (w33, n_n_219, n__998, n__999);
   nand g81 (w32, g43, n_n_179, n__1007);
-  fflopd gggg306gggggg(.CK (clk), .D (g6648), .Q (n__1390));
+  ff gggg306gggggg(.CK (clk), .D (g6648), .Q (n__1390));
   nand g28578gg2346 (n_n_762, n__1462, g6648);
-  fflopd gggg204gggggg(.CK (clk), .D (g6653), .Q (n__1396));
-  fflopd gggg429gggggg(.CK (clk), .D (g6236), .Q (n__1399));
-  fflopd gggg466gggggg(.CK (clk), .D (n__1393), .Q
+  ff gggg204gggggg(.CK (clk), .D (g6653), .Q (n__1396));
+  ff gggg429gggggg(.CK (clk), .D (g6236), .Q (n__1399));
+  ff gggg466gggggg(.CK (clk), .D (n__1393), .Q
        (n__1395));
   nor g28391gg7410 (n_n_760, g1810, g1804, n__849);
-  fflopd gggg324gggggg(.CK (clk), .D (n__849), .Q (n__852));
-  fflopd gggg267gggggg(.CK (clk), .D (n_n_965), .Q
+  ff gggg324gggggg(.CK (clk), .D (n__849), .Q (n__852));
+  ff gggg267gggggg(.CK (clk), .D (n_n_965), .Q
        (n__1327));
-  fflopd gggg557gggggg(.CK (clk), .D (n_n_1017), .Q
+  ff gggg557gggggg(.CK (clk), .D (n_n_1017), .Q
        (n__1328));
-  fflopd gggg614gggggg(.CK (clk), .D (n_n_1899), .Q
+  ff gggg614gggggg(.CK (clk), .D (n_n_1899), .Q
        (n__1323));
-  fflopd gggg44gggggg(.CK (clk), .D (n_3913), .Q (n__1444));
-  fflopd gggg461gggggg(.CK (clk), .D (n_n_2423), .Q
+  ff gggg44gggggg(.CK (clk), .D (n_3913), .Q (n__1444));
+  ff gggg461gggggg(.CK (clk), .D (n_n_2423), .Q
        (n__1322));
-  fflopd gggg85gggggg(.CK (clk), .D (n_n_734), .Q (n__1454));
-  fflopd gggg632gggggg(.CK (clk), .D (n_n_737), .Q
+  ff gggg85gggggg(.CK (clk), .D (n_n_734), .Q (n__1454));
+  ff gggg632gggggg(.CK (clk), .D (n_n_737), .Q
        (n__1450));
-  fflopd gggg166gggggg(.CK (clk), .D (n_3982), .Q (g5687));
-  fflopd gggg240gggggg(.CK (clk), .D (n_n_735), .Q (g5684));
+  ff gggg166gggggg(.CK (clk), .D (n_3982), .Q (g5687));
+  ff gggg240gggggg(.CK (clk), .D (n_n_735), .Q (g5684));
   wire w34;
   nor g28492gg1705 (n_n_745, n__1304, n_3958, w34);
   and g83 (w34, n_n_2700, n_n_1025);
-  fflopd gggg453gggggg(.CK (clk), .D (n_n_3441), .Q
+  ff gggg453gggggg(.CK (clk), .D (n_n_3441), .Q
        (n__1408));
-  fflopd gggg168gggggg(.CK (clk), .D (n_n_3438), .Q
+  ff gggg168gggggg(.CK (clk), .D (n_n_3438), .Q
        (n__1415));
-  fflopd gggg91gggggg(.CK (clk), .D (n_n_714), .Q (g5669));
-  fflopd gggg555gggggg(.CK (clk), .D (n_n_710), .Q
+  ff gggg91gggggg(.CK (clk), .D (n_n_714), .Q (g5669));
+  ff gggg555gggggg(.CK (clk), .D (n_n_710), .Q
        (n__1272));
   wire w35, w36;
   nand g28524gg5115 (n_n_737, w35, w36);
@@ -617,62 +617,62 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nand g28523gg6161 (n_n_734, w37, w38);
   or g89 (w38, n__1307, n_n_3525);
   or g86 (w37, n_n_132, n_n_3238);
-  fflopd gggg321gggggg(.CK (clk), .D (n_n_697), .Q
+  ff gggg321gggggg(.CK (clk), .D (n_n_697), .Q
        (n__1357));
   nand g28600gg2346 (n_n_766, n_n_232, n_n_2168);
-  fflopd gggg312gggggg(.CK (clk), .D (n_n_3512), .Q (g6653));
+  ff gggg312gggggg(.CK (clk), .D (n_n_3512), .Q (g6653));
   not g28604 (g6648, n_n_2168);
   nor g28460gg5477 (n_n_720, g1829, g1798);
-  fflopd gggg584gggggg(.CK (clk), .D (g5678), .Q (n__1393));
-  fflopd gggg523gggggg(.CK (clk), .D (n_n_1260), .Q
+  ff gggg584gggggg(.CK (clk), .D (g5678), .Q (n__1393));
+  ff gggg523gggggg(.CK (clk), .D (n_n_1260), .Q
        (n__1325));
-  fflopd gggg253gggggg(.CK (clk), .D (n_n_1272), .Q
+  ff gggg253gggggg(.CK (clk), .D (n_n_1272), .Q
        (n__1326));
   or g28465gg2398 (g6236, g5678, n__1189);
-  fflopd gggg631gggggg(.CK (clk), .D (n_n_2000), .Q
+  ff gggg631gggggg(.CK (clk), .D (n_n_2000), .Q
        (n__1360));
-  fflopd gggg379gggggg(.CK (clk), .D (g1798), .Q (n__849));
-  fflopd gggg419gggggg(.CK (clk), .D (n_3967), .Q (n__1324));
-  fflopd gggg586gggggg(.CK (clk), .D (n_n_2422), .Q
+  ff gggg379gggggg(.CK (clk), .D (g1798), .Q (n__849));
+  ff gggg419gggggg(.CK (clk), .D (n_3967), .Q (n__1324));
+  ff gggg586gggggg(.CK (clk), .D (n_n_2422), .Q
        (n__1321));
-  fflopd gggg553gggggg(.CK (clk), .D (n_n_2252), .Q
+  ff gggg553gggggg(.CK (clk), .D (n_n_2252), .Q
        (n__999));
-  fflopd gggg160gggggg(.CK (clk), .D (n_n_2587), .Q
+  ff gggg160gggggg(.CK (clk), .D (n_n_2587), .Q
        (n__1007));
   nor g28326gg4319 (n_n_714, n_n_1747, n_n_1040);
   nor g28452gg1617 (n_n_710, n__1304, n_n_685);
-  fflopd gggg345gggggg(.CK (clk), .D (n_n_2418), .Q
+  ff gggg345gggggg(.CK (clk), .D (n_n_2418), .Q
        (n__1320));
-  fflopd gggg292gggggg(.CK (clk), .D (n_n_2419), .Q
+  ff gggg292gggggg(.CK (clk), .D (n_n_2419), .Q
        (n__1317));
-  fflopd gggg626gggggg(.CK (clk), .D (n_n_2420), .Q
+  ff gggg626gggggg(.CK (clk), .D (n_n_2420), .Q
        (n__1313));
   nand g28501gg1705 (g8958, g1, n_n_689);
-  fflopd gggg251gggggg(.CK (clk), .D (n_n_1757), .Q
+  ff gggg251gggggg(.CK (clk), .D (n_n_1757), .Q
        (n__1126));
-  fflopd gggg513gggggg(.CK (clk), .D (n_n_2425), .Q
+  ff gggg513gggggg(.CK (clk), .D (n_n_2425), .Q
        (n__1319));
-  fflopd gggg577gggggg(.CK (clk), .D (n_n_2424), .Q
+  ff gggg577gggggg(.CK (clk), .D (n_n_2424), .Q
        (n__1318));
-  fflopd gggg542gggggg(.CK (clk), .D (n_n_684), .Q
+  ff gggg542gggggg(.CK (clk), .D (n_n_684), .Q
        (n__1416));
-  fflopd gggg333gggggg(.CK (clk), .D (n_3902), .Q (g2888));
-  fflopd gggg480gggggg(.CK (clk), .D (n_n_679), .Q
+  ff gggg333gggggg(.CK (clk), .D (n_3902), .Q (g2888));
+  ff gggg480gggggg(.CK (clk), .D (n_n_679), .Q
        (n__1354));
   nor g28576gg5122 (n_n_707, n__1435, n__1430);
   wire w39;
   nor g28586gg8246 (n_n_706, w39, n__1430);
   and g90 (w39, g5684, n_n_3181);
-  fflopd gggg491gggggg(.CK (clk), .D (n_n_671), .Q (n__950));
-  fflopd gggg562gggggg(.CK (clk), .D (g7423), .Q (n__1166));
-  fflopd gggg411gggggg(.CK (clk), .D (n_n_2667), .Q
+  ff gggg491gggggg(.CK (clk), .D (n_n_671), .Q (n__950));
+  ff gggg562gggggg(.CK (clk), .D (g7423), .Q (n__1166));
+  ff gggg411gggggg(.CK (clk), .D (n_n_2667), .Q
        (n__1176));
-  fflopd gggg175gggggg(.CK (clk), .D (n__1404), .Q (g5678));
-  fflopd gggg39gggggg(.CK (clk), .D (g1804), .Q (g1798));
+  ff gggg175gggggg(.CK (clk), .D (n__1404), .Q (g5678));
+  ff gggg39gggggg(.CK (clk), .D (g1804), .Q (g1798));
   wire w40;
   nand g28440gg4733 (n_n_697, w40, n_n_1341);
   or g93 (w40, n_n_395, n_n_2826);
-  fflopd gggg221gggggg(.CK (clk), .D (n_n_670), .Q
+  ff gggg221gggggg(.CK (clk), .D (n_n_670), .Q
        (n__1421));
   wire w41;
   nand g28587gg6417 (n_n_689, w41, n_n_1734);
@@ -684,13 +684,13 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   wire w44;
   nand g28648gg4319 (n_n_684, w44, n_n_987);
   or g104 (w44, n__1416, n__1421);
-  fflopd gggg454gggggg(.CK (clk), .D (n_n_3031), .Q
+  ff gggg454gggggg(.CK (clk), .D (n_n_3031), .Q
        (n__1336));
   not g28603 (n_n_711, n__1430);
-  fflopd gggg545gggggg(.CK (clk), .D (n_n_2634), .Q
+  ff gggg545gggggg(.CK (clk), .D (n_n_2634), .Q
        (n__1251));
-  fflopd gggg472gggggg(.CK (clk), .D (n_3965), .Q (n__1142));
-  fflopd gggg40gggggg(.CK (clk), .D (n__1312), .Q (n__1304));
+  ff gggg472gggggg(.CK (clk), .D (n_3965), .Q (n__1142));
+  ff gggg40gggggg(.CK (clk), .D (n__1312), .Q (n__1304));
   wire w45, w46;
   nand g28439gg3680 (n_n_679, w45, w46);
   or g108 (w46, n_n_627, n_n_575);
@@ -698,60 +698,60 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   wire w47;
   nand g28597gg2802 (g8872, w47, g1);
   not g109 (w47, n_n_1734);
-  fflopd gggg202gggggg(.CK (clk), .D (n_n_2321), .Q
+  ff gggg202gggggg(.CK (clk), .D (n_n_2321), .Q
        (n__1333));
-  fflopd gggg57gggggg(.CK (clk), .D (n_n_2538), .Q (n__984));
-  fflopd gggg617gggggg(.CK (clk), .D (n_3959), .Q (n__1351));
-  fflopd gggg534gggggg(.CK (clk), .D (n_n_2319), .Q
+  ff gggg57gggggg(.CK (clk), .D (n_n_2538), .Q (n__984));
+  ff gggg617gggggg(.CK (clk), .D (n_3959), .Q (n__1351));
+  ff gggg534gggggg(.CK (clk), .D (n_n_2319), .Q
        (n__1345));
-  fflopd gggg559gggggg(.CK (clk), .D (n_n_2323), .Q
+  ff gggg559gggggg(.CK (clk), .D (n_n_2323), .Q
        (n__1330));
-  fflopd gggg25gggggg(.CK (clk), .D (n_n_2324), .Q
+  ff gggg25gggggg(.CK (clk), .D (n_n_2324), .Q
        (n__1339));
-  fflopd gggg462gggggg(.CK (clk), .D (n_n_3378), .Q
+  ff gggg462gggggg(.CK (clk), .D (n_n_3378), .Q
        (n__1230));
-  fflopd gggg567gggggg(.CK (clk), .D (n_n_3364), .Q
+  ff gggg567gggggg(.CK (clk), .D (n_n_3364), .Q
        (n__1348));
-  fflopd gggg459gggggg(.CK (clk), .D (n_3961), .Q (n__1228));
-  fflopd gggg473gggggg(.CK (clk), .D (n_3983), .Q (n__1342));
+  ff gggg459gggggg(.CK (clk), .D (n_3961), .Q (n__1228));
+  ff gggg473gggggg(.CK (clk), .D (n_3983), .Q (n__1342));
   wire w48;
   nand g28651gg8246 (n_n_671, w48, n_n_2349);
   not g110 (w48, n_3923);
-  fflopd gggg339gggggg(.CK (clk), .D (n__1403), .Q
+  ff gggg339gggggg(.CK (clk), .D (n__1403), .Q
        (n__1404));
   wire w49, w50;
   and g28649gg7098 (n_n_670, w50, n__1416, w49);
   not g112 (w50, n__1307);
   not g111 (w49, n__1421);
-  fflopd gggg183gggggg(.CK (clk), .D (n__1307), .Q
+  ff gggg183gggggg(.CK (clk), .D (n__1307), .Q
        (n__1428));
-  fflopd gggg576gggggg(.CK (clk), .D (g7424), .Q (g7423));
-  fflopd gggg50gggggg(.CK (clk), .D (g1810), .Q (g1804));
-  fflopd gggg187gggggg(.CK (clk), .D (n_n_630), .Q
+  ff gggg576gggggg(.CK (clk), .D (g7424), .Q (g7423));
+  ff gggg50gggggg(.CK (clk), .D (g1810), .Q (g1804));
+  ff gggg187gggggg(.CK (clk), .D (n_n_630), .Q
        (n__1430));
-  fflopd gggg575gggggg(.CK (clk), .D (n_n_634), .Q
+  ff gggg575gggggg(.CK (clk), .D (n_n_634), .Q
        (n__1118));
-  fflopd gggg516gggggg(.CK (clk), .D (n_n_2650), .Q (g1871));
-  fflopd gggg458gggggg(.CK (clk), .D (n_n_632), .Q
+  ff gggg516gggggg(.CK (clk), .D (n_n_2650), .Q (g1871));
+  ff gggg458gggggg(.CK (clk), .D (n_n_632), .Q
        (n__1122));
-  fflopd gggg431gggggg(.CK (clk), .D (n_n_3516), .Q (g785));
-  fflopd gggg396gggggg(.CK (clk), .D (n_3915), .Q (g1870));
-  fflopd gggg169gggggg(.CK (clk), .D (n_n_2135), .Q
+  ff gggg431gggggg(.CK (clk), .D (n_n_3516), .Q (g785));
+  ff gggg396gggggg(.CK (clk), .D (n_3915), .Q (g1870));
+  ff gggg169gggggg(.CK (clk), .D (n_n_2135), .Q
        (n__1227));
-  fflopd gggg448gggggg(.CK (clk), .D (n_3979), .Q (n__1114));
-  fflopd gggg80gggggg(.CK (clk), .D (n_n_635), .Q (n__1102));
-  fflopd gggg417gggggg(.CK (clk), .D (n_n_2527), .Q
+  ff gggg448gggggg(.CK (clk), .D (n_3979), .Q (n__1114));
+  ff gggg80gggggg(.CK (clk), .D (n_n_635), .Q (n__1102));
+  ff gggg417gggggg(.CK (clk), .D (n_n_2527), .Q
        (n__1225));
   nand g28630gg2398 (n_n_724, n__93, n_n_1747);
-  fflopd gggg487gggggg(.CK (clk), .D (n__1311), .Q
+  ff gggg487gggggg(.CK (clk), .D (n__1311), .Q
        (n__1312));
-  fflopd gggg11gggggg(.CK (clk), .D (n_n_611), .Q (n__976));
-  fflopd gggg99gggggg(.CK (clk), .D (g4657), .Q (g6212));
-  fflopd gggg582gggggg(.CK (clk), .D (n_n_612), .Q (n__973));
-  fflopd gggg368gggggg(.CK (clk), .D (n_3969), .Q (n__1110));
-  fflopd gggg525gggggg(.CK (clk), .D (n_n_616), .Q
+  ff gggg11gggggg(.CK (clk), .D (n_n_611), .Q (n__976));
+  ff gggg99gggggg(.CK (clk), .D (g4657), .Q (g6212));
+  ff gggg582gggggg(.CK (clk), .D (n_n_612), .Q (n__973));
+  ff gggg368gggggg(.CK (clk), .D (n_3969), .Q (n__1110));
+  ff gggg525gggggg(.CK (clk), .D (n_n_616), .Q
        (n__1106));
-  fflopd gggg533gggggg(.CK (clk), .D (n__1402), .Q
+  ff gggg533gggggg(.CK (clk), .D (n__1402), .Q
        (n__1403));
   nor g28507gg7098 (n_n_635, n__1097, n_n_3076);
   wire w51;
@@ -759,56 +759,56 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   or g113 (w51, n_n_1165, n_n_586);
   nand g28659gg5115 (n_n_632, n_n_587, n_n_585);
   not g28669 (n_n_630, n__1252);
-  fflopd gggg520gggggg(.CK (clk), .D (g7425), .Q (g7424));
-  fflopd gggg135gggggg(.CK (clk), .D (g1817), .Q (g1810));
+  ff gggg520gggggg(.CK (clk), .D (g7425), .Q (g7424));
+  ff gggg135gggggg(.CK (clk), .D (g1817), .Q (g1810));
   nand g28684gg9945 (n_n_627, n__1354, n__1247);
   nor g28716gg1666 (n_n_622, g4371, g4370, n__1179, g4267);
-  fflopd gggg27gggggg(.CK (clk), .D (n_n_593), .Q (n__1307));
+  ff gggg27gggggg(.CK (clk), .D (n_n_593), .Q (n__1307));
   wire w52;
   nand g28537gg5107 (n_n_616, w52, n_n_580);
   nand g114 (w52, n__1106, n_n_503);
-  fflopd gggg408gggggg(.CK (clk), .D (n__1260), .Q
+  ff gggg408gggggg(.CK (clk), .D (n__1260), .Q
        (n__1252));
-  fflopd gggg122gggggg(.CK (clk), .D (n_n_578), .Q
+  ff gggg122gggggg(.CK (clk), .D (n_n_578), .Q
        (n__1098));
-  fflopd gggg492gggggg(.CK (clk), .D (n__1267), .Q
+  ff gggg492gggggg(.CK (clk), .D (n__1267), .Q
        (n__1329));
   nor g28763gg6783 (n_n_612, g6850, n_3934);
   nor g28780gg3680 (n_n_611, g6850, n_n_598);
-  fflopd gggg595gggggg(.CK (clk), .D (g1246), .Q (n__1311));
-  fflopd gggg540gggggg(.CK (clk), .D (n_n_573), .Q
+  ff gggg595gggggg(.CK (clk), .D (g1246), .Q (n__1311));
+  ff gggg540gggggg(.CK (clk), .D (n_n_573), .Q
        (n__1223));
-  fflopd gggg261gggggg(.CK (clk), .D (n_n_2530), .Q
+  ff gggg261gggggg(.CK (clk), .D (n_n_2530), .Q
        (n__1220));
-  fflopd gggg344gggggg(.CK (clk), .D (n_n_570), .Q
+  ff gggg344gggggg(.CK (clk), .D (n_n_570), .Q
        (n__1224));
-  fflopd gggg151gggggg(.CK (clk), .D (n_n_2518), .Q
+  ff gggg151gggggg(.CK (clk), .D (n_n_2518), .Q
        (n__1226));
-  fflopd gggg98gggggg(.CK (clk), .D (n_3963), .Q (n__1189));
+  ff gggg98gggggg(.CK (clk), .D (n_3963), .Q (n__1189));
   not g28841 (g7103, n_3934);
-  fflopd gggg372gggggg(.CK (clk), .D (n_n_2769), .Q
+  ff gggg372gggggg(.CK (clk), .D (n_n_2769), .Q
        (n__1402));
   not g28804 (g7298, n_n_598);
   nor g28686gg7482 (n_n_594, g1783, g1824);
-  fflopd gggg243gggggg(.CK (clk), .D (n_3964), .Q (n__812));
-  fflopd gggg154gggggg(.CK (clk), .D (n_n_540), .Q (g7425));
-  fflopd gggg53gggggg(.CK (clk), .D (g1824), .Q (g1817));
+  ff gggg243gggggg(.CK (clk), .D (n_3964), .Q (n__812));
+  ff gggg154gggggg(.CK (clk), .D (n_n_540), .Q (g7425));
+  ff gggg53gggggg(.CK (clk), .D (g1824), .Q (g1817));
   not g28746 (n_n_593, n__1260);
   nor g28729gg9315 (n_n_592, n__1097, n_n_1723);
   wire w53;
   nor g28727gg2346 (n_n_587, w53, n__1097);
   and g116 (w53, n_n_86, n_n_586);
   nand g28760gg1666 (n_n_585, n__1122, n_n_541);
-  fflopd gggg82gggggg(.CK (clk), .D (n_n_2085), .Q (n__775));
-  fflopd gggg26gggggg(.CK (clk), .D (n_n_2770), .Q (g5682));
-  fflopd gggg384gggggg(.CK (clk), .D (n_n_2637), .Q (g2662));
-  fflopd gggg148gggggg(.CK (clk), .D (n_n_532), .Q
+  ff gggg82gggggg(.CK (clk), .D (n_n_2085), .Q (n__775));
+  ff gggg26gggggg(.CK (clk), .D (n_n_2770), .Q (g5682));
+  ff gggg384gggggg(.CK (clk), .D (n_n_2637), .Q (g2662));
+  ff gggg148gggggg(.CK (clk), .D (n_n_532), .Q
        (n__1087));
-  fflopd gggg49gggggg(.CK (clk), .D (n_n_3381), .Q (n__803));
-  fflopd gggg242gggggg(.CK (clk), .D (n_n_537), .Q (n__799));
-  fflopd gggg188gggggg(.CK (clk), .D (n_n_2636), .Q
+  ff gggg49gggggg(.CK (clk), .D (n_n_3381), .Q (n__803));
+  ff gggg242gggggg(.CK (clk), .D (n_n_537), .Q (n__799));
+  ff gggg188gggggg(.CK (clk), .D (n_n_2636), .Q
        (n__1247));
-  fflopd gggg388gggggg(.CK (clk), .D (n_n_2002), .Q
+  ff gggg388gggggg(.CK (clk), .D (n_n_2002), .Q
        (n__1229));
   nor g28813gg6417 (n_n_583, g4372, g4373);
   wire w54;
@@ -817,23 +817,23 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nor g28547gg6260 (n_n_578, n__1097, n_n_505);
   not g28542 (n_n_575, n_n_2260);
   nand g28826gg5526 (n_n_598, g1, n_n_3045);
-  fflopd gggg369gggggg(.CK (clk), .D (n__1244), .Q (g1246));
-  fflopd gggg634gggggg(.CK (clk), .D (g4373), .Q (n__1179));
-  fflopd gggg451gggggg(.CK (clk), .D (n_n_490), .Q (n__809));
-  fflopd gggg198gggggg(.CK (clk), .D (n_3976), .Q (n__1217));
+  ff gggg369gggggg(.CK (clk), .D (n__1244), .Q (g1246));
+  ff gggg634gggggg(.CK (clk), .D (g4373), .Q (n__1179));
+  ff gggg451gggggg(.CK (clk), .D (n_n_490), .Q (n__809));
+  ff gggg198gggggg(.CK (clk), .D (n_3976), .Q (n__1217));
   wire w55;
   nand g28795gg1617 (n_n_573, w55, n_n_3445);
   nand g118 (w55, n__1223, n_n_1827);
   nand g28717gg5122 (n_n_570, n_n_3272, n_3925);
-  fflopd gggg486gggggg(.CK (clk), .D (n_n_519), .Q
+  ff gggg486gggggg(.CK (clk), .D (n_n_519), .Q
        (n__1267));
-  fflopd gggg359gggggg(.CK (clk), .D (n_n_3518), .Q
+  ff gggg359gggggg(.CK (clk), .D (n_n_3518), .Q
        (n__949));
-  fflopd gggg181gggggg(.CK (clk), .D (n_n_487), .Q (n__806));
-  fflopd gggg569gggggg(.CK (clk), .D (n_n_2635), .Q
+  ff gggg181gggggg(.CK (clk), .D (n_n_487), .Q (n__806));
+  ff gggg569gggggg(.CK (clk), .D (n_n_2635), .Q
        (n__1260));
-  fflopd gggg329gggggg(.CK (clk), .D (n_n_972), .Q (n__778));
-  fflopd gggg367gggggg(.CK (clk), .D (n_n_517), .Q
+  ff gggg329gggggg(.CK (clk), .D (n_n_972), .Q (n__778));
+  ff gggg367gggggg(.CK (clk), .D (n_n_517), .Q
        (n__1214));
   nand g28773gg1881 (g9280, n_n_501, n__62);
   or g28505gg6161 (n_n_557, n__866, n__875);
@@ -847,16 +847,16 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   and g28758gg8428 (n_n_537, w57, n_n_222);
   not g120 (w57, n_n_3379);
   nor g28677gg1617 (n_n_532, n__1097, n_n_477);
-  fflopd gggg341gggggg(.CK (clk), .D (n_n_500), .Q (n__2));
-  fflopd gggg257gggggg(.CK (clk), .D (g1829), .Q (g1824));
+  ff gggg341gggggg(.CK (clk), .D (n_n_500), .Q (n__2));
+  ff gggg257gggggg(.CK (clk), .D (g1829), .Q (g1824));
   nor g28815gg4733 (n_n_519, n__1269, n__1268);
   nor g28847gg9315 (n_n_517, n_n_1982, n_n_976);
-  fflopd gggg111gggggg(.CK (clk), .D (n_n_1558), .Q
+  ff gggg111gggggg(.CK (clk), .D (n_n_1558), .Q
        (n__1244));
   nor g28526gg1666 (n_n_511, n_n_384, n_n_406);
   nand g28818gg7410 (n_n_510, n_n_2043, n_n_3777);
-  fflopd gggg624gggggg(.CK (clk), .D (n_n_436), .Q (n__995));
-  fflopd gggg517gggggg(.CK (clk), .D (g4372), .Q (g4373));
+  ff gggg624gggggg(.CK (clk), .D (n_n_436), .Q (n__995));
+  ff gggg517gggggg(.CK (clk), .D (g4372), .Q (g4373));
   nor g28836gg5107 (n_n_586, n_n_1384, n_n_2479);
   wire w58, w59, w60, w61;
   nand g28644gg4319 (n_n_505, w59, w61);
@@ -873,15 +873,15 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nand g28782gg8246 (n_n_487, w63, n_n_486);
   nand g126 (w63, n_n_159, n_n_2080);
   nor g28792gg7098 (n_n_485, n__1366, n__1374, n__1372);
-  fflopd gggg401gggggg(.CK (clk), .D (n_n_411), .Q (n__828));
-  fflopd gggg142gggggg(.CK (clk), .D (n_n_410), .Q (n__822));
-  fflopd gggg201gggggg(.CK (clk), .D (n_n_2561), .Q
+  ff gggg401gggggg(.CK (clk), .D (n_n_411), .Q (n__828));
+  ff gggg142gggggg(.CK (clk), .D (n_n_410), .Q (n__822));
+  ff gggg201gggggg(.CK (clk), .D (n_n_2561), .Q
        (n__825));
-  fflopd gggg440gggggg(.CK (clk), .D (n_n_3058), .Q
+  ff gggg440gggggg(.CK (clk), .D (n_n_3058), .Q
        (n__1207));
-  fflopd gggg515gggggg(.CK (clk), .D (n_n_428), .Q
+  ff gggg515gggggg(.CK (clk), .D (n_n_428), .Q
        (n__1211));
-  fflopd gggg587gggggg(.CK (clk), .D (n_n_394), .Q
+  ff gggg587gggggg(.CK (clk), .D (n_n_394), .Q
        (n__1253));
   wire w64, w65, w66;
   nand g28852gg9945 (n_n_477, w65, w66);
@@ -889,17 +889,17 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nand g128 (w65, w64, n_n_1384);
   not g127 (w64, n__1087);
   nand g28830gg6417 (n_n_500, n_n_469, n_n_2332);
-  fflopd gggg226gggggg(.CK (clk), .D (n_n_3061), .Q
+  ff gggg226gggggg(.CK (clk), .D (n_n_3061), .Q
        (n__1257));
-  fflopd gggg297gggggg(.CK (clk), .D (n_n_469), .Q (n__62));
-  fflopd gggg266gggggg(.CK (clk), .D (g1783), .Q (g1829));
+  ff gggg297gggggg(.CK (clk), .D (n_n_469), .Q (n__62));
+  ff gggg266gggggg(.CK (clk), .D (g1783), .Q (g1829));
   nor g28811gg6260 (n_n_466, n__1368, n__1371);
   not g28809 (n_n_462, n_n_1438);
-  fflopd gggg223gggggg(.CK (clk), .D (n_n_2441), .Q
+  ff gggg223gggggg(.CK (clk), .D (n_n_2441), .Q
        (n__1263));
   nand g28948gg5122 (n_n_527, n__1148, n_n_1164);
   nor g28740gg8246 (n_n_579, n_n_447, n_n_59);
-  fflopd gggg608gggggg(.CK (clk), .D (n_n_376), .Q (n__866));
+  ff gggg608gggggg(.CK (clk), .D (n_n_376), .Q (n__866));
   nor g28733gg5115 (n_n_441, n_n_401, n__926, n_n_3458);
   nor g28850gg7482 (n_n_440, n_n_482, n_n_3657);
   wire w67;
@@ -908,14 +908,14 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   wire w68;
   nand g28859gg9315 (n_n_435, w68, n_n_3657);
   not g131 (w68, n_n_3661);
-  fflopd gggg469gggggg(.CK (clk), .D (n_n_340), .Q
+  ff gggg469gggggg(.CK (clk), .D (n_n_340), .Q
        (n__1266));
-  fflopd gggg128gggggg(.CK (clk), .D (n_n_367), .Q
+  ff gggg128gggggg(.CK (clk), .D (n_n_367), .Q
        (n__1268));
   wire w69;
   nand g28922gg2346 (n_n_428, w69, n_n_3432);
   or g132 (w69, n_n_2429, n_n_3063);
-  fflopd gggg519gggggg(.CK (clk), .D (n_n_348), .Q (n__875));
+  ff gggg519gggggg(.CK (clk), .D (n_n_348), .Q (n__875));
   nor g28838gg7410 (n_n_486, n_n_24, n_n_2083);
   nor g28722gg4319 (n_n_411, n_n_2953, n_n_349);
   wire w70;
@@ -928,32 +928,32 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   wire w73;
   nor g28656gg2802 (n_n_402, w73, n_n_356);
   and g136 (w73, n_n_3459, n_n_401);
-  fflopd gggg494gggggg(.CK (clk), .D (n_n_3570), .Q
+  ff gggg494gggggg(.CK (clk), .D (n_n_3570), .Q
        (n__871));
-  fflopd gggg10gggggg(.CK (clk), .D (n_n_331), .Q (n__940));
-  fflopd gggg66gggggg(.CK (clk), .D (g4370), .Q (g4372));
-  fflopd gggg314gggggg(.CK (clk), .D (n_n_316), .Q
+  ff gggg10gggggg(.CK (clk), .D (n_n_331), .Q (n__940));
+  ff gggg66gggggg(.CK (clk), .D (g4370), .Q (g4372));
+  ff gggg314gggggg(.CK (clk), .D (n_n_316), .Q
        (n__1363));
-  fflopd gggg24gggggg(.CK (clk), .D (n_3903), .Q (n__1371));
-  fflopd gggg20gggggg(.CK (clk), .D (n_3906), .Q (n__1375));
-  fflopd gggg63gggggg(.CK (clk), .D (n_n_307), .Q (n__1365));
-  fflopd gggg578gggggg(.CK (clk), .D (n_n_1603), .Q
+  ff gggg24gggggg(.CK (clk), .D (n_3903), .Q (n__1371));
+  ff gggg20gggggg(.CK (clk), .D (n_3906), .Q (n__1375));
+  ff gggg63gggggg(.CK (clk), .D (n_n_307), .Q (n__1365));
+  ff gggg578gggggg(.CK (clk), .D (n_n_1603), .Q
        (n__1367));
-  fflopd gggg527gggggg(.CK (clk), .D (n_n_3055), .Q
+  ff gggg527gggggg(.CK (clk), .D (n_n_3055), .Q
        (n__1374));
-  fflopd gggg564gggggg(.CK (clk), .D (n_3942), .Q (n__1366));
-  fflopd gggg260gggggg(.CK (clk), .D (n_n_2333), .Q
+  ff gggg564gggggg(.CK (clk), .D (n_3942), .Q (n__1366));
+  ff gggg260gggggg(.CK (clk), .D (n_n_2333), .Q
        (n__1370));
-  fflopd gggg155gggggg(.CK (clk), .D (n_n_2284), .Q
+  ff gggg155gggggg(.CK (clk), .D (n_n_2284), .Q
        (n__1373));
-  fflopd gggg215gggggg(.CK (clk), .D (n_n_305), .Q
+  ff gggg215gggggg(.CK (clk), .D (n_n_305), .Q
        (n__1368));
-  fflopd gggg84gggggg(.CK (clk), .D (n_n_302), .Q (n__1364));
-  fflopd gggg140gggggg(.CK (clk), .D (n_3904), .Q (n__1372));
+  ff gggg84gggggg(.CK (clk), .D (n_n_302), .Q (n__1364));
+  ff gggg140gggggg(.CK (clk), .D (n_3904), .Q (n__1372));
   nor g28895gg1881 (n_n_394, n_n_2173, n_3926);
-  fflopd gggg68gggggg(.CK (clk), .D (n_n_318), .Q (n__1369));
-  fflopd gggg55gggggg(.CK (clk), .D (n__926), .Q (g1783));
-  fflopd gggg477gggggg(.CK (clk), .D (n__1185), .Q
+  ff gggg68gggggg(.CK (clk), .D (n_n_318), .Q (n__1369));
+  ff gggg55gggggg(.CK (clk), .D (n__926), .Q (g1783));
+  ff gggg477gggggg(.CK (clk), .D (n__1185), .Q
        (n__1097));
   nor g28926gg6161 (n_n_390, n_n_3578, n_n_306);
   wire w74;
@@ -965,7 +965,7 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   not g140 (w77, g786);
   nand g139 (w76, w75, g786);
   not g138 (w75, n_n_2953);
-  fflopd gggg593gggggg(.CK (clk), .D (n__1159), .Q
+  ff gggg593gggggg(.CK (clk), .D (n__1159), .Q
        (n__1158));
   wire w79;
   and g28934gg6417 (n_n_425, w79, n__998);
@@ -973,7 +973,7 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   wire w80;
   and g28936gg5477 (n_n_469, w80, n_n_225);
   not g144 (w80, n__55);
-  fflopd gggg444gggggg(.CK (clk), .D (n_n_288), .Q (n__936));
+  ff gggg444gggggg(.CK (clk), .D (n_n_288), .Q (n__936));
   nand g28946gg2398 (n_n_447, n__1148, n__1087);
   nand g28974gg6783 (n_n_367, n_n_139, n_n_257);
   nor g28925gg2802 (n_n_361, n_n_359, n_n_1164);
@@ -981,9 +981,9 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nand g28930gg1705 (n_n_358, w81, g6850);
   or g146 (w81, n_3931, n_3933);
   not g28958 (n_n_355, n_n_1827);
-  fflopd gggg238gggggg(.CK (clk), .D (n_n_272), .Q (n__990));
+  ff gggg238gggggg(.CK (clk), .D (n_n_272), .Q (n__990));
   nor g28870gg6161 (n_n_459, n_n_418, n_n_1768);
-  fflopd gggg301gggggg(.CK (clk), .D (n_n_262), .Q (g206));
+  ff gggg301gggggg(.CK (clk), .D (n_n_262), .Q (g206));
   wire w82;
   nor g28783gg9945 (n_n_349, w82, n__828);
   and g147 (w82, n__825, n_n_189);
@@ -995,30 +995,30 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   not g148 (w83, n_n_2442);
   nor g28724gg8428 (n_n_331, n_n_227, n_n_2294);
   not g29006 (n_n_776, n_n_2077);
-  fflopd gggg158gggggg(.CK (clk), .D (n_3928), .Q (n__959));
-  fflopd gggg447gggggg(.CK (clk), .D (n_n_278), .Q (n__945));
-  fflopd gggg349gggggg(.CK (clk), .D (n_n_247), .Q (n__933));
-  fflopd gggg386gggggg(.CK (clk), .D (n_n_268), .Q (g1724));
+  ff gggg158gggggg(.CK (clk), .D (n_3928), .Q (n__959));
+  ff gggg447gggggg(.CK (clk), .D (n_n_278), .Q (n__945));
+  ff gggg349gggggg(.CK (clk), .D (n_n_247), .Q (n__933));
+  ff gggg386gggggg(.CK (clk), .D (n_n_268), .Q (g1724));
   nor g28736gg3680 (n_n_384, n_n_401, n_n_283);
-  fflopd gggg529gggggg(.CK (clk), .D (n_n_276), .Q (g3829));
-  fflopd gggg630gggggg(.CK (clk), .D (g4371), .Q (g4370));
-  fflopd gggg104gggggg(.CK (clk), .D (n_n_264), .Q (n__985));
-  fflopd gggg328gggggg(.CK (clk), .D (n_n_1496), .Q
+  ff gggg529gggggg(.CK (clk), .D (n_n_276), .Q (g3829));
+  ff gggg630gggggg(.CK (clk), .D (g4371), .Q (g4370));
+  ff gggg104gggggg(.CK (clk), .D (n_n_264), .Q (n__985));
+  ff gggg328gggggg(.CK (clk), .D (n_n_1496), .Q
        (n__979));
-  fflopd gggg119gggggg(.CK (clk), .D (n__1200), .Q (g1201));
+  ff gggg119gggggg(.CK (clk), .D (n__1200), .Q (g1201));
   wire w84, w85;
   nand g28921gg1705 (n_n_326, w84, w85);
   nand g150 (w85, n__809, n_n_2080);
   or g149 (w84, n__809, n_n_2080);
-  fflopd gggg5gggggg(.CK (clk), .D (n_n_2292), .Q (n__948));
-  fflopd gggg185gggggg(.CK (clk), .D (n_n_215), .Q
+  ff gggg5gggggg(.CK (clk), .D (n_n_2292), .Q (n__948));
+  ff gggg185gggggg(.CK (clk), .D (n_n_215), .Q
        (n__1030));
-  fflopd gggg107gggggg(.CK (clk), .D (n__89), .Q (n__93));
-  fflopd gggg539gggggg(.CK (clk), .D (n__1157), .Q
+  ff gggg107gggggg(.CK (clk), .D (n__89), .Q (n__93));
+  ff gggg539gggggg(.CK (clk), .D (n__1157), .Q
        (n__1159));
-  fflopd gggg45gggggg(.CK (clk), .D (n_n_3053), .Q
+  ff gggg45gggggg(.CK (clk), .D (n_n_3053), .Q
        (n__1269));
-  fflopd gggg291gggggg(.CK (clk), .D (n_n_217), .Q (n__55));
+  ff gggg291gggggg(.CK (clk), .D (n_n_217), .Q (n__55));
   wire w86, w87;
   nand g29012gg1881 (n_n_318, w86, w87);
   or g152 (w87, n__1225, n_n_2332);
@@ -1027,11 +1027,11 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nand g29010gg5115 (n_n_316, w88, w89);
   or g154 (w89, n__1227, n_n_2332);
   or g153 (w88, n_n_30, n__52);
-  fflopd gggg229gggggg(.CK (clk), .D (n__1005), .Q (n__998));
-  fflopd gggg566gggggg(.CK (clk), .D (n__1147), .Q
+  ff gggg229gggggg(.CK (clk), .D (n__1005), .Q (n__998));
+  ff gggg566gggggg(.CK (clk), .D (n__1147), .Q
        (n__1148));
-  fflopd gggg364gggggg(.CK (clk), .D (g4316), .Q (n__926));
-  fflopd gggg31gggggg(.CK (clk), .D (g5571), .Q (n__1231));
+  ff gggg364gggggg(.CK (clk), .D (g4316), .Q (n__926));
+  ff gggg31gggggg(.CK (clk), .D (g5571), .Q (n__1231));
   wire w90, w91;
   nand g29018gg2346 (n_n_307, w90, w91);
   or g157 (w91, n__1229, n_n_2332);
@@ -1051,14 +1051,14 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nand g29029gg2398 (n_n_302, w97, w98);
   or g164 (w98, n__1228, n_n_2332);
   or g163 (w97, n_n_301, n__52);
-  fflopd gggg583gggggg(.CK (clk), .D (n__1192), .Q (g1193));
-  fflopd gggg139gggggg(.CK (clk), .D (n__1155), .Q
+  ff gggg583gggggg(.CK (clk), .D (n__1192), .Q (g1193));
+  ff gggg139gggggg(.CK (clk), .D (n__1155), .Q
        (n__1185));
   or g29067gg3680 (n_n_291, n__1360, n_n_290);
   and g29068gg1617 (n_n_288, n__942, n_n_287);
   not g29042 (g4655, n_n_2294);
   not g29045 (g5164, n_n_283);
-  fflopd gggg482gggggg(.CK (clk), .D (n_n_401), .Q (n__874));
+  ff gggg482gggggg(.CK (clk), .D (n_n_401), .Q (n__874));
   wire w99, w100;
   nand g28853gg6131 (n_n_278, w99, w100);
   nand g167 (w100, n__945, n_n_226);
@@ -1083,10 +1083,10 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   wire w108;
   and g29058gg1666 (n_n_264, w108, n_n_271);
   not g181 (w108, n_3931);
-  fflopd gggg250gggggg(.CK (clk), .D (n__646), .Q (n__652));
+  ff gggg250gggggg(.CK (clk), .D (n__646), .Q (n__652));
   not g29044 (n_n_262, n_3935);
   not g29046 (n_n_337, n_n_259);
-  fflopd gggg194gggggg(.CK (clk), .D (n_n_146), .Q (n__819));
+  ff gggg194gggggg(.CK (clk), .D (n_n_146), .Q (n__819));
   nor g29121gg6260 (n_n_257, n__1225, n__1224, n__1227, n__1223);
   nor g29114gg6783 (n_n_249, n_n_2153, n_n_1449);
   wire w109;
@@ -1097,42 +1097,42 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   not g29047 (n_n_345, n_n_232);
   not g29049 (n_n_335, g4316);
   nand g29079gg1881 (n_n_283, g785, n_n_184);
-  fflopd gggg313gggggg(.CK (clk), .D (g4267), .Q (g4371));
+  ff gggg313gggggg(.CK (clk), .D (g4267), .Q (g4371));
   wire w110;
   and g28933gg5115 (n_n_227, w110, n__945);
   not g184 (w110, n_n_226);
   nor g29112gg7482 (n_n_225, g42, g41, n_n_216);
-  fflopd gggg320gggggg(.CK (clk), .D (n__1156), .Q
+  ff gggg320gggggg(.CK (clk), .D (n__1156), .Q
        (n__1157));
   wire w111;
   and g29065gg9315 (n_n_220, w111, n_n_219);
   not g186 (w111, n__979);
-  fflopd gggg568gggggg(.CK (clk), .D (n__1154), .Q
+  ff gggg568gggggg(.CK (clk), .D (n__1154), .Q
        (n__1155));
   nand g29066gg2883 (n_n_217, n_n_216, n__47);
   nor g29071gg2346 (n_n_215, g8234, n_n_90);
   nor g29100gg6260 (n_n_204, n_n_80, n_n_1585);
   nor g29084gg4319 (n_n_232, n_n_201, n_n_3157);
-  fflopd gggg380gggggg(.CK (clk), .D (n_n_164), .Q (n__47));
-  fflopd gggg373gggggg(.CK (clk), .D (g1894), .Q (g5571));
-  fflopd gggg58gggggg(.CK (clk), .D (n__52), .Q (n__89));
+  ff gggg380gggggg(.CK (clk), .D (n_n_164), .Q (n__47));
+  ff gggg373gggggg(.CK (clk), .D (g1894), .Q (g5571));
+  ff gggg58gggggg(.CK (clk), .D (n__52), .Q (n__89));
   nor g29082gg6783 (n_n_259, g5684, n_n_3181);
-  fflopd gggg73gggggg(.CK (clk), .D (n__890), .Q (g4316));
+  ff gggg73gggggg(.CK (clk), .D (n__890), .Q (g4316));
   wire w112;
   and g28951gg2802 (n_n_401, w112, n__871);
   not g187 (w112, n_n_141);
   nor g29117gg6131 (n_n_192, n_n_2092, n_n_79);
-  fflopd gggg36gggggg(.CK (clk), .D (n__1204), .Q (g1205));
-  fflopd gggg531gggggg(.CK (clk), .D (n__1199), .Q
+  ff gggg36gggggg(.CK (clk), .D (n__1204), .Q (g1205));
+  ff gggg531gggggg(.CK (clk), .D (n__1199), .Q
        (n__1200));
   not g29136 (n_n_187, n_3949);
   not g29138 (n_n_185, n_n_184);
-  fflopd gggg400gggggg(.CK (clk), .D (n__1191), .Q
+  ff gggg400gggggg(.CK (clk), .D (n__1191), .Q
        (n__1192));
-  fflopd gggg144gggggg(.CK (clk), .D (g1871), .Q (n__969));
+  ff gggg144gggggg(.CK (clk), .D (g1871), .Q (n__969));
   nor g29113gg4733 (n_n_179, g1016, g1008, n_n_1806);
-  fflopd gggg56gggggg(.CK (clk), .D (n__1004), .Q (n__1005));
-  fflopd gggg281gggggg(.CK (clk), .D (n__1146), .Q
+  ff gggg56gggggg(.CK (clk), .D (n__1004), .Q (n__1005));
+  ff gggg281gggggg(.CK (clk), .D (n__1146), .Q
        (n__1147));
   not g29140 (n_n_290, n_n_3548);
   not g29201 (n_n_287, n_3930);
@@ -1160,9 +1160,9 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nor g29188gg4733 (n_n_184, n_n_128, n_n_3459);
   or g29231gg6417 (n_n_122, n__1065, n_n_2701);
   nor g29238gg2398 (n_n_120, n__1102, n_n_22);
-  fflopd gggg95gggggg(.CK (clk), .D (n_3908), .Q (n__646));
-  fflopd gggg622gggggg(.CK (clk), .D (g1870), .Q (n__970));
-  fflopd gggg381gggggg(.CK (clk), .D (n_n_90), .Q (n__971));
+  ff gggg95gggggg(.CK (clk), .D (n_3908), .Q (n__646));
+  ff gggg622gggggg(.CK (clk), .D (g1870), .Q (n__970));
+  ff gggg381gggggg(.CK (clk), .D (n_n_90), .Q (n__971));
   not g29340 (n_n_100, n_n_114);
   nand g29245gg1617 (n_n_395, n__1354, n_n_1339);
   wire w119, w120, w121;
@@ -1170,46 +1170,46 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   nand g196 (w121, g30, g32);
   nand g195 (w120, w119, g31);
   not g194 (w119, g32);
-  fflopd gggg300gggggg(.CK (clk), .D (n_n_8), .Q (n__815));
-  fflopd gggg337gggggg(.CK (clk), .D (g11), .Q (n__890));
+  ff gggg300gggggg(.CK (clk), .D (n_n_8), .Q (n__815));
+  ff gggg337gggggg(.CK (clk), .D (g11), .Q (n__890));
   nand g29212gg1881 (n_n_89, n__1467, n__1499);
-  fflopd gggg511gggggg(.CK (clk), .D (g37), .Q (g1911));
-  fflopd gggg402gggggg(.CK (clk), .D (g26), .Q (n__1392));
+  ff gggg511gggggg(.CK (clk), .D (g37), .Q (g1911));
+  ff gggg402gggggg(.CK (clk), .D (g26), .Q (n__1392));
   not g29307 (n_n_86, n__1122);
   nand g29178gg4733 (n_n_85, n__1494, n__1489);
-  fflopd gggg479gggggg(.CK (clk), .D (n__1153), .Q
+  ff gggg479gggggg(.CK (clk), .D (n__1153), .Q
        (n__1154));
   nand g29179gg9945 (n_n_82, n__1061, n__1065);
-  fflopd gggg269gggggg(.CK (clk), .D (g2888), .Q (n__1146));
-  fflopd gggg371gggggg(.CK (clk), .D (n__979), .Q (n__972));
-  fflopd gggg252gggggg(.CK (clk), .D (g29), .Q (n__1400));
+  ff gggg269gggggg(.CK (clk), .D (g2888), .Q (n__1146));
+  ff gggg371gggggg(.CK (clk), .D (n__979), .Q (n__972));
+  ff gggg252gggggg(.CK (clk), .D (g29), .Q (n__1400));
   nand g29177gg2346 (n_n_80, n__1322, n__1323);
-  fflopd gggg428gggggg(.CK (clk), .D (g24), .Q (n__1199));
-  fflopd gggg308gggggg(.CK (clk), .D (g1944), .Q (n__1156));
+  ff gggg428gggggg(.CK (clk), .D (g24), .Q (n__1199));
+  ff gggg308gggggg(.CK (clk), .D (g1944), .Q (n__1156));
   nand g29211gg1666 (n_n_79, n__1226, n__1220);
   wire w122;
   nand g29251gg5477 (n_n_164, w122, n__47);
   not g197 (w122, g44);
-  fflopd gggg274gggggg(.CK (clk), .D (g1234), .Q (g1894));
-  fflopd gggg171gggggg(.CK (clk), .D (g1206), .Q (g2844));
+  ff gggg274gggggg(.CK (clk), .D (g1234), .Q (g1894));
+  ff gggg171gggggg(.CK (clk), .D (g1206), .Q (g2844));
   not g29310 (g4267, n_n_3493);
   nor g29193gg8428 (n_n_271, g43, n__985);
   nand g29195gg3680 (g8234, g43, n__1033);
-  fflopd gggg6gggggg(.CK (clk), .D (n__2), .Q (n__52));
-  fflopd gggg535gggggg(.CK (clk), .D (g22), .Q (n__1191));
-  fflopd gggg93gggggg(.CK (clk), .D (g43), .Q (n__1004));
-  fflopd gggg342gggggg(.CK (clk), .D (g1194), .Q (g3096));
-  fflopd gggg377gggggg(.CK (clk), .D (g27), .Q (n__1394));
-  fflopd gggg609gggggg(.CK (clk), .D (g1203), .Q (n__1204));
+  ff gggg6gggggg(.CK (clk), .D (n__2), .Q (n__52));
+  ff gggg535gggggg(.CK (clk), .D (g22), .Q (n__1191));
+  ff gggg93gggggg(.CK (clk), .D (g43), .Q (n__1004));
+  ff gggg342gggggg(.CK (clk), .D (g1194), .Q (g3096));
+  ff gggg377gggggg(.CK (clk), .D (g27), .Q (n__1394));
+  ff gggg609gggggg(.CK (clk), .D (g1203), .Q (n__1204));
   nand g29208gg8246 (n_n_59, n__1102, n_n_1148);
   nand g29224gg1881 (n_n_55, n__828, n__825);
-  fflopd gggg465gggggg(.CK (clk), .D (g23), .Q (g1195));
-  fflopd gggg391gggggg(.CK (clk), .D (g941), .Q (n__942));
+  ff gggg465gggggg(.CK (clk), .D (g23), .Q (g1195));
+  ff gggg391gggggg(.CK (clk), .D (g941), .Q (n__942));
   nand g29219gg6161 (n_n_50, g43, n__984);
-  fflopd gggg218gggggg(.CK (clk), .D (g28), .Q (n__1397));
-  fflopd gggg156gggggg(.CK (clk), .D (g1198), .Q (g3130));
-  fflopd gggg286gggggg(.CK (clk), .D (g1202), .Q (g3191));
-  fflopd gggg216gggggg(.CK (clk), .D (g1196), .Q (g1197));
+  ff gggg218gggggg(.CK (clk), .D (g28), .Q (n__1397));
+  ff gggg156gggggg(.CK (clk), .D (g1198), .Q (g3130));
+  ff gggg286gggggg(.CK (clk), .D (g1202), .Q (g3191));
+  ff gggg216gggggg(.CK (clk), .D (g1196), .Q (g1197));
   wire w123;
   and g29185gg9315 (n_n_131, w123, n__1450);
   not g198 (w123, n__1454);
@@ -2307,21 +2307,5 @@ module s13207(clk, g1, g10, g1000, g1006, g1008, g1015, g1016, g1017,
   wire w388;
   nand g32300 (n_3994, n_n_1981, n__1348, w388);
   not g467 (w388, n_n_1933);
-endmodule
-
-module fflopd(CK, D, Q);
-	input CK, D;
-	output Q;
-	wire CK, D;
-	wire Q;
-	wire next_state;
-	reg  qi;
-	assign #1 Q = qi;
-	assign next_state = D;
-	always
-	@(posedge CK)
-	qi <= next_state;
-	initial
-	  qi <= 1'b0;
 endmodule
 

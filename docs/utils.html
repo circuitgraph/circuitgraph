@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.utils API documentation</title>
 <meta name="description" content="Various circuit related utilities" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -63,7 +63,7 @@ def int_to_bin(i, w, lend=False):
     w : int
             Width of conversion
     lend : bool
-            Endianess of returned tuple, helpful for iterating.
+            Endianness of returned tuple, helpful for iterating.
 
     Returns
     -------
@@ -87,7 +87,7 @@ def bin_to_int(b, lend=False):
     b : tuple of bool
             Binary tuple.
     lend : bool
-            Endianess of tuple.
+            Endianness of tuple.
 
     Returns
     -------
@@ -114,18 +114,17 @@ def lint(c):
             The Circuit to lint.
     &#34;&#34;&#34;
     c.type(c.nodes())
-    c.output(c.nodes())
-    for g in c.nodes(types=[&#34;buf&#34;, &#34;not&#34;]):
+    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;output&#34;, &#34;bb_input&#34;]):
         if len(c.fanin(g)) != 1:
             raise ValueError(f&#34;buf/not {g} has incorrect fanin count&#34;)
-    for g in c.nodes(types=[&#34;input&#34;, &#34;0&#34;, &#34;1&#34;]):
+    for g in c.filter_type([&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_output&#34;]):
         if len(c.fanin(g)) &gt; 0:
             raise ValueError(f&#34;0/1/input {g} has fanin&#34;)
-    for g in c.nodes(types=[&#34;ff&#34;, &#34;lat&#34;, &#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;]):
+    for g in c.filter_type([&#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;]):
         if len(c.fanin(g)) &lt; 1:
             raise ValueError(f&#34;{g} has no fanin&#34;)
     for g in c.nodes():
-        if not c.fanout(g) and not c.output(g):
+        if not c.fanout(g) and not c.type(g)==&#34;output&#34;:
             raise ValueError(f&#34;{g} has no fanout and is not output&#34;)</code></pre>
 </details>
 </section>
@@ -146,7 +145,7 @@ def lint(c):
 <dt><strong><code>b</code></strong> :&ensp;<code>tuple</code> of <code>bool</code></dt>
 <dd>Binary tuple.</dd>
 <dt><strong><code>lend</code></strong> :&ensp;<code>bool</code></dt>
-<dd>Endianess of tuple.</dd>
+<dd>Endianness of tuple.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -166,7 +165,7 @@ def lint(c):
     b : tuple of bool
             Binary tuple.
     lend : bool
-            Endianess of tuple.
+            Endianness of tuple.
 
     Returns
     -------
@@ -236,7 +235,7 @@ ValueError: expected num &gt;= 1</p></div>
 <dt><strong><code>w</code></strong> :&ensp;<code>int</code></dt>
 <dd>Width of conversion</dd>
 <dt><strong><code>lend</code></strong> :&ensp;<code>bool</code></dt>
-<dd>Endianess of returned tuple, helpful for iterating.</dd>
+<dd>Endianness of returned tuple, helpful for iterating.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -258,7 +257,7 @@ ValueError: expected num &gt;= 1</p></div>
     w : int
             Width of conversion
     lend : bool
-            Endianess of returned tuple, helpful for iterating.
+            Endianness of returned tuple, helpful for iterating.
 
     Returns
     -------
@@ -297,18 +296,17 @@ ValueError: expected num &gt;= 1</p></div>
             The Circuit to lint.
     &#34;&#34;&#34;
     c.type(c.nodes())
-    c.output(c.nodes())
-    for g in c.nodes(types=[&#34;buf&#34;, &#34;not&#34;]):
+    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;output&#34;, &#34;bb_input&#34;]):
         if len(c.fanin(g)) != 1:
             raise ValueError(f&#34;buf/not {g} has incorrect fanin count&#34;)
-    for g in c.nodes(types=[&#34;input&#34;, &#34;0&#34;, &#34;1&#34;]):
+    for g in c.filter_type([&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_output&#34;]):
         if len(c.fanin(g)) &gt; 0:
             raise ValueError(f&#34;0/1/input {g} has fanin&#34;)
-    for g in c.nodes(types=[&#34;ff&#34;, &#34;lat&#34;, &#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;]):
+    for g in c.filter_type([&#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;]):
         if len(c.fanin(g)) &lt; 1:
             raise ValueError(f&#34;{g} has no fanin&#34;)
     for g in c.nodes():
-        if not c.fanout(g) and not c.output(g):
+        if not c.fanout(g) and not c.type(g)==&#34;output&#34;:
             raise ValueError(f&#34;{g} has no fanout and is not output&#34;)</code></pre>
 </details>
 </dd>
@@ -344,7 +342,7 @@ ValueError: expected num &gt;= 1</p></div>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

@@ -74,7 +74,7 @@ def sensitivity(c, n):
     sen = len(sp)
     s = sensitivity_transform(c, n)
     vs = int_to_bin(sen, clog2(len(sp)), True)
-    while not sat(s, {f"out_{i}": v for i, v in enumerate(vs)}):
+    while not sat(s, {f"sen_out_{i}": v for i, v in enumerate(vs)}):
         sen -= 1
         vs = int_to_bin(sen, clog2(len(sp)), True)
 

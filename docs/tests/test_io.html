@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.tests.test_io API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -35,252 +35,110 @@ from circuitgraph.sat import sat
 
 
 class TestIO(unittest.TestCase):
-    @unittest.skip(&#34;bench parsing is not working&#34;)
+    def setUp(self):
+        self.test_path = f&#34;{os.path.dirname(__file__)}/../netlists/tests/&#34;
+        self.bbs = [cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])]
+
     def test_bench(self):
-        g = cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/b17_C.bench&#34;)
-        print(g.nodes())
+        g = cg.from_lib(f&#34;b17_C&#34;)
+        self.assertEqual(len(g),2943)
+        self.assertSetEqual(g.fanin(&#34;n2905&#34;), set([&#34;n2516&#34;, &#34;n2904&#34;]))
+        self.assertSetEqual(g.fanin(&#34;out789&#34;), set([&#34;out789_driver&#34;]))
+        self.assertSetEqual(g.fanin(&#34;out789_driver&#34;), set([&#34;n2942&#34;]))
+        self.assertSetEqual(g.fanout(&#34;in382&#34;), set([&#34;n2484&#34;]))
 
-    def test_verilog_comb(self):
-        for g in [
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_correct_io&#34;),
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_1&#34;),
-            cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;),
-        ]:
-            self.assertSetEqual(
-                g.nodes(),
-                set(
-                    [
-                        &#34;G1&#34;,
-                        &#34;G2&#34;,
-                        &#34;G3&#34;,
-                        &#34;G4&#34;,
-                        &#34;\\G5[0]&#34;,
-                        &#34;\\G5[1]&#34;,
-                        &#34;G17&#34;,
-                        &#34;G18&#34;,
-                        &#34;G19&#34;,
-                        &#34;G20&#34;,
-                        &#34;G21&#34;,
-                        &#34;\\G22[0]&#34;,
-                        &#34;\\G22[1]&#34;,
-                        &#34;\\G8[0]&#34;,
-                        &#34;\\G8[1]&#34;,
-                        &#34;not_G2&#34;,
-                        &#34;xor_G3_G4&#34;,
-                        &#34;and_G1_G2&#34;,
-                        &#34;tie_1&#34;,
-                        &#34;\\and_G8[0]_G5[0]&#34;,
-                        &#34;or_not_G2_tie_1&#34;,
-                    ]
-                ),
-            )
-            self.assertSetEqual(g.fanin(&#34;\\G8[0]&#34;), set([&#34;G1&#34;, &#34;G3&#34;]))
-            self.assertSetEqual(g.fanin(&#34;G17&#34;), set([&#34;\\G8[1]&#34;, &#34;tie_1&#34;]))
-            self.assertSetEqual(g.fanin(&#34;G18&#34;), set([&#34;G2&#34;, &#34;\\G5[0]&#34;]))
-            self.assertSetEqual(g.fanin(&#34;\\G22[0]&#34;), set([&#34;\\G5[1]&#34;, &#34;G4&#34;]))
+        self.assertEqual(g.type(&#34;n2905&#34;), &#34;and&#34;)
+        self.assertEqual(g.type(&#34;out789&#34;), &#34;output&#34;)
+        self.assertEqual(g.type(&#34;out789_driver&#34;), &#34;not&#34;)
+        self.assertEqual(g.type(&#34;in382&#34;), &#34;input&#34;)
 
-            self.assertEqual(g.type(&#34;\\G8[0]&#34;), &#34;nand&#34;)
-            self.assertEqual(g.type(&#34;G17&#34;), &#34;nor&#34;)
-            self.assertEqual(g.type(&#34;G18&#34;), &#34;and&#34;)
-            self.assertEqual(g.type(&#34;\\G22[0]&#34;), &#34;xor&#34;)
-            self.assertEqual(g.type(&#34;tie_1&#34;), &#34;1&#34;)
+    def test_bench_output(self):
+        g = cg.from_lib(f&#34;b17_C&#34;)
+        g2 = cg.bench_to_circuit(cg.circuit_to_bench(g), g.name)
 
-            self.assertSetEqual(g.fanin(&#34;G19&#34;), set([&#34;and_G1_G2&#34;, &#34;xor_G3_G4&#34;]))
-            self.assertSetEqual(g.fanin(&#34;and_G1_G2&#34;), set([&#34;G1&#34;, &#34;G2&#34;]))
-            self.assertSetEqual(g.fanin(&#34;xor_G3_G4&#34;), set([&#34;G3&#34;, &#34;G4&#34;]))
-            self.assertSetEqual(g.fanin(&#34;G20&#34;), set([&#34;G17&#34;, &#34;\\and_G8[0]_G5[0]&#34;]))
-            self.assertSetEqual(
-                g.fanin(&#34;\\and_G8[0]_G5[0]&#34;), set([&#34;\\G8[0]&#34;, &#34;\\G5[0]&#34;])
-            )
-            self.assertSetEqual(g.fanin(&#34;\\G22[1]&#34;), set([&#34;G1&#34;, &#34;or_not_G2_tie_1&#34;]))
-            self.assertSetEqual(g.fanin(&#34;or_not_G2_tie_1&#34;), set([&#34;not_G2&#34;, &#34;tie_1&#34;]))
-            self.assertSetEqual(g.fanin(&#34;not_G2&#34;), set([&#34;G2&#34;]))
+        m = miter(g, g2)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        if different_output:
+            import code; code.interact(local=dict(**globals(),**locals()))
+        self.assertFalse(different_output)
 
-            self.assertSetEqual(
-                g.inputs(), set([&#34;G1&#34;, &#34;G2&#34;, &#34;G3&#34;, &#34;G4&#34;, &#34;\\G5[0]&#34;, &#34;\\G5[1]&#34;])
-            )
-            self.assertSetEqual(
-                g.outputs(),
-                set([&#34;G17&#34;, &#34;G18&#34;, &#34;G19&#34;, &#34;G20&#34;, &#34;G21&#34;, &#34;\\G22[0]&#34;, &#34;\\G22[1]&#34;]),
-            )
+    def test_verilog(self):
+        g = cg.from_file(f&#34;{self.test_path}/test_correct_io.v&#34;)
 
-    def test_verilog_seq(self):
-        g = cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_2&#34;)
         self.assertSetEqual(
             g.nodes(),
-            set(
-                [
-                    &#34;clk&#34;,
-                    &#34;G0&#34;,
-                    &#34;G1&#34;,
-                    &#34;\\G2[0]&#34;,
-                    &#34;\\G2[1]&#34;,
-                    &#34;\\G18[0]&#34;,
-                    &#34;\\G18[1]&#34;,
-                    &#34;G3&#34;,
-                    &#34;G4&#34;,
-                    &#34;G5&#34;,
-                ]
-            ),
+            set([
+                &#34;G1&#34;, &#34;G2&#34;, &#34;G3&#34;, &#34;G4&#34;, &#34;G5_0&#34;, &#34;G5_1&#34;, &#34;G17&#34;, &#34;G18&#34;,
+                &#34;G19&#34;, &#34;G20&#34;, &#34;G21&#34;, &#34;G22_0&#34;, &#34;G22_1&#34;, &#34;G8_0&#34;, &#34;G8_1&#34;,
+                &#34;G19_driver&#34;, &#34;G18_driver&#34;, &#34;G20_driver&#34;,
+                &#34;G21_driver&#34;, &#34;G17_driver&#34;, &#34;and_G1_G2&#34;, &#34;tie_0&#34;, &#34;tie_1&#34;,
+                &#34;not_G2&#34;, &#34;xor_G3_G4&#34;, &#34;and_G8_0_G5_0&#34;,
+                &#34;xor_G17_driver_and_G8_0_G5_0&#34;, &#34;and_and_G1_G2_xor_G3_G4&#34;,
+                &#34;and_G1_or_not_G2_tie_1&#34;, &#34;or_not_G2_tie_1&#34;, &#34;G22_0_driver&#34;,
+                &#34;G22_1_driver&#34;
+            ]),
         )
-        self.assertSetEqual(g.fanin(&#34;G4&#34;), set([&#34;G3&#34;]))
-        self.assertSetEqual(g.fanin(&#34;G5&#34;), set([&#34;\\G2[0]&#34;]))
-        self.assertSetEqual(g.fanin(&#34;\\G18[0]&#34;), set([&#34;G5&#34;]))
-        self.assertSetEqual(set(g.clk([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;clk&#34;]))
-        self.assertEqual(g.d(&#34;G4&#34;), &#34;G3&#34;)
-        self.assertSetEqual(set(g.type([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;ff&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G8_0&#34;), set([&#34;G1&#34;, &#34;G3&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G17&#34;), set([&#34;G17_driver&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G18&#34;), set([&#34;G18_driver&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G17_driver&#34;), set([&#34;G8_1&#34;, &#34;tie_1&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G8_1&#34;), set([&#34;tie_1&#34;]))
 
-    def test_verilog_custom_seq(self):
-        c = cg.from_file(
-            f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
-            name=&#34;test_module_4&#34;,
-            seq_types=[
-                cg.SequentialElement(
-                    &#34;custom_flop&#34;,
-                    &#34;ff&#34;,
-                    {
-                        &#34;d&#34;: &#34;data_in&#34;,
-                        &#34;q&#34;: &#34;data_out&#34;,
-                        &#34;clk&#34;: &#34;clock&#34;,
-                        &#34;r&#34;: &#34;reset&#34;,
-                        &#34;s&#34;: &#34;set&#34;,
-                    },
-                    &#34;&#34;,
-                )
-            ],
-        )
-        self.assertEqual(c.d(&#34;b&#34;), &#34;a&#34;)
-        self.assertEqual(c.r(&#34;b&#34;), &#34;rst&#34;)
-        self.assertEqual(c.s(&#34;b&#34;), &#34;set&#34;)
-        self.assertEqual(c.clk(&#34;b&#34;), &#34;clk&#34;)
+        self.assertEqual(g.type(&#34;G8_0&#34;), &#34;nand&#34;)
+        self.assertEqual(g.type(&#34;G17_driver&#34;), &#34;nor&#34;)
+        self.assertEqual(g.type(&#34;G18_driver&#34;), &#34;and&#34;)
+        self.assertEqual(g.type(&#34;G18&#34;), &#34;output&#34;)
+        self.assertEqual(g.type(&#34;G22_0&#34;), &#34;output&#34;)
+        self.assertEqual(g.type(&#34;G22_0_driver&#34;), &#34;xor&#34;)
+        self.assertEqual(g.type(&#34;tie_1&#34;), &#34;1&#34;)
+        self.assertEqual(g.type(&#34;tie_0&#34;), &#34;0&#34;)
 
-    def test_verilog_seq(self):
-        g = cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_2&#34;)
+        self.assertSetEqual(g.fanin(&#34;G19_driver&#34;), set([&#34;and_and_G1_G2_xor_G3_G4&#34;]))
+        self.assertSetEqual(g.fanin(&#34;and_and_G1_G2_xor_G3_G4&#34;), set([&#34;and_G1_G2&#34;, &#34;xor_G3_G4&#34;]))
+        self.assertSetEqual(g.fanin(&#34;and_G1_G2&#34;), set([&#34;G1&#34;, &#34;G2&#34;]))
+        self.assertSetEqual(g.fanin(&#34;xor_G3_G4&#34;), set([&#34;G3&#34;, &#34;G4&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G20_driver&#34;), set([&#34;xor_G17_driver_and_G8_0_G5_0&#34;]))
+        self.assertSetEqual(g.fanin(&#34;xor_G17_driver_and_G8_0_G5_0&#34;), set([&#34;G17_driver&#34;,&#34;and_G8_0_G5_0&#34;]))
         self.assertSetEqual(
-            g.nodes(),
-            set(
-                [
-                    &#34;clk&#34;,
-                    &#34;G0&#34;,
-                    &#34;G1&#34;,
-                    &#34;\\G2[0]&#34;,
-                    &#34;\\G2[1]&#34;,
-                    &#34;\\G18[0]&#34;,
-                    &#34;\\G18[1]&#34;,
-                    &#34;G3&#34;,
-                    &#34;G4&#34;,
-                    &#34;G5&#34;,
-                ]
-            ),
+            g.fanin(&#34;and_G8_0_G5_0&#34;), set([&#34;G8_0&#34;, &#34;G5_0&#34;])
         )
-        self.assertSetEqual(g.fanin(&#34;G4&#34;), set([&#34;G3&#34;]))
-        self.assertSetEqual(g.fanin(&#34;G5&#34;), set([&#34;\\G2[0]&#34;]))
-        self.assertSetEqual(g.fanin(&#34;\\G18[0]&#34;), set([&#34;G5&#34;]))
-        self.assertSetEqual(set(g.clk([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;clk&#34;]))
-        self.assertEqual(g.d(&#34;G4&#34;), &#34;G3&#34;)
-        self.assertSetEqual(set(g.type([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;ff&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G22_1_driver&#34;), set([&#39;and_G1_or_not_G2_tie_1&#39;]))
+        self.assertSetEqual(g.fanin(&#39;and_G1_or_not_G2_tie_1&#39;),set([&#34;G1&#34;, &#34;or_not_G2_tie_1&#34;]))
+        self.assertSetEqual(g.fanin(&#34;or_not_G2_tie_1&#34;), set([&#34;not_G2&#34;, &#34;tie_1&#34;]))
+        self.assertSetEqual(g.fanin(&#34;not_G2&#34;), set([&#34;G2&#34;]))
 
-    def test_verilog_escaped_names(self):
-        g = cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_3&#34;)
         self.assertSetEqual(
-            g.nodes(),
-            set(
-                [
-                    &#34;clk&#34;,
-                    &#34;\\G0[0]&#34;,
-                    &#34;\\I0[0]&#34;,
-                    &#34;\\I0[1]&#34;,
-                    &#34;\\G1[1][0]&#34;,
-                    &#34;\\G1[1][1]&#34;,
-                    &#34;\\G2[0]&#34;,
-                    &#34;\\G3[0][0]&#34;,
-                    &#34;\\G3[0][1]&#34;,
-                    &#34;\\G3[0][2]&#34;,
-                    &#34;\\I1[0]&#34;,
-                    &#34;\\not_G1[1][1]&#34;,
-                    &#34;\\and_G0[0]_not_G1[1][1]&#34;,
-                ]
-            ),
+            g.inputs(), set([&#34;G1&#34;, &#34;G2&#34;, &#34;G3&#34;, &#34;G4&#34;, &#34;G5_0&#34;, &#34;G5_1&#34;])
         )
         self.assertSetEqual(
-            g.fanin(&#34;\\G2[0]&#34;), set([&#34;\\G0[0]&#34;, &#34;\\G1[1][1]&#34;, &#34;\\I0[1]&#34;])
+            g.outputs(),
+            set([&#34;G17&#34;, &#34;G18&#34;, &#34;G19&#34;, &#34;G20&#34;, &#34;G21&#34;, &#34;G22_0&#34;, &#34;G22_1&#34;]),
         )
-        self.assertSetEqual(g.fanin(&#34;\\G3[0][0]&#34;), set([&#34;\\G0[0]&#34;, &#34;\\G1[1][0]&#34;]))
-
-    def test_incorrect_verilog(self):
-        with open(f&#34;{os.path.dirname(__file__)}/../netlists/test_incorrect_io.v&#34;) as f:
-            verilog = f.read()
-            for module in [
-                &#34;test_part_select_inst_0&#34;,
-                &#34;test_part_select_inst_1&#34;,
-                &#34;test_part_select_assign_0&#34;,
-                &#34;test_part_select_assign_1&#34;,
-                &#34;test_parameter_0&#34;,
-                &#34;test_parameter_1&#34;,
-                &#34;test_concat_0&#34;,
-                &#34;test_concat_1&#34;,
-                &#34;test_instance&#34;,
-                &#34;test_seq&#34;,
-                &#34;test_always&#34;,
-                &#34;test_logical_operator&#34;,
-                &#34;incorrect_module_name&#34;,
-            ]:
-                self.assertRaises(ValueError, cg.verilog_to_circuit, verilog, module)
 
     def test_incorrect_file_type(self):
         self.assertRaises(ValueError, cg.from_file, &#34;setup.py&#34;)
 
     def test_verilog_output(self):
         for g in [
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_1&#34;),
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_2&#34;),
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_3&#34;),
+            cg.from_file(f&#34;{self.test_path}/test_correct_io.v&#34;, name=&#34;test_module_bb&#34;, blackboxes=self.bbs),
+            cg.from_file(f&#34;{self.test_path}/test_correct_io.v&#34;, name=&#34;test_correct_io&#34;),
         ]:
-            g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name)
-            m = miter(g, g2)
-            # live = sat(m)
-            try:
-                live = sat(m)
-            except:
-                import code
-
-                code.interact(local=dict(globals(), **locals()))
+            g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name, blackboxes=self.bbs)
+            m = miter(cg.strip_blackboxes(g), cg.strip_blackboxes(g2))
+            live = sat(m)
             self.assertTrue(live)
             different_output = sat(m, assumptions={&#34;sat&#34;: True})
+            if different_output:
+                import code; code.interact(local=dict(**globals(),**locals()))
             self.assertFalse(different_output)
-
-        seq_types = [
-            cg.SequentialElement(
-                &#34;custom_flop&#34;,
-                &#34;ff&#34;,
-                {
-                    &#34;d&#34;: &#34;data_in&#34;,
-                    &#34;q&#34;: &#34;data_out&#34;,
-                    &#34;clk&#34;: &#34;clock&#34;,
-                    &#34;r&#34;: &#34;reset&#34;,
-                    &#34;s&#34;: &#34;set&#34;,
-                },
-                &#34;&#34;,
-            )
-        ]
-        g = cg.from_file(
-            f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
-            name=&#34;test_module_4&#34;,
-            seq_types=seq_types,
-        )
-        g2 = cg.verilog_to_circuit(
-            cg.circuit_to_verilog(g, seq_types=seq_types), g.name, seq_types=seq_types
-        )
-        live = sat(m)
-        self.assertTrue(live)
-        different_output = sat(m, assumptions={&#34;sat&#34;: True})
-        self.assertFalse(different_output)
 
     def test_verilog_incorrect_output(self):
         c = cg.Circuit()
         c.add(&#34;a&#34;, &#34;input&#34;)
         c.add(&#34;b&#34;, &#34;input&#34;)
-        c.add(&#34;c&#34;, &#34;fake_gate&#34;, fanin=[&#34;a&#34;, &#34;b&#34;], output=True)
+        c.add(&#34;c&#34;, &#34;fake_gate&#34;, fanin=[&#34;a&#34;, &#34;b&#34;])
         self.assertRaises(ValueError, cg.circuit_to_verilog, c)</code></pre>
 </details>
 </section>
@@ -331,252 +189,110 @@ not have a method with the specified name.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class TestIO(unittest.TestCase):
-    @unittest.skip(&#34;bench parsing is not working&#34;)
+    def setUp(self):
+        self.test_path = f&#34;{os.path.dirname(__file__)}/../netlists/tests/&#34;
+        self.bbs = [cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])]
+
     def test_bench(self):
-        g = cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/b17_C.bench&#34;)
-        print(g.nodes())
+        g = cg.from_lib(f&#34;b17_C&#34;)
+        self.assertEqual(len(g),2943)
+        self.assertSetEqual(g.fanin(&#34;n2905&#34;), set([&#34;n2516&#34;, &#34;n2904&#34;]))
+        self.assertSetEqual(g.fanin(&#34;out789&#34;), set([&#34;out789_driver&#34;]))
+        self.assertSetEqual(g.fanin(&#34;out789_driver&#34;), set([&#34;n2942&#34;]))
+        self.assertSetEqual(g.fanout(&#34;in382&#34;), set([&#34;n2484&#34;]))
 
-    def test_verilog_comb(self):
-        for g in [
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_correct_io&#34;),
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_1&#34;),
-            cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;),
-        ]:
-            self.assertSetEqual(
-                g.nodes(),
-                set(
-                    [
-                        &#34;G1&#34;,
-                        &#34;G2&#34;,
-                        &#34;G3&#34;,
-                        &#34;G4&#34;,
-                        &#34;\\G5[0]&#34;,
-                        &#34;\\G5[1]&#34;,
-                        &#34;G17&#34;,
-                        &#34;G18&#34;,
-                        &#34;G19&#34;,
-                        &#34;G20&#34;,
-                        &#34;G21&#34;,
-                        &#34;\\G22[0]&#34;,
-                        &#34;\\G22[1]&#34;,
-                        &#34;\\G8[0]&#34;,
-                        &#34;\\G8[1]&#34;,
-                        &#34;not_G2&#34;,
-                        &#34;xor_G3_G4&#34;,
-                        &#34;and_G1_G2&#34;,
-                        &#34;tie_1&#34;,
-                        &#34;\\and_G8[0]_G5[0]&#34;,
-                        &#34;or_not_G2_tie_1&#34;,
-                    ]
-                ),
-            )
-            self.assertSetEqual(g.fanin(&#34;\\G8[0]&#34;), set([&#34;G1&#34;, &#34;G3&#34;]))
-            self.assertSetEqual(g.fanin(&#34;G17&#34;), set([&#34;\\G8[1]&#34;, &#34;tie_1&#34;]))
-            self.assertSetEqual(g.fanin(&#34;G18&#34;), set([&#34;G2&#34;, &#34;\\G5[0]&#34;]))
-            self.assertSetEqual(g.fanin(&#34;\\G22[0]&#34;), set([&#34;\\G5[1]&#34;, &#34;G4&#34;]))
+        self.assertEqual(g.type(&#34;n2905&#34;), &#34;and&#34;)
+        self.assertEqual(g.type(&#34;out789&#34;), &#34;output&#34;)
+        self.assertEqual(g.type(&#34;out789_driver&#34;), &#34;not&#34;)
+        self.assertEqual(g.type(&#34;in382&#34;), &#34;input&#34;)
 
-            self.assertEqual(g.type(&#34;\\G8[0]&#34;), &#34;nand&#34;)
-            self.assertEqual(g.type(&#34;G17&#34;), &#34;nor&#34;)
-            self.assertEqual(g.type(&#34;G18&#34;), &#34;and&#34;)
-            self.assertEqual(g.type(&#34;\\G22[0]&#34;), &#34;xor&#34;)
-            self.assertEqual(g.type(&#34;tie_1&#34;), &#34;1&#34;)
+    def test_bench_output(self):
+        g = cg.from_lib(f&#34;b17_C&#34;)
+        g2 = cg.bench_to_circuit(cg.circuit_to_bench(g), g.name)
 
-            self.assertSetEqual(g.fanin(&#34;G19&#34;), set([&#34;and_G1_G2&#34;, &#34;xor_G3_G4&#34;]))
-            self.assertSetEqual(g.fanin(&#34;and_G1_G2&#34;), set([&#34;G1&#34;, &#34;G2&#34;]))
-            self.assertSetEqual(g.fanin(&#34;xor_G3_G4&#34;), set([&#34;G3&#34;, &#34;G4&#34;]))
-            self.assertSetEqual(g.fanin(&#34;G20&#34;), set([&#34;G17&#34;, &#34;\\and_G8[0]_G5[0]&#34;]))
-            self.assertSetEqual(
-                g.fanin(&#34;\\and_G8[0]_G5[0]&#34;), set([&#34;\\G8[0]&#34;, &#34;\\G5[0]&#34;])
-            )
-            self.assertSetEqual(g.fanin(&#34;\\G22[1]&#34;), set([&#34;G1&#34;, &#34;or_not_G2_tie_1&#34;]))
-            self.assertSetEqual(g.fanin(&#34;or_not_G2_tie_1&#34;), set([&#34;not_G2&#34;, &#34;tie_1&#34;]))
-            self.assertSetEqual(g.fanin(&#34;not_G2&#34;), set([&#34;G2&#34;]))
+        m = miter(g, g2)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        if different_output:
+            import code; code.interact(local=dict(**globals(),**locals()))
+        self.assertFalse(different_output)
 
-            self.assertSetEqual(
-                g.inputs(), set([&#34;G1&#34;, &#34;G2&#34;, &#34;G3&#34;, &#34;G4&#34;, &#34;\\G5[0]&#34;, &#34;\\G5[1]&#34;])
-            )
-            self.assertSetEqual(
-                g.outputs(),
-                set([&#34;G17&#34;, &#34;G18&#34;, &#34;G19&#34;, &#34;G20&#34;, &#34;G21&#34;, &#34;\\G22[0]&#34;, &#34;\\G22[1]&#34;]),
-            )
+    def test_verilog(self):
+        g = cg.from_file(f&#34;{self.test_path}/test_correct_io.v&#34;)
 
-    def test_verilog_seq(self):
-        g = cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_2&#34;)
         self.assertSetEqual(
             g.nodes(),
-            set(
-                [
-                    &#34;clk&#34;,
-                    &#34;G0&#34;,
-                    &#34;G1&#34;,
-                    &#34;\\G2[0]&#34;,
-                    &#34;\\G2[1]&#34;,
-                    &#34;\\G18[0]&#34;,
-                    &#34;\\G18[1]&#34;,
-                    &#34;G3&#34;,
-                    &#34;G4&#34;,
-                    &#34;G5&#34;,
-                ]
-            ),
+            set([
+                &#34;G1&#34;, &#34;G2&#34;, &#34;G3&#34;, &#34;G4&#34;, &#34;G5_0&#34;, &#34;G5_1&#34;, &#34;G17&#34;, &#34;G18&#34;,
+                &#34;G19&#34;, &#34;G20&#34;, &#34;G21&#34;, &#34;G22_0&#34;, &#34;G22_1&#34;, &#34;G8_0&#34;, &#34;G8_1&#34;,
+                &#34;G19_driver&#34;, &#34;G18_driver&#34;, &#34;G20_driver&#34;,
+                &#34;G21_driver&#34;, &#34;G17_driver&#34;, &#34;and_G1_G2&#34;, &#34;tie_0&#34;, &#34;tie_1&#34;,
+                &#34;not_G2&#34;, &#34;xor_G3_G4&#34;, &#34;and_G8_0_G5_0&#34;,
+                &#34;xor_G17_driver_and_G8_0_G5_0&#34;, &#34;and_and_G1_G2_xor_G3_G4&#34;,
+                &#34;and_G1_or_not_G2_tie_1&#34;, &#34;or_not_G2_tie_1&#34;, &#34;G22_0_driver&#34;,
+                &#34;G22_1_driver&#34;
+            ]),
         )
-        self.assertSetEqual(g.fanin(&#34;G4&#34;), set([&#34;G3&#34;]))
-        self.assertSetEqual(g.fanin(&#34;G5&#34;), set([&#34;\\G2[0]&#34;]))
-        self.assertSetEqual(g.fanin(&#34;\\G18[0]&#34;), set([&#34;G5&#34;]))
-        self.assertSetEqual(set(g.clk([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;clk&#34;]))
-        self.assertEqual(g.d(&#34;G4&#34;), &#34;G3&#34;)
-        self.assertSetEqual(set(g.type([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;ff&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G8_0&#34;), set([&#34;G1&#34;, &#34;G3&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G17&#34;), set([&#34;G17_driver&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G18&#34;), set([&#34;G18_driver&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G17_driver&#34;), set([&#34;G8_1&#34;, &#34;tie_1&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G8_1&#34;), set([&#34;tie_1&#34;]))
 
-    def test_verilog_custom_seq(self):
-        c = cg.from_file(
-            f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
-            name=&#34;test_module_4&#34;,
-            seq_types=[
-                cg.SequentialElement(
-                    &#34;custom_flop&#34;,
-                    &#34;ff&#34;,
-                    {
-                        &#34;d&#34;: &#34;data_in&#34;,
-                        &#34;q&#34;: &#34;data_out&#34;,
-                        &#34;clk&#34;: &#34;clock&#34;,
-                        &#34;r&#34;: &#34;reset&#34;,
-                        &#34;s&#34;: &#34;set&#34;,
-                    },
-                    &#34;&#34;,
-                )
-            ],
-        )
-        self.assertEqual(c.d(&#34;b&#34;), &#34;a&#34;)
-        self.assertEqual(c.r(&#34;b&#34;), &#34;rst&#34;)
-        self.assertEqual(c.s(&#34;b&#34;), &#34;set&#34;)
-        self.assertEqual(c.clk(&#34;b&#34;), &#34;clk&#34;)
+        self.assertEqual(g.type(&#34;G8_0&#34;), &#34;nand&#34;)
+        self.assertEqual(g.type(&#34;G17_driver&#34;), &#34;nor&#34;)
+        self.assertEqual(g.type(&#34;G18_driver&#34;), &#34;and&#34;)
+        self.assertEqual(g.type(&#34;G18&#34;), &#34;output&#34;)
+        self.assertEqual(g.type(&#34;G22_0&#34;), &#34;output&#34;)
+        self.assertEqual(g.type(&#34;G22_0_driver&#34;), &#34;xor&#34;)
+        self.assertEqual(g.type(&#34;tie_1&#34;), &#34;1&#34;)
+        self.assertEqual(g.type(&#34;tie_0&#34;), &#34;0&#34;)
 
-    def test_verilog_seq(self):
-        g = cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_2&#34;)
+        self.assertSetEqual(g.fanin(&#34;G19_driver&#34;), set([&#34;and_and_G1_G2_xor_G3_G4&#34;]))
+        self.assertSetEqual(g.fanin(&#34;and_and_G1_G2_xor_G3_G4&#34;), set([&#34;and_G1_G2&#34;, &#34;xor_G3_G4&#34;]))
+        self.assertSetEqual(g.fanin(&#34;and_G1_G2&#34;), set([&#34;G1&#34;, &#34;G2&#34;]))
+        self.assertSetEqual(g.fanin(&#34;xor_G3_G4&#34;), set([&#34;G3&#34;, &#34;G4&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G20_driver&#34;), set([&#34;xor_G17_driver_and_G8_0_G5_0&#34;]))
+        self.assertSetEqual(g.fanin(&#34;xor_G17_driver_and_G8_0_G5_0&#34;), set([&#34;G17_driver&#34;,&#34;and_G8_0_G5_0&#34;]))
         self.assertSetEqual(
-            g.nodes(),
-            set(
-                [
-                    &#34;clk&#34;,
-                    &#34;G0&#34;,
-                    &#34;G1&#34;,
-                    &#34;\\G2[0]&#34;,
-                    &#34;\\G2[1]&#34;,
-                    &#34;\\G18[0]&#34;,
-                    &#34;\\G18[1]&#34;,
-                    &#34;G3&#34;,
-                    &#34;G4&#34;,
-                    &#34;G5&#34;,
-                ]
-            ),
+            g.fanin(&#34;and_G8_0_G5_0&#34;), set([&#34;G8_0&#34;, &#34;G5_0&#34;])
         )
-        self.assertSetEqual(g.fanin(&#34;G4&#34;), set([&#34;G3&#34;]))
-        self.assertSetEqual(g.fanin(&#34;G5&#34;), set([&#34;\\G2[0]&#34;]))
-        self.assertSetEqual(g.fanin(&#34;\\G18[0]&#34;), set([&#34;G5&#34;]))
-        self.assertSetEqual(set(g.clk([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;clk&#34;]))
-        self.assertEqual(g.d(&#34;G4&#34;), &#34;G3&#34;)
-        self.assertSetEqual(set(g.type([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;ff&#34;]))
+        self.assertSetEqual(g.fanin(&#34;G22_1_driver&#34;), set([&#39;and_G1_or_not_G2_tie_1&#39;]))
+        self.assertSetEqual(g.fanin(&#39;and_G1_or_not_G2_tie_1&#39;),set([&#34;G1&#34;, &#34;or_not_G2_tie_1&#34;]))
+        self.assertSetEqual(g.fanin(&#34;or_not_G2_tie_1&#34;), set([&#34;not_G2&#34;, &#34;tie_1&#34;]))
+        self.assertSetEqual(g.fanin(&#34;not_G2&#34;), set([&#34;G2&#34;]))
 
-    def test_verilog_escaped_names(self):
-        g = cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_3&#34;)
         self.assertSetEqual(
-            g.nodes(),
-            set(
-                [
-                    &#34;clk&#34;,
-                    &#34;\\G0[0]&#34;,
-                    &#34;\\I0[0]&#34;,
-                    &#34;\\I0[1]&#34;,
-                    &#34;\\G1[1][0]&#34;,
-                    &#34;\\G1[1][1]&#34;,
-                    &#34;\\G2[0]&#34;,
-                    &#34;\\G3[0][0]&#34;,
-                    &#34;\\G3[0][1]&#34;,
-                    &#34;\\G3[0][2]&#34;,
-                    &#34;\\I1[0]&#34;,
-                    &#34;\\not_G1[1][1]&#34;,
-                    &#34;\\and_G0[0]_not_G1[1][1]&#34;,
-                ]
-            ),
+            g.inputs(), set([&#34;G1&#34;, &#34;G2&#34;, &#34;G3&#34;, &#34;G4&#34;, &#34;G5_0&#34;, &#34;G5_1&#34;])
         )
         self.assertSetEqual(
-            g.fanin(&#34;\\G2[0]&#34;), set([&#34;\\G0[0]&#34;, &#34;\\G1[1][1]&#34;, &#34;\\I0[1]&#34;])
+            g.outputs(),
+            set([&#34;G17&#34;, &#34;G18&#34;, &#34;G19&#34;, &#34;G20&#34;, &#34;G21&#34;, &#34;G22_0&#34;, &#34;G22_1&#34;]),
         )
-        self.assertSetEqual(g.fanin(&#34;\\G3[0][0]&#34;), set([&#34;\\G0[0]&#34;, &#34;\\G1[1][0]&#34;]))
-
-    def test_incorrect_verilog(self):
-        with open(f&#34;{os.path.dirname(__file__)}/../netlists/test_incorrect_io.v&#34;) as f:
-            verilog = f.read()
-            for module in [
-                &#34;test_part_select_inst_0&#34;,
-                &#34;test_part_select_inst_1&#34;,
-                &#34;test_part_select_assign_0&#34;,
-                &#34;test_part_select_assign_1&#34;,
-                &#34;test_parameter_0&#34;,
-                &#34;test_parameter_1&#34;,
-                &#34;test_concat_0&#34;,
-                &#34;test_concat_1&#34;,
-                &#34;test_instance&#34;,
-                &#34;test_seq&#34;,
-                &#34;test_always&#34;,
-                &#34;test_logical_operator&#34;,
-                &#34;incorrect_module_name&#34;,
-            ]:
-                self.assertRaises(ValueError, cg.verilog_to_circuit, verilog, module)
 
     def test_incorrect_file_type(self):
         self.assertRaises(ValueError, cg.from_file, &#34;setup.py&#34;)
 
     def test_verilog_output(self):
         for g in [
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_1&#34;),
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_2&#34;),
-            cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_3&#34;),
+            cg.from_file(f&#34;{self.test_path}/test_correct_io.v&#34;, name=&#34;test_module_bb&#34;, blackboxes=self.bbs),
+            cg.from_file(f&#34;{self.test_path}/test_correct_io.v&#34;, name=&#34;test_correct_io&#34;),
         ]:
-            g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name)
-            m = miter(g, g2)
-            # live = sat(m)
-            try:
-                live = sat(m)
-            except:
-                import code
-
-                code.interact(local=dict(globals(), **locals()))
+            g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name, blackboxes=self.bbs)
+            m = miter(cg.strip_blackboxes(g), cg.strip_blackboxes(g2))
+            live = sat(m)
             self.assertTrue(live)
             different_output = sat(m, assumptions={&#34;sat&#34;: True})
+            if different_output:
+                import code; code.interact(local=dict(**globals(),**locals()))
             self.assertFalse(different_output)
-
-        seq_types = [
-            cg.SequentialElement(
-                &#34;custom_flop&#34;,
-                &#34;ff&#34;,
-                {
-                    &#34;d&#34;: &#34;data_in&#34;,
-                    &#34;q&#34;: &#34;data_out&#34;,
-                    &#34;clk&#34;: &#34;clock&#34;,
-                    &#34;r&#34;: &#34;reset&#34;,
-                    &#34;s&#34;: &#34;set&#34;,
-                },
-                &#34;&#34;,
-            )
-        ]
-        g = cg.from_file(
-            f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
-            name=&#34;test_module_4&#34;,
-            seq_types=seq_types,
-        )
-        g2 = cg.verilog_to_circuit(
-            cg.circuit_to_verilog(g, seq_types=seq_types), g.name, seq_types=seq_types
-        )
-        live = sat(m)
-        self.assertTrue(live)
-        different_output = sat(m, assumptions={&#34;sat&#34;: True})
-        self.assertFalse(different_output)
 
     def test_verilog_incorrect_output(self):
         c = cg.Circuit()
         c.add(&#34;a&#34;, &#34;input&#34;)
         c.add(&#34;b&#34;, &#34;input&#34;)
-        c.add(&#34;c&#34;, &#34;fake_gate&#34;, fanin=[&#34;a&#34;, &#34;b&#34;], output=True)
+        c.add(&#34;c&#34;, &#34;fake_gate&#34;, fanin=[&#34;a&#34;, &#34;b&#34;])
         self.assertRaises(ValueError, cg.circuit_to_verilog, c)</code></pre>
 </details>
 <h3>Ancestors</h3>
@@ -585,6 +301,20 @@ not have a method with the specified name.</p></div>
 </ul>
 <h3>Methods</h3>
 <dl>
+<dt id="circuitgraph.tests.test_io.TestIO.setUp"><code class="name flex">
+<span>def <span class="ident">setUp</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Hook method for setting up the test fixture before exercising it.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def setUp(self):
+    self.test_path = f&#34;{os.path.dirname(__file__)}/../netlists/tests/&#34;
+    self.bbs = [cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])]</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.tests.test_io.TestIO.test_bench"><code class="name flex">
 <span>def <span class="ident">test_bench</span></span>(<span>self)</span>
 </code></dt>
@@ -594,10 +324,40 @@ not have a method with the specified name.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">@unittest.skip(&#34;bench parsing is not working&#34;)
-def test_bench(self):
-    g = cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/b17_C.bench&#34;)
-    print(g.nodes())</code></pre>
+<pre><code class="python">def test_bench(self):
+    g = cg.from_lib(f&#34;b17_C&#34;)
+    self.assertEqual(len(g),2943)
+    self.assertSetEqual(g.fanin(&#34;n2905&#34;), set([&#34;n2516&#34;, &#34;n2904&#34;]))
+    self.assertSetEqual(g.fanin(&#34;out789&#34;), set([&#34;out789_driver&#34;]))
+    self.assertSetEqual(g.fanin(&#34;out789_driver&#34;), set([&#34;n2942&#34;]))
+    self.assertSetEqual(g.fanout(&#34;in382&#34;), set([&#34;n2484&#34;]))
+
+    self.assertEqual(g.type(&#34;n2905&#34;), &#34;and&#34;)
+    self.assertEqual(g.type(&#34;out789&#34;), &#34;output&#34;)
+    self.assertEqual(g.type(&#34;out789_driver&#34;), &#34;not&#34;)
+    self.assertEqual(g.type(&#34;in382&#34;), &#34;input&#34;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_io.TestIO.test_bench_output"><code class="name flex">
+<span>def <span class="ident">test_bench_output</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_bench_output(self):
+    g = cg.from_lib(f&#34;b17_C&#34;)
+    g2 = cg.bench_to_circuit(cg.circuit_to_bench(g), g.name)
+
+    m = miter(g, g2)
+    live = sat(m)
+    self.assertTrue(live)
+    different_output = sat(m, assumptions={&#34;sat&#34;: True})
+    if different_output:
+        import code; code.interact(local=dict(**globals(),**locals()))
+    self.assertFalse(different_output)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_io.TestIO.test_incorrect_file_type"><code class="name flex">
@@ -613,8 +373,8 @@ def test_bench(self):
     self.assertRaises(ValueError, cg.from_file, &#34;setup.py&#34;)</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.tests.test_io.TestIO.test_incorrect_verilog"><code class="name flex">
-<span>def <span class="ident">test_incorrect_verilog</span></span>(<span>self)</span>
+<dt id="circuitgraph.tests.test_io.TestIO.test_verilog"><code class="name flex">
+<span>def <span class="ident">test_verilog</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -622,170 +382,58 @@ def test_bench(self):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def test_incorrect_verilog(self):
-    with open(f&#34;{os.path.dirname(__file__)}/../netlists/test_incorrect_io.v&#34;) as f:
-        verilog = f.read()
-        for module in [
-            &#34;test_part_select_inst_0&#34;,
-            &#34;test_part_select_inst_1&#34;,
-            &#34;test_part_select_assign_0&#34;,
-            &#34;test_part_select_assign_1&#34;,
-            &#34;test_parameter_0&#34;,
-            &#34;test_parameter_1&#34;,
-            &#34;test_concat_0&#34;,
-            &#34;test_concat_1&#34;,
-            &#34;test_instance&#34;,
-            &#34;test_seq&#34;,
-            &#34;test_always&#34;,
-            &#34;test_logical_operator&#34;,
-            &#34;incorrect_module_name&#34;,
-        ]:
-            self.assertRaises(ValueError, cg.verilog_to_circuit, verilog, module)</code></pre>
-</details>
-</dd>
-<dt id="circuitgraph.tests.test_io.TestIO.test_verilog_comb"><code class="name flex">
-<span>def <span class="ident">test_verilog_comb</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def test_verilog_comb(self):
-    for g in [
-        cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_correct_io&#34;),
-        cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_1&#34;),
-        cg.from_file(f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;),
-    ]:
-        self.assertSetEqual(
-            g.nodes(),
-            set(
-                [
-                    &#34;G1&#34;,
-                    &#34;G2&#34;,
-                    &#34;G3&#34;,
-                    &#34;G4&#34;,
-                    &#34;\\G5[0]&#34;,
-                    &#34;\\G5[1]&#34;,
-                    &#34;G17&#34;,
-                    &#34;G18&#34;,
-                    &#34;G19&#34;,
-                    &#34;G20&#34;,
-                    &#34;G21&#34;,
-                    &#34;\\G22[0]&#34;,
-                    &#34;\\G22[1]&#34;,
-                    &#34;\\G8[0]&#34;,
-                    &#34;\\G8[1]&#34;,
-                    &#34;not_G2&#34;,
-                    &#34;xor_G3_G4&#34;,
-                    &#34;and_G1_G2&#34;,
-                    &#34;tie_1&#34;,
-                    &#34;\\and_G8[0]_G5[0]&#34;,
-                    &#34;or_not_G2_tie_1&#34;,
-                ]
-            ),
-        )
-        self.assertSetEqual(g.fanin(&#34;\\G8[0]&#34;), set([&#34;G1&#34;, &#34;G3&#34;]))
-        self.assertSetEqual(g.fanin(&#34;G17&#34;), set([&#34;\\G8[1]&#34;, &#34;tie_1&#34;]))
-        self.assertSetEqual(g.fanin(&#34;G18&#34;), set([&#34;G2&#34;, &#34;\\G5[0]&#34;]))
-        self.assertSetEqual(g.fanin(&#34;\\G22[0]&#34;), set([&#34;\\G5[1]&#34;, &#34;G4&#34;]))
+<pre><code class="python">def test_verilog(self):
+    g = cg.from_file(f&#34;{self.test_path}/test_correct_io.v&#34;)
 
-        self.assertEqual(g.type(&#34;\\G8[0]&#34;), &#34;nand&#34;)
-        self.assertEqual(g.type(&#34;G17&#34;), &#34;nor&#34;)
-        self.assertEqual(g.type(&#34;G18&#34;), &#34;and&#34;)
-        self.assertEqual(g.type(&#34;\\G22[0]&#34;), &#34;xor&#34;)
-        self.assertEqual(g.type(&#34;tie_1&#34;), &#34;1&#34;)
-
-        self.assertSetEqual(g.fanin(&#34;G19&#34;), set([&#34;and_G1_G2&#34;, &#34;xor_G3_G4&#34;]))
-        self.assertSetEqual(g.fanin(&#34;and_G1_G2&#34;), set([&#34;G1&#34;, &#34;G2&#34;]))
-        self.assertSetEqual(g.fanin(&#34;xor_G3_G4&#34;), set([&#34;G3&#34;, &#34;G4&#34;]))
-        self.assertSetEqual(g.fanin(&#34;G20&#34;), set([&#34;G17&#34;, &#34;\\and_G8[0]_G5[0]&#34;]))
-        self.assertSetEqual(
-            g.fanin(&#34;\\and_G8[0]_G5[0]&#34;), set([&#34;\\G8[0]&#34;, &#34;\\G5[0]&#34;])
-        )
-        self.assertSetEqual(g.fanin(&#34;\\G22[1]&#34;), set([&#34;G1&#34;, &#34;or_not_G2_tie_1&#34;]))
-        self.assertSetEqual(g.fanin(&#34;or_not_G2_tie_1&#34;), set([&#34;not_G2&#34;, &#34;tie_1&#34;]))
-        self.assertSetEqual(g.fanin(&#34;not_G2&#34;), set([&#34;G2&#34;]))
-
-        self.assertSetEqual(
-            g.inputs(), set([&#34;G1&#34;, &#34;G2&#34;, &#34;G3&#34;, &#34;G4&#34;, &#34;\\G5[0]&#34;, &#34;\\G5[1]&#34;])
-        )
-        self.assertSetEqual(
-            g.outputs(),
-            set([&#34;G17&#34;, &#34;G18&#34;, &#34;G19&#34;, &#34;G20&#34;, &#34;G21&#34;, &#34;\\G22[0]&#34;, &#34;\\G22[1]&#34;]),
-        )</code></pre>
-</details>
-</dd>
-<dt id="circuitgraph.tests.test_io.TestIO.test_verilog_custom_seq"><code class="name flex">
-<span>def <span class="ident">test_verilog_custom_seq</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def test_verilog_custom_seq(self):
-    c = cg.from_file(
-        f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
-        name=&#34;test_module_4&#34;,
-        seq_types=[
-            cg.SequentialElement(
-                &#34;custom_flop&#34;,
-                &#34;ff&#34;,
-                {
-                    &#34;d&#34;: &#34;data_in&#34;,
-                    &#34;q&#34;: &#34;data_out&#34;,
-                    &#34;clk&#34;: &#34;clock&#34;,
-                    &#34;r&#34;: &#34;reset&#34;,
-                    &#34;s&#34;: &#34;set&#34;,
-                },
-                &#34;&#34;,
-            )
-        ],
-    )
-    self.assertEqual(c.d(&#34;b&#34;), &#34;a&#34;)
-    self.assertEqual(c.r(&#34;b&#34;), &#34;rst&#34;)
-    self.assertEqual(c.s(&#34;b&#34;), &#34;set&#34;)
-    self.assertEqual(c.clk(&#34;b&#34;), &#34;clk&#34;)</code></pre>
-</details>
-</dd>
-<dt id="circuitgraph.tests.test_io.TestIO.test_verilog_escaped_names"><code class="name flex">
-<span>def <span class="ident">test_verilog_escaped_names</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def test_verilog_escaped_names(self):
-    g = cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_3&#34;)
     self.assertSetEqual(
         g.nodes(),
-        set(
-            [
-                &#34;clk&#34;,
-                &#34;\\G0[0]&#34;,
-                &#34;\\I0[0]&#34;,
-                &#34;\\I0[1]&#34;,
-                &#34;\\G1[1][0]&#34;,
-                &#34;\\G1[1][1]&#34;,
-                &#34;\\G2[0]&#34;,
-                &#34;\\G3[0][0]&#34;,
-                &#34;\\G3[0][1]&#34;,
-                &#34;\\G3[0][2]&#34;,
-                &#34;\\I1[0]&#34;,
-                &#34;\\not_G1[1][1]&#34;,
-                &#34;\\and_G0[0]_not_G1[1][1]&#34;,
-            ]
-        ),
+        set([
+            &#34;G1&#34;, &#34;G2&#34;, &#34;G3&#34;, &#34;G4&#34;, &#34;G5_0&#34;, &#34;G5_1&#34;, &#34;G17&#34;, &#34;G18&#34;,
+            &#34;G19&#34;, &#34;G20&#34;, &#34;G21&#34;, &#34;G22_0&#34;, &#34;G22_1&#34;, &#34;G8_0&#34;, &#34;G8_1&#34;,
+            &#34;G19_driver&#34;, &#34;G18_driver&#34;, &#34;G20_driver&#34;,
+            &#34;G21_driver&#34;, &#34;G17_driver&#34;, &#34;and_G1_G2&#34;, &#34;tie_0&#34;, &#34;tie_1&#34;,
+            &#34;not_G2&#34;, &#34;xor_G3_G4&#34;, &#34;and_G8_0_G5_0&#34;,
+            &#34;xor_G17_driver_and_G8_0_G5_0&#34;, &#34;and_and_G1_G2_xor_G3_G4&#34;,
+            &#34;and_G1_or_not_G2_tie_1&#34;, &#34;or_not_G2_tie_1&#34;, &#34;G22_0_driver&#34;,
+            &#34;G22_1_driver&#34;
+        ]),
+    )
+    self.assertSetEqual(g.fanin(&#34;G8_0&#34;), set([&#34;G1&#34;, &#34;G3&#34;]))
+    self.assertSetEqual(g.fanin(&#34;G17&#34;), set([&#34;G17_driver&#34;]))
+    self.assertSetEqual(g.fanin(&#34;G18&#34;), set([&#34;G18_driver&#34;]))
+    self.assertSetEqual(g.fanin(&#34;G17_driver&#34;), set([&#34;G8_1&#34;, &#34;tie_1&#34;]))
+    self.assertSetEqual(g.fanin(&#34;G8_1&#34;), set([&#34;tie_1&#34;]))
+
+    self.assertEqual(g.type(&#34;G8_0&#34;), &#34;nand&#34;)
+    self.assertEqual(g.type(&#34;G17_driver&#34;), &#34;nor&#34;)
+    self.assertEqual(g.type(&#34;G18_driver&#34;), &#34;and&#34;)
+    self.assertEqual(g.type(&#34;G18&#34;), &#34;output&#34;)
+    self.assertEqual(g.type(&#34;G22_0&#34;), &#34;output&#34;)
+    self.assertEqual(g.type(&#34;G22_0_driver&#34;), &#34;xor&#34;)
+    self.assertEqual(g.type(&#34;tie_1&#34;), &#34;1&#34;)
+    self.assertEqual(g.type(&#34;tie_0&#34;), &#34;0&#34;)
+
+    self.assertSetEqual(g.fanin(&#34;G19_driver&#34;), set([&#34;and_and_G1_G2_xor_G3_G4&#34;]))
+    self.assertSetEqual(g.fanin(&#34;and_and_G1_G2_xor_G3_G4&#34;), set([&#34;and_G1_G2&#34;, &#34;xor_G3_G4&#34;]))
+    self.assertSetEqual(g.fanin(&#34;and_G1_G2&#34;), set([&#34;G1&#34;, &#34;G2&#34;]))
+    self.assertSetEqual(g.fanin(&#34;xor_G3_G4&#34;), set([&#34;G3&#34;, &#34;G4&#34;]))
+    self.assertSetEqual(g.fanin(&#34;G20_driver&#34;), set([&#34;xor_G17_driver_and_G8_0_G5_0&#34;]))
+    self.assertSetEqual(g.fanin(&#34;xor_G17_driver_and_G8_0_G5_0&#34;), set([&#34;G17_driver&#34;,&#34;and_G8_0_G5_0&#34;]))
+    self.assertSetEqual(
+        g.fanin(&#34;and_G8_0_G5_0&#34;), set([&#34;G8_0&#34;, &#34;G5_0&#34;])
+    )
+    self.assertSetEqual(g.fanin(&#34;G22_1_driver&#34;), set([&#39;and_G1_or_not_G2_tie_1&#39;]))
+    self.assertSetEqual(g.fanin(&#39;and_G1_or_not_G2_tie_1&#39;),set([&#34;G1&#34;, &#34;or_not_G2_tie_1&#34;]))
+    self.assertSetEqual(g.fanin(&#34;or_not_G2_tie_1&#34;), set([&#34;not_G2&#34;, &#34;tie_1&#34;]))
+    self.assertSetEqual(g.fanin(&#34;not_G2&#34;), set([&#34;G2&#34;]))
+
+    self.assertSetEqual(
+        g.inputs(), set([&#34;G1&#34;, &#34;G2&#34;, &#34;G3&#34;, &#34;G4&#34;, &#34;G5_0&#34;, &#34;G5_1&#34;])
     )
     self.assertSetEqual(
-        g.fanin(&#34;\\G2[0]&#34;), set([&#34;\\G0[0]&#34;, &#34;\\G1[1][1]&#34;, &#34;\\I0[1]&#34;])
-    )
-    self.assertSetEqual(g.fanin(&#34;\\G3[0][0]&#34;), set([&#34;\\G0[0]&#34;, &#34;\\G1[1][0]&#34;]))</code></pre>
+        g.outputs(),
+        set([&#34;G17&#34;, &#34;G18&#34;, &#34;G19&#34;, &#34;G20&#34;, &#34;G21&#34;, &#34;G22_0&#34;, &#34;G22_1&#34;]),
+    )</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_io.TestIO.test_verilog_incorrect_output"><code class="name flex">
@@ -801,7 +449,7 @@ def test_bench(self):
     c = cg.Circuit()
     c.add(&#34;a&#34;, &#34;input&#34;)
     c.add(&#34;b&#34;, &#34;input&#34;)
-    c.add(&#34;c&#34;, &#34;fake_gate&#34;, fanin=[&#34;a&#34;, &#34;b&#34;], output=True)
+    c.add(&#34;c&#34;, &#34;fake_gate&#34;, fanin=[&#34;a&#34;, &#34;b&#34;])
     self.assertRaises(ValueError, cg.circuit_to_verilog, c)</code></pre>
 </details>
 </dd>
@@ -816,85 +464,17 @@ def test_bench(self):
 </summary>
 <pre><code class="python">def test_verilog_output(self):
     for g in [
-        cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_1&#34;),
-        cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_2&#34;),
-        cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_3&#34;),
+        cg.from_file(f&#34;{self.test_path}/test_correct_io.v&#34;, name=&#34;test_module_bb&#34;, blackboxes=self.bbs),
+        cg.from_file(f&#34;{self.test_path}/test_correct_io.v&#34;, name=&#34;test_correct_io&#34;),
     ]:
-        g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name)
-        m = miter(g, g2)
-        # live = sat(m)
-        try:
-            live = sat(m)
-        except:
-            import code
-
-            code.interact(local=dict(globals(), **locals()))
+        g2 = cg.verilog_to_circuit(cg.circuit_to_verilog(g), g.name, blackboxes=self.bbs)
+        m = miter(cg.strip_blackboxes(g), cg.strip_blackboxes(g2))
+        live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
-        self.assertFalse(different_output)
-
-    seq_types = [
-        cg.SequentialElement(
-            &#34;custom_flop&#34;,
-            &#34;ff&#34;,
-            {
-                &#34;d&#34;: &#34;data_in&#34;,
-                &#34;q&#34;: &#34;data_out&#34;,
-                &#34;clk&#34;: &#34;clock&#34;,
-                &#34;r&#34;: &#34;reset&#34;,
-                &#34;s&#34;: &#34;set&#34;,
-            },
-            &#34;&#34;,
-        )
-    ]
-    g = cg.from_file(
-        f&#34;{os.path.dirname(__file__)}/../netlists/test_correct_io.v&#34;,
-        name=&#34;test_module_4&#34;,
-        seq_types=seq_types,
-    )
-    g2 = cg.verilog_to_circuit(
-        cg.circuit_to_verilog(g, seq_types=seq_types), g.name, seq_types=seq_types
-    )
-    live = sat(m)
-    self.assertTrue(live)
-    different_output = sat(m, assumptions={&#34;sat&#34;: True})
-    self.assertFalse(different_output)</code></pre>
-</details>
-</dd>
-<dt id="circuitgraph.tests.test_io.TestIO.test_verilog_seq"><code class="name flex">
-<span>def <span class="ident">test_verilog_seq</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def test_verilog_seq(self):
-    g = cg.from_lib(&#34;test_correct_io&#34;, name=&#34;test_module_2&#34;)
-    self.assertSetEqual(
-        g.nodes(),
-        set(
-            [
-                &#34;clk&#34;,
-                &#34;G0&#34;,
-                &#34;G1&#34;,
-                &#34;\\G2[0]&#34;,
-                &#34;\\G2[1]&#34;,
-                &#34;\\G18[0]&#34;,
-                &#34;\\G18[1]&#34;,
-                &#34;G3&#34;,
-                &#34;G4&#34;,
-                &#34;G5&#34;,
-            ]
-        ),
-    )
-    self.assertSetEqual(g.fanin(&#34;G4&#34;), set([&#34;G3&#34;]))
-    self.assertSetEqual(g.fanin(&#34;G5&#34;), set([&#34;\\G2[0]&#34;]))
-    self.assertSetEqual(g.fanin(&#34;\\G18[0]&#34;), set([&#34;G5&#34;]))
-    self.assertSetEqual(set(g.clk([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;clk&#34;]))
-    self.assertEqual(g.d(&#34;G4&#34;), &#34;G3&#34;)
-    self.assertSetEqual(set(g.type([&#34;G4&#34;, &#34;G5&#34;, &#34;\\G18[0]&#34;])), set([&#34;ff&#34;]))</code></pre>
+        if different_output:
+            import code; code.interact(local=dict(**globals(),**locals()))
+        self.assertFalse(different_output)</code></pre>
 </details>
 </dd>
 </dl>
@@ -922,15 +502,13 @@ def test_bench(self):
 <li>
 <h4><code><a title="circuitgraph.tests.test_io.TestIO" href="#circuitgraph.tests.test_io.TestIO">TestIO</a></code></h4>
 <ul class="">
+<li><code><a title="circuitgraph.tests.test_io.TestIO.setUp" href="#circuitgraph.tests.test_io.TestIO.setUp">setUp</a></code></li>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_bench" href="#circuitgraph.tests.test_io.TestIO.test_bench">test_bench</a></code></li>
+<li><code><a title="circuitgraph.tests.test_io.TestIO.test_bench_output" href="#circuitgraph.tests.test_io.TestIO.test_bench_output">test_bench_output</a></code></li>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_incorrect_file_type" href="#circuitgraph.tests.test_io.TestIO.test_incorrect_file_type">test_incorrect_file_type</a></code></li>
-<li><code><a title="circuitgraph.tests.test_io.TestIO.test_incorrect_verilog" href="#circuitgraph.tests.test_io.TestIO.test_incorrect_verilog">test_incorrect_verilog</a></code></li>
-<li><code><a title="circuitgraph.tests.test_io.TestIO.test_verilog_comb" href="#circuitgraph.tests.test_io.TestIO.test_verilog_comb">test_verilog_comb</a></code></li>
-<li><code><a title="circuitgraph.tests.test_io.TestIO.test_verilog_custom_seq" href="#circuitgraph.tests.test_io.TestIO.test_verilog_custom_seq">test_verilog_custom_seq</a></code></li>
-<li><code><a title="circuitgraph.tests.test_io.TestIO.test_verilog_escaped_names" href="#circuitgraph.tests.test_io.TestIO.test_verilog_escaped_names">test_verilog_escaped_names</a></code></li>
+<li><code><a title="circuitgraph.tests.test_io.TestIO.test_verilog" href="#circuitgraph.tests.test_io.TestIO.test_verilog">test_verilog</a></code></li>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_verilog_incorrect_output" href="#circuitgraph.tests.test_io.TestIO.test_verilog_incorrect_output">test_verilog_incorrect_output</a></code></li>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_verilog_output" href="#circuitgraph.tests.test_io.TestIO.test_verilog_output">test_verilog_output</a></code></li>
-<li><code><a title="circuitgraph.tests.test_io.TestIO.test_verilog_seq" href="#circuitgraph.tests.test_io.TestIO.test_verilog_seq">test_verilog_seq</a></code></li>
 </ul>
 </li>
 </ul>
@@ -939,7 +517,7 @@ def test_bench(self):
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

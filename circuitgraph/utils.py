@@ -85,16 +85,15 @@ def lint(c):
             The Circuit to lint.
     """
     c.type(c.nodes())
-    c.output(c.nodes())
-    for g in c.nodes(types=["buf", "not"]):
+    for g in c.filter_type(["buf", "not", "output", "bb_input"]):
         if len(c.fanin(g)) != 1:
             raise ValueError(f"buf/not {g} has incorrect fanin count")
-    for g in c.nodes(types=["input", "0", "1"]):
+    for g in c.filter_type(["input", "0", "1", "bb_output"]):
         if len(c.fanin(g)) > 0:
             raise ValueError(f"0/1/input {g} has fanin")
-    for g in c.nodes(types=["ff", "lat", "and", "nand", "or", "nor", "xor", "xnor"]):
+    for g in c.filter_type(["and", "nand", "or", "nor", "xor", "xnor"]):
         if len(c.fanin(g)) < 1:
             raise ValueError(f"{g} has no fanin")
     for g in c.nodes():
-        if not c.fanout(g) and not c.output(g):
+        if not c.fanout(g) and not c.type(g) == "output":
             raise ValueError(f"{g} has no fanout and is not output")
