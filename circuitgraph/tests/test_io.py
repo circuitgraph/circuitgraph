@@ -71,7 +71,7 @@ class TestIO(unittest.TestCase):
                     "not_G2",
                     "xor_G3_G4",
                     "and_G8_0_G5_0",
-                    "xor_G17_driver_and_G8_0_G5_0",
+                    "xor_G17_and_G8_0_G5_0",
                     "and_and_G1_G2_xor_G3_G4",
                     "and_G1_or_not_G2_tie_1",
                     "or_not_G2_tie_1",
@@ -84,7 +84,7 @@ class TestIO(unittest.TestCase):
         self.assertSetEqual(g.fanin("G17"), set(["G17_driver"]))
         self.assertSetEqual(g.fanin("G18"), set(["G18_driver"]))
         self.assertSetEqual(g.fanin("G17_driver"), set(["G8_1", "tie_1"]))
-        self.assertSetEqual(g.fanin("G8_1"), set(["tie_1"]))
+        self.assertEqual(g.type("G8_1"), "1")
 
         self.assertEqual(g.type("G8_0"), "nand")
         self.assertEqual(g.type("G17_driver"), "nor")
@@ -102,10 +102,10 @@ class TestIO(unittest.TestCase):
         self.assertSetEqual(g.fanin("and_G1_G2"), set(["G1", "G2"]))
         self.assertSetEqual(g.fanin("xor_G3_G4"), set(["G3", "G4"]))
         self.assertSetEqual(
-            g.fanin("G20_driver"), set(["xor_G17_driver_and_G8_0_G5_0"])
+            g.fanin("G20_driver"), set(["xor_G17_and_G8_0_G5_0"])
         )
         self.assertSetEqual(
-            g.fanin("xor_G17_driver_and_G8_0_G5_0"),
+            g.fanin("xor_G17_and_G8_0_G5_0"),
             set(["G17_driver", "and_G8_0_G5_0"]),
         )
         self.assertSetEqual(g.fanin("and_G8_0_G5_0"), set(["G8_0", "G5_0"]))

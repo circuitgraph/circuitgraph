@@ -17,6 +17,22 @@ import networkx as nx
 from networkx.exception import NetworkXNoCycle
 
 
+supported_types = [
+    "buf",
+    "and",
+    "or",
+    "xor",
+    "not",
+    "nand",
+    "nor",
+    "xnor",
+    "0",
+    "1",
+    "output",
+    "input",
+]
+
+
 class Circuit:
     """Class for representing circuits"""
 
@@ -87,21 +103,6 @@ class Circuit:
         t : str
                 Type.
         """
-
-        supported_types = [
-            "buf",
-            "and",
-            "or",
-            "xor",
-            "not",
-            "nand",
-            "nor",
-            "xnor",
-            "0",
-            "1",
-            "output",
-            "input",
-        ]
         if t not in supported_types:
             raise ValueError(f"unsupported type {t}")
 

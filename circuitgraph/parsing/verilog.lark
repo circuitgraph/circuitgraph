@@ -1,0 +1,113 @@
+// Following https://www.verilog.com/VerilogBNF.html
+
+// Source Text
+start: description*
+    
+?description: module
+    
+?module: "module" identifier list_of_ports? ";" module_item* "endmodule"
+    
+list_of_ports: "(" port ("," port)* ")"
+?port: identifier
+    
+?module_item: input_declaration
+            | output_declaration
+            | net_declaration
+            | module_instantiation
+            | continuous_assign
+
+// Declarations
+input_declaration: "input" list_of_variables ";"
+    
+output_declaration: "output" list_of_variables ";"
+    
+net_declaration: "wire" list_of_variables ";"
+
+continuous_assign: "assign" list_of_assignments ";"
+
+list_of_assignments: assignment ("," assignment)*
+    
+assignment: lvalue "=" cond
+
+list_of_variables: identifier ("," identifier)*
+
+// Module Instantiations
+module_instantiation: identifier module_instance ("," module_instance)* ";"
+    
+module_instance: identifier "(" list_of_module_connections ")"
+
+list_of_module_connections: module_port_connection ("," module_port_connection)*
+                          | named_port_connection ("," named_port_connection)*
+    
+module_port_connection: expression
+
+named_port_connection: "." identifier "(" expression ")"
+
+// Expressions
+expression: identifier 
+          | constant_value
+
+constant_value: constant_zero
+               | constant_one
+
+constant_zero: "1'b0"
+             | "1'h0"
+
+constant_one: "1'b1"
+            | "1'h1"
+
+lvalue: identifier
+
+// General
+identifier: CNAME
+          | ESCAPED_IDENTIFIER
+
+// Assign Statements
+?cond : or
+      | ternary
+
+?ternary: or "?" or ":" or
+
+?or : xor
+    | or_gate
+
+?or_gate: or "|" xor
+
+?xor : and
+     | xor_gate
+     | xnor_gate
+
+?xor_gate: xor "^" and
+
+?xnor_gate: xor "~^" and
+          | xor "^~" and
+
+?and : unary
+     | and_gate
+
+?and_gate: and "&" unary
+
+?unary : primary
+       | not_gate
+
+not_gate: ( "!" | "~" ) primary
+
+?primary : val
+         | "(" or ")"
+
+val : expression
+
+// Lark
+ESCAPED_IDENTIFIER: /\\([^\s]+)/
+COMMENT: "//" /[^\n]*/ NEWLINE
+NEWLINE: "\n"
+MULTILINE_COMMENT: /\/\*(\*(?!\/)|[^*])*\*\//
+
+%import common.CNAME
+%import common.ESCAPED_STRING
+%import common.WS
+
+%ignore WS
+%ignore COMMENT
+%ignore MULTILINE_COMMENT
+%ignore NEWLINE
