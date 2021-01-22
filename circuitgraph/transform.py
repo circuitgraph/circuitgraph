@@ -1,6 +1,6 @@
 """Functions for transforming circuits"""
 
-from subprocess import PIPE, Popen
+import subprocess
 from tempfile import NamedTemporaryFile
 import os
 
@@ -149,41 +149,9 @@ def relabel(c):
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
-# def seq_graph(c):
-#    """
-#    Creates a Circuit of the sequential elements and IO.
-#
-#    Parameters
-#    ----------
-#    c: Circuit
-#
-#    Returns
-#    -------
-#    Circuit
-#            Sequential circuit.
-#
-#    """
-#    s = Circuit(name=f"{c.name}_seq")
-#
-#    # add nodes
-#    for n in c.inputs() | c.seq():
-#        s.add(n, c.type(n), output=c.output(n))
-#
-#    # add edges
-#    for n in c.seq():
-#        s.connect(c.startpoints(c.d(n)), n)
-#
-#    # add outputs
-#    for n in s:
-#        if c.endpoints(n) & c.outputs():
-#            s.set_output(n, True)
-#
-#    return s
-
-
-def syn(c, engine="yosys", print_output=False):
+def syn(c, engine="yosys", output_log=False):
     """
-    Synthesizes the circuit using Genus.
+    Synthesizes the circuit using yosys or genus.
 
     Parameters
     ----------
@@ -191,8 +159,8 @@ def syn(c, engine="yosys", print_output=False):
             Circuit to synthesize.
     engine : str
             Synthesis tool to use ('genus' or 'yosys')
-    print_output : bool
-            Option to print synthesis log
+    output_log : str or None
+            If defined, synthesis log will be written to this file.
 
     Returns
     -------
@@ -229,23 +197,22 @@ def syn(c, engine="yosys", print_output=False):
                     "synth; "
                     f"write_verilog -noattr {tmp_out.name}",
                 ]
-
             else:
                 raise ValueError("synthesis engine must be yosys or genus")
 
-            process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-            while True:
-                line = process.stdout.readline()
-                if line == "" and process.poll() is not None:
-                    break
-                if line:
-                    if print_output:
-                        print(line.strip())
-            output = tmp_out.read().decode("utf-8")
-            if print_output:
-                print(output)
+            if output_log:
+                with open(output_log, "w") as f:
+                    subprocess.run(cmd, stdout=f, stderr=f)
+            else:
+                subprocess.run(cmd, capture_output=True)
 
-    return verilog_to_circuit(output, c.name)
+            output_netlist = tmp_out.read().decode("utf-8")
+    try:
+        return verilog_to_circuit(output_netlist, c.name)
+    except Exception as e:
+        print("error reading synthesized netlist:")
+        print(output_netlist)
+        raise e
 
 
 def ternary(c):
@@ -371,80 +338,6 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
         m.add(f"dif_{n}", "xor", fanin=[f"c0_{n}", f"c1_{n}"], fanout="miter")
 
     return m
-
-
-# def comb(c):
-#    """
-#    Creates combinational version of the circuit.
-#
-#    Parameters
-#    ----------
-#    c : Circuit
-#            Sequential circuit to make combinational.
-#
-#    Returns
-#    -------
-#    Circuit
-#            Combinational circuit.
-#
-#    """
-#    import circuitgraph.logic as logic
-#
-#    c_comb = copy(c)
-#    lat_model = logic.comb_lat()
-#    ff_model = logic.comb_ff()
-#
-#    for s in c.seq():
-#        model = lat_model if c.type(s) == "lat" else ff_model
-#        relabeled_model = relabel(model, {n: f"{s}_{n}" for n in model})
-#        c_comb.extend(relabeled_model)
-#        c_comb.connect(f"{s}_q", c_comb.fanout(s))
-#        c_comb.connect(c_comb.fanin(s), f"{s}_d")
-#        if c.clk(s):
-#            c_comb.connect(c.clk(s), f"{s}_clk")
-#        if c.r(s):
-#            c_comb.connect(c.r(s), f"{s}_rst")
-#        if c.s(s):
-#            c_comb.connect(c.s(s), f"{s}_set")
-#        c_comb.remove(s)
-#
-#    return c_comb
-
-
-# def unroll(c, cycles):
-#    """
-#    Creates combinational unrolling of the circuit.
-#
-#    Parameters
-#    ----------
-#    c : Circuit
-#            Sequential circuit to unroll.
-#    cycles : int
-#            Number of cycles to unroll
-#
-#    Returns
-#    -------
-#    Circuit
-#            Unrolled circuit.
-#
-#    """
-#    u = Circuit()
-#    c_comb = comb(c)
-#    for i in range(cycles):
-#        u.extend(c_comb, {n: f"{n}_{i}" for n in c_comb})
-#        if i == 0:
-#            # convert si to inputs
-#            for n in c:
-#                if c.type(n) in ["lat", "ff"]:
-#                    u.set_type(f"{n}_si_{i}", "input")
-#
-#        else:
-#            # connect prev si
-#            for n in c:
-#                if c.type(n) in ["lat", "ff"]:
-#                    u.connect(f"{n}_si_{i-1}", f"{n}_si_{i}")
-#
-#    return u
 
 
 def influence_transform(c, n, s):

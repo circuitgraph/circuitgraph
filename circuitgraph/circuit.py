@@ -324,6 +324,9 @@ class Circuit:
                 Nodes to add to new node's fanin
         fanout : iterable of str
                 Nodes to add to new node's fanout
+        uid: bool
+                If True, the node is given a unique name if it already
+                exists in the circuit.
 
         Returns
         -------

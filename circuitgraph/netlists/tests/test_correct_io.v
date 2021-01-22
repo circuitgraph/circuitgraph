@@ -39,7 +39,7 @@ module do_not_parse_1(G2, G3);
     assign G2 = ~G3;
 endmodule
 
-module test_module_bb(clk, G0, G1, G2_0, G2_1, G17, G18_0, G18_1);
+module test_module_bb(clk, G0, G1, G2_0, G2_1, G18_0, G18_1);
     input clk, G0, G1;
     input G2_0,G2_1;
     output G18_0,G18_1;

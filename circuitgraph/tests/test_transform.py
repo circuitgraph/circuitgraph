@@ -76,7 +76,7 @@ class TestTransform(unittest.TestCase):
     @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
     def test_syn_yosys(self):
         # synthesize and check equiv
-        s = syn(self.s27, "yosys", print_output=False)
+        s = syn(self.s27, "yosys")
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
@@ -88,7 +88,7 @@ class TestTransform(unittest.TestCase):
     )
     def test_syn_genus(self):
         if "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ:
-            s = syn(self.s27, "Genus", print_output=False)
+            s = syn(self.s27, "Genus")
             m = miter(self.s27, s)
             live = sat(m)
             self.assertTrue(live)

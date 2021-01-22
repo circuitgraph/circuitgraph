@@ -1,22 +1,21 @@
 """Functions for reading/writing CircuitGraphs"""
 
 import re
-import os
-from glob import glob
-from lark import Lark, Transformer, v_args
-import tempfile
+from pathlib import Path
 
 from circuitgraph import Circuit, BlackBox
-from circuitgraph.parsing import get_verilog_parser
+from circuitgraph.parsing import parse_verilog_netlist
 
 
-def from_file(path, name=None, fmt=None, blackboxes=None):
+def from_file(
+    path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False
+):
     """
     Creates a new `Circuit` from a verilog file.
 
     Parameters
     ----------
-    path: str
+    path: str or pathlib.Path
             the path to the file to read from.
     name: str
             the name of the module to read if different from the filename.
@@ -24,25 +23,28 @@ def from_file(path, name=None, fmt=None, blackboxes=None):
             the format of the file to be read, overrides the extension.
     blackboxes: seq of BlackBox
             sub circuits in the circuit to be parsed.
+    warnings: bool
+            If True, warnings about unused nets will be printed.
+    error_on_warning: bool
+            If True, unused nets will cause raise `VerilogParsingWarning`
+            exceptions.
 
     Returns
     -------
     Circuit
             the parsed circuit.
     """
-    ext = path.split(".")[-1]
+    path = Path(path)
     if name is None:
-        name = path.split("/")[-1].replace(f".{ext}", "")
-
+        name = path.stem
     with open(path, "r") as f:
         netlist = f.read()
-
-    if fmt == "verilog" or ext == "v":
-        return verilog_to_circuit(netlist, name, blackboxes)
-    elif fmt == "bench" or ext == "bench":
+    if fmt == "verilog" or path.suffix == ".v":
+        return verilog_to_circuit(netlist, name, blackboxes, warnings, error_on_warning)
+    elif fmt == "bench" or path.suffix == ".bench":
         return bench_to_circuit(netlist, name)
     else:
-        raise ValueError(f"extension {ext} not supported")
+        raise ValueError(f"extension {path.suffix} not supported")
 
 
 def from_lib(name):
@@ -60,7 +62,7 @@ def from_lib(name):
             the parsed circuit.
     """
     bbs = [BlackBox("ff", ["CK", "D"], ["Q"])]
-    path = glob(f"{os.path.dirname(__file__)}/netlists/{name}.*")[0]
+    [path] = Path(__file__).parent.absolute().glob(f"netlists/{name}.*")
     return from_file(path, name, blackboxes=bbs)
 
 
@@ -111,7 +113,9 @@ def bench_to_circuit(netlist, name):
     return c
 
 
-def verilog_to_circuit(netlist, name, blackboxes=None):
+def verilog_to_circuit(
+    netlist, name, blackboxes=None, warnings=False, error_on_warning=False
+):
     """
     Creates a new Circuit from a module inside Verilog code.
 
@@ -123,6 +127,11 @@ def verilog_to_circuit(netlist, name, blackboxes=None):
             Module name.
     blackboxes: seq of BlackBox
             Blackboxes in module.
+    warnings: bool
+            If True, warnings about unused nets will be printed.
+    error_on_warning: bool
+            If True, unused nets will cause raise `VerilogParsingWarning`
+            exceptions.
 
     Returns
     -------
@@ -137,10 +146,7 @@ def verilog_to_circuit(netlist, name, blackboxes=None):
     if blackboxes is None:
         blackboxes = []
 
-    verilog_parser = get_verilog_parser(blackboxes)
-
-    c = verilog_parser.parse(module)
-    return c
+    return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)
 
 
 def to_file(c, path):
@@ -172,15 +178,29 @@ def circuit_to_verilog(c):
     str
         Verilog code.
     """
-    inputs = []
-    outputs = []
+    c = Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
+    # sanitize escaped nets
+    for node in c.nodes():
+        if node.startswith("\\"):
+            c.relabel({node: node + " "})
+
+    inputs = list(c.inputs())
+    outputs = list(c.outputs())
     insts = []
     wires = []
 
-    # sanitize escaped nets
-    for node in c.nodes():
-        if node.startswith('\\'):
-            c.relabel({node: node + ' '})
+    # remove outputs drivers
+    driver_mapping = dict()
+    for output in outputs:
+        if len(c.fanin(output)) > 1:
+            raise ValueError(f"Output {output} has multiple drivers.")
+        elif len(c.fanin(output)) == 1:
+            driver = c.fanin(output).pop()
+            if c.type(driver) in ["input", "1", "0"]:
+                driver = c.add(f"{output}_driver", type="buf", fanin=driver, uid=True)
+            driver_mapping[driver] = output
+    c.remove(c.outputs())
+    c.relabel(driver_mapping)
 
     # blackboxes
     output_map = {}
@@ -209,16 +229,18 @@ def circuit_to_verilog(c):
         elif c.type(n) in ["0", "1"]:
             insts.append(f"assign {n} = 1'b{c.type(n)}")
             wires.append(n)
-        elif c.type(n) in ["input"]:
-            inputs.append(n)
-        elif c.type(n) in ["output"]:
-            fanin = c.fanin(n).pop()
-            if fanin in output_map:
-                fanin = output_map[fanin]
-            insts.append(f"assign {n} = {fanin}")
-            outputs.append(n)
-        elif c.type(n) in ["bb_output", "bb_input"]:
+        elif c.type(n) in ["input", "output", "bb_input", "bb_output"]:
             pass
+        #     inputs.append(n)
+        # elif c.type(n) in ["output"]:
+        #     if len(c.fanin(n)):
+        #         fanin = c.fanin(n).pop()
+        #         if fanin in output_map:
+        #             fanin = output_map[fanin]
+        #         insts.append(f"assign {n} = {fanin}")
+        #     outputs.append(n)
+        # elif c.type(n) in ["bb_output", "bb_input"]:
+        #     pass
         else:
             raise ValueError(f"unknown gate type: {c.type(n)}")
 
@@ -235,9 +257,9 @@ def circuit_to_verilog(c):
     verilog += "endmodule\n"
 
     # de-sanitize escaped nets
-    for node in c.nodes():
-        if node.startswith('\\'):
-            c.relabel({node: node[:-1]})
+    # for node in c.nodes():
+    #     if node.startswith('\\'):
+    #         c.relabel({node: node[:-1]})
 
     return verilog
 
