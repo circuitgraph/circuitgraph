@@ -1,7 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [0.1.0] - 2021-01-22
+## [0.1.1] - 2021-01-22
+### FIXED
+- Parsing is now being included correctly
+
 ### Added
 - Lark based verilog parsing to vastly speed up reading verilog netlists
 

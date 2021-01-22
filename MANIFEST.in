@@ -1,5 +1,6 @@
 include README.md
 include circuitgraph/netlists/*
+include circuitgraph/parsing/verilog.lark
 include docs/*
 include requirements.txt
 include LICENSE
