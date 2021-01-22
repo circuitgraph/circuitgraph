@@ -30,21 +30,21 @@
 <pre><code class="python">&#34;&#34;&#34;Functions for reading/writing CircuitGraphs&#34;&#34;&#34;
 
 import re
-import os
-from glob import glob
-from lark import Lark, Transformer
-import tempfile
+from pathlib import Path
 
 from circuitgraph import Circuit, BlackBox
+from circuitgraph.parsing import parse_verilog_netlist
 
 
-def from_file(path, name=None, fmt=None, blackboxes=None):
+def from_file(
+    path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False
+):
     &#34;&#34;&#34;
     Creates a new `Circuit` from a verilog file.
 
     Parameters
     ----------
-    path: str
+    path: str or pathlib.Path
             the path to the file to read from.
     name: str
             the name of the module to read if different from the filename.
@@ -52,25 +52,28 @@ def from_file(path, name=None, fmt=None, blackboxes=None):
             the format of the file to be read, overrides the extension.
     blackboxes: seq of BlackBox
             sub circuits in the circuit to be parsed.
+    warnings: bool
+            If True, warnings about unused nets will be printed.
+    error_on_warning: bool
+            If True, unused nets will cause raise `VerilogParsingWarning`
+            exceptions.
 
     Returns
     -------
     Circuit
             the parsed circuit.
     &#34;&#34;&#34;
-    ext = path.split(&#34;.&#34;)[-1]
+    path = Path(path)
     if name is None:
-        name = path.split(&#34;/&#34;)[-1].replace(f&#34;.{ext}&#34;, &#34;&#34;)
-
+        name = path.stem
     with open(path, &#34;r&#34;) as f:
         netlist = f.read()
-
-    if fmt == &#34;verilog&#34; or ext == &#34;v&#34;:
-        return verilog_to_circuit(netlist, name, blackboxes)
-    elif fmt == &#34;bench&#34; or ext == &#34;bench&#34;:
+    if fmt == &#34;verilog&#34; or path.suffix == &#34;.v&#34;:
+        return verilog_to_circuit(netlist, name, blackboxes, warnings, error_on_warning)
+    elif fmt == &#34;bench&#34; or path.suffix == &#34;.bench&#34;:
         return bench_to_circuit(netlist, name)
     else:
-        raise ValueError(f&#34;extension {ext} not supported&#34;)
+        raise ValueError(f&#34;extension {path.suffix} not supported&#34;)
 
 
 def from_lib(name):
@@ -87,8 +90,8 @@ def from_lib(name):
     Circuit
             the parsed circuit.
     &#34;&#34;&#34;
-    bbs = [BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])]
-    path = glob(f&#34;{os.path.dirname(__file__)}/netlists/{name}.*&#34;)[0]
+    bbs = [BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])]
+    [path] = Path(__file__).parent.absolute().glob(f&#34;netlists/{name}.*&#34;)
     return from_file(path, name, blackboxes=bbs)
 
 
@@ -133,13 +136,15 @@ def bench_to_circuit(netlist, name):
         nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
         for n in nets:
             driver = c.uid(f&#34;{n}_driver&#34;)
-            c.relabel({n:driver})
+            c.relabel({n: driver})
             c.add(n, &#34;output&#34;, fanin=driver)
 
     return c
 
 
-def verilog_to_circuit(netlist, name, blackboxes=None):
+def verilog_to_circuit(
+    netlist, name, blackboxes=None, warnings=False, error_on_warning=False
+):
     &#34;&#34;&#34;
     Creates a new Circuit from a module inside Verilog code.
 
@@ -151,173 +156,26 @@ def verilog_to_circuit(netlist, name, blackboxes=None):
             Module name.
     blackboxes: seq of BlackBox
             Blackboxes in module.
+    warnings: bool
+            If True, warnings about unused nets will be printed.
+    error_on_warning: bool
+            If True, unused nets will cause raise `VerilogParsingWarning`
+            exceptions.
 
     Returns
     -------
     Circuit
             Parsed circuit.
     &#34;&#34;&#34;
-
     # parse module
-    regex = f&#34;module\s+{name}\s*\(.*?\);(.*?)endmodule&#34;
-    m = re.search(regex,netlist,re.DOTALL)
+    regex = f&#34;(module\s+{name}\s*\(.*?\);(.*?)endmodule)&#34;
+    m = re.search(regex, netlist, re.DOTALL)
     module = m.group(1)
 
-    # create circuit
-    c = Circuit(name=name)
+    if blackboxes is None:
+        blackboxes = []
 
-    # parse wires, will all be replaced with gate types
-    regex = &#34;wire\s(.+?);&#34;
-    for net_str in re.findall(regex,module,re.DOTALL):
-        nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
-        for net in nets: c.add(net,&#34;wire&#34;)
-
-    # parse io
-    regex = &#34;(input|output)\s(.+?);&#34;
-    for net_type, net_str in re.findall(regex,module,re.DOTALL):
-        nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
-        for net in nets: c.add(net,net_type)
-
-    # create output drivers, ensure unique names
-    output_drivers = {o:c.add(f&#34;{o}_driver&#34;, &#34;wire&#34;, uid=True) for o in c.outputs()}
-
-    # create constants, (will be removed if unused)
-    tie_1 = c.add(&#34;tie_1&#34;, &#34;1&#34;, uid=True)
-    tie_0 = c.add(&#34;tie_0&#34;, &#34;0&#34;, uid=True)
-
-    # parse insts
-    regex = &#34;([a-zA-Z][a-zA-Z\d_]*)\s+([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);&#34;
-    for gate, inst, net_str in re.findall(regex,module,re.DOTALL):
-
-        # parse generics
-        if gate in set([&#39;and&#39;,&#39;nand&#39;,&#39;or&#39;,&#39;nor&#39;,&#39;xor&#39;,&#39;xnor&#39;,&#39;buf&#39;,&#39;not&#39;]):
-            # parse nets
-            nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
-
-            # check for outputs, replace constants
-            nets = [output_drivers[n] if n in output_drivers else n for n in nets]
-            nets = [tie_1 if n == &#34;1&#39;b1&#34; else n for n in nets]
-            nets = [tie_0 if n == &#34;1&#39;b0&#34; else n for n in nets]
-
-            # add to graph
-            c.add(nets[0], gate, fanin=nets[1:])
-
-        # parse non-generics
-        else:
-            # get blackbox definition
-            try:
-                bb = next(bb for bb in blackboxes if bb.name==gate)
-            except:
-                raise ValueError(f&#34;blackbox {gate} not defined&#34;)
-
-            # parse pins
-            regex = &#34;\.\s*(\S+)\s*\(\s*(\S+)\s*\)&#34;
-            connections = {}
-            for pin, net in re.findall(regex, net_str):
-                # check for outputs
-                if net in output_drivers:
-                    net = output_drivers[net]
-                elif net==&#34;1&#39;b1&#34;:
-                    net = tie_1
-                elif net==&#34;1&#39;b0&#34;:
-                    net = tie_0
-
-                if pin in bb.outputs:
-                    # add intermediate net for outputs
-                    connections[pin] = c.add(net,&#34;buf&#34;)
-                else:
-                    connections[pin] = net
-
-            # add inst
-            c.add_blackbox(bb, inst, connections)
-
-    # parse assigns
-    class TreeToCircuit(Transformer):
-        def add_not(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;not_{io}&#39;, &#39;not&#39;, fanin=items[0], uid=True)
-
-        def add_xor(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;xor_{io}&#39;, &#39;xor&#39;, fanin=[items[0],items[1]],uid=True)
-
-        def add_xnor(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;xnor_{io}&#39;, &#39;xnor&#39;, fanin=[items[0],items[1]],uid=True)
-
-        def add_and(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;and_{io}&#39;, &#39;and&#39;, fanin=[items[0],items[1]],uid=True)
-
-        def add_or(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;or_{io}&#39;, &#39;or&#39;, fanin=[items[0],items[1]],uid=True)
-
-        def add_mux(self, items):
-            io = &#34;_&#34;.join(items)
-            n = c.add(f&#39;mux_n_{io}&#39;,&#39;not&#39;,fanin=items[0],uid=True)
-            a0 = c.add(f&#39;mux_a0_{io}&#39;,&#39;and&#39;,fanin=[n, items[2]],uid=True)
-            a1 = c.add(f&#39;mux_a1_{io}&#39;,&#39;and&#39;,fanin=[items[0], items[1]],uid=True)
-            return c.add(f&#39;mux_o_{io}&#39;,&#39;or&#39;,fanin=[a0, a1],uid=True)
-
-        def add_node(self, items):
-            if items[0] in [&#34;1&#39;b0&#34;, &#34;1&#39;h0&#34;]:
-                return tie_0
-            elif items[0] in [&#34;1&#39;b1&#34;, &#34;1&#39;h1&#34;]:
-                return tie_1
-            elif items[0].value in output_drivers:
-                return output_drivers[items[0].value]
-            else:
-                return items[0].value
-
-    exp_parser = Lark(r&#34;&#34;&#34;
-        ?cond : or
-              | or &#34;?&#34; or &#34;:&#34; or -&gt; add_mux
-
-        ?or : xor
-              | or &#34;|&#34; xor -&gt; add_or
-
-        ?xor : and
-              | xor &#34;^&#34; and -&gt; add_xor
-              | xor &#34;~^&#34; and -&gt; add_xnor
-              | xor &#34;^~&#34; and -&gt; add_xnor
-
-        ?and : unary
-             | and &#34;&amp;&#34; unary -&gt; add_and
-
-        ?unary : primary
-                | ( &#34;!&#34; | &#34;~&#34; ) primary -&gt; add_not
-
-        ?primary : VAL -&gt; add_node
-                  | &#34;(&#34; or &#34;)&#34;
-
-        VAL : CNAME | &#34;1&#39;b0&#34; | &#34;1&#39;b1&#34; | &#34;1&#39;h0&#34; | &#34;1&#39;h1&#34;
-
-        %import common.CNAME
-        %import common.WS
-        %ignore WS
-    &#34;&#34;&#34;, start=&#34;cond&#34;)
-
-    # parse expressions
-    regex = &#34;assign\s+(.+?)\s*=\s*(.+?)\s*;&#34;
-    for n0, n1 in re.findall(regex,module):
-        tree = exp_parser.parse(n1)
-        rhs = TreeToCircuit(c).transform(tree)
-        if n0 in output_drivers:
-            n0 = output_drivers[n0]
-        c.add(n0,&#39;buf&#39;,fanin=rhs)
-
-    # connect outputs
-    for o,od in output_drivers.items():
-        c.connect(od,o)
-
-    # remove unused ties
-    #cg.lint(c)
-    # check for unconnected wires
-    if &#34;wire&#34; in c.type(c.nodes()):
-        raise ValueError(f&#34;uninitialized wire&#34;)
-
-    return c
+    return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)
 
 
 def to_file(c, path):
@@ -349,10 +207,29 @@ def circuit_to_verilog(c):
     str
         Verilog code.
     &#34;&#34;&#34;
-    inputs = []
-    outputs = []
+    c = Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
+    # sanitize escaped nets
+    for node in c.nodes():
+        if node.startswith(&#34;\\&#34;):
+            c.relabel({node: node + &#34; &#34;})
+
+    inputs = list(c.inputs())
+    outputs = list(c.outputs())
     insts = []
     wires = []
+
+    # remove outputs drivers
+    driver_mapping = dict()
+    for output in outputs:
+        if len(c.fanin(output)) &gt; 1:
+            raise ValueError(f&#34;Output {output} has multiple drivers.&#34;)
+        elif len(c.fanin(output)) == 1:
+            driver = c.fanin(output).pop()
+            if c.type(driver) in [&#34;input&#34;, &#34;1&#34;, &#34;0&#34;]:
+                driver = c.add(f&#34;{output}_driver&#34;, type=&#34;buf&#34;, fanin=driver, uid=True)
+            driver_mapping[driver] = output
+    c.remove(c.outputs())
+    c.relabel(driver_mapping)
 
     # blackboxes
     output_map = {}
@@ -381,16 +258,18 @@ def circuit_to_verilog(c):
         elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
             insts.append(f&#34;assign {n} = 1&#39;b{c.type(n)}&#34;)
             wires.append(n)
-        elif c.type(n) in [&#34;input&#34;]:
-            inputs.append(n)
-        elif c.type(n) in [&#34;output&#34;]:
-            fanin = c.fanin(n).pop()
-            if fanin in output_map:
-                fanin = output_map[fanin]
-            insts.append(f&#34;assign {n} = {fanin}&#34;)
-            outputs.append(n)
-        elif c.type(n) in [&#34;bb_output&#34;,&#34;bb_input&#34;]:
+        elif c.type(n) in [&#34;input&#34;, &#34;output&#34;, &#34;bb_input&#34;, &#34;bb_output&#34;]:
             pass
+        #     inputs.append(n)
+        # elif c.type(n) in [&#34;output&#34;]:
+        #     if len(c.fanin(n)):
+        #         fanin = c.fanin(n).pop()
+        #         if fanin in output_map:
+        #             fanin = output_map[fanin]
+        #         insts.append(f&#34;assign {n} = {fanin}&#34;)
+        #     outputs.append(n)
+        # elif c.type(n) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
+        #     pass
         else:
             raise ValueError(f&#34;unknown gate type: {c.type(n)}&#34;)
 
@@ -406,7 +285,13 @@ def circuit_to_verilog(c):
     verilog += &#34;&#34;.join(f&#34;  {inst};\n&#34; for inst in insts)
     verilog += &#34;endmodule\n&#34;
 
+    # de-sanitize escaped nets
+    # for node in c.nodes():
+    #     if node.startswith(&#39;\\&#39;):
+    #         c.relabel({node: node[:-1]})
+
     return verilog
+
 
 def circuit_to_bench(c):
     &#34;&#34;&#34;
@@ -527,7 +412,7 @@ def circuit_to_bench(c):
         nets = net_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
         for n in nets:
             driver = c.uid(f&#34;{n}_driver&#34;)
-            c.relabel({n:driver})
+            c.relabel({n: driver})
             c.add(n, &#34;output&#34;, fanin=driver)
 
     return c</code></pre>
@@ -635,10 +520,29 @@ def circuit_to_bench(c):
     str
         Verilog code.
     &#34;&#34;&#34;
-    inputs = []
-    outputs = []
+    c = Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
+    # sanitize escaped nets
+    for node in c.nodes():
+        if node.startswith(&#34;\\&#34;):
+            c.relabel({node: node + &#34; &#34;})
+
+    inputs = list(c.inputs())
+    outputs = list(c.outputs())
     insts = []
     wires = []
+
+    # remove outputs drivers
+    driver_mapping = dict()
+    for output in outputs:
+        if len(c.fanin(output)) &gt; 1:
+            raise ValueError(f&#34;Output {output} has multiple drivers.&#34;)
+        elif len(c.fanin(output)) == 1:
+            driver = c.fanin(output).pop()
+            if c.type(driver) in [&#34;input&#34;, &#34;1&#34;, &#34;0&#34;]:
+                driver = c.add(f&#34;{output}_driver&#34;, type=&#34;buf&#34;, fanin=driver, uid=True)
+            driver_mapping[driver] = output
+    c.remove(c.outputs())
+    c.relabel(driver_mapping)
 
     # blackboxes
     output_map = {}
@@ -667,16 +571,18 @@ def circuit_to_bench(c):
         elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
             insts.append(f&#34;assign {n} = 1&#39;b{c.type(n)}&#34;)
             wires.append(n)
-        elif c.type(n) in [&#34;input&#34;]:
-            inputs.append(n)
-        elif c.type(n) in [&#34;output&#34;]:
-            fanin = c.fanin(n).pop()
-            if fanin in output_map:
-                fanin = output_map[fanin]
-            insts.append(f&#34;assign {n} = {fanin}&#34;)
-            outputs.append(n)
-        elif c.type(n) in [&#34;bb_output&#34;,&#34;bb_input&#34;]:
+        elif c.type(n) in [&#34;input&#34;, &#34;output&#34;, &#34;bb_input&#34;, &#34;bb_output&#34;]:
             pass
+        #     inputs.append(n)
+        # elif c.type(n) in [&#34;output&#34;]:
+        #     if len(c.fanin(n)):
+        #         fanin = c.fanin(n).pop()
+        #         if fanin in output_map:
+        #             fanin = output_map[fanin]
+        #         insts.append(f&#34;assign {n} = {fanin}&#34;)
+        #     outputs.append(n)
+        # elif c.type(n) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
+        #     pass
         else:
             raise ValueError(f&#34;unknown gate type: {c.type(n)}&#34;)
 
@@ -692,17 +598,22 @@ def circuit_to_bench(c):
     verilog += &#34;&#34;.join(f&#34;  {inst};\n&#34; for inst in insts)
     verilog += &#34;endmodule\n&#34;
 
+    # de-sanitize escaped nets
+    # for node in c.nodes():
+    #     if node.startswith(&#39;\\&#39;):
+    #         c.relabel({node: node[:-1]})
+
     return verilog</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.io.from_file"><code class="name flex">
-<span>def <span class="ident">from_file</span></span>(<span>path, name=None, fmt=None, blackboxes=None)</span>
+<span>def <span class="ident">from_file</span></span>(<span>path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a new <code>Circuit</code> from a verilog file.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
-<dt><strong><code>path</code></strong> :&ensp;<code>str</code></dt>
+<dt><strong><code>path</code></strong> :&ensp;<code>str</code> or <code>pathlib.Path</code></dt>
 <dd>the path to the file to read from.</dd>
 <dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
 <dd>the name of the module to read if different from the filename.</dd>
@@ -710,6 +621,11 @@ def circuit_to_bench(c):
 <dd>the format of the file to be read, overrides the extension.</dd>
 <dt><strong><code>blackboxes</code></strong> :&ensp;<code>seq</code> of <code>BlackBox</code></dt>
 <dd>sub circuits in the circuit to be parsed.</dd>
+<dt><strong><code>warnings</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, warnings about unused nets will be printed.</dd>
+<dt><strong><code>error_on_warning</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, unused nets will cause raise <code>VerilogParsingWarning</code>
+exceptions.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -720,13 +636,15 @@ def circuit_to_bench(c):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def from_file(path, name=None, fmt=None, blackboxes=None):
+<pre><code class="python">def from_file(
+    path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False
+):
     &#34;&#34;&#34;
     Creates a new `Circuit` from a verilog file.
 
     Parameters
     ----------
-    path: str
+    path: str or pathlib.Path
             the path to the file to read from.
     name: str
             the name of the module to read if different from the filename.
@@ -734,25 +652,28 @@ def circuit_to_bench(c):
             the format of the file to be read, overrides the extension.
     blackboxes: seq of BlackBox
             sub circuits in the circuit to be parsed.
+    warnings: bool
+            If True, warnings about unused nets will be printed.
+    error_on_warning: bool
+            If True, unused nets will cause raise `VerilogParsingWarning`
+            exceptions.
 
     Returns
     -------
     Circuit
             the parsed circuit.
     &#34;&#34;&#34;
-    ext = path.split(&#34;.&#34;)[-1]
+    path = Path(path)
     if name is None:
-        name = path.split(&#34;/&#34;)[-1].replace(f&#34;.{ext}&#34;, &#34;&#34;)
-
+        name = path.stem
     with open(path, &#34;r&#34;) as f:
         netlist = f.read()
-
-    if fmt == &#34;verilog&#34; or ext == &#34;v&#34;:
-        return verilog_to_circuit(netlist, name, blackboxes)
-    elif fmt == &#34;bench&#34; or ext == &#34;bench&#34;:
+    if fmt == &#34;verilog&#34; or path.suffix == &#34;.v&#34;:
+        return verilog_to_circuit(netlist, name, blackboxes, warnings, error_on_warning)
+    elif fmt == &#34;bench&#34; or path.suffix == &#34;.bench&#34;:
         return bench_to_circuit(netlist, name)
     else:
-        raise ValueError(f&#34;extension {ext} not supported&#34;)</code></pre>
+        raise ValueError(f&#34;extension {path.suffix} not supported&#34;)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.io.from_lib"><code class="name flex">
@@ -786,8 +707,8 @@ folder</p>
     Circuit
             the parsed circuit.
     &#34;&#34;&#34;
-    bbs = [BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])]
-    path = glob(f&#34;{os.path.dirname(__file__)}/netlists/{name}.*&#34;)[0]
+    bbs = [BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])]
+    [path] = Path(__file__).parent.absolute().glob(f&#34;netlists/{name}.*&#34;)
     return from_file(path, name, blackboxes=bbs)</code></pre>
 </details>
 </dd>
@@ -823,7 +744,7 @@ folder</p>
 </details>
 </dd>
 <dt id="circuitgraph.io.verilog_to_circuit"><code class="name flex">
-<span>def <span class="ident">verilog_to_circuit</span></span>(<span>netlist, name, blackboxes=None)</span>
+<span>def <span class="ident">verilog_to_circuit</span></span>(<span>netlist, name, blackboxes=None, warnings=False, error_on_warning=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a new Circuit from a module inside Verilog code.</p>
@@ -835,6 +756,11 @@ folder</p>
 <dd>Module name.</dd>
 <dt><strong><code>blackboxes</code></strong> :&ensp;<code>seq</code> of <code>BlackBox</code></dt>
 <dd>Blackboxes in module.</dd>
+<dt><strong><code>warnings</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, warnings about unused nets will be printed.</dd>
+<dt><strong><code>error_on_warning</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, unused nets will cause raise <code>VerilogParsingWarning</code>
+exceptions.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -845,7 +771,9 @@ folder</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def verilog_to_circuit(netlist, name, blackboxes=None):
+<pre><code class="python">def verilog_to_circuit(
+    netlist, name, blackboxes=None, warnings=False, error_on_warning=False
+):
     &#34;&#34;&#34;
     Creates a new Circuit from a module inside Verilog code.
 
@@ -857,173 +785,26 @@ folder</p>
             Module name.
     blackboxes: seq of BlackBox
             Blackboxes in module.
+    warnings: bool
+            If True, warnings about unused nets will be printed.
+    error_on_warning: bool
+            If True, unused nets will cause raise `VerilogParsingWarning`
+            exceptions.
 
     Returns
     -------
     Circuit
             Parsed circuit.
     &#34;&#34;&#34;
-
     # parse module
-    regex = f&#34;module\s+{name}\s*\(.*?\);(.*?)endmodule&#34;
-    m = re.search(regex,netlist,re.DOTALL)
+    regex = f&#34;(module\s+{name}\s*\(.*?\);(.*?)endmodule)&#34;
+    m = re.search(regex, netlist, re.DOTALL)
     module = m.group(1)
 
-    # create circuit
-    c = Circuit(name=name)
+    if blackboxes is None:
+        blackboxes = []
 
-    # parse wires, will all be replaced with gate types
-    regex = &#34;wire\s(.+?);&#34;
-    for net_str in re.findall(regex,module,re.DOTALL):
-        nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
-        for net in nets: c.add(net,&#34;wire&#34;)
-
-    # parse io
-    regex = &#34;(input|output)\s(.+?);&#34;
-    for net_type, net_str in re.findall(regex,module,re.DOTALL):
-        nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
-        for net in nets: c.add(net,net_type)
-
-    # create output drivers, ensure unique names
-    output_drivers = {o:c.add(f&#34;{o}_driver&#34;, &#34;wire&#34;, uid=True) for o in c.outputs()}
-
-    # create constants, (will be removed if unused)
-    tie_1 = c.add(&#34;tie_1&#34;, &#34;1&#34;, uid=True)
-    tie_0 = c.add(&#34;tie_0&#34;, &#34;0&#34;, uid=True)
-
-    # parse insts
-    regex = &#34;([a-zA-Z][a-zA-Z\d_]*)\s+([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);&#34;
-    for gate, inst, net_str in re.findall(regex,module,re.DOTALL):
-
-        # parse generics
-        if gate in set([&#39;and&#39;,&#39;nand&#39;,&#39;or&#39;,&#39;nor&#39;,&#39;xor&#39;,&#39;xnor&#39;,&#39;buf&#39;,&#39;not&#39;]):
-            # parse nets
-            nets = net_str.replace(&#34; &#34;,&#34;&#34;).replace(&#34;\n&#34;,&#34;&#34;).replace(&#34;\t&#34;,&#34;&#34;).split(&#34;,&#34;)
-
-            # check for outputs, replace constants
-            nets = [output_drivers[n] if n in output_drivers else n for n in nets]
-            nets = [tie_1 if n == &#34;1&#39;b1&#34; else n for n in nets]
-            nets = [tie_0 if n == &#34;1&#39;b0&#34; else n for n in nets]
-
-            # add to graph
-            c.add(nets[0], gate, fanin=nets[1:])
-
-        # parse non-generics
-        else:
-            # get blackbox definition
-            try:
-                bb = next(bb for bb in blackboxes if bb.name==gate)
-            except:
-                raise ValueError(f&#34;blackbox {gate} not defined&#34;)
-
-            # parse pins
-            regex = &#34;\.\s*(\S+)\s*\(\s*(\S+)\s*\)&#34;
-            connections = {}
-            for pin, net in re.findall(regex, net_str):
-                # check for outputs
-                if net in output_drivers:
-                    net = output_drivers[net]
-                elif net==&#34;1&#39;b1&#34;:
-                    net = tie_1
-                elif net==&#34;1&#39;b0&#34;:
-                    net = tie_0
-
-                if pin in bb.outputs:
-                    # add intermediate net for outputs
-                    connections[pin] = c.add(net,&#34;buf&#34;)
-                else:
-                    connections[pin] = net
-
-            # add inst
-            c.add_blackbox(bb, inst, connections)
-
-    # parse assigns
-    class TreeToCircuit(Transformer):
-        def add_not(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;not_{io}&#39;, &#39;not&#39;, fanin=items[0], uid=True)
-
-        def add_xor(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;xor_{io}&#39;, &#39;xor&#39;, fanin=[items[0],items[1]],uid=True)
-
-        def add_xnor(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;xnor_{io}&#39;, &#39;xnor&#39;, fanin=[items[0],items[1]],uid=True)
-
-        def add_and(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;and_{io}&#39;, &#39;and&#39;, fanin=[items[0],items[1]],uid=True)
-
-        def add_or(self, items):
-            io = &#34;_&#34;.join(items)
-            return c.add(f&#39;or_{io}&#39;, &#39;or&#39;, fanin=[items[0],items[1]],uid=True)
-
-        def add_mux(self, items):
-            io = &#34;_&#34;.join(items)
-            n = c.add(f&#39;mux_n_{io}&#39;,&#39;not&#39;,fanin=items[0],uid=True)
-            a0 = c.add(f&#39;mux_a0_{io}&#39;,&#39;and&#39;,fanin=[n, items[2]],uid=True)
-            a1 = c.add(f&#39;mux_a1_{io}&#39;,&#39;and&#39;,fanin=[items[0], items[1]],uid=True)
-            return c.add(f&#39;mux_o_{io}&#39;,&#39;or&#39;,fanin=[a0, a1],uid=True)
-
-        def add_node(self, items):
-            if items[0] in [&#34;1&#39;b0&#34;, &#34;1&#39;h0&#34;]:
-                return tie_0
-            elif items[0] in [&#34;1&#39;b1&#34;, &#34;1&#39;h1&#34;]:
-                return tie_1
-            elif items[0].value in output_drivers:
-                return output_drivers[items[0].value]
-            else:
-                return items[0].value
-
-    exp_parser = Lark(r&#34;&#34;&#34;
-        ?cond : or
-              | or &#34;?&#34; or &#34;:&#34; or -&gt; add_mux
-
-        ?or : xor
-              | or &#34;|&#34; xor -&gt; add_or
-
-        ?xor : and
-              | xor &#34;^&#34; and -&gt; add_xor
-              | xor &#34;~^&#34; and -&gt; add_xnor
-              | xor &#34;^~&#34; and -&gt; add_xnor
-
-        ?and : unary
-             | and &#34;&amp;&#34; unary -&gt; add_and
-
-        ?unary : primary
-                | ( &#34;!&#34; | &#34;~&#34; ) primary -&gt; add_not
-
-        ?primary : VAL -&gt; add_node
-                  | &#34;(&#34; or &#34;)&#34;
-
-        VAL : CNAME | &#34;1&#39;b0&#34; | &#34;1&#39;b1&#34; | &#34;1&#39;h0&#34; | &#34;1&#39;h1&#34;
-
-        %import common.CNAME
-        %import common.WS
-        %ignore WS
-    &#34;&#34;&#34;, start=&#34;cond&#34;)
-
-    # parse expressions
-    regex = &#34;assign\s+(.+?)\s*=\s*(.+?)\s*;&#34;
-    for n0, n1 in re.findall(regex,module):
-        tree = exp_parser.parse(n1)
-        rhs = TreeToCircuit(c).transform(tree)
-        if n0 in output_drivers:
-            n0 = output_drivers[n0]
-        c.add(n0,&#39;buf&#39;,fanin=rhs)
-
-    # connect outputs
-    for o,od in output_drivers.items():
-        c.connect(od,o)
-
-    # remove unused ties
-    #cg.lint(c)
-    # check for unconnected wires
-    if &#34;wire&#34; in c.type(c.nodes()):
-        raise ValueError(f&#34;uninitialized wire&#34;)
-
-    return c</code></pre>
+    return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)</code></pre>
 </details>
 </dd>
 </dl>

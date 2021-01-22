@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="circuitgraph",
-    version="0.0.3",
+    version="0.1.0",
     author="Ruben Purdy, Joseph Sweeney",
     author_email="rpurdy@andrew.cmu.edu, joesweeney@cmu.edu",
     description="Tools for working with boolean circuits as graphs.",
@@ -25,5 +25,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
-    install_requires=["python-sat", "pyverilog", "networkx",],
+    install_requires=["python-sat", "lark", "networkx",],
 )

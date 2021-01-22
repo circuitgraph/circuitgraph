@@ -124,7 +124,7 @@ def lint(c):
         if len(c.fanin(g)) &lt; 1:
             raise ValueError(f&#34;{g} has no fanin&#34;)
     for g in c.nodes():
-        if not c.fanout(g) and not c.type(g)==&#34;output&#34;:
+        if not c.fanout(g) and not c.type(g) == &#34;output&#34;:
             raise ValueError(f&#34;{g} has no fanout and is not output&#34;)</code></pre>
 </details>
 </section>
@@ -306,7 +306,7 @@ ValueError: expected num &gt;= 1</p></div>
         if len(c.fanin(g)) &lt; 1:
             raise ValueError(f&#34;{g} has no fanin&#34;)
     for g in c.nodes():
-        if not c.fanout(g) and not c.type(g)==&#34;output&#34;:
+        if not c.fanout(g) and not c.type(g) == &#34;output&#34;:
             raise ValueError(f&#34;{g} has no fanout and is not output&#34;)</code></pre>
 </details>
 </dd>

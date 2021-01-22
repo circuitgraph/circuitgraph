@@ -57,6 +57,22 @@ import networkx as nx
 from networkx.exception import NetworkXNoCycle
 
 
+supported_types = [
+    &#34;buf&#34;,
+    &#34;and&#34;,
+    &#34;or&#34;,
+    &#34;xor&#34;,
+    &#34;not&#34;,
+    &#34;nand&#34;,
+    &#34;nor&#34;,
+    &#34;xnor&#34;,
+    &#34;0&#34;,
+    &#34;1&#34;,
+    &#34;output&#34;,
+    &#34;input&#34;,
+]
+
+
 class Circuit:
     &#34;&#34;&#34;Class for representing circuits&#34;&#34;&#34;
 
@@ -127,12 +143,6 @@ class Circuit:
         t : str
                 Type.
         &#34;&#34;&#34;
-
-        supported_types = [
-            &#34;buf&#34;, &#34;and&#34;, &#34;or&#34;, &#34;xor&#34;,
-            &#34;not&#34;, &#34;nand&#34;, &#34;nor&#34;, &#34;xnor&#34;,
-            &#34;0&#34;, &#34;1&#34;, &#34;output&#34;, &#34;input&#34;
-        ]
         if t not in supported_types:
             raise ValueError(f&#34;unsupported type {t}&#34;)
 
@@ -253,14 +263,13 @@ class Circuit:
         if connections:
             sc_inputs = sc.inputs()
             sc_outputs = sc.outputs()
-            for sc_node,node in connections.items():
+            for sc_node, node in connections.items():
                 if sc_node in sc_inputs:
-                    self.connect(node, f&#39;{name}_{sc_node}&#39;)
+                    self.connect(node, f&#34;{name}_{sc_node}&#34;)
                 elif sc_node in sc_outputs:
-                    self.connect(f&#39;{name}_{sc_node}&#39;, node)
+                    self.connect(f&#34;{name}_{sc_node}&#34;, node)
                 else:
                     raise ValueError(f&#34;node {sc_node} not in {name} io&#34;)
-
 
     def add_blackbox(self, blackbox, name, connections=None):
         &#34;&#34;&#34;
@@ -281,20 +290,20 @@ class Circuit:
         # make nodes
         io = []
         for n in blackbox.inputs:
-            io += [self.add(f&#39;{name}.{n}&#39;,&#39;bb_input&#39;)]
+            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_input&#34;)]
         for n in blackbox.outputs:
-            io += [self.add(f&#39;{name}.{n}&#39;,&#39;bb_output&#39;)]
+            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_output&#34;)]
 
         # save info
         self.blackboxes[name] = blackbox
 
         # make connections
         if connections:
-            for bb_node,node in connections.items():
+            for bb_node, node in connections.items():
                 if bb_node in blackbox.inputs:
-                    self.connect(node, f&#39;{name}.{bb_node}&#39;)
+                    self.connect(node, f&#34;{name}.{bb_node}&#34;)
                 elif bb_node in blackbox.outputs:
-                    self.connect(f&#39;{name}.{bb_node}&#39;, node)
+                    self.connect(f&#34;{name}.{bb_node}&#34;, node)
                 else:
                     raise ValueError(f&#34;node {bb_node} not defined for blackbox {name}&#34;)
 
@@ -311,12 +320,11 @@ class Circuit:
 
         &#34;&#34;&#34;
         # rename blackbox io
-        self.relabel({n: n.replace(&#34;.&#34;,&#34;_&#34;) for n in self.blackboxes[name].io})
+        self.relabel({n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in self.blackboxes[name].io})
 
         # extend circuit
         g = nx.relabel_nodes(c.graph, {n: f&#34;{name}_{n}&#34; for n in c})
         self.graph.update(g)
-
 
     def nodes(self):
         &#34;&#34;&#34;
@@ -356,6 +364,9 @@ class Circuit:
                 Nodes to add to new node&#39;s fanin
         fanout : iterable of str
                 Nodes to add to new node&#39;s fanout
+        uid: bool
+                If True, the node is given a unique name if it already
+                exists in the circuit.
 
         Returns
         -------
@@ -547,7 +558,7 @@ class Circuit:
             ns = [ns]
         gates = set()
         for n in ns:
-            gates |= nx.ancestors(self.graph,n)
+            gates |= nx.ancestors(self.graph, n)
         return gates
 
     def transitive_fanout(self, ns):
@@ -569,7 +580,7 @@ class Circuit:
             ns = [ns]
         gates = set()
         for n in ns:
-            gates |= nx.descendants(self.graph,n)
+            gates |= nx.descendants(self.graph, n)
         return gates
 
     def fanout_depth(self, ns, visited=None, reachable=None, depth=0):
@@ -602,21 +613,21 @@ class Circuit:
 
             # recurse
             for f in self.fanout(ns):
-                self.fanout_depth(f, visited, reachable, depth+1)
+                self.fanout_depth(f, visited, reachable, depth + 1)
 
             return max(visited.values())
 
         else:
             # update node depth
             if ns in visited:
-                visited[ns] = max(visited[ns],depth)
+                visited[ns] = max(visited[ns], depth)
             else:
                 visited[ns] = depth
 
             # check if all reachable fanin has been visited
             if all(n in visited for n in self.fanin(ns) &amp; reachable):
                 for f in self.fanout(ns):
-                    self.fanout_depth(f, visited, reachable, visited[ns]+1)
+                    self.fanout_depth(f, visited, reachable, visited[ns] + 1)
 
     def fanin_depth(self, ns, visited=None, reachable=None, depth=0):
         &#34;&#34;&#34;
@@ -649,21 +660,21 @@ class Circuit:
 
             # recurse
             for f in self.fanin(ns):
-                self.fanin_depth(f, visited, reachable, depth+1)
+                self.fanin_depth(f, visited, reachable, depth + 1)
 
             return max(visited.values())
 
         else:
             # update node depth
             if ns in visited:
-                visited[ns] = max(visited[ns],depth)
+                visited[ns] = max(visited[ns], depth)
             else:
                 visited[ns] = depth
 
             # check if all reachable fanin has been visited
             if all(n in visited for n in self.fanout(ns) &amp; reachable):
                 for f in self.fanin(ns):
-                    self.fanin_depth(f, visited, reachable, visited[ns]+1)
+                    self.fanin_depth(f, visited, reachable, visited[ns] + 1)
 
     def inputs(self):
         &#34;&#34;&#34;
@@ -699,7 +710,7 @@ class Circuit:
                 Output and input nodes in circuit.
 
         &#34;&#34;&#34;
-        return self.filter_type([&#34;input&#34;,&#34;output&#34;])
+        return self.filter_type([&#34;input&#34;, &#34;output&#34;])
 
     def startpoints(self, ns=None):
         &#34;&#34;&#34;
@@ -722,7 +733,7 @@ class Circuit:
         if ns:
             return (set(ns) | self.transitive_fanin(ns)) &amp; self.startpoints()
         else:
-            return self.inputs() | self.filter_type(&#39;bb_output&#39;)
+            return self.inputs() | self.filter_type(&#34;bb_output&#34;)
 
     def endpoints(self, ns=None):
         &#34;&#34;&#34;
@@ -745,7 +756,7 @@ class Circuit:
         if ns:
             return (set(ns) | self.transitive_fanout(ns)) &amp; self.endpoints()
         else:
-            return self.outputs() | self.filter_type(&#39;bb_input&#39;)
+            return self.outputs() | self.filter_type(&#34;bb_input&#34;)
 
     def is_cyclic(self):
         &#34;&#34;&#34;
@@ -772,10 +783,9 @@ class Circuit:
         if n not in self.graph:
             return n
         i = 0
-        while f&#39;{n}_{i}&#39; in self.graph:
+        while f&#34;{n}_{i}&#34; in self.graph:
             i += 1
-        return f&#39;{n}_{i}&#39;
-
+        return f&#34;{n}_{i}&#34;
 
 
 class BlackBox:
@@ -954,12 +964,6 @@ class BlackBox:
         t : str
                 Type.
         &#34;&#34;&#34;
-
-        supported_types = [
-            &#34;buf&#34;, &#34;and&#34;, &#34;or&#34;, &#34;xor&#34;,
-            &#34;not&#34;, &#34;nand&#34;, &#34;nor&#34;, &#34;xnor&#34;,
-            &#34;0&#34;, &#34;1&#34;, &#34;output&#34;, &#34;input&#34;
-        ]
         if t not in supported_types:
             raise ValueError(f&#34;unsupported type {t}&#34;)
 
@@ -1080,14 +1084,13 @@ class BlackBox:
         if connections:
             sc_inputs = sc.inputs()
             sc_outputs = sc.outputs()
-            for sc_node,node in connections.items():
+            for sc_node, node in connections.items():
                 if sc_node in sc_inputs:
-                    self.connect(node, f&#39;{name}_{sc_node}&#39;)
+                    self.connect(node, f&#34;{name}_{sc_node}&#34;)
                 elif sc_node in sc_outputs:
-                    self.connect(f&#39;{name}_{sc_node}&#39;, node)
+                    self.connect(f&#34;{name}_{sc_node}&#34;, node)
                 else:
                     raise ValueError(f&#34;node {sc_node} not in {name} io&#34;)
-
 
     def add_blackbox(self, blackbox, name, connections=None):
         &#34;&#34;&#34;
@@ -1108,20 +1111,20 @@ class BlackBox:
         # make nodes
         io = []
         for n in blackbox.inputs:
-            io += [self.add(f&#39;{name}.{n}&#39;,&#39;bb_input&#39;)]
+            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_input&#34;)]
         for n in blackbox.outputs:
-            io += [self.add(f&#39;{name}.{n}&#39;,&#39;bb_output&#39;)]
+            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_output&#34;)]
 
         # save info
         self.blackboxes[name] = blackbox
 
         # make connections
         if connections:
-            for bb_node,node in connections.items():
+            for bb_node, node in connections.items():
                 if bb_node in blackbox.inputs:
-                    self.connect(node, f&#39;{name}.{bb_node}&#39;)
+                    self.connect(node, f&#34;{name}.{bb_node}&#34;)
                 elif bb_node in blackbox.outputs:
-                    self.connect(f&#39;{name}.{bb_node}&#39;, node)
+                    self.connect(f&#34;{name}.{bb_node}&#34;, node)
                 else:
                     raise ValueError(f&#34;node {bb_node} not defined for blackbox {name}&#34;)
 
@@ -1138,12 +1141,11 @@ class BlackBox:
 
         &#34;&#34;&#34;
         # rename blackbox io
-        self.relabel({n: n.replace(&#34;.&#34;,&#34;_&#34;) for n in self.blackboxes[name].io})
+        self.relabel({n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in self.blackboxes[name].io})
 
         # extend circuit
         g = nx.relabel_nodes(c.graph, {n: f&#34;{name}_{n}&#34; for n in c})
         self.graph.update(g)
-
 
     def nodes(self):
         &#34;&#34;&#34;
@@ -1183,6 +1185,9 @@ class BlackBox:
                 Nodes to add to new node&#39;s fanin
         fanout : iterable of str
                 Nodes to add to new node&#39;s fanout
+        uid: bool
+                If True, the node is given a unique name if it already
+                exists in the circuit.
 
         Returns
         -------
@@ -1374,7 +1379,7 @@ class BlackBox:
             ns = [ns]
         gates = set()
         for n in ns:
-            gates |= nx.ancestors(self.graph,n)
+            gates |= nx.ancestors(self.graph, n)
         return gates
 
     def transitive_fanout(self, ns):
@@ -1396,7 +1401,7 @@ class BlackBox:
             ns = [ns]
         gates = set()
         for n in ns:
-            gates |= nx.descendants(self.graph,n)
+            gates |= nx.descendants(self.graph, n)
         return gates
 
     def fanout_depth(self, ns, visited=None, reachable=None, depth=0):
@@ -1429,21 +1434,21 @@ class BlackBox:
 
             # recurse
             for f in self.fanout(ns):
-                self.fanout_depth(f, visited, reachable, depth+1)
+                self.fanout_depth(f, visited, reachable, depth + 1)
 
             return max(visited.values())
 
         else:
             # update node depth
             if ns in visited:
-                visited[ns] = max(visited[ns],depth)
+                visited[ns] = max(visited[ns], depth)
             else:
                 visited[ns] = depth
 
             # check if all reachable fanin has been visited
             if all(n in visited for n in self.fanin(ns) &amp; reachable):
                 for f in self.fanout(ns):
-                    self.fanout_depth(f, visited, reachable, visited[ns]+1)
+                    self.fanout_depth(f, visited, reachable, visited[ns] + 1)
 
     def fanin_depth(self, ns, visited=None, reachable=None, depth=0):
         &#34;&#34;&#34;
@@ -1476,21 +1481,21 @@ class BlackBox:
 
             # recurse
             for f in self.fanin(ns):
-                self.fanin_depth(f, visited, reachable, depth+1)
+                self.fanin_depth(f, visited, reachable, depth + 1)
 
             return max(visited.values())
 
         else:
             # update node depth
             if ns in visited:
-                visited[ns] = max(visited[ns],depth)
+                visited[ns] = max(visited[ns], depth)
             else:
                 visited[ns] = depth
 
             # check if all reachable fanin has been visited
             if all(n in visited for n in self.fanout(ns) &amp; reachable):
                 for f in self.fanin(ns):
-                    self.fanin_depth(f, visited, reachable, visited[ns]+1)
+                    self.fanin_depth(f, visited, reachable, visited[ns] + 1)
 
     def inputs(self):
         &#34;&#34;&#34;
@@ -1526,7 +1531,7 @@ class BlackBox:
                 Output and input nodes in circuit.
 
         &#34;&#34;&#34;
-        return self.filter_type([&#34;input&#34;,&#34;output&#34;])
+        return self.filter_type([&#34;input&#34;, &#34;output&#34;])
 
     def startpoints(self, ns=None):
         &#34;&#34;&#34;
@@ -1549,7 +1554,7 @@ class BlackBox:
         if ns:
             return (set(ns) | self.transitive_fanin(ns)) &amp; self.startpoints()
         else:
-            return self.inputs() | self.filter_type(&#39;bb_output&#39;)
+            return self.inputs() | self.filter_type(&#34;bb_output&#34;)
 
     def endpoints(self, ns=None):
         &#34;&#34;&#34;
@@ -1572,7 +1577,7 @@ class BlackBox:
         if ns:
             return (set(ns) | self.transitive_fanout(ns)) &amp; self.endpoints()
         else:
-            return self.outputs() | self.filter_type(&#39;bb_input&#39;)
+            return self.outputs() | self.filter_type(&#34;bb_input&#34;)
 
     def is_cyclic(self):
         &#34;&#34;&#34;
@@ -1599,9 +1604,9 @@ class BlackBox:
         if n not in self.graph:
             return n
         i = 0
-        while f&#39;{n}_{i}&#39; in self.graph:
+        while f&#34;{n}_{i}&#34; in self.graph:
             i += 1
-        return f&#39;{n}_{i}&#39;</code></pre>
+        return f&#34;{n}_{i}&#34;</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
@@ -1620,6 +1625,9 @@ class BlackBox:
 <dd>Nodes to add to new node's fanin</dd>
 <dt><strong><code>fanout</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
 <dd>Nodes to add to new node's fanout</dd>
+<dt><strong><code>uid</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, the node is given a unique name if it already
+exists in the circuit.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1659,6 +1667,9 @@ syntax.</p>
             Nodes to add to new node&#39;s fanin
     fanout : iterable of str
             Nodes to add to new node&#39;s fanout
+    uid: bool
+            If True, the node is given a unique name if it already
+            exists in the circuit.
 
     Returns
     -------
@@ -1755,20 +1766,20 @@ syntax.</p>
     # make nodes
     io = []
     for n in blackbox.inputs:
-        io += [self.add(f&#39;{name}.{n}&#39;,&#39;bb_input&#39;)]
+        io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_input&#34;)]
     for n in blackbox.outputs:
-        io += [self.add(f&#39;{name}.{n}&#39;,&#39;bb_output&#39;)]
+        io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_output&#34;)]
 
     # save info
     self.blackboxes[name] = blackbox
 
     # make connections
     if connections:
-        for bb_node,node in connections.items():
+        for bb_node, node in connections.items():
             if bb_node in blackbox.inputs:
-                self.connect(node, f&#39;{name}.{bb_node}&#39;)
+                self.connect(node, f&#34;{name}.{bb_node}&#34;)
             elif bb_node in blackbox.outputs:
-                self.connect(f&#39;{name}.{bb_node}&#39;, node)
+                self.connect(f&#34;{name}.{bb_node}&#34;, node)
             else:
                 raise ValueError(f&#34;node {bb_node} not defined for blackbox {name}&#34;)</code></pre>
 </details>
@@ -1824,11 +1835,11 @@ syntax.</p>
     if connections:
         sc_inputs = sc.inputs()
         sc_outputs = sc.outputs()
-        for sc_node,node in connections.items():
+        for sc_node, node in connections.items():
             if sc_node in sc_inputs:
-                self.connect(node, f&#39;{name}_{sc_node}&#39;)
+                self.connect(node, f&#34;{name}_{sc_node}&#34;)
             elif sc_node in sc_outputs:
-                self.connect(f&#39;{name}_{sc_node}&#39;, node)
+                self.connect(f&#34;{name}_{sc_node}&#34;, node)
             else:
                 raise ValueError(f&#34;node {sc_node} not in {name} io&#34;)</code></pre>
 </details>
@@ -1970,7 +1981,7 @@ syntax.</p>
     if ns:
         return (set(ns) | self.transitive_fanout(ns)) &amp; self.endpoints()
     else:
-        return self.outputs() | self.filter_type(&#39;bb_input&#39;)</code></pre>
+        return self.outputs() | self.filter_type(&#34;bb_input&#34;)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.fanin"><code class="name flex">
@@ -2082,21 +2093,21 @@ syntax.</p>
 
         # recurse
         for f in self.fanin(ns):
-            self.fanin_depth(f, visited, reachable, depth+1)
+            self.fanin_depth(f, visited, reachable, depth + 1)
 
         return max(visited.values())
 
     else:
         # update node depth
         if ns in visited:
-            visited[ns] = max(visited[ns],depth)
+            visited[ns] = max(visited[ns], depth)
         else:
             visited[ns] = depth
 
         # check if all reachable fanin has been visited
         if all(n in visited for n in self.fanout(ns) &amp; reachable):
             for f in self.fanin(ns):
-                self.fanin_depth(f, visited, reachable, visited[ns]+1)</code></pre>
+                self.fanin_depth(f, visited, reachable, visited[ns] + 1)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.fanout"><code class="name flex">
@@ -2191,21 +2202,21 @@ syntax.</p>
 
         # recurse
         for f in self.fanout(ns):
-            self.fanout_depth(f, visited, reachable, depth+1)
+            self.fanout_depth(f, visited, reachable, depth + 1)
 
         return max(visited.values())
 
     else:
         # update node depth
         if ns in visited:
-            visited[ns] = max(visited[ns],depth)
+            visited[ns] = max(visited[ns], depth)
         else:
             visited[ns] = depth
 
         # check if all reachable fanin has been visited
         if all(n in visited for n in self.fanin(ns) &amp; reachable):
             for f in self.fanout(ns):
-                self.fanout_depth(f, visited, reachable, visited[ns]+1)</code></pre>
+                self.fanout_depth(f, visited, reachable, visited[ns] + 1)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.fill_blackbox"><code class="name flex">
@@ -2237,7 +2248,7 @@ syntax.</p>
 
     &#34;&#34;&#34;
     # rename blackbox io
-    self.relabel({n: n.replace(&#34;.&#34;,&#34;_&#34;) for n in self.blackboxes[name].io})
+    self.relabel({n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in self.blackboxes[name].io})
 
     # extend circuit
     g = nx.relabel_nodes(c.graph, {n: f&#34;{name}_{n}&#34; for n in c})
@@ -2365,7 +2376,7 @@ syntax.</p>
             Output and input nodes in circuit.
 
     &#34;&#34;&#34;
-    return self.filter_type([&#34;input&#34;,&#34;output&#34;])</code></pre>
+    return self.filter_type([&#34;input&#34;, &#34;output&#34;])</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.is_cyclic"><code class="name flex">
@@ -2531,12 +2542,6 @@ syntax.</p>
     t : str
             Type.
     &#34;&#34;&#34;
-
-    supported_types = [
-        &#34;buf&#34;, &#34;and&#34;, &#34;or&#34;, &#34;xor&#34;,
-        &#34;not&#34;, &#34;nand&#34;, &#34;nor&#34;, &#34;xnor&#34;,
-        &#34;0&#34;, &#34;1&#34;, &#34;output&#34;, &#34;input&#34;
-    ]
     if t not in supported_types:
         raise ValueError(f&#34;unsupported type {t}&#34;)
 
@@ -2586,7 +2591,7 @@ syntax.</p>
     if ns:
         return (set(ns) | self.transitive_fanin(ns)) &amp; self.startpoints()
     else:
-        return self.inputs() | self.filter_type(&#39;bb_output&#39;)</code></pre>
+        return self.inputs() | self.filter_type(&#34;bb_output&#34;)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.transitive_fanin"><code class="name flex">
@@ -2628,7 +2633,7 @@ syntax.</p>
         ns = [ns]
     gates = set()
     for n in ns:
-        gates |= nx.ancestors(self.graph,n)
+        gates |= nx.ancestors(self.graph, n)
     return gates</code></pre>
 </details>
 </dd>
@@ -2670,7 +2675,7 @@ syntax.</p>
         ns = [ns]
     gates = set()
     for n in ns:
-        gates |= nx.descendants(self.graph,n)
+        gates |= nx.descendants(self.graph, n)
     return gates</code></pre>
 </details>
 </dd>
@@ -2783,9 +2788,9 @@ syntax.</p>
     if n not in self.graph:
         return n
     i = 0
-    while f&#39;{n}_{i}&#39; in self.graph:
+    while f&#34;{n}_{i}&#34; in self.graph:
         i += 1
-    return f&#39;{n}_{i}&#39;</code></pre>
+    return f&#34;{n}_{i}&#34;</code></pre>
 </details>
 </dd>
 </dl>

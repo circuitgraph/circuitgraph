@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.1.0] - 2021-01-22
+### Added
+- Lark based verilog parsing to vastly speed up reading verilog netlists
+
+### Changed
+- Replaced memory elements with a more general blackbox-based scheme
+
 ## [0.0.3] - 2020-09-08
 ### Fixed
 - Image link in README is external so that it will appear in pypi

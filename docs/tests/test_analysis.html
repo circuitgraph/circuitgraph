@@ -91,14 +91,17 @@ class TestAnalysis(unittest.TestCase):
             sen_sim = max(sen_sim, input_sen)
 
         # check answer
-        if sen!=sen_sim:
-            import code; code.interact(local=dict(**globals(),**locals()))
+        if sen != sen_sim:
+            import code
+
+            code.interact(local=dict(**globals(), **locals()))
         self.assertEqual(sen, sen_sim)
 
     def test_sensitize(self):
         # pick random node
-        nr = choice(tuple(self.s27.nodes()
-            - set([&#34;clk&#34;]) - self.s27.filter_type([&#34;0&#34;, &#34;1&#34;])))
+        nr = choice(
+            tuple(self.s27.nodes() - set([&#34;clk&#34;]) - self.s27.filter_type([&#34;0&#34;, &#34;1&#34;]))
+        )
 
         # pick startpoint
         ns = choice(tuple(self.s27.startpoints() - set([&#34;clk&#34;])))
@@ -108,14 +111,18 @@ class TestAnalysis(unittest.TestCase):
 
         for n in [nr, ns, ne]:
             # get input
-            input_val = sensitize(self.s27, n, {f&#39;c0_{n}&#39;: True})
+            input_val = sensitize(self.s27, n, {f&#34;c0_{n}&#34;: True})
             if not input_val:
-                import code; code.interact(local=dict(**globals(),**locals()))
+                import code
+
+                code.interact(local=dict(**globals(), **locals()))
 
             # simulate input
             result = sat(self.s27, input_val)
             if not result[n]:
-                import code; code.interact(local=dict(**globals(),**locals()))
+                import code
+
+                code.interact(local=dict(**globals(), **locals()))
             self.assertTrue(result[n])
 
             # remove constrained input
@@ -134,7 +141,9 @@ class TestAnalysis(unittest.TestCase):
 
     def test_signal_probability(self):
         # pick random node
-        n = choice(tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints()))
+        n = choice(
+            tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints())
+        )
         sp = self.s27.startpoints(n)
 
         # get signal prob
@@ -254,14 +263,17 @@ not have a method with the specified name.</p></div>
             sen_sim = max(sen_sim, input_sen)
 
         # check answer
-        if sen!=sen_sim:
-            import code; code.interact(local=dict(**globals(),**locals()))
+        if sen != sen_sim:
+            import code
+
+            code.interact(local=dict(**globals(), **locals()))
         self.assertEqual(sen, sen_sim)
 
     def test_sensitize(self):
         # pick random node
-        nr = choice(tuple(self.s27.nodes()
-            - set([&#34;clk&#34;]) - self.s27.filter_type([&#34;0&#34;, &#34;1&#34;])))
+        nr = choice(
+            tuple(self.s27.nodes() - set([&#34;clk&#34;]) - self.s27.filter_type([&#34;0&#34;, &#34;1&#34;]))
+        )
 
         # pick startpoint
         ns = choice(tuple(self.s27.startpoints() - set([&#34;clk&#34;])))
@@ -271,14 +283,18 @@ not have a method with the specified name.</p></div>
 
         for n in [nr, ns, ne]:
             # get input
-            input_val = sensitize(self.s27, n, {f&#39;c0_{n}&#39;: True})
+            input_val = sensitize(self.s27, n, {f&#34;c0_{n}&#34;: True})
             if not input_val:
-                import code; code.interact(local=dict(**globals(),**locals()))
+                import code
+
+                code.interact(local=dict(**globals(), **locals()))
 
             # simulate input
             result = sat(self.s27, input_val)
             if not result[n]:
-                import code; code.interact(local=dict(**globals(),**locals()))
+                import code
+
+                code.interact(local=dict(**globals(), **locals()))
             self.assertTrue(result[n])
 
             # remove constrained input
@@ -297,7 +313,9 @@ not have a method with the specified name.</p></div>
 
     def test_signal_probability(self):
         # pick random node
-        n = choice(tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints()))
+        n = choice(
+            tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints())
+        )
         sp = self.s27.startpoints(n)
 
         # get signal prob
@@ -404,8 +422,10 @@ not have a method with the specified name.</p></div>
         sen_sim = max(sen_sim, input_sen)
 
     # check answer
-    if sen!=sen_sim:
-        import code; code.interact(local=dict(**globals(),**locals()))
+    if sen != sen_sim:
+        import code
+
+        code.interact(local=dict(**globals(), **locals()))
     self.assertEqual(sen, sen_sim)</code></pre>
 </details>
 </dd>
@@ -420,8 +440,9 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">def test_sensitize(self):
     # pick random node
-    nr = choice(tuple(self.s27.nodes()
-        - set([&#34;clk&#34;]) - self.s27.filter_type([&#34;0&#34;, &#34;1&#34;])))
+    nr = choice(
+        tuple(self.s27.nodes() - set([&#34;clk&#34;]) - self.s27.filter_type([&#34;0&#34;, &#34;1&#34;]))
+    )
 
     # pick startpoint
     ns = choice(tuple(self.s27.startpoints() - set([&#34;clk&#34;])))
@@ -431,14 +452,18 @@ not have a method with the specified name.</p></div>
 
     for n in [nr, ns, ne]:
         # get input
-        input_val = sensitize(self.s27, n, {f&#39;c0_{n}&#39;: True})
+        input_val = sensitize(self.s27, n, {f&#34;c0_{n}&#34;: True})
         if not input_val:
-            import code; code.interact(local=dict(**globals(),**locals()))
+            import code
+
+            code.interact(local=dict(**globals(), **locals()))
 
         # simulate input
         result = sat(self.s27, input_val)
         if not result[n]:
-            import code; code.interact(local=dict(**globals(),**locals()))
+            import code
+
+            code.interact(local=dict(**globals(), **locals()))
         self.assertTrue(result[n])
 
         # remove constrained input
@@ -467,7 +492,9 @@ not have a method with the specified name.</p></div>
 </summary>
 <pre><code class="python">def test_signal_probability(self):
     # pick random node
-    n = choice(tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints()))
+    n = choice(
+        tuple(self.s27.nodes() - self.s27.startpoints() - self.s27.endpoints())
+    )
     sp = self.s27.startpoints(n)
 
     # get signal prob

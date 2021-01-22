@@ -64,7 +64,7 @@ class TestTransform(unittest.TestCase):
         self.assertFalse(&#34;input&#34; not in c.type(c.nodes()))
         self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))
 
-    #def test_seq_graph(self):
+    # def test_seq_graph(self):
     #    g = seq_graph(self.s27)
     #    self.assertSetEqual(
     #        set(g.nodes()), set([&#34;G1&#34;, &#34;G3&#34;, &#34;clk&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G2&#34;, &#34;G7&#34;]),
@@ -74,7 +74,7 @@ class TestTransform(unittest.TestCase):
     #    for n in [&#34;G2&#34;, &#34;clk&#34;]:
     #        self.assertFalse(g.output(n))
 
-    #def test_unroll(self):
+    # def test_unroll(self):
     #    u = unroll(self.s27, 3)
 
     def test_miter(self):
@@ -84,7 +84,6 @@ class TestTransform(unittest.TestCase):
         self.assertTrue(live)
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
         self.assertFalse(different_output)
-
 
         # check equivalence with incorrect copy
         m = miter(self.s27, self.s27m)
@@ -105,7 +104,7 @@ class TestTransform(unittest.TestCase):
     @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
     def test_syn_yosys(self):
         # synthesize and check equiv
-        s = syn(self.s27, &#34;yosys&#34;, print_output=False)
+        s = syn(self.s27, &#34;yosys&#34;)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
@@ -117,7 +116,7 @@ class TestTransform(unittest.TestCase):
     )
     def test_syn_genus(self):
         if &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ:
-            s = syn(self.s27, &#34;Genus&#34;, print_output=False)
+            s = syn(self.s27, &#34;Genus&#34;)
             m = miter(self.s27, s)
             live = sat(m)
             self.assertTrue(live)
@@ -129,7 +128,7 @@ class TestTransform(unittest.TestCase):
                 os.remove(f)
             shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
 
-    #def test_ternary(self):
+    # def test_ternary(self):
     #    # encode circuit
     #    t = ternary(self.s27)
 
@@ -282,7 +281,7 @@ not have a method with the specified name.</p></div>
         self.assertFalse(&#34;input&#34; not in c.type(c.nodes()))
         self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))
 
-    #def test_seq_graph(self):
+    # def test_seq_graph(self):
     #    g = seq_graph(self.s27)
     #    self.assertSetEqual(
     #        set(g.nodes()), set([&#34;G1&#34;, &#34;G3&#34;, &#34;clk&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G2&#34;, &#34;G7&#34;]),
@@ -292,7 +291,7 @@ not have a method with the specified name.</p></div>
     #    for n in [&#34;G2&#34;, &#34;clk&#34;]:
     #        self.assertFalse(g.output(n))
 
-    #def test_unroll(self):
+    # def test_unroll(self):
     #    u = unroll(self.s27, 3)
 
     def test_miter(self):
@@ -302,7 +301,6 @@ not have a method with the specified name.</p></div>
         self.assertTrue(live)
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
         self.assertFalse(different_output)
-
 
         # check equivalence with incorrect copy
         m = miter(self.s27, self.s27m)
@@ -323,7 +321,7 @@ not have a method with the specified name.</p></div>
     @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
     def test_syn_yosys(self):
         # synthesize and check equiv
-        s = syn(self.s27, &#34;yosys&#34;, print_output=False)
+        s = syn(self.s27, &#34;yosys&#34;)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
@@ -335,7 +333,7 @@ not have a method with the specified name.</p></div>
     )
     def test_syn_genus(self):
         if &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ:
-            s = syn(self.s27, &#34;Genus&#34;, print_output=False)
+            s = syn(self.s27, &#34;Genus&#34;)
             m = miter(self.s27, s)
             live = sat(m)
             self.assertTrue(live)
@@ -347,7 +345,7 @@ not have a method with the specified name.</p></div>
                 os.remove(f)
             shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
 
-    #def test_ternary(self):
+    # def test_ternary(self):
     #    # encode circuit
     #    t = ternary(self.s27)
 
@@ -466,7 +464,6 @@ not have a method with the specified name.</p></div>
     self.assertTrue(live)
     different_output = sat(m, assumptions={&#34;sat&#34;: True})
     self.assertFalse(different_output)
-
 
     # check equivalence with incorrect copy
     m = miter(self.s27, self.s27m)
@@ -607,7 +604,7 @@ not have a method with the specified name.</p></div>
 )
 def test_syn_genus(self):
     if &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ:
-        s = syn(self.s27, &#34;Genus&#34;, print_output=False)
+        s = syn(self.s27, &#34;Genus&#34;)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
@@ -632,7 +629,7 @@ def test_syn_genus(self):
 <pre><code class="python">@unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
 def test_syn_yosys(self):
     # synthesize and check equiv
-    s = syn(self.s27, &#34;yosys&#34;, print_output=False)
+    s = syn(self.s27, &#34;yosys&#34;)
     m = miter(self.s27, s)
     live = sat(m)
     self.assertTrue(live)

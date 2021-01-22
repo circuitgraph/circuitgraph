@@ -45,7 +45,7 @@ class TestCircuit(unittest.TestCase):
         c.add(&#34;co&#34;, &#34;output&#34;, fanin=&#34;c&#34;)
         self.assertTrue(&#34;a&#34; in c)
         self.assertTrue(len(c) == 4)
-        self.assertSetEqual(c.nodes(), set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;,&#34;co&#34;]))
+        self.assertSetEqual(c.nodes(), set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;co&#34;]))
 
     def test_constructor(self):
         g = nx.DiGraph()
@@ -164,9 +164,9 @@ class TestCircuit(unittest.TestCase):
         c.add(&#34;g&#34;, &#34;or&#34;, fanin=[&#34;c&#34;, &#34;d&#34;])
         c.add(&#34;h&#34;, &#34;and&#34;, fanin=[&#34;e&#34;, &#34;f&#34;])
 
-        ff = cg.BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])
-        c.add_blackbox(ff, &#34;ff0&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;a&#39;, &#39;Q&#39;:&#39;d&#39;})
-        c.add_blackbox(ff, &#34;ff1&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;g&#39;})
+        ff = cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])
+        c.add_blackbox(ff, &#34;ff0&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;a&#34;, &#34;Q&#34;: &#34;d&#34;})
+        c.add_blackbox(ff, &#34;ff1&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;g&#34;})
 
         c.add(&#34;j&#34;, &#34;nor&#34;, fanin=[&#34;ff1.Q&#34;, &#34;h&#34;])
         c.add(&#34;k&#34;, &#34;not&#34;, fanin=&#34;ff1.Q&#34;)
@@ -174,8 +174,7 @@ class TestCircuit(unittest.TestCase):
 
         self.assertSetEqual(c.transitive_fanin(&#34;a&#34;), set())
         self.assertSetEqual(
-            c.transitive_fanin(&#34;j&#34;),
-            set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;e&#34;, &#34;f&#34;, &#34;h&#34;, &#34;ff1.Q&#34;])
+            c.transitive_fanin(&#34;j&#34;), set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;e&#34;, &#34;f&#34;, &#34;h&#34;, &#34;ff1.Q&#34;])
         )
         self.assertSetEqual(
             c.transitive_fanin([&#34;j&#34;, &#34;l&#34;]),
@@ -183,12 +182,11 @@ class TestCircuit(unittest.TestCase):
         )
         self.assertSetEqual(c.transitive_fanout(&#34;l&#34;), set())
         self.assertSetEqual(
-            c.transitive_fanout([&#34;c&#34;]),
-            set([&#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;])
+            c.transitive_fanout([&#34;c&#34;]), set([&#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;])
         )
         self.assertSetEqual(
             c.transitive_fanout([&#34;a&#34;, &#34;c&#34;]),
-            set([&#34;e&#34;, &#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;, &#34;ff0.D&#34;])
+            set([&#34;e&#34;, &#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;, &#34;ff0.D&#34;]),
         )
 
     def test_comb_depth(self):
@@ -215,7 +213,7 @@ class TestCircuit(unittest.TestCase):
         self.assertEqual(c.fanin_depth([&#34;f&#34;, &#34;m&#34;]), 6)
         self.assertEqual(c.fanin_depth(&#34;g&#34;), 2)
 
-        c.connect(&#34;f&#34;,&#34;c&#34;)
+        c.connect(&#34;f&#34;, &#34;c&#34;)
         self.assertRaises(ValueError, c.fanout_depth, &#34;a&#34;)
 
     def test_blackbox(self):
@@ -229,8 +227,8 @@ class TestCircuit(unittest.TestCase):
         c.add(&#34;d&#34;, &#34;xor&#34;, fanin=[&#34;a&#34;, &#34;b&#34;])
         c.add(&#34;e&#34;, &#34;and&#34;, fanin=[&#34;c&#34;, &#34;d&#34;])
 
-        ff = cg.BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])
-        c.add_blackbox(ff, &#34;ff0&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;a&#39;, &#39;Q&#39;:&#39;d&#39;})
+        ff = cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])
+        c.add_blackbox(ff, &#34;ff0&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;a&#34;, &#34;Q&#34;: &#34;d&#34;})
 
         c.add(&#34;h&#34;, &#34;output&#34;, fanin=&#34;f&#34;)
         c.add(&#34;i&#34;, &#34;output&#34;, fanin=&#34;g&#34;)
@@ -256,20 +254,18 @@ class TestCircuit(unittest.TestCase):
         c.add(&#34;d&#34;, &#34;xor&#34;, fanin=[&#34;a&#34;, &#34;b&#34;])
         c.add(&#34;e&#34;, &#34;and&#34;, fanin=[&#34;c&#34;, &#34;d&#34;])
 
-        ff = cg.BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])
-        c.add_blackbox(ff, &#34;ff0&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;d&#39;, &#39;Q&#39;:&#39;d&#39;})
-        c.add_blackbox(ff, &#34;ff1&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;e&#39;, &#39;Q&#39;:&#39;d&#39;})
+        ff = cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])
+        c.add_blackbox(ff, &#34;ff0&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;d&#34;, &#34;Q&#34;: &#34;d&#34;})
+        c.add_blackbox(ff, &#34;ff1&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;e&#34;, &#34;Q&#34;: &#34;d&#34;})
 
         c.add(&#34;h&#34;, &#34;output&#34;, fanin=&#34;ff0.Q&#34;)
         c.add(&#34;i&#34;, &#34;output&#34;, fanin=&#34;ff1.Q&#34;)
 
         self.assertSetEqual(
-            c.startpoints(),
-            set([&#34;clk&#34;, &#34;rst&#34;, &#34;set&#34;, &#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;ff0.Q&#34;, &#34;ff1.Q&#34;])
+            c.startpoints(), set([&#34;clk&#34;, &#34;rst&#34;, &#34;set&#34;, &#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;ff0.Q&#34;, &#34;ff1.Q&#34;])
         )
         self.assertSetEqual(
-            c.endpoints(),
-            set([&#34;ff1.D&#34;, &#34;ff0.D&#34;, &#34;ff0.CK&#34;, &#34;ff1.CK&#34;, &#34;h&#34;, &#34;i&#34;])
+            c.endpoints(), set([&#34;ff1.D&#34;, &#34;ff0.D&#34;, &#34;ff0.CK&#34;, &#34;ff1.CK&#34;, &#34;h&#34;, &#34;i&#34;])
         )
         self.assertSetEqual(c.startpoints(&#34;h&#34;), set([&#34;ff0.Q&#34;]))
         self.assertSetEqual(c.endpoints(&#34;c&#34;), set([&#34;ff1.D&#34;]))
@@ -288,7 +284,7 @@ class TestCircuit(unittest.TestCase):
         c = cg.Circuit()
         c.add(&#34;a&#34;, &#34;input&#34;)
         c.add(&#34;b&#34;, &#34;xor&#34;, fanin=&#34;a&#34;)
-        c.relabel({&#34;a&#34;:&#34;n&#34;})
+        c.relabel({&#34;a&#34;: &#34;n&#34;})
         self.assertSetEqual(c.nodes(), set([&#34;b&#34;, &#34;n&#34;]))</code></pre>
 </details>
 </section>
@@ -347,7 +343,7 @@ not have a method with the specified name.</p></div>
         c.add(&#34;co&#34;, &#34;output&#34;, fanin=&#34;c&#34;)
         self.assertTrue(&#34;a&#34; in c)
         self.assertTrue(len(c) == 4)
-        self.assertSetEqual(c.nodes(), set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;,&#34;co&#34;]))
+        self.assertSetEqual(c.nodes(), set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;co&#34;]))
 
     def test_constructor(self):
         g = nx.DiGraph()
@@ -466,9 +462,9 @@ not have a method with the specified name.</p></div>
         c.add(&#34;g&#34;, &#34;or&#34;, fanin=[&#34;c&#34;, &#34;d&#34;])
         c.add(&#34;h&#34;, &#34;and&#34;, fanin=[&#34;e&#34;, &#34;f&#34;])
 
-        ff = cg.BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])
-        c.add_blackbox(ff, &#34;ff0&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;a&#39;, &#39;Q&#39;:&#39;d&#39;})
-        c.add_blackbox(ff, &#34;ff1&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;g&#39;})
+        ff = cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])
+        c.add_blackbox(ff, &#34;ff0&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;a&#34;, &#34;Q&#34;: &#34;d&#34;})
+        c.add_blackbox(ff, &#34;ff1&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;g&#34;})
 
         c.add(&#34;j&#34;, &#34;nor&#34;, fanin=[&#34;ff1.Q&#34;, &#34;h&#34;])
         c.add(&#34;k&#34;, &#34;not&#34;, fanin=&#34;ff1.Q&#34;)
@@ -476,8 +472,7 @@ not have a method with the specified name.</p></div>
 
         self.assertSetEqual(c.transitive_fanin(&#34;a&#34;), set())
         self.assertSetEqual(
-            c.transitive_fanin(&#34;j&#34;),
-            set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;e&#34;, &#34;f&#34;, &#34;h&#34;, &#34;ff1.Q&#34;])
+            c.transitive_fanin(&#34;j&#34;), set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;e&#34;, &#34;f&#34;, &#34;h&#34;, &#34;ff1.Q&#34;])
         )
         self.assertSetEqual(
             c.transitive_fanin([&#34;j&#34;, &#34;l&#34;]),
@@ -485,12 +480,11 @@ not have a method with the specified name.</p></div>
         )
         self.assertSetEqual(c.transitive_fanout(&#34;l&#34;), set())
         self.assertSetEqual(
-            c.transitive_fanout([&#34;c&#34;]),
-            set([&#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;])
+            c.transitive_fanout([&#34;c&#34;]), set([&#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;])
         )
         self.assertSetEqual(
             c.transitive_fanout([&#34;a&#34;, &#34;c&#34;]),
-            set([&#34;e&#34;, &#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;, &#34;ff0.D&#34;])
+            set([&#34;e&#34;, &#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;, &#34;ff0.D&#34;]),
         )
 
     def test_comb_depth(self):
@@ -517,7 +511,7 @@ not have a method with the specified name.</p></div>
         self.assertEqual(c.fanin_depth([&#34;f&#34;, &#34;m&#34;]), 6)
         self.assertEqual(c.fanin_depth(&#34;g&#34;), 2)
 
-        c.connect(&#34;f&#34;,&#34;c&#34;)
+        c.connect(&#34;f&#34;, &#34;c&#34;)
         self.assertRaises(ValueError, c.fanout_depth, &#34;a&#34;)
 
     def test_blackbox(self):
@@ -531,8 +525,8 @@ not have a method with the specified name.</p></div>
         c.add(&#34;d&#34;, &#34;xor&#34;, fanin=[&#34;a&#34;, &#34;b&#34;])
         c.add(&#34;e&#34;, &#34;and&#34;, fanin=[&#34;c&#34;, &#34;d&#34;])
 
-        ff = cg.BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])
-        c.add_blackbox(ff, &#34;ff0&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;a&#39;, &#39;Q&#39;:&#39;d&#39;})
+        ff = cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])
+        c.add_blackbox(ff, &#34;ff0&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;a&#34;, &#34;Q&#34;: &#34;d&#34;})
 
         c.add(&#34;h&#34;, &#34;output&#34;, fanin=&#34;f&#34;)
         c.add(&#34;i&#34;, &#34;output&#34;, fanin=&#34;g&#34;)
@@ -558,20 +552,18 @@ not have a method with the specified name.</p></div>
         c.add(&#34;d&#34;, &#34;xor&#34;, fanin=[&#34;a&#34;, &#34;b&#34;])
         c.add(&#34;e&#34;, &#34;and&#34;, fanin=[&#34;c&#34;, &#34;d&#34;])
 
-        ff = cg.BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])
-        c.add_blackbox(ff, &#34;ff0&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;d&#39;, &#39;Q&#39;:&#39;d&#39;})
-        c.add_blackbox(ff, &#34;ff1&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;e&#39;, &#39;Q&#39;:&#39;d&#39;})
+        ff = cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])
+        c.add_blackbox(ff, &#34;ff0&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;d&#34;, &#34;Q&#34;: &#34;d&#34;})
+        c.add_blackbox(ff, &#34;ff1&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;e&#34;, &#34;Q&#34;: &#34;d&#34;})
 
         c.add(&#34;h&#34;, &#34;output&#34;, fanin=&#34;ff0.Q&#34;)
         c.add(&#34;i&#34;, &#34;output&#34;, fanin=&#34;ff1.Q&#34;)
 
         self.assertSetEqual(
-            c.startpoints(),
-            set([&#34;clk&#34;, &#34;rst&#34;, &#34;set&#34;, &#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;ff0.Q&#34;, &#34;ff1.Q&#34;])
+            c.startpoints(), set([&#34;clk&#34;, &#34;rst&#34;, &#34;set&#34;, &#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;ff0.Q&#34;, &#34;ff1.Q&#34;])
         )
         self.assertSetEqual(
-            c.endpoints(),
-            set([&#34;ff1.D&#34;, &#34;ff0.D&#34;, &#34;ff0.CK&#34;, &#34;ff1.CK&#34;, &#34;h&#34;, &#34;i&#34;])
+            c.endpoints(), set([&#34;ff1.D&#34;, &#34;ff0.D&#34;, &#34;ff0.CK&#34;, &#34;ff1.CK&#34;, &#34;h&#34;, &#34;i&#34;])
         )
         self.assertSetEqual(c.startpoints(&#34;h&#34;), set([&#34;ff0.Q&#34;]))
         self.assertSetEqual(c.endpoints(&#34;c&#34;), set([&#34;ff1.D&#34;]))
@@ -590,7 +582,7 @@ not have a method with the specified name.</p></div>
         c = cg.Circuit()
         c.add(&#34;a&#34;, &#34;input&#34;)
         c.add(&#34;b&#34;, &#34;xor&#34;, fanin=&#34;a&#34;)
-        c.relabel({&#34;a&#34;:&#34;n&#34;})
+        c.relabel({&#34;a&#34;: &#34;n&#34;})
         self.assertSetEqual(c.nodes(), set([&#34;b&#34;, &#34;n&#34;]))</code></pre>
 </details>
 <h3>Ancestors</h3>
@@ -643,8 +635,8 @@ not have a method with the specified name.</p></div>
     c.add(&#34;d&#34;, &#34;xor&#34;, fanin=[&#34;a&#34;, &#34;b&#34;])
     c.add(&#34;e&#34;, &#34;and&#34;, fanin=[&#34;c&#34;, &#34;d&#34;])
 
-    ff = cg.BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])
-    c.add_blackbox(ff, &#34;ff0&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;a&#39;, &#39;Q&#39;:&#39;d&#39;})
+    ff = cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])
+    c.add_blackbox(ff, &#34;ff0&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;a&#34;, &#34;Q&#34;: &#34;d&#34;})
 
     c.add(&#34;h&#34;, &#34;output&#34;, fanin=&#34;f&#34;)
     c.add(&#34;i&#34;, &#34;output&#34;, fanin=&#34;g&#34;)</code></pre>
@@ -667,7 +659,7 @@ not have a method with the specified name.</p></div>
     c.add(&#34;co&#34;, &#34;output&#34;, fanin=&#34;c&#34;)
     self.assertTrue(&#34;a&#34; in c)
     self.assertTrue(len(c) == 4)
-    self.assertSetEqual(c.nodes(), set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;,&#34;co&#34;]))</code></pre>
+    self.assertSetEqual(c.nodes(), set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;co&#34;]))</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_circuit.TestCircuit.test_comb_depth"><code class="name flex">
@@ -703,7 +695,7 @@ not have a method with the specified name.</p></div>
     self.assertEqual(c.fanin_depth([&#34;f&#34;, &#34;m&#34;]), 6)
     self.assertEqual(c.fanin_depth(&#34;g&#34;), 2)
 
-    c.connect(&#34;f&#34;,&#34;c&#34;)
+    c.connect(&#34;f&#34;, &#34;c&#34;)
     self.assertRaises(ValueError, c.fanout_depth, &#34;a&#34;)</code></pre>
 </details>
 </dd>
@@ -888,7 +880,7 @@ not have a method with the specified name.</p></div>
     c = cg.Circuit()
     c.add(&#34;a&#34;, &#34;input&#34;)
     c.add(&#34;b&#34;, &#34;xor&#34;, fanin=&#34;a&#34;)
-    c.relabel({&#34;a&#34;:&#34;n&#34;})
+    c.relabel({&#34;a&#34;: &#34;n&#34;})
     self.assertSetEqual(c.nodes(), set([&#34;b&#34;, &#34;n&#34;]))</code></pre>
 </details>
 </dd>
@@ -933,20 +925,18 @@ not have a method with the specified name.</p></div>
     c.add(&#34;d&#34;, &#34;xor&#34;, fanin=[&#34;a&#34;, &#34;b&#34;])
     c.add(&#34;e&#34;, &#34;and&#34;, fanin=[&#34;c&#34;, &#34;d&#34;])
 
-    ff = cg.BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])
-    c.add_blackbox(ff, &#34;ff0&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;d&#39;, &#39;Q&#39;:&#39;d&#39;})
-    c.add_blackbox(ff, &#34;ff1&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;e&#39;, &#39;Q&#39;:&#39;d&#39;})
+    ff = cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])
+    c.add_blackbox(ff, &#34;ff0&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;d&#34;, &#34;Q&#34;: &#34;d&#34;})
+    c.add_blackbox(ff, &#34;ff1&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;e&#34;, &#34;Q&#34;: &#34;d&#34;})
 
     c.add(&#34;h&#34;, &#34;output&#34;, fanin=&#34;ff0.Q&#34;)
     c.add(&#34;i&#34;, &#34;output&#34;, fanin=&#34;ff1.Q&#34;)
 
     self.assertSetEqual(
-        c.startpoints(),
-        set([&#34;clk&#34;, &#34;rst&#34;, &#34;set&#34;, &#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;ff0.Q&#34;, &#34;ff1.Q&#34;])
+        c.startpoints(), set([&#34;clk&#34;, &#34;rst&#34;, &#34;set&#34;, &#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;ff0.Q&#34;, &#34;ff1.Q&#34;])
     )
     self.assertSetEqual(
-        c.endpoints(),
-        set([&#34;ff1.D&#34;, &#34;ff0.D&#34;, &#34;ff0.CK&#34;, &#34;ff1.CK&#34;, &#34;h&#34;, &#34;i&#34;])
+        c.endpoints(), set([&#34;ff1.D&#34;, &#34;ff0.D&#34;, &#34;ff0.CK&#34;, &#34;ff1.CK&#34;, &#34;h&#34;, &#34;i&#34;])
     )
     self.assertSetEqual(c.startpoints(&#34;h&#34;), set([&#34;ff0.Q&#34;]))
     self.assertSetEqual(c.endpoints(&#34;c&#34;), set([&#34;ff1.D&#34;]))
@@ -974,9 +964,9 @@ not have a method with the specified name.</p></div>
     c.add(&#34;g&#34;, &#34;or&#34;, fanin=[&#34;c&#34;, &#34;d&#34;])
     c.add(&#34;h&#34;, &#34;and&#34;, fanin=[&#34;e&#34;, &#34;f&#34;])
 
-    ff = cg.BlackBox(&#39;ff&#39;,[&#39;CK&#39;,&#39;D&#39;],[&#39;Q&#39;])
-    c.add_blackbox(ff, &#34;ff0&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;a&#39;, &#39;Q&#39;:&#39;d&#39;})
-    c.add_blackbox(ff, &#34;ff1&#34;, {&#39;CK&#39;:&#39;clk&#39;, &#39;D&#39;:&#39;g&#39;})
+    ff = cg.BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])
+    c.add_blackbox(ff, &#34;ff0&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;a&#34;, &#34;Q&#34;: &#34;d&#34;})
+    c.add_blackbox(ff, &#34;ff1&#34;, {&#34;CK&#34;: &#34;clk&#34;, &#34;D&#34;: &#34;g&#34;})
 
     c.add(&#34;j&#34;, &#34;nor&#34;, fanin=[&#34;ff1.Q&#34;, &#34;h&#34;])
     c.add(&#34;k&#34;, &#34;not&#34;, fanin=&#34;ff1.Q&#34;)
@@ -984,8 +974,7 @@ not have a method with the specified name.</p></div>
 
     self.assertSetEqual(c.transitive_fanin(&#34;a&#34;), set())
     self.assertSetEqual(
-        c.transitive_fanin(&#34;j&#34;),
-        set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;e&#34;, &#34;f&#34;, &#34;h&#34;, &#34;ff1.Q&#34;])
+        c.transitive_fanin(&#34;j&#34;), set([&#34;a&#34;, &#34;b&#34;, &#34;c&#34;, &#34;e&#34;, &#34;f&#34;, &#34;h&#34;, &#34;ff1.Q&#34;])
     )
     self.assertSetEqual(
         c.transitive_fanin([&#34;j&#34;, &#34;l&#34;]),
@@ -993,12 +982,11 @@ not have a method with the specified name.</p></div>
     )
     self.assertSetEqual(c.transitive_fanout(&#34;l&#34;), set())
     self.assertSetEqual(
-        c.transitive_fanout([&#34;c&#34;]),
-        set([&#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;])
+        c.transitive_fanout([&#34;c&#34;]), set([&#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;])
     )
     self.assertSetEqual(
         c.transitive_fanout([&#34;a&#34;, &#34;c&#34;]),
-        set([&#34;e&#34;, &#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;, &#34;ff0.D&#34;])
+        set([&#34;e&#34;, &#34;f&#34;, &#34;g&#34;, &#34;h&#34;, &#34;ff1.D&#34;, &#34;j&#34;, &#34;ff0.D&#34;]),
     )</code></pre>
 </details>
 </dd>

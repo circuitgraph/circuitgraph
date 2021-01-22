@@ -1,0 +1,1382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>circuitgraph.parsing.verilog API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js" integrity="sha256-eOgo0OtLL4cdq7RdwRUiGKLX9XsIJ7nGhWEKbohmVAQ=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>circuitgraph.parsing.verilog</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">from pathlib import Path
+
+from lark import Lark, Transformer
+
+from circuitgraph import Circuit
+
+
+supported_gates = [&#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;, &#34;buf&#34;, &#34;not&#34;]
+
+
+def get_context_window(text, index):
+    &#34;&#34;&#34;
+    Finds the line containing an index.
+
+    Parameters
+    ----------
+    text: str
+            The text to search in
+    index: int
+            The index to search around
+
+    Returns:
+    str
+            The line that `index` is contained in.
+    &#34;&#34;&#34;
+    previous_newline = max(0, text.rfind(&#34;\n&#34;, 0, index))
+    next_newline = text.find(&#34;\n&#34;, index)
+    context = text[previous_newline:next_newline]
+    context += &#34;\n&#34; + &#34; &#34; * (index - previous_newline - 1) + &#34;^&#34;
+    return context
+
+
+class VerilogParsingError(Exception):
+    &#34;&#34;&#34;
+    Raised if there is an issue parsing the verilog.
+    &#34;&#34;&#34;
+
+    def __init__(self, message, token, text):
+        self.message = message
+        self.token = token
+        self.line = getattr(token, &#34;line&#34;, &#34;?&#34;)
+        self.column = getattr(token, &#34;column&#34;, &#34;?&#34;)
+        index = getattr(token, &#34;pos_in_stream&#34;, None)
+        if index:
+            self.context = get_context_window(text, index)
+        else:
+            self.context = &#34;?&#34;
+
+    def __str__(self):
+        self.message += f&#34; (line {self.line}, column {self.column}):\n&#34;
+        self.message += self.context
+        return self.message
+
+
+class VerilogParsingWarning(Exception):
+    &#34;&#34;&#34;
+    Potentially raised if there is a warning parsing verilog.
+    &#34;&#34;&#34;
+
+    pass
+
+
+class VerilogCircuitGraphTransformer(Transformer):
+    &#34;&#34;&#34;
+    A lark.Transformer that transforms a parsed verilog netlist into a
+    circuitgraph.Circuit.
+    &#34;&#34;&#34;
+
+    def __init__(self, text, blackboxes, warnings=False, error_on_warning=False):
+        &#34;&#34;&#34;
+        Initializes a new transformer.
+
+        Parameters
+        ----------
+        text: str
+                The netlist that the transformer will be used on, used for
+                error messages.
+        blackboxes: list of circuitgraph.BlackBox
+                The blackboxes present in the netlist that will be parsed.
+        warnings: bool
+                If True, warnings about unused nets will be printed.
+        error_on_warning: bool
+                If True, unused nets will cause raise `VerilogParsingWarning`
+                exceptions.
+        &#34;&#34;&#34;
+        self.c = Circuit()
+        self.text = text
+        self.blackboxes = blackboxes
+        self.warnings = warnings
+        self.error_on_warning = error_on_warning
+        self.tie0 = self.c.add(&#34;tie0&#34;, &#34;0&#34;)
+        self.tie1 = self.c.add(&#34;tie1&#34;, &#34;1&#34;)
+        self.io = set()
+        self.inputs = set()
+        self.outputs = set()
+        self.wires = set()
+
+    # Helper functions
+    def add_node(self, n, type, fanin=[], fanout=[], uid=False):
+        &#34;&#34;&#34;So that nodes are of type `str`, not `lark.Token`&#34;&#34;&#34;
+        if not isinstance(fanin, list):
+            fanin = [fanin]
+        if not isinstance(fanout, list):
+            fanout = [fanout]
+        return self.c.add(
+            str(n),
+            type,
+            fanin=[str(i) for i in fanin],
+            fanout=[str(i) for i in fanout],
+            uid=uid,
+        )
+
+    def add_blackbox(self, blackbox, name, connections=dict()):
+        formatted_connections = dict()
+        for key in connections:
+            formatted_connections[str(key)] = str(connections[key])
+        self.c.add_blackbox(blackbox, str(name), formatted_connections)
+
+    def warn(self, message):
+        if self.error_on_warning:
+            raise VerilogParsingWarning(message)
+        else:
+            print(f&#34;Warning: {message}&#34;)
+
+    def check_for_warnings(self):
+        for wire in self.wires:
+            if wire not in self.c.nodes():
+                self.warn(f&#34;{wire} declared as wire but isn&#39;t connected.&#34;)
+
+        for n in self.c.nodes():
+            if self.c.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.c.fanout(n):
+                self.warn(f&#34;{n} doesn&#39;t drive any nets.&#34;)
+            elif self.c.type(n) not in [
+                &#34;input&#34;,
+                &#34;0&#34;,
+                &#34;1&#34;,
+                &#34;bb_output&#34;,
+            ] and not self.c.fanin(n):
+                self.warn(f&#34;{n} doesn&#39;t have any drivers.&#34;)
+
+    # 1. Source text
+    def start(self, description):
+        return description
+
+    def module(self, module_name_and_list_of_ports_and_module_items):
+        self.c.name = module_name_and_list_of_ports_and_module_items[0]
+
+        # Check if ports list matches with inputs and outputs
+        if not self.inputs &lt;= self.io:
+            i = (self.inputs - self.io).pop()
+            raise VerilogParsingError(
+                f&#34;{i} declared as output but not in port list&#34;, i, self.text
+            )
+        if not self.outputs &lt;= self.io:
+            o = (self.outputs - self.io).pop()
+            raise VerilogParsingError(
+                f&#34;{o} declared as output but not in port list&#34;, o, self.text
+            )
+        if not self.io &lt;= (self.inputs | self.outputs):
+            v = (self.io - (self.inputs | self.outputs)).pop()
+            raise VerilogParsingError(
+                f&#34;{v} in port list but was not declared as input or output&#34;,
+                v,
+                self.text,
+            )
+
+        # Relabel outputs using drivers
+        for o in self.outputs:
+            o = str(o)
+            if self.c.fanin(o):
+                o_driver = f&#34;{o}_driver&#34;
+                while o_driver in self.c.nodes():
+                    o_driver += &#34;_0&#34;
+                self.c.relabel({o: o_driver})
+                self.add_node(o, &#34;output&#34;)
+                self.c.connect(o_driver, o)
+
+        # Remove tie0, tie1 if not used
+        if not self.c.fanout(self.tie0):
+            self.c.remove(self.tie0)
+        if not self.c.fanout(self.tie1):
+            self.c.remove(self.tie1)
+
+        # Check for warnings
+        if self.warnings:
+            self.check_for_warnings()
+
+        return self.c
+
+    def list_of_ports(self, ports):
+        for port in ports:
+            self.io.add(port)
+
+    # 2. Declarations
+    def input_declaration(self, list_of_variables):
+        [list_of_variables] = list_of_variables
+        self.inputs.update(list_of_variables)
+        for variable in list_of_variables:
+            self.add_node(variable, &#34;input&#34;)
+
+    def output_declaration(self, list_of_variables):
+        [list_of_variables] = list_of_variables
+        self.outputs.update(list_of_variables)
+        for variable in list_of_variables:
+            self.add_node(variable, &#34;output&#34;)
+
+    def net_declaration(self, list_of_variables):
+        [list_of_variables] = list_of_variables
+        self.wires.update(list_of_variables)
+
+    def list_of_variables(self, identifiers):
+        return identifiers
+
+    # 3. Primitive Instances
+    # These are merged with module isntantiations
+
+    # 4. Module Instantiations
+    def module_instantiation(self, name_of_module_and_module_instances):
+        name_of_module = name_of_module_and_module_instances[0]
+        module_instances = name_of_module_and_module_instances[1:]
+        # Check if this is a primitive gate
+        if name_of_module in supported_gates:
+            for name, ports in module_instances:
+                if isinstance(ports, dict):
+                    raise VerilogParsingError(
+                        &#34;Primitive gates cannot use named port connections&#34;,
+                        name,
+                        self.text,
+                    )
+                self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
+        # Otherwise, try to parse as blackbox
+        else:
+            try:
+                bb = {i.name: i for i in self.blackboxes}[name_of_module]
+            except KeyError:
+                raise VerilogParsingError(
+                    f&#34;Blackbox {name_of_module} not in list of defined blackboxes.&#34;,
+                    name_of_module,
+                    self.text,
+                )
+            for (name, connections) in module_instances:
+                if not isinstance(connections, dict):
+                    raise VerilogParsingError(
+                        &#34;Blackbox instantiations must use named port connections&#34;,
+                        name,
+                        self.text,
+                    )
+                for output in bb.outputs:
+                    self.add_node(connections[output], &#34;buf&#34;)
+                self.add_blackbox(bb, name, connections)
+
+    def module_instance(self, name_of_instance_and_list_of_module_connecetions):
+        (
+            name_of_instance,
+            list_of_module_connecetions,
+        ) = name_of_instance_and_list_of_module_connecetions
+        return (name_of_instance, list_of_module_connecetions)
+
+    def list_of_module_connections(self, module_port_connections):
+        if isinstance(module_port_connections[0], dict):
+            d = dict()
+            for m in module_port_connections:
+                d.update(m)
+            return d
+        else:
+            return module_port_connections
+
+    def module_port_connection(self, expression):
+        return expression[0]
+
+    def named_port_connection(self, identifier_and_expression):
+        [identifier, expression] = identifier_and_expression
+        return {identifier: expression}
+
+    # 5. Behavioral Statements
+    def assignment(self, lvalue_and_expression):
+        [lvalue, expression] = lvalue_and_expression
+        if lvalue not in [self.tie0, self.tie1]:
+            self.add_node(lvalue, &#34;buf&#34;, fanin=expression)
+
+    # 6. Specify Section
+
+    # 7. Expressions
+    def expression(self, s):
+        return s[0]
+
+    def constant_zero(self, value):
+        return self.tie0
+
+    def constant_one(self, value):
+        return self.tie1
+
+    def not_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;not_{io}&#34;, &#34;not&#34;, fanin=items[0], uid=True)
+
+    def xor_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;xor_{io}&#34;, &#34;xor&#34;, fanin=[items[0], items[1]], uid=True)
+
+    def xnor_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;xnor_{io}&#34;, &#34;xnor&#34;, fanin=[items[0], items[1]], uid=True)
+
+    def and_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;and_{io}&#34;, &#34;and&#34;, fanin=[items[0], items[1]], uid=True)
+
+    def or_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;or_{io}&#34;, &#34;or&#34;, fanin=[items[0], items[1]], uid=True)
+
+    def ternary(self, items):
+        io = &#34;_&#34;.join(items)
+        n = self.add_node(f&#34;mux_n_{io}&#34;, &#34;not&#34;, fanin=items[0], uid=True)
+        a0 = self.add_node(f&#34;mux_a0_{io}&#34;, &#34;and&#34;, fanin=[n, items[2]], uid=True)
+        a1 = self.add_node(f&#34;mux_a1_{io}&#34;, &#34;and&#34;, fanin=[items[0], items[1]], uid=True)
+        return self.add_node(f&#34;mux_o_{io}&#34;, &#34;or&#34;, fanin=[a0, a1], uid=True)
+
+
+def parse_verilog_netlist(netlist, blackboxes, warnings=False, error_on_warning=False):
+    &#34;&#34;&#34;
+    Parses a verilog netlist into a Circuit
+
+    Parameters
+    ----------
+    netlist: str
+            The verilog netlist to parse.
+    blackboxes: list of circuitgraph.BlackBox
+            The blackboxes present in the netlist.
+    warnings: bool
+            If True, warnings about unused nets will be printed.
+    error_on_warning: bool
+            If True, unused nets will cause raise `VerilogParsingWarning`
+            exceptions.
+
+    Returns
+    -------
+    circuitgraph.Circuit
+            The parsed circuit.
+    &#34;&#34;&#34;
+    transformer = VerilogCircuitGraphTransformer(
+        netlist, blackboxes, warnings, error_on_warning
+    )
+    with open(Path(__file__).parent.absolute() / &#34;verilog.lark&#34;) as f:
+        parser = Lark(f, parser=&#34;lalr&#34;, transformer=transformer)
+    [c] = parser.parse(netlist)
+    return c</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="circuitgraph.parsing.verilog.get_context_window"><code class="name flex">
+<span>def <span class="ident">get_context_window</span></span>(<span>text, index)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Finds the line containing an index.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>text</code></strong> :&ensp;<code>str</code></dt>
+<dd>The text to search in</dd>
+<dt><strong><code>index</code></strong> :&ensp;<code>int</code></dt>
+<dd>The index to search around</dd>
+<dt>Returns:</dt>
+<dt><strong><code>str</code></strong></dt>
+<dd>The line that <code>index</code> is contained in.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_context_window(text, index):
+    &#34;&#34;&#34;
+    Finds the line containing an index.
+
+    Parameters
+    ----------
+    text: str
+            The text to search in
+    index: int
+            The index to search around
+
+    Returns:
+    str
+            The line that `index` is contained in.
+    &#34;&#34;&#34;
+    previous_newline = max(0, text.rfind(&#34;\n&#34;, 0, index))
+    next_newline = text.find(&#34;\n&#34;, index)
+    context = text[previous_newline:next_newline]
+    context += &#34;\n&#34; + &#34; &#34; * (index - previous_newline - 1) + &#34;^&#34;
+    return context</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.parse_verilog_netlist"><code class="name flex">
+<span>def <span class="ident">parse_verilog_netlist</span></span>(<span>netlist, blackboxes, warnings=False, error_on_warning=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Parses a verilog netlist into a Circuit</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>netlist</code></strong> :&ensp;<code>str</code></dt>
+<dd>The verilog netlist to parse.</dd>
+<dt><strong><code>blackboxes</code></strong> :&ensp;<code>list</code> of <code>circuitgraph.BlackBox</code></dt>
+<dd>The blackboxes present in the netlist.</dd>
+<dt><strong><code>warnings</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, warnings about unused nets will be printed.</dd>
+<dt><strong><code>error_on_warning</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, unused nets will cause raise <code><a title="circuitgraph.parsing.verilog.VerilogParsingWarning" href="#circuitgraph.parsing.verilog.VerilogParsingWarning">VerilogParsingWarning</a></code>
+exceptions.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>circuitgraph.Circuit</code></dt>
+<dd>The parsed circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def parse_verilog_netlist(netlist, blackboxes, warnings=False, error_on_warning=False):
+    &#34;&#34;&#34;
+    Parses a verilog netlist into a Circuit
+
+    Parameters
+    ----------
+    netlist: str
+            The verilog netlist to parse.
+    blackboxes: list of circuitgraph.BlackBox
+            The blackboxes present in the netlist.
+    warnings: bool
+            If True, warnings about unused nets will be printed.
+    error_on_warning: bool
+            If True, unused nets will cause raise `VerilogParsingWarning`
+            exceptions.
+
+    Returns
+    -------
+    circuitgraph.Circuit
+            The parsed circuit.
+    &#34;&#34;&#34;
+    transformer = VerilogCircuitGraphTransformer(
+        netlist, blackboxes, warnings, error_on_warning
+    )
+    with open(Path(__file__).parent.absolute() / &#34;verilog.lark&#34;) as f:
+        parser = Lark(f, parser=&#34;lalr&#34;, transformer=transformer)
+    [c] = parser.parse(netlist)
+    return c</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer"><code class="flex name class">
+<span>class <span class="ident">VerilogCircuitGraphTransformer</span></span>
+<span>(</span><span>text, blackboxes, warnings=False, error_on_warning=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A lark.Transformer that transforms a parsed verilog netlist into a
+circuitgraph.Circuit.</p>
+<p>Initializes a new transformer.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>text</code></strong> :&ensp;<code>str</code></dt>
+<dd>The netlist that the transformer will be used on, used for
+error messages.</dd>
+<dt><strong><code>blackboxes</code></strong> :&ensp;<code>list</code> of <code>circuitgraph.BlackBox</code></dt>
+<dd>The blackboxes present in the netlist that will be parsed.</dd>
+<dt><strong><code>warnings</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, warnings about unused nets will be printed.</dd>
+<dt><strong><code>error_on_warning</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, unused nets will cause raise <code><a title="circuitgraph.parsing.verilog.VerilogParsingWarning" href="#circuitgraph.parsing.verilog.VerilogParsingWarning">VerilogParsingWarning</a></code>
+exceptions.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class VerilogCircuitGraphTransformer(Transformer):
+    &#34;&#34;&#34;
+    A lark.Transformer that transforms a parsed verilog netlist into a
+    circuitgraph.Circuit.
+    &#34;&#34;&#34;
+
+    def __init__(self, text, blackboxes, warnings=False, error_on_warning=False):
+        &#34;&#34;&#34;
+        Initializes a new transformer.
+
+        Parameters
+        ----------
+        text: str
+                The netlist that the transformer will be used on, used for
+                error messages.
+        blackboxes: list of circuitgraph.BlackBox
+                The blackboxes present in the netlist that will be parsed.
+        warnings: bool
+                If True, warnings about unused nets will be printed.
+        error_on_warning: bool
+                If True, unused nets will cause raise `VerilogParsingWarning`
+                exceptions.
+        &#34;&#34;&#34;
+        self.c = Circuit()
+        self.text = text
+        self.blackboxes = blackboxes
+        self.warnings = warnings
+        self.error_on_warning = error_on_warning
+        self.tie0 = self.c.add(&#34;tie0&#34;, &#34;0&#34;)
+        self.tie1 = self.c.add(&#34;tie1&#34;, &#34;1&#34;)
+        self.io = set()
+        self.inputs = set()
+        self.outputs = set()
+        self.wires = set()
+
+    # Helper functions
+    def add_node(self, n, type, fanin=[], fanout=[], uid=False):
+        &#34;&#34;&#34;So that nodes are of type `str`, not `lark.Token`&#34;&#34;&#34;
+        if not isinstance(fanin, list):
+            fanin = [fanin]
+        if not isinstance(fanout, list):
+            fanout = [fanout]
+        return self.c.add(
+            str(n),
+            type,
+            fanin=[str(i) for i in fanin],
+            fanout=[str(i) for i in fanout],
+            uid=uid,
+        )
+
+    def add_blackbox(self, blackbox, name, connections=dict()):
+        formatted_connections = dict()
+        for key in connections:
+            formatted_connections[str(key)] = str(connections[key])
+        self.c.add_blackbox(blackbox, str(name), formatted_connections)
+
+    def warn(self, message):
+        if self.error_on_warning:
+            raise VerilogParsingWarning(message)
+        else:
+            print(f&#34;Warning: {message}&#34;)
+
+    def check_for_warnings(self):
+        for wire in self.wires:
+            if wire not in self.c.nodes():
+                self.warn(f&#34;{wire} declared as wire but isn&#39;t connected.&#34;)
+
+        for n in self.c.nodes():
+            if self.c.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.c.fanout(n):
+                self.warn(f&#34;{n} doesn&#39;t drive any nets.&#34;)
+            elif self.c.type(n) not in [
+                &#34;input&#34;,
+                &#34;0&#34;,
+                &#34;1&#34;,
+                &#34;bb_output&#34;,
+            ] and not self.c.fanin(n):
+                self.warn(f&#34;{n} doesn&#39;t have any drivers.&#34;)
+
+    # 1. Source text
+    def start(self, description):
+        return description
+
+    def module(self, module_name_and_list_of_ports_and_module_items):
+        self.c.name = module_name_and_list_of_ports_and_module_items[0]
+
+        # Check if ports list matches with inputs and outputs
+        if not self.inputs &lt;= self.io:
+            i = (self.inputs - self.io).pop()
+            raise VerilogParsingError(
+                f&#34;{i} declared as output but not in port list&#34;, i, self.text
+            )
+        if not self.outputs &lt;= self.io:
+            o = (self.outputs - self.io).pop()
+            raise VerilogParsingError(
+                f&#34;{o} declared as output but not in port list&#34;, o, self.text
+            )
+        if not self.io &lt;= (self.inputs | self.outputs):
+            v = (self.io - (self.inputs | self.outputs)).pop()
+            raise VerilogParsingError(
+                f&#34;{v} in port list but was not declared as input or output&#34;,
+                v,
+                self.text,
+            )
+
+        # Relabel outputs using drivers
+        for o in self.outputs:
+            o = str(o)
+            if self.c.fanin(o):
+                o_driver = f&#34;{o}_driver&#34;
+                while o_driver in self.c.nodes():
+                    o_driver += &#34;_0&#34;
+                self.c.relabel({o: o_driver})
+                self.add_node(o, &#34;output&#34;)
+                self.c.connect(o_driver, o)
+
+        # Remove tie0, tie1 if not used
+        if not self.c.fanout(self.tie0):
+            self.c.remove(self.tie0)
+        if not self.c.fanout(self.tie1):
+            self.c.remove(self.tie1)
+
+        # Check for warnings
+        if self.warnings:
+            self.check_for_warnings()
+
+        return self.c
+
+    def list_of_ports(self, ports):
+        for port in ports:
+            self.io.add(port)
+
+    # 2. Declarations
+    def input_declaration(self, list_of_variables):
+        [list_of_variables] = list_of_variables
+        self.inputs.update(list_of_variables)
+        for variable in list_of_variables:
+            self.add_node(variable, &#34;input&#34;)
+
+    def output_declaration(self, list_of_variables):
+        [list_of_variables] = list_of_variables
+        self.outputs.update(list_of_variables)
+        for variable in list_of_variables:
+            self.add_node(variable, &#34;output&#34;)
+
+    def net_declaration(self, list_of_variables):
+        [list_of_variables] = list_of_variables
+        self.wires.update(list_of_variables)
+
+    def list_of_variables(self, identifiers):
+        return identifiers
+
+    # 3. Primitive Instances
+    # These are merged with module isntantiations
+
+    # 4. Module Instantiations
+    def module_instantiation(self, name_of_module_and_module_instances):
+        name_of_module = name_of_module_and_module_instances[0]
+        module_instances = name_of_module_and_module_instances[1:]
+        # Check if this is a primitive gate
+        if name_of_module in supported_gates:
+            for name, ports in module_instances:
+                if isinstance(ports, dict):
+                    raise VerilogParsingError(
+                        &#34;Primitive gates cannot use named port connections&#34;,
+                        name,
+                        self.text,
+                    )
+                self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
+        # Otherwise, try to parse as blackbox
+        else:
+            try:
+                bb = {i.name: i for i in self.blackboxes}[name_of_module]
+            except KeyError:
+                raise VerilogParsingError(
+                    f&#34;Blackbox {name_of_module} not in list of defined blackboxes.&#34;,
+                    name_of_module,
+                    self.text,
+                )
+            for (name, connections) in module_instances:
+                if not isinstance(connections, dict):
+                    raise VerilogParsingError(
+                        &#34;Blackbox instantiations must use named port connections&#34;,
+                        name,
+                        self.text,
+                    )
+                for output in bb.outputs:
+                    self.add_node(connections[output], &#34;buf&#34;)
+                self.add_blackbox(bb, name, connections)
+
+    def module_instance(self, name_of_instance_and_list_of_module_connecetions):
+        (
+            name_of_instance,
+            list_of_module_connecetions,
+        ) = name_of_instance_and_list_of_module_connecetions
+        return (name_of_instance, list_of_module_connecetions)
+
+    def list_of_module_connections(self, module_port_connections):
+        if isinstance(module_port_connections[0], dict):
+            d = dict()
+            for m in module_port_connections:
+                d.update(m)
+            return d
+        else:
+            return module_port_connections
+
+    def module_port_connection(self, expression):
+        return expression[0]
+
+    def named_port_connection(self, identifier_and_expression):
+        [identifier, expression] = identifier_and_expression
+        return {identifier: expression}
+
+    # 5. Behavioral Statements
+    def assignment(self, lvalue_and_expression):
+        [lvalue, expression] = lvalue_and_expression
+        if lvalue not in [self.tie0, self.tie1]:
+            self.add_node(lvalue, &#34;buf&#34;, fanin=expression)
+
+    # 6. Specify Section
+
+    # 7. Expressions
+    def expression(self, s):
+        return s[0]
+
+    def constant_zero(self, value):
+        return self.tie0
+
+    def constant_one(self, value):
+        return self.tie1
+
+    def not_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;not_{io}&#34;, &#34;not&#34;, fanin=items[0], uid=True)
+
+    def xor_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;xor_{io}&#34;, &#34;xor&#34;, fanin=[items[0], items[1]], uid=True)
+
+    def xnor_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;xnor_{io}&#34;, &#34;xnor&#34;, fanin=[items[0], items[1]], uid=True)
+
+    def and_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;and_{io}&#34;, &#34;and&#34;, fanin=[items[0], items[1]], uid=True)
+
+    def or_gate(self, items):
+        io = &#34;_&#34;.join(items)
+        return self.add_node(f&#34;or_{io}&#34;, &#34;or&#34;, fanin=[items[0], items[1]], uid=True)
+
+    def ternary(self, items):
+        io = &#34;_&#34;.join(items)
+        n = self.add_node(f&#34;mux_n_{io}&#34;, &#34;not&#34;, fanin=items[0], uid=True)
+        a0 = self.add_node(f&#34;mux_a0_{io}&#34;, &#34;and&#34;, fanin=[n, items[2]], uid=True)
+        a1 = self.add_node(f&#34;mux_a1_{io}&#34;, &#34;and&#34;, fanin=[items[0], items[1]], uid=True)
+        return self.add_node(f&#34;mux_o_{io}&#34;, &#34;or&#34;, fanin=[a0, a1], uid=True)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>lark.visitors.Transformer</li>
+<li>lark.visitors._Decoratable</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.add_blackbox"><code class="name flex">
+<span>def <span class="ident">add_blackbox</span></span>(<span>self, blackbox, name, connections={})</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add_blackbox(self, blackbox, name, connections=dict()):
+    formatted_connections = dict()
+    for key in connections:
+        formatted_connections[str(key)] = str(connections[key])
+    self.c.add_blackbox(blackbox, str(name), formatted_connections)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.add_node"><code class="name flex">
+<span>def <span class="ident">add_node</span></span>(<span>self, n, type, fanin=[], fanout=[], uid=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>So that nodes are of type <code>str</code>, not <code>lark.Token</code></p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add_node(self, n, type, fanin=[], fanout=[], uid=False):
+    &#34;&#34;&#34;So that nodes are of type `str`, not `lark.Token`&#34;&#34;&#34;
+    if not isinstance(fanin, list):
+        fanin = [fanin]
+    if not isinstance(fanout, list):
+        fanout = [fanout]
+    return self.c.add(
+        str(n),
+        type,
+        fanin=[str(i) for i in fanin],
+        fanout=[str(i) for i in fanout],
+        uid=uid,
+    )</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.and_gate"><code class="name flex">
+<span>def <span class="ident">and_gate</span></span>(<span>self, items)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def and_gate(self, items):
+    io = &#34;_&#34;.join(items)
+    return self.add_node(f&#34;and_{io}&#34;, &#34;and&#34;, fanin=[items[0], items[1]], uid=True)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.assignment"><code class="name flex">
+<span>def <span class="ident">assignment</span></span>(<span>self, lvalue_and_expression)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def assignment(self, lvalue_and_expression):
+    [lvalue, expression] = lvalue_and_expression
+    if lvalue not in [self.tie0, self.tie1]:
+        self.add_node(lvalue, &#34;buf&#34;, fanin=expression)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.check_for_warnings"><code class="name flex">
+<span>def <span class="ident">check_for_warnings</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def check_for_warnings(self):
+    for wire in self.wires:
+        if wire not in self.c.nodes():
+            self.warn(f&#34;{wire} declared as wire but isn&#39;t connected.&#34;)
+
+    for n in self.c.nodes():
+        if self.c.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.c.fanout(n):
+            self.warn(f&#34;{n} doesn&#39;t drive any nets.&#34;)
+        elif self.c.type(n) not in [
+            &#34;input&#34;,
+            &#34;0&#34;,
+            &#34;1&#34;,
+            &#34;bb_output&#34;,
+        ] and not self.c.fanin(n):
+            self.warn(f&#34;{n} doesn&#39;t have any drivers.&#34;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_one"><code class="name flex">
+<span>def <span class="ident">constant_one</span></span>(<span>self, value)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def constant_one(self, value):
+    return self.tie1</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_zero"><code class="name flex">
+<span>def <span class="ident">constant_zero</span></span>(<span>self, value)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def constant_zero(self, value):
+    return self.tie0</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.expression"><code class="name flex">
+<span>def <span class="ident">expression</span></span>(<span>self, s)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def expression(self, s):
+    return s[0]</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.input_declaration"><code class="name flex">
+<span>def <span class="ident">input_declaration</span></span>(<span>self, list_of_variables)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def input_declaration(self, list_of_variables):
+    [list_of_variables] = list_of_variables
+    self.inputs.update(list_of_variables)
+    for variable in list_of_variables:
+        self.add_node(variable, &#34;input&#34;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.list_of_module_connections"><code class="name flex">
+<span>def <span class="ident">list_of_module_connections</span></span>(<span>self, module_port_connections)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def list_of_module_connections(self, module_port_connections):
+    if isinstance(module_port_connections[0], dict):
+        d = dict()
+        for m in module_port_connections:
+            d.update(m)
+        return d
+    else:
+        return module_port_connections</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.list_of_ports"><code class="name flex">
+<span>def <span class="ident">list_of_ports</span></span>(<span>self, ports)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def list_of_ports(self, ports):
+    for port in ports:
+        self.io.add(port)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.list_of_variables"><code class="name flex">
+<span>def <span class="ident">list_of_variables</span></span>(<span>self, identifiers)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def list_of_variables(self, identifiers):
+    return identifiers</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module"><code class="name flex">
+<span>def <span class="ident">module</span></span>(<span>self, module_name_and_list_of_ports_and_module_items)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def module(self, module_name_and_list_of_ports_and_module_items):
+    self.c.name = module_name_and_list_of_ports_and_module_items[0]
+
+    # Check if ports list matches with inputs and outputs
+    if not self.inputs &lt;= self.io:
+        i = (self.inputs - self.io).pop()
+        raise VerilogParsingError(
+            f&#34;{i} declared as output but not in port list&#34;, i, self.text
+        )
+    if not self.outputs &lt;= self.io:
+        o = (self.outputs - self.io).pop()
+        raise VerilogParsingError(
+            f&#34;{o} declared as output but not in port list&#34;, o, self.text
+        )
+    if not self.io &lt;= (self.inputs | self.outputs):
+        v = (self.io - (self.inputs | self.outputs)).pop()
+        raise VerilogParsingError(
+            f&#34;{v} in port list but was not declared as input or output&#34;,
+            v,
+            self.text,
+        )
+
+    # Relabel outputs using drivers
+    for o in self.outputs:
+        o = str(o)
+        if self.c.fanin(o):
+            o_driver = f&#34;{o}_driver&#34;
+            while o_driver in self.c.nodes():
+                o_driver += &#34;_0&#34;
+            self.c.relabel({o: o_driver})
+            self.add_node(o, &#34;output&#34;)
+            self.c.connect(o_driver, o)
+
+    # Remove tie0, tie1 if not used
+    if not self.c.fanout(self.tie0):
+        self.c.remove(self.tie0)
+    if not self.c.fanout(self.tie1):
+        self.c.remove(self.tie1)
+
+    # Check for warnings
+    if self.warnings:
+        self.check_for_warnings()
+
+    return self.c</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module_instance"><code class="name flex">
+<span>def <span class="ident">module_instance</span></span>(<span>self, name_of_instance_and_list_of_module_connecetions)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def module_instance(self, name_of_instance_and_list_of_module_connecetions):
+    (
+        name_of_instance,
+        list_of_module_connecetions,
+    ) = name_of_instance_and_list_of_module_connecetions
+    return (name_of_instance, list_of_module_connecetions)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module_instantiation"><code class="name flex">
+<span>def <span class="ident">module_instantiation</span></span>(<span>self, name_of_module_and_module_instances)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def module_instantiation(self, name_of_module_and_module_instances):
+    name_of_module = name_of_module_and_module_instances[0]
+    module_instances = name_of_module_and_module_instances[1:]
+    # Check if this is a primitive gate
+    if name_of_module in supported_gates:
+        for name, ports in module_instances:
+            if isinstance(ports, dict):
+                raise VerilogParsingError(
+                    &#34;Primitive gates cannot use named port connections&#34;,
+                    name,
+                    self.text,
+                )
+            self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
+    # Otherwise, try to parse as blackbox
+    else:
+        try:
+            bb = {i.name: i for i in self.blackboxes}[name_of_module]
+        except KeyError:
+            raise VerilogParsingError(
+                f&#34;Blackbox {name_of_module} not in list of defined blackboxes.&#34;,
+                name_of_module,
+                self.text,
+            )
+        for (name, connections) in module_instances:
+            if not isinstance(connections, dict):
+                raise VerilogParsingError(
+                    &#34;Blackbox instantiations must use named port connections&#34;,
+                    name,
+                    self.text,
+                )
+            for output in bb.outputs:
+                self.add_node(connections[output], &#34;buf&#34;)
+            self.add_blackbox(bb, name, connections)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module_port_connection"><code class="name flex">
+<span>def <span class="ident">module_port_connection</span></span>(<span>self, expression)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def module_port_connection(self, expression):
+    return expression[0]</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.named_port_connection"><code class="name flex">
+<span>def <span class="ident">named_port_connection</span></span>(<span>self, identifier_and_expression)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def named_port_connection(self, identifier_and_expression):
+    [identifier, expression] = identifier_and_expression
+    return {identifier: expression}</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.net_declaration"><code class="name flex">
+<span>def <span class="ident">net_declaration</span></span>(<span>self, list_of_variables)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def net_declaration(self, list_of_variables):
+    [list_of_variables] = list_of_variables
+    self.wires.update(list_of_variables)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.not_gate"><code class="name flex">
+<span>def <span class="ident">not_gate</span></span>(<span>self, items)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def not_gate(self, items):
+    io = &#34;_&#34;.join(items)
+    return self.add_node(f&#34;not_{io}&#34;, &#34;not&#34;, fanin=items[0], uid=True)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.or_gate"><code class="name flex">
+<span>def <span class="ident">or_gate</span></span>(<span>self, items)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def or_gate(self, items):
+    io = &#34;_&#34;.join(items)
+    return self.add_node(f&#34;or_{io}&#34;, &#34;or&#34;, fanin=[items[0], items[1]], uid=True)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.output_declaration"><code class="name flex">
+<span>def <span class="ident">output_declaration</span></span>(<span>self, list_of_variables)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def output_declaration(self, list_of_variables):
+    [list_of_variables] = list_of_variables
+    self.outputs.update(list_of_variables)
+    for variable in list_of_variables:
+        self.add_node(variable, &#34;output&#34;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.start"><code class="name flex">
+<span>def <span class="ident">start</span></span>(<span>self, description)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def start(self, description):
+    return description</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.ternary"><code class="name flex">
+<span>def <span class="ident">ternary</span></span>(<span>self, items)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ternary(self, items):
+    io = &#34;_&#34;.join(items)
+    n = self.add_node(f&#34;mux_n_{io}&#34;, &#34;not&#34;, fanin=items[0], uid=True)
+    a0 = self.add_node(f&#34;mux_a0_{io}&#34;, &#34;and&#34;, fanin=[n, items[2]], uid=True)
+    a1 = self.add_node(f&#34;mux_a1_{io}&#34;, &#34;and&#34;, fanin=[items[0], items[1]], uid=True)
+    return self.add_node(f&#34;mux_o_{io}&#34;, &#34;or&#34;, fanin=[a0, a1], uid=True)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.warn"><code class="name flex">
+<span>def <span class="ident">warn</span></span>(<span>self, message)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def warn(self, message):
+    if self.error_on_warning:
+        raise VerilogParsingWarning(message)
+    else:
+        print(f&#34;Warning: {message}&#34;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.xnor_gate"><code class="name flex">
+<span>def <span class="ident">xnor_gate</span></span>(<span>self, items)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def xnor_gate(self, items):
+    io = &#34;_&#34;.join(items)
+    return self.add_node(f&#34;xnor_{io}&#34;, &#34;xnor&#34;, fanin=[items[0], items[1]], uid=True)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.xor_gate"><code class="name flex">
+<span>def <span class="ident">xor_gate</span></span>(<span>self, items)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def xor_gate(self, items):
+    io = &#34;_&#34;.join(items)
+    return self.add_node(f&#34;xor_{io}&#34;, &#34;xor&#34;, fanin=[items[0], items[1]], uid=True)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogParsingError"><code class="flex name class">
+<span>class <span class="ident">VerilogParsingError</span></span>
+<span>(</span><span>message, token, text)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Raised if there is an issue parsing the verilog.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class VerilogParsingError(Exception):
+    &#34;&#34;&#34;
+    Raised if there is an issue parsing the verilog.
+    &#34;&#34;&#34;
+
+    def __init__(self, message, token, text):
+        self.message = message
+        self.token = token
+        self.line = getattr(token, &#34;line&#34;, &#34;?&#34;)
+        self.column = getattr(token, &#34;column&#34;, &#34;?&#34;)
+        index = getattr(token, &#34;pos_in_stream&#34;, None)
+        if index:
+            self.context = get_context_window(text, index)
+        else:
+            self.context = &#34;?&#34;
+
+    def __str__(self):
+        self.message += f&#34; (line {self.line}, column {self.column}):\n&#34;
+        self.message += self.context
+        return self.message</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>builtins.Exception</li>
+<li>builtins.BaseException</li>
+</ul>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogParsingWarning"><code class="flex name class">
+<span>class <span class="ident">VerilogParsingWarning</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Potentially raised if there is a warning parsing verilog.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class VerilogParsingWarning(Exception):
+    &#34;&#34;&#34;
+    Potentially raised if there is a warning parsing verilog.
+    &#34;&#34;&#34;
+
+    pass</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>builtins.Exception</li>
+<li>builtins.BaseException</li>
+</ul>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<header>
+<img src="circuitgraph.png" alt="" style="margin-bottom: 31px;">
+<a class="github-button" href="https://github.com/circuitgraph/circuitgraph"><b>GitHub</b></a>
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="circuitgraph.parsing" href="index.html">circuitgraph.parsing</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="circuitgraph.parsing.verilog.get_context_window" href="#circuitgraph.parsing.verilog.get_context_window">get_context_window</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.parse_verilog_netlist" href="#circuitgraph.parsing.verilog.parse_verilog_netlist">parse_verilog_netlist</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer">VerilogCircuitGraphTransformer</a></code></h4>
+<ul class="">
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.add_blackbox" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.add_blackbox">add_blackbox</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.add_node" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.add_node">add_node</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.and_gate" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.and_gate">and_gate</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.assignment" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.assignment">assignment</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.check_for_warnings" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.check_for_warnings">check_for_warnings</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_one" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_one">constant_one</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_zero" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_zero">constant_zero</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.expression" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.expression">expression</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.input_declaration" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.input_declaration">input_declaration</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.list_of_module_connections" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.list_of_module_connections">list_of_module_connections</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.list_of_ports" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.list_of_ports">list_of_ports</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.list_of_variables" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.list_of_variables">list_of_variables</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module">module</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module_instance" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module_instance">module_instance</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module_instantiation" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module_instantiation">module_instantiation</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module_port_connection" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.module_port_connection">module_port_connection</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.named_port_connection" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.named_port_connection">named_port_connection</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.net_declaration" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.net_declaration">net_declaration</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.not_gate" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.not_gate">not_gate</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.or_gate" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.or_gate">or_gate</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.output_declaration" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.output_declaration">output_declaration</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.start" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.start">start</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.ternary" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.ternary">ternary</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.warn" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.warn">warn</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.xnor_gate" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.xnor_gate">xnor_gate</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.xor_gate" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.xor_gate">xor_gate</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="circuitgraph.parsing.verilog.VerilogParsingError" href="#circuitgraph.parsing.verilog.VerilogParsingError">VerilogParsingError</a></code></h4>
+</li>
+<li>
+<h4><code><a title="circuitgraph.parsing.verilog.VerilogParsingWarning" href="#circuitgraph.parsing.verilog.VerilogParsingWarning">VerilogParsingWarning</a></code></h4>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>

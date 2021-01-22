@@ -29,7 +29,7 @@
 </summary>
 <pre><code class="python">&#34;&#34;&#34;Functions for transforming circuits&#34;&#34;&#34;
 
-from subprocess import PIPE, Popen
+import subprocess
 from tempfile import NamedTemporaryFile
 import os
 
@@ -39,6 +39,7 @@ from circuitgraph import Circuit
 from circuitgraph.utils import clog2
 from circuitgraph.logic import popcount
 from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
+
 
 def copy(c):
     &#34;&#34;&#34;
@@ -55,11 +56,8 @@ def copy(c):
             Circuit copy.
 
     &#34;&#34;&#34;
-    return Circuit(
-        graph=c.graph.copy(),
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )
+    return Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
+
 
 def strip_io(c):
     &#34;&#34;&#34;
@@ -80,11 +78,7 @@ def strip_io(c):
     for o in c.io():
         g.nodes[o][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(
-        graph=g,
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )
+    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def strip_outputs(c):
@@ -106,11 +100,7 @@ def strip_outputs(c):
     for o in c.outputs():
         g.nodes[o][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(
-        graph=g,
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )
+    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def strip_inputs(c):
@@ -132,11 +122,7 @@ def strip_inputs(c):
     for i in c.inputs():
         g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(
-        graph=g,
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )
+    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def strip_blackboxes(c):
@@ -165,7 +151,8 @@ def strip_blackboxes(c):
     # rename nodes
     mapping = {n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in bb_pins}
     for k in mapping.values():
-        if k in g: raise ValueError(f&#34;Overlapping blackbox name: {k}&#34;)
+        if k in g:
+            raise ValueError(f&#34;Overlapping blackbox name: {k}&#34;)
     nx.relabel_nodes(g, mapping, copy=False)
 
     return Circuit(graph=g, name=c.name)
@@ -188,47 +175,12 @@ def relabel(c):
             Circuit with removed blackboxes.
     &#34;&#34;&#34;
     g = nx.relabel_nodes(g, mapping)
-    return Circuit(
-        graph=g,
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )
-
-#def seq_graph(c):
-#    &#34;&#34;&#34;
-#    Creates a Circuit of the sequential elements and IO.
-#
-#    Parameters
-#    ----------
-#    c: Circuit
-#
-#    Returns
-#    -------
-#    Circuit
-#            Sequential circuit.
-#
-#    &#34;&#34;&#34;
-#    s = Circuit(name=f&#34;{c.name}_seq&#34;)
-#
-#    # add nodes
-#    for n in c.inputs() | c.seq():
-#        s.add(n, c.type(n), output=c.output(n))
-#
-#    # add edges
-#    for n in c.seq():
-#        s.connect(c.startpoints(c.d(n)), n)
-#
-#    # add outputs
-#    for n in s:
-#        if c.endpoints(n) &amp; c.outputs():
-#            s.set_output(n, True)
-#
-#    return s
+    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
-def syn(c, engine=&#34;yosys&#34;, print_output=False):
+def syn(c, engine=&#34;yosys&#34;, output_log=False):
     &#34;&#34;&#34;
-    Synthesizes the circuit using Genus.
+    Synthesizes the circuit using yosys or genus.
 
     Parameters
     ----------
@@ -236,8 +188,8 @@ def syn(c, engine=&#34;yosys&#34;, print_output=False):
             Circuit to synthesize.
     engine : str
             Synthesis tool to use (&#39;genus&#39; or &#39;yosys&#39;)
-    print_output : bool
-            Option to print synthesis log
+    output_log : str or None
+            If defined, synthesis log will be written to this file.
 
     Returns
     -------
@@ -274,23 +226,22 @@ def syn(c, engine=&#34;yosys&#34;, print_output=False):
                     &#34;synth; &#34;
                     f&#34;write_verilog -noattr {tmp_out.name}&#34;,
                 ]
-
             else:
                 raise ValueError(&#34;synthesis engine must be yosys or genus&#34;)
 
-            process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-            while True:
-                line = process.stdout.readline()
-                if line == &#34;&#34; and process.poll() is not None:
-                    break
-                if line:
-                    if print_output:
-                        print(line.strip())
-            output = tmp_out.read().decode(&#34;utf-8&#34;)
-            if print_output:
-                print(output)
+            if output_log:
+                with open(output_log, &#34;w&#34;) as f:
+                    subprocess.run(cmd, stdout=f, stderr=f)
+            else:
+                subprocess.run(cmd, capture_output=True)
 
-    return verilog_to_circuit(output, c.name)
+            output_netlist = tmp_out.read().decode(&#34;utf-8&#34;)
+    try:
+        return verilog_to_circuit(output_netlist, c.name)
+    except Exception as e:
+        print(&#34;error reading synthesized netlist:&#34;)
+        print(output_netlist)
+        raise e
 
 
 def ternary(c):
@@ -352,9 +303,7 @@ def ternary(c):
             t.add(f&#34;{n}_x&#34;, &#34;output&#34;, fanin=f&#34;{p}_x&#34;)
 
         elif c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;]:
-            t.add(
-                f&#34;{n}_x&#34;, &#34;or&#34;, fanin=(f&#34;{p}_x&#34; for p in c.fanin(n))
-            )
+            t.add(f&#34;{n}_x&#34;, &#34;or&#34;, fanin=(f&#34;{p}_x&#34; for p in c.fanin(n)))
 
         elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
             t.add(f&#34;{n}_x&#34;, &#34;0&#34;)
@@ -420,80 +369,6 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     return m
 
 
-#def comb(c):
-#    &#34;&#34;&#34;
-#    Creates combinational version of the circuit.
-#
-#    Parameters
-#    ----------
-#    c : Circuit
-#            Sequential circuit to make combinational.
-#
-#    Returns
-#    -------
-#    Circuit
-#            Combinational circuit.
-#
-#    &#34;&#34;&#34;
-#    import circuitgraph.logic as logic
-#
-#    c_comb = copy(c)
-#    lat_model = logic.comb_lat()
-#    ff_model = logic.comb_ff()
-#
-#    for s in c.seq():
-#        model = lat_model if c.type(s) == &#34;lat&#34; else ff_model
-#        relabeled_model = relabel(model, {n: f&#34;{s}_{n}&#34; for n in model})
-#        c_comb.extend(relabeled_model)
-#        c_comb.connect(f&#34;{s}_q&#34;, c_comb.fanout(s))
-#        c_comb.connect(c_comb.fanin(s), f&#34;{s}_d&#34;)
-#        if c.clk(s):
-#            c_comb.connect(c.clk(s), f&#34;{s}_clk&#34;)
-#        if c.r(s):
-#            c_comb.connect(c.r(s), f&#34;{s}_rst&#34;)
-#        if c.s(s):
-#            c_comb.connect(c.s(s), f&#34;{s}_set&#34;)
-#        c_comb.remove(s)
-#
-#    return c_comb
-
-
-#def unroll(c, cycles):
-#    &#34;&#34;&#34;
-#    Creates combinational unrolling of the circuit.
-#
-#    Parameters
-#    ----------
-#    c : Circuit
-#            Sequential circuit to unroll.
-#    cycles : int
-#            Number of cycles to unroll
-#
-#    Returns
-#    -------
-#    Circuit
-#            Unrolled circuit.
-#
-#    &#34;&#34;&#34;
-#    u = Circuit()
-#    c_comb = comb(c)
-#    for i in range(cycles):
-#        u.extend(c_comb, {n: f&#34;{n}_{i}&#34; for n in c_comb})
-#        if i == 0:
-#            # convert si to inputs
-#            for n in c:
-#                if c.type(n) in [&#34;lat&#34;, &#34;ff&#34;]:
-#                    u.set_type(f&#34;{n}_si_{i}&#34;, &#34;input&#34;)
-#
-#        else:
-#            # connect prev si
-#            for n in c:
-#                if c.type(n) in [&#34;lat&#34;, &#34;ff&#34;]:
-#                    u.connect(f&#34;{n}_si_{i-1}&#34;, f&#34;{n}_si_{i}&#34;)
-#
-#    return u
-
-
 def influence_transform(c, n, s):
     &#34;&#34;&#34;
     Creates a circuit to compute sensitivity.
@@ -524,7 +399,7 @@ def influence_transform(c, n, s):
 
     # get input cone
     fi_nodes = c.transitive_fanin(n) | set([n])
-    sub_c = Circuit(&#34;sub_cone&#34;,c.graph.subgraph(fi_nodes).copy())
+    sub_c = Circuit(&#34;sub_cone&#34;, c.graph.subgraph(fi_nodes).copy())
 
     # create two copies of sub circuit, share inputs except s
     infl = Circuit(name=f&#34;infl_{s}_on_{n}&#34;)
@@ -583,7 +458,7 @@ def sensitivity_transform(c, n):
     sen.add_subcircuit(popcount(len(startpoints)), &#34;pc&#34;)
 
     # add inverted input copies
-    for i,s0 in enumerate(startpoints):
+    for i, s0 in enumerate(startpoints):
         sen.add_subcircuit(sub_c, f&#34;inv_{s0}&#34;)
 
         # connect inputs
@@ -597,9 +472,10 @@ def sensitivity_transform(c, n):
 
         # compare to orig
         sen.add(
-            f&#34;dif_{s0}&#34;, &#34;xor&#34;,
+            f&#34;dif_{s0}&#34;,
+            &#34;xor&#34;,
             fanin=[f&#34;orig_{n}&#34;, f&#34;inv_{s0}_{n}&#34;],
-            fanout=f&#34;pc_in_{i}&#34;
+            fanout=f&#34;pc_in_{i}&#34;,
         )
         sen.add(f&#34;dif_out_{s0}&#34;, &#34;output&#34;, fanin=f&#34;dif_{s0}&#34;)
 
@@ -680,11 +556,7 @@ def sensitization_transform(c, n):
             Circuit copy.
 
     &#34;&#34;&#34;
-    return Circuit(
-        graph=c.graph.copy(),
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )</code></pre>
+    return Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.influence_transform"><code class="name flex">
@@ -740,7 +612,7 @@ def sensitization_transform(c, n):
 
     # get input cone
     fi_nodes = c.transitive_fanin(n) | set([n])
-    sub_c = Circuit(&#34;sub_cone&#34;,c.graph.subgraph(fi_nodes).copy())
+    sub_c = Circuit(&#34;sub_cone&#34;, c.graph.subgraph(fi_nodes).copy())
 
     # create two copies of sub circuit, share inputs except s
     infl = Circuit(name=f&#34;infl_{s}_on_{n}&#34;)
@@ -873,11 +745,7 @@ def sensitization_transform(c, n):
             Circuit with removed blackboxes.
     &#34;&#34;&#34;
     g = nx.relabel_nodes(g, mapping)
-    return Circuit(
-        graph=g,
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )</code></pre>
+    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.sensitivity_transform"><code class="name flex">
@@ -942,7 +810,7 @@ def sensitization_transform(c, n):
     sen.add_subcircuit(popcount(len(startpoints)), &#34;pc&#34;)
 
     # add inverted input copies
-    for i,s0 in enumerate(startpoints):
+    for i, s0 in enumerate(startpoints):
         sen.add_subcircuit(sub_c, f&#34;inv_{s0}&#34;)
 
         # connect inputs
@@ -956,9 +824,10 @@ def sensitization_transform(c, n):
 
         # compare to orig
         sen.add(
-            f&#34;dif_{s0}&#34;, &#34;xor&#34;,
+            f&#34;dif_{s0}&#34;,
+            &#34;xor&#34;,
             fanin=[f&#34;orig_{n}&#34;, f&#34;inv_{s0}_{n}&#34;],
-            fanout=f&#34;pc_in_{i}&#34;
+            fanout=f&#34;pc_in_{i}&#34;,
         )
         sen.add(f&#34;dif_out_{s0}&#34;, &#34;output&#34;, fanin=f&#34;dif_{s0}&#34;)
 
@@ -1064,7 +933,8 @@ def sensitization_transform(c, n):
     # rename nodes
     mapping = {n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in bb_pins}
     for k in mapping.values():
-        if k in g: raise ValueError(f&#34;Overlapping blackbox name: {k}&#34;)
+        if k in g:
+            raise ValueError(f&#34;Overlapping blackbox name: {k}&#34;)
     nx.relabel_nodes(g, mapping, copy=False)
 
     return Circuit(graph=g, name=c.name)</code></pre>
@@ -1109,11 +979,7 @@ instantiation.</p>
     for i in c.inputs():
         g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(
-        graph=g,
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )</code></pre>
+    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.strip_io"><code class="name flex">
@@ -1155,11 +1021,7 @@ instantiation.</p>
     for o in c.io():
         g.nodes[o][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(
-        graph=g,
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )</code></pre>
+    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.strip_outputs"><code class="name flex">
@@ -1201,26 +1063,22 @@ instantiation.</p>
     for o in c.outputs():
         g.nodes[o][&#34;type&#34;] = &#34;buf&#34;
 
-    return Circuit(
-        graph=g,
-        name=c.name,
-        blackboxes=c.blackboxes.copy()
-    )</code></pre>
+    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.syn"><code class="name flex">
-<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', print_output=False)</span>
+<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', output_log=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Synthesizes the circuit using Genus.</p>
+<div class="desc"><p>Synthesizes the circuit using yosys or genus.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>Circuit to synthesize.</dd>
 <dt><strong><code>engine</code></strong> :&ensp;<code>str</code></dt>
 <dd>Synthesis tool to use ('genus' or 'yosys')</dd>
-<dt><strong><code>print_output</code></strong> :&ensp;<code>bool</code></dt>
-<dd>Option to print synthesis log</dd>
+<dt><strong><code>output_log</code></strong> :&ensp;<code>str</code> or <code>None</code></dt>
+<dd>If defined, synthesis log will be written to this file.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1231,9 +1089,9 @@ instantiation.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def syn(c, engine=&#34;yosys&#34;, print_output=False):
+<pre><code class="python">def syn(c, engine=&#34;yosys&#34;, output_log=False):
     &#34;&#34;&#34;
-    Synthesizes the circuit using Genus.
+    Synthesizes the circuit using yosys or genus.
 
     Parameters
     ----------
@@ -1241,8 +1099,8 @@ instantiation.</p>
             Circuit to synthesize.
     engine : str
             Synthesis tool to use (&#39;genus&#39; or &#39;yosys&#39;)
-    print_output : bool
-            Option to print synthesis log
+    output_log : str or None
+            If defined, synthesis log will be written to this file.
 
     Returns
     -------
@@ -1279,23 +1137,22 @@ instantiation.</p>
                     &#34;synth; &#34;
                     f&#34;write_verilog -noattr {tmp_out.name}&#34;,
                 ]
-
             else:
                 raise ValueError(&#34;synthesis engine must be yosys or genus&#34;)
 
-            process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-            while True:
-                line = process.stdout.readline()
-                if line == &#34;&#34; and process.poll() is not None:
-                    break
-                if line:
-                    if print_output:
-                        print(line.strip())
-            output = tmp_out.read().decode(&#34;utf-8&#34;)
-            if print_output:
-                print(output)
+            if output_log:
+                with open(output_log, &#34;w&#34;) as f:
+                    subprocess.run(cmd, stdout=f, stderr=f)
+            else:
+                subprocess.run(cmd, capture_output=True)
 
-    return verilog_to_circuit(output, c.name)</code></pre>
+            output_netlist = tmp_out.read().decode(&#34;utf-8&#34;)
+    try:
+        return verilog_to_circuit(output_netlist, c.name)
+    except Exception as e:
+        print(&#34;error reading synthesized netlist:&#34;)
+        print(output_netlist)
+        raise e</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.ternary"><code class="name flex">
@@ -1376,9 +1233,7 @@ instantiation.</p>
             t.add(f&#34;{n}_x&#34;, &#34;output&#34;, fanin=f&#34;{p}_x&#34;)
 
         elif c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;]:
-            t.add(
-                f&#34;{n}_x&#34;, &#34;or&#34;, fanin=(f&#34;{p}_x&#34; for p in c.fanin(n))
-            )
+            t.add(f&#34;{n}_x&#34;, &#34;or&#34;, fanin=(f&#34;{p}_x&#34; for p in c.fanin(n)))
 
         elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
             t.add(f&#34;{n}_x&#34;, &#34;0&#34;)
