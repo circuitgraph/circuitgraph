@@ -1,4 +1,5 @@
 from pathlib import Path
+from string import digits
 
 from lark import Lark, Transformer
 
@@ -96,15 +97,15 @@ class VerilogCircuitGraphTransformer(Transformer):
         self.wires = set()
 
     # Helper functions
-    def add_node(self, n, type, fanin=[], fanout=[], uid=False):
+    def add_node(self, n, node_type, fanin=[], fanout=[], uid=False):
         """So that nodes are of type `str`, not `lark.Token`"""
-        if not isinstance(fanin, list):
+        if type(fanin) not in [list, set]:
             fanin = [fanin]
-        if not isinstance(fanout, list):
+        if type(fanout) not in [list, set]:
             fanout = [fanout]
         return self.c.add(
             str(n),
-            type,
+            node_type,
             fanin=[str(i) for i in fanin],
             fanout=[str(i) for i in fanout],
             uid=uid,
@@ -228,6 +229,20 @@ class VerilogCircuitGraphTransformer(Transformer):
                         self.text,
                     )
                 self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
+        # Check if this is a GTECH gate
+        elif (
+            name_of_module.startswith("GTECH_")
+            and name_of_module.split("_")[-1].rstrip(digits).lower() in supported_gates
+        ):
+            gate = name_of_module.split("_")[-1].rstrip(digits).lower()
+            for name, connections in module_instances:
+                if not isinstance(connections, dict):
+                    raise VerilogParsingError(
+                        "GTECH gates must use named port connections", name, self.text,
+                    )
+                output = connections["Z"]
+                inputs = set(connections.values()) - {output}
+                self.add_node(output, gate, fanin=inputs)
         # Otherwise, try to parse as blackbox
         else:
             try:
@@ -238,7 +253,7 @@ class VerilogCircuitGraphTransformer(Transformer):
                     name_of_module,
                     self.text,
                 )
-            for (name, connections) in module_instances:
+            for name, connections in module_instances:
                 if not isinstance(connections, dict):
                     raise VerilogParsingError(
                         "Blackbox instantiations must use named port connections",

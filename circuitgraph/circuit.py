@@ -370,7 +370,7 @@ class Circuit:
         if fanin and type in ["0", "1", "input"]:
             raise ValueError(f"{type} cannot have fanin")
         if fanout and type in ["output"]:
-            raise ValueError(f"{type} cannot have fanin")
+            raise ValueError(f"{type} cannot have fanout")
         if n[0] in "0123456789":
             raise ValueError(f"cannot add node starting with int: {n}")
 

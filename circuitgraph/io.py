@@ -121,7 +121,7 @@ def verilog_to_circuit(
 
     Parameters
     ----------
-    path: str
+    netlist: str
             Verilog code.
     name: str
             Module name.
@@ -141,7 +141,10 @@ def verilog_to_circuit(
     # parse module
     regex = f"(module\s+{name}\s*\(.*?\);(.*?)endmodule)"
     m = re.search(regex, netlist, re.DOTALL)
-    module = m.group(1)
+    try:
+        module = m.group(1)
+    except AttributeError:
+        raise ValueError("Could not read netlist: no modules found")
 
     if blackboxes is None:
         blackboxes = []

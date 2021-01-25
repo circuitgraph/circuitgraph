@@ -75,8 +75,7 @@ class TestTransform(unittest.TestCase):
 
     @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
     def test_syn_yosys(self):
-        # synthesize and check equiv
-        s = syn(self.s27, "yosys")
+        s = syn(self.s27, "yosys", suppress_output=True)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
@@ -87,18 +86,30 @@ class TestTransform(unittest.TestCase):
         "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ, "Genus not installed"
     )
     def test_syn_genus(self):
-        if "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ:
-            s = syn(self.s27, "Genus")
-            m = miter(self.s27, s)
-            live = sat(m)
-            self.assertTrue(live)
-            different_output = sat(m, assumptions={"sat": True})
-            self.assertFalse(different_output)
-            for f in glob.glob(f"{os.getcwd()}/genus.cmd*"):
-                os.remove(f)
-            for f in glob.glob(f"{os.getcwd()}/genus.log*"):
-                os.remove(f)
-            shutil.rmtree(f"{os.getcwd()}/fv")
+        s = syn(self.s27, "genus", suppress_output=True)
+        m = miter(self.s27, s)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+        for f in glob.glob(f"{os.getcwd()}/genus.cmd*"):
+            os.remove(f)
+        for f in glob.glob(f"{os.getcwd()}/genus.log*"):
+            os.remove(f)
+        shutil.rmtree(f"{os.getcwd()}/fv")
+
+    @unittest.skipIf(shutil.which("dc_shell-t") == None, "DesignCompiler not installed")
+    def test_syn_dc(self):
+        s = syn(self.s27, "dc", suppress_output=True)
+        m = miter(self.s27, s)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+        for f in glob.glob(f"{os.getcwd()}/command.log*"):
+            os.remove(f)
+        for f in glob.glob(f"{os.getcwd()}/default.svf*"):
+            os.remove(f)
 
     # def test_ternary(self):
     #    # encode circuit

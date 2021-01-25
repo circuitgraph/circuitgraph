@@ -149,7 +149,14 @@ def relabel(c):
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
-def syn(c, engine="yosys", output_log=False):
+def syn(
+    c,
+    engine="yosys",
+    suppress_output=False,
+    stdout_file=None,
+    stderr_file=None,
+    working_dir=".",
+):
     """
     Synthesizes the circuit using yosys or genus.
 
@@ -158,9 +165,18 @@ def syn(c, engine="yosys", output_log=False):
     c : Circuit
             Circuit to synthesize.
     engine : str
-            Synthesis tool to use ('genus' or 'yosys')
-    output_log : str or None
-            If defined, synthesis log will be written to this file.
+            Synthesis tool to use ('genus', 'dc', or 'yosys')
+    suppress_output: bool
+            If True, synthesis stdout will not be printed.
+    stdout_file: file or str or None
+            If defined, synthesis stdout will be directed to this file instead
+            of being printed.
+    output_file: file or str or None
+            If defined, synthesis stderr will be written to this file instead
+            of being printed.
+    working_dir: str
+            The path to run synthesis from. If using genus, this will effect
+            where the genus run files are stored.
 
     Returns
     -------
@@ -169,17 +185,31 @@ def syn(c, engine="yosys", output_log=False):
     """
     verilog = circuit_to_verilog(c)
 
-    with NamedTemporaryFile(prefix="circuitgraph_syn_genus_input") as tmp_in:
+    with NamedTemporaryFile(
+        prefix="circuitgraph_synthesis_input", suffix=".v"
+    ) as tmp_in:
         tmp_in.write(bytes(verilog, "ascii"))
         tmp_in.flush()
-        with NamedTemporaryFile(prefix="circuitgraph_syn_genus_output") as tmp_out:
+        with NamedTemporaryFile(
+            prefix="circuitgraph_synthesis_output", suffix=".v"
+        ) as tmp_out:
             if engine == "genus":
+                try:
+                    lib_path = os.environ["CIRCUITGRAPH_GENUS_LIBRARY_PATH"]
+                except KeyError:
+                    raise ValueError(
+                        "In order to run synthesis with Genus, "
+                        "please set the "
+                        "CIRCUITGRAPH_GENUS_LIBRARY_PATH "
+                        "variable in your os environment to the "
+                        "path to the tech library to use"
+                    )
                 cmd = [
                     "genus",
                     "-no_gui",
                     "-execute",
                     "set_db / .library "
-                    f"{os.environ['CIRCUITGRAPH_GENUS_LIBRARY_PATH']};\n"
+                    f"{lib_path};\n"
                     f"read_hdl -sv {tmp_in.name};\n"
                     "elaborate;\n"
                     "set_db syn_generic_effort high;\n"
@@ -187,6 +217,19 @@ def syn(c, engine="yosys", output_log=False):
                     "syn_map;\n"
                     "syn_opt;\n"
                     f'redirect {tmp_out.name} "write_hdl -generic";\n'
+                    "exit;",
+                ]
+            elif engine == "dc":
+                cmd = [
+                    "dc_shell-t",
+                    "-no_gui",
+                    "-x",
+                    f"read_file {tmp_in.name}\n"
+                    "link;\n"
+                    "uniquify;\n"
+                    "check_design;\n"
+                    "compile -map_effort high;\n"
+                    f"write -format verilog -output {tmp_out.name};\n"
                     "exit;",
                 ]
             elif engine == "yosys":
@@ -200,19 +243,25 @@ def syn(c, engine="yosys", output_log=False):
             else:
                 raise ValueError("synthesis engine must be yosys or genus")
 
-            if output_log:
-                with open(output_log, "w") as f:
-                    subprocess.run(cmd, stdout=f, stderr=f)
+            if suppress_output and not stdout_file:
+                stdout = subprocess.DEVNULL
+            elif stdout_file:
+                stdout = open(stdout_file, "w")
             else:
-                subprocess.run(cmd, capture_output=True)
+                stdout = None
+            if stderr_file:
+                stderr = open(stderr_file, "w")
+            else:
+                stderr = None
+            subprocess.run(cmd, stdout=stdout, stderr=stderr, cwd=working_dir)
+            if stdout_file:
+                stdout.close()
+            if stderr_file:
+                stderr.close()
 
             output_netlist = tmp_out.read().decode("utf-8")
-    try:
-        return verilog_to_circuit(output_netlist, c.name)
-    except Exception as e:
-        print("error reading synthesized netlist:")
-        print(output_netlist)
-        raise e
+
+    return verilog_to_circuit(output_netlist, c.name)
 
 
 def ternary(c):

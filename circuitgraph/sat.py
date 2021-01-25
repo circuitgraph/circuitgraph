@@ -235,9 +235,14 @@ def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
         result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
 
     # parse results
+    # approxmc version < 4
     m = re.search(r"Number of solutions is: (\d+) x 2\^(\d+)", result.stdout)
-    estimate = int(m.group(1)) * (2 ** int(m.group(2)))
-    return estimate
+    # approxmc version 4
+    if not m:
+        m = re.search(r"Number of solutions is: (\d+)\*2\*\*(\d+)", result.stdout)
+    if not m:
+        return None
+    return int(m.group(1)) * (2 ** int(m.group(2)))
 
 
 def model_count(c, assumptions=None):

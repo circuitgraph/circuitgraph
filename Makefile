@@ -25,5 +25,8 @@ test_upload: dist
 upload : dist
 	python3 -m twine upload dist/*
 
+install:
+	pip3 install .
+
 install_editable :
 	pip3 install -e .
