@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2021-01-24
+### FIXED
+- Synthesis now works with python3.6 again
+
+### Added
+- DesignCompiler synthesis
+
 ## [0.1.1] - 2021-01-22
 ### FIXED
 - Parsing is now being included correctly

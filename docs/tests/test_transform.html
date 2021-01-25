@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.tests.test_transform API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -103,8 +103,7 @@ class TestTransform(unittest.TestCase):
 
     @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
     def test_syn_yosys(self):
-        # synthesize and check equiv
-        s = syn(self.s27, &#34;yosys&#34;)
+        s = syn(self.s27, &#34;yosys&#34;, suppress_output=True)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
@@ -115,18 +114,30 @@ class TestTransform(unittest.TestCase):
         &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus not installed&#34;
     )
     def test_syn_genus(self):
-        if &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ:
-            s = syn(self.s27, &#34;Genus&#34;)
-            m = miter(self.s27, s)
-            live = sat(m)
-            self.assertTrue(live)
-            different_output = sat(m, assumptions={&#34;sat&#34;: True})
-            self.assertFalse(different_output)
-            for f in glob.glob(f&#34;{os.getcwd()}/genus.cmd*&#34;):
-                os.remove(f)
-            for f in glob.glob(f&#34;{os.getcwd()}/genus.log*&#34;):
-                os.remove(f)
-            shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
+        s = syn(self.s27, &#34;genus&#34;, suppress_output=True)
+        m = miter(self.s27, s)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+        for f in glob.glob(f&#34;{os.getcwd()}/genus.cmd*&#34;):
+            os.remove(f)
+        for f in glob.glob(f&#34;{os.getcwd()}/genus.log*&#34;):
+            os.remove(f)
+        shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
+
+    @unittest.skipIf(shutil.which(&#34;dc_shell-t&#34;) == None, &#34;DesignCompiler not installed&#34;)
+    def test_syn_dc(self):
+        s = syn(self.s27, &#34;dc&#34;, suppress_output=True)
+        m = miter(self.s27, s)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+        for f in glob.glob(f&#34;{os.getcwd()}/command.log*&#34;):
+            os.remove(f)
+        for f in glob.glob(f&#34;{os.getcwd()}/default.svf*&#34;):
+            os.remove(f)
 
     # def test_ternary(self):
     #    # encode circuit
@@ -320,8 +331,7 @@ not have a method with the specified name.</p></div>
 
     @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
     def test_syn_yosys(self):
-        # synthesize and check equiv
-        s = syn(self.s27, &#34;yosys&#34;)
+        s = syn(self.s27, &#34;yosys&#34;, suppress_output=True)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
@@ -332,18 +342,30 @@ not have a method with the specified name.</p></div>
         &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus not installed&#34;
     )
     def test_syn_genus(self):
-        if &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ:
-            s = syn(self.s27, &#34;Genus&#34;)
-            m = miter(self.s27, s)
-            live = sat(m)
-            self.assertTrue(live)
-            different_output = sat(m, assumptions={&#34;sat&#34;: True})
-            self.assertFalse(different_output)
-            for f in glob.glob(f&#34;{os.getcwd()}/genus.cmd*&#34;):
-                os.remove(f)
-            for f in glob.glob(f&#34;{os.getcwd()}/genus.log*&#34;):
-                os.remove(f)
-            shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
+        s = syn(self.s27, &#34;genus&#34;, suppress_output=True)
+        m = miter(self.s27, s)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+        for f in glob.glob(f&#34;{os.getcwd()}/genus.cmd*&#34;):
+            os.remove(f)
+        for f in glob.glob(f&#34;{os.getcwd()}/genus.log*&#34;):
+            os.remove(f)
+        shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
+
+    @unittest.skipIf(shutil.which(&#34;dc_shell-t&#34;) == None, &#34;DesignCompiler not installed&#34;)
+    def test_syn_dc(self):
+        s = syn(self.s27, &#34;dc&#34;, suppress_output=True)
+        m = miter(self.s27, s)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+        for f in glob.glob(f&#34;{os.getcwd()}/command.log*&#34;):
+            os.remove(f)
+        for f in glob.glob(f&#34;{os.getcwd()}/default.svf*&#34;):
+            os.remove(f)
 
     # def test_ternary(self):
     #    # encode circuit
@@ -590,6 +612,29 @@ not have a method with the specified name.</p></div>
     self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.tests.test_transform.TestTransform.test_syn_dc"><code class="name flex">
+<span>def <span class="ident">test_syn_dc</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@unittest.skipIf(shutil.which(&#34;dc_shell-t&#34;) == None, &#34;DesignCompiler not installed&#34;)
+def test_syn_dc(self):
+    s = syn(self.s27, &#34;dc&#34;, suppress_output=True)
+    m = miter(self.s27, s)
+    live = sat(m)
+    self.assertTrue(live)
+    different_output = sat(m, assumptions={&#34;sat&#34;: True})
+    self.assertFalse(different_output)
+    for f in glob.glob(f&#34;{os.getcwd()}/command.log*&#34;):
+        os.remove(f)
+    for f in glob.glob(f&#34;{os.getcwd()}/default.svf*&#34;):
+        os.remove(f)</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_syn_genus"><code class="name flex">
 <span>def <span class="ident">test_syn_genus</span></span>(<span>self)</span>
 </code></dt>
@@ -603,18 +648,17 @@ not have a method with the specified name.</p></div>
     &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus not installed&#34;
 )
 def test_syn_genus(self):
-    if &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ:
-        s = syn(self.s27, &#34;Genus&#34;)
-        m = miter(self.s27, s)
-        live = sat(m)
-        self.assertTrue(live)
-        different_output = sat(m, assumptions={&#34;sat&#34;: True})
-        self.assertFalse(different_output)
-        for f in glob.glob(f&#34;{os.getcwd()}/genus.cmd*&#34;):
-            os.remove(f)
-        for f in glob.glob(f&#34;{os.getcwd()}/genus.log*&#34;):
-            os.remove(f)
-        shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)</code></pre>
+    s = syn(self.s27, &#34;genus&#34;, suppress_output=True)
+    m = miter(self.s27, s)
+    live = sat(m)
+    self.assertTrue(live)
+    different_output = sat(m, assumptions={&#34;sat&#34;: True})
+    self.assertFalse(different_output)
+    for f in glob.glob(f&#34;{os.getcwd()}/genus.cmd*&#34;):
+        os.remove(f)
+    for f in glob.glob(f&#34;{os.getcwd()}/genus.log*&#34;):
+        os.remove(f)
+    shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_syn_yosys"><code class="name flex">
@@ -628,8 +672,7 @@ def test_syn_genus(self):
 </summary>
 <pre><code class="python">@unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
 def test_syn_yosys(self):
-    # synthesize and check equiv
-    s = syn(self.s27, &#34;yosys&#34;)
+    s = syn(self.s27, &#34;yosys&#34;, suppress_output=True)
     m = miter(self.s27, s)
     live = sat(m)
     self.assertTrue(live)
@@ -668,6 +711,7 @@ def test_syn_yosys(self):
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_inputs" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_inputs">test_strip_inputs</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_io" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_io">test_strip_io</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_outputs" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_outputs">test_strip_outputs</a></code></li>
+<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_dc" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_dc">test_syn_dc</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_genus" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_genus">test_syn_genus</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_yosys" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_yosys">test_syn_yosys</a></code></li>
 </ul>
@@ -678,7 +722,7 @@ def test_syn_yosys(self):
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

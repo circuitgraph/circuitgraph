@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.transform API documentation</title>
 <meta name="description" content="Functions for transforming circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -178,7 +178,14 @@ def relabel(c):
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
-def syn(c, engine=&#34;yosys&#34;, output_log=False):
+def syn(
+    c,
+    engine=&#34;yosys&#34;,
+    suppress_output=False,
+    stdout_file=None,
+    stderr_file=None,
+    working_dir=&#34;.&#34;,
+):
     &#34;&#34;&#34;
     Synthesizes the circuit using yosys or genus.
 
@@ -187,9 +194,18 @@ def syn(c, engine=&#34;yosys&#34;, output_log=False):
     c : Circuit
             Circuit to synthesize.
     engine : str
-            Synthesis tool to use (&#39;genus&#39; or &#39;yosys&#39;)
-    output_log : str or None
-            If defined, synthesis log will be written to this file.
+            Synthesis tool to use (&#39;genus&#39;, &#39;dc&#39;, or &#39;yosys&#39;)
+    suppress_output: bool
+            If True, synthesis stdout will not be printed.
+    stdout_file: file or str or None
+            If defined, synthesis stdout will be directed to this file instead
+            of being printed.
+    output_file: file or str or None
+            If defined, synthesis stderr will be written to this file instead
+            of being printed.
+    working_dir: str
+            The path to run synthesis from. If using genus, this will effect
+            where the genus run files are stored.
 
     Returns
     -------
@@ -198,17 +214,31 @@ def syn(c, engine=&#34;yosys&#34;, output_log=False):
     &#34;&#34;&#34;
     verilog = circuit_to_verilog(c)
 
-    with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_input&#34;) as tmp_in:
+    with NamedTemporaryFile(
+        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;
+    ) as tmp_in:
         tmp_in.write(bytes(verilog, &#34;ascii&#34;))
         tmp_in.flush()
-        with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_output&#34;) as tmp_out:
+        with NamedTemporaryFile(
+            prefix=&#34;circuitgraph_synthesis_output&#34;, suffix=&#34;.v&#34;
+        ) as tmp_out:
             if engine == &#34;genus&#34;:
+                try:
+                    lib_path = os.environ[&#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34;]
+                except KeyError:
+                    raise ValueError(
+                        &#34;In order to run synthesis with Genus, &#34;
+                        &#34;please set the &#34;
+                        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH &#34;
+                        &#34;variable in your os environment to the &#34;
+                        &#34;path to the tech library to use&#34;
+                    )
                 cmd = [
                     &#34;genus&#34;,
                     &#34;-no_gui&#34;,
                     &#34;-execute&#34;,
                     &#34;set_db / .library &#34;
-                    f&#34;{os.environ[&#39;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#39;]};\n&#34;
+                    f&#34;{lib_path};\n&#34;
                     f&#34;read_hdl -sv {tmp_in.name};\n&#34;
                     &#34;elaborate;\n&#34;
                     &#34;set_db syn_generic_effort high;\n&#34;
@@ -216,6 +246,19 @@ def syn(c, engine=&#34;yosys&#34;, output_log=False):
                     &#34;syn_map;\n&#34;
                     &#34;syn_opt;\n&#34;
                     f&#39;redirect {tmp_out.name} &#34;write_hdl -generic&#34;;\n&#39;
+                    &#34;exit;&#34;,
+                ]
+            elif engine == &#34;dc&#34;:
+                cmd = [
+                    &#34;dc_shell-t&#34;,
+                    &#34;-no_gui&#34;,
+                    &#34;-x&#34;,
+                    f&#34;read_file {tmp_in.name}\n&#34;
+                    &#34;link;\n&#34;
+                    &#34;uniquify;\n&#34;
+                    &#34;check_design;\n&#34;
+                    &#34;compile -map_effort high;\n&#34;
+                    f&#34;write -format verilog -output {tmp_out.name};\n&#34;
                     &#34;exit;&#34;,
                 ]
             elif engine == &#34;yosys&#34;:
@@ -229,19 +272,25 @@ def syn(c, engine=&#34;yosys&#34;, output_log=False):
             else:
                 raise ValueError(&#34;synthesis engine must be yosys or genus&#34;)
 
-            if output_log:
-                with open(output_log, &#34;w&#34;) as f:
-                    subprocess.run(cmd, stdout=f, stderr=f)
+            if suppress_output and not stdout_file:
+                stdout = subprocess.DEVNULL
+            elif stdout_file:
+                stdout = open(stdout_file, &#34;w&#34;)
             else:
-                subprocess.run(cmd, capture_output=True)
+                stdout = None
+            if stderr_file:
+                stderr = open(stderr_file, &#34;w&#34;)
+            else:
+                stderr = None
+            subprocess.run(cmd, stdout=stdout, stderr=stderr, cwd=working_dir)
+            if stdout_file:
+                stdout.close()
+            if stderr_file:
+                stderr.close()
 
             output_netlist = tmp_out.read().decode(&#34;utf-8&#34;)
-    try:
-        return verilog_to_circuit(output_netlist, c.name)
-    except Exception as e:
-        print(&#34;error reading synthesized netlist:&#34;)
-        print(output_netlist)
-        raise e
+
+    return verilog_to_circuit(output_netlist, c.name)
 
 
 def ternary(c):
@@ -1067,7 +1116,7 @@ instantiation.</p>
 </details>
 </dd>
 <dt id="circuitgraph.transform.syn"><code class="name flex">
-<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', output_log=False)</span>
+<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', suppress_output=False, stdout_file=None, stderr_file=None, working_dir='.')</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Synthesizes the circuit using yosys or genus.</p>
@@ -1076,9 +1125,18 @@ instantiation.</p>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>Circuit to synthesize.</dd>
 <dt><strong><code>engine</code></strong> :&ensp;<code>str</code></dt>
-<dd>Synthesis tool to use ('genus' or 'yosys')</dd>
-<dt><strong><code>output_log</code></strong> :&ensp;<code>str</code> or <code>None</code></dt>
-<dd>If defined, synthesis log will be written to this file.</dd>
+<dd>Synthesis tool to use ('genus', 'dc', or 'yosys')</dd>
+<dt><strong><code>suppress_output</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, synthesis stdout will not be printed.</dd>
+<dt><strong><code>stdout_file</code></strong> :&ensp;<code>file</code> or <code>str</code> or <code>None</code></dt>
+<dd>If defined, synthesis stdout will be directed to this file instead
+of being printed.</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>file</code> or <code>str</code> or <code>None</code></dt>
+<dd>If defined, synthesis stderr will be written to this file instead
+of being printed.</dd>
+<dt><strong><code>working_dir</code></strong> :&ensp;<code>str</code></dt>
+<dd>The path to run synthesis from. If using genus, this will effect
+where the genus run files are stored.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1089,7 +1147,14 @@ instantiation.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def syn(c, engine=&#34;yosys&#34;, output_log=False):
+<pre><code class="python">def syn(
+    c,
+    engine=&#34;yosys&#34;,
+    suppress_output=False,
+    stdout_file=None,
+    stderr_file=None,
+    working_dir=&#34;.&#34;,
+):
     &#34;&#34;&#34;
     Synthesizes the circuit using yosys or genus.
 
@@ -1098,9 +1163,18 @@ instantiation.</p>
     c : Circuit
             Circuit to synthesize.
     engine : str
-            Synthesis tool to use (&#39;genus&#39; or &#39;yosys&#39;)
-    output_log : str or None
-            If defined, synthesis log will be written to this file.
+            Synthesis tool to use (&#39;genus&#39;, &#39;dc&#39;, or &#39;yosys&#39;)
+    suppress_output: bool
+            If True, synthesis stdout will not be printed.
+    stdout_file: file or str or None
+            If defined, synthesis stdout will be directed to this file instead
+            of being printed.
+    output_file: file or str or None
+            If defined, synthesis stderr will be written to this file instead
+            of being printed.
+    working_dir: str
+            The path to run synthesis from. If using genus, this will effect
+            where the genus run files are stored.
 
     Returns
     -------
@@ -1109,17 +1183,31 @@ instantiation.</p>
     &#34;&#34;&#34;
     verilog = circuit_to_verilog(c)
 
-    with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_input&#34;) as tmp_in:
+    with NamedTemporaryFile(
+        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;
+    ) as tmp_in:
         tmp_in.write(bytes(verilog, &#34;ascii&#34;))
         tmp_in.flush()
-        with NamedTemporaryFile(prefix=&#34;circuitgraph_syn_genus_output&#34;) as tmp_out:
+        with NamedTemporaryFile(
+            prefix=&#34;circuitgraph_synthesis_output&#34;, suffix=&#34;.v&#34;
+        ) as tmp_out:
             if engine == &#34;genus&#34;:
+                try:
+                    lib_path = os.environ[&#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34;]
+                except KeyError:
+                    raise ValueError(
+                        &#34;In order to run synthesis with Genus, &#34;
+                        &#34;please set the &#34;
+                        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH &#34;
+                        &#34;variable in your os environment to the &#34;
+                        &#34;path to the tech library to use&#34;
+                    )
                 cmd = [
                     &#34;genus&#34;,
                     &#34;-no_gui&#34;,
                     &#34;-execute&#34;,
                     &#34;set_db / .library &#34;
-                    f&#34;{os.environ[&#39;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#39;]};\n&#34;
+                    f&#34;{lib_path};\n&#34;
                     f&#34;read_hdl -sv {tmp_in.name};\n&#34;
                     &#34;elaborate;\n&#34;
                     &#34;set_db syn_generic_effort high;\n&#34;
@@ -1127,6 +1215,19 @@ instantiation.</p>
                     &#34;syn_map;\n&#34;
                     &#34;syn_opt;\n&#34;
                     f&#39;redirect {tmp_out.name} &#34;write_hdl -generic&#34;;\n&#39;
+                    &#34;exit;&#34;,
+                ]
+            elif engine == &#34;dc&#34;:
+                cmd = [
+                    &#34;dc_shell-t&#34;,
+                    &#34;-no_gui&#34;,
+                    &#34;-x&#34;,
+                    f&#34;read_file {tmp_in.name}\n&#34;
+                    &#34;link;\n&#34;
+                    &#34;uniquify;\n&#34;
+                    &#34;check_design;\n&#34;
+                    &#34;compile -map_effort high;\n&#34;
+                    f&#34;write -format verilog -output {tmp_out.name};\n&#34;
                     &#34;exit;&#34;,
                 ]
             elif engine == &#34;yosys&#34;:
@@ -1140,19 +1241,25 @@ instantiation.</p>
             else:
                 raise ValueError(&#34;synthesis engine must be yosys or genus&#34;)
 
-            if output_log:
-                with open(output_log, &#34;w&#34;) as f:
-                    subprocess.run(cmd, stdout=f, stderr=f)
+            if suppress_output and not stdout_file:
+                stdout = subprocess.DEVNULL
+            elif stdout_file:
+                stdout = open(stdout_file, &#34;w&#34;)
             else:
-                subprocess.run(cmd, capture_output=True)
+                stdout = None
+            if stderr_file:
+                stderr = open(stderr_file, &#34;w&#34;)
+            else:
+                stderr = None
+            subprocess.run(cmd, stdout=stdout, stderr=stderr, cwd=working_dir)
+            if stdout_file:
+                stdout.close()
+            if stderr_file:
+                stderr.close()
 
             output_netlist = tmp_out.read().decode(&#34;utf-8&#34;)
-    try:
-        return verilog_to_circuit(output_netlist, c.name)
-    except Exception as e:
-        print(&#34;error reading synthesized netlist:&#34;)
-        print(output_netlist)
-        raise e</code></pre>
+
+    return verilog_to_circuit(output_netlist, c.name)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.ternary"><code class="name flex">
@@ -1287,7 +1394,7 @@ instantiation.</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

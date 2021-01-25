@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.parsing.verilog API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -27,6 +27,7 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">from pathlib import Path
+from string import digits
 
 from lark import Lark, Transformer
 
@@ -124,15 +125,15 @@ class VerilogCircuitGraphTransformer(Transformer):
         self.wires = set()
 
     # Helper functions
-    def add_node(self, n, type, fanin=[], fanout=[], uid=False):
+    def add_node(self, n, node_type, fanin=[], fanout=[], uid=False):
         &#34;&#34;&#34;So that nodes are of type `str`, not `lark.Token`&#34;&#34;&#34;
-        if not isinstance(fanin, list):
+        if type(fanin) not in [list, set]:
             fanin = [fanin]
-        if not isinstance(fanout, list):
+        if type(fanout) not in [list, set]:
             fanout = [fanout]
         return self.c.add(
             str(n),
-            type,
+            node_type,
             fanin=[str(i) for i in fanin],
             fanout=[str(i) for i in fanout],
             uid=uid,
@@ -256,6 +257,20 @@ class VerilogCircuitGraphTransformer(Transformer):
                         self.text,
                     )
                 self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
+        # Check if this is a GTECH gate
+        elif (
+            name_of_module.startswith(&#34;GTECH_&#34;)
+            and name_of_module.split(&#34;_&#34;)[-1].rstrip(digits).lower() in supported_gates
+        ):
+            gate = name_of_module.split(&#34;_&#34;)[-1].rstrip(digits).lower()
+            for name, connections in module_instances:
+                if not isinstance(connections, dict):
+                    raise VerilogParsingError(
+                        &#34;GTECH gates must use named port connections&#34;, name, self.text,
+                    )
+                output = connections[&#34;Z&#34;]
+                inputs = set(connections.values()) - {output}
+                self.add_node(output, gate, fanin=inputs)
         # Otherwise, try to parse as blackbox
         else:
             try:
@@ -266,7 +281,7 @@ class VerilogCircuitGraphTransformer(Transformer):
                     name_of_module,
                     self.text,
                 )
-            for (name, connections) in module_instances:
+            for name, connections in module_instances:
                 if not isinstance(connections, dict):
                     raise VerilogParsingError(
                         &#34;Blackbox instantiations must use named port connections&#34;,
@@ -546,15 +561,15 @@ exceptions.</dd>
         self.wires = set()
 
     # Helper functions
-    def add_node(self, n, type, fanin=[], fanout=[], uid=False):
+    def add_node(self, n, node_type, fanin=[], fanout=[], uid=False):
         &#34;&#34;&#34;So that nodes are of type `str`, not `lark.Token`&#34;&#34;&#34;
-        if not isinstance(fanin, list):
+        if type(fanin) not in [list, set]:
             fanin = [fanin]
-        if not isinstance(fanout, list):
+        if type(fanout) not in [list, set]:
             fanout = [fanout]
         return self.c.add(
             str(n),
-            type,
+            node_type,
             fanin=[str(i) for i in fanin],
             fanout=[str(i) for i in fanout],
             uid=uid,
@@ -678,6 +693,20 @@ exceptions.</dd>
                         self.text,
                     )
                 self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
+        # Check if this is a GTECH gate
+        elif (
+            name_of_module.startswith(&#34;GTECH_&#34;)
+            and name_of_module.split(&#34;_&#34;)[-1].rstrip(digits).lower() in supported_gates
+        ):
+            gate = name_of_module.split(&#34;_&#34;)[-1].rstrip(digits).lower()
+            for name, connections in module_instances:
+                if not isinstance(connections, dict):
+                    raise VerilogParsingError(
+                        &#34;GTECH gates must use named port connections&#34;, name, self.text,
+                    )
+                output = connections[&#34;Z&#34;]
+                inputs = set(connections.values()) - {output}
+                self.add_node(output, gate, fanin=inputs)
         # Otherwise, try to parse as blackbox
         else:
             try:
@@ -688,7 +717,7 @@ exceptions.</dd>
                     name_of_module,
                     self.text,
                 )
-            for (name, connections) in module_instances:
+            for name, connections in module_instances:
                 if not isinstance(connections, dict):
                     raise VerilogParsingError(
                         &#34;Blackbox instantiations must use named port connections&#34;,
@@ -791,7 +820,7 @@ exceptions.</dd>
 </details>
 </dd>
 <dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.add_node"><code class="name flex">
-<span>def <span class="ident">add_node</span></span>(<span>self, n, type, fanin=[], fanout=[], uid=False)</span>
+<span>def <span class="ident">add_node</span></span>(<span>self, n, node_type, fanin=[], fanout=[], uid=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>So that nodes are of type <code>str</code>, not <code>lark.Token</code></p></div>
@@ -799,15 +828,15 @@ exceptions.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def add_node(self, n, type, fanin=[], fanout=[], uid=False):
+<pre><code class="python">def add_node(self, n, node_type, fanin=[], fanout=[], uid=False):
     &#34;&#34;&#34;So that nodes are of type `str`, not `lark.Token`&#34;&#34;&#34;
-    if not isinstance(fanin, list):
+    if type(fanin) not in [list, set]:
         fanin = [fanin]
-    if not isinstance(fanout, list):
+    if type(fanout) not in [list, set]:
         fanout = [fanout]
     return self.c.add(
         str(n),
-        type,
+        node_type,
         fanin=[str(i) for i in fanin],
         fanout=[str(i) for i in fanout],
         uid=uid,
@@ -1064,6 +1093,20 @@ exceptions.</dd>
                     self.text,
                 )
             self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
+    # Check if this is a GTECH gate
+    elif (
+        name_of_module.startswith(&#34;GTECH_&#34;)
+        and name_of_module.split(&#34;_&#34;)[-1].rstrip(digits).lower() in supported_gates
+    ):
+        gate = name_of_module.split(&#34;_&#34;)[-1].rstrip(digits).lower()
+        for name, connections in module_instances:
+            if not isinstance(connections, dict):
+                raise VerilogParsingError(
+                    &#34;GTECH gates must use named port connections&#34;, name, self.text,
+                )
+            output = connections[&#34;Z&#34;]
+            inputs = set(connections.values()) - {output}
+            self.add_node(output, gate, fanin=inputs)
     # Otherwise, try to parse as blackbox
     else:
         try:
@@ -1074,7 +1117,7 @@ exceptions.</dd>
                 name_of_module,
                 self.text,
             )
-        for (name, connections) in module_instances:
+        for name, connections in module_instances:
             if not isinstance(connections, dict):
                 raise VerilogParsingError(
                     &#34;Blackbox instantiations must use named port connections&#34;,
@@ -1286,7 +1329,7 @@ exceptions.</dd>
 </dd>
 <dt id="circuitgraph.parsing.verilog.VerilogParsingWarning"><code class="flex name class">
 <span>class <span class="ident">VerilogParsingWarning</span></span>
-<span>(</span><span>*args, **kwargs)</span>
+<span>(</span><span>...)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Potentially raised if there is a warning parsing verilog.</p></div>
@@ -1376,7 +1419,7 @@ exceptions.</dd>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>
