@@ -37,12 +37,22 @@ class TestCircuit(unittest.TestCase):
         c = cg.Circuit()
         c.graph.add_node("a")
         self.assertRaises(KeyError, c.type, "a")
+        self.assertRaises(KeyError, c.type, "b")
+
         c.set_type("a", "and")
         self.assertEqual(c.type("a"), "and")
+        self.assertRaises(ValueError, c.set_type, "a", "bad")
+        self.assertRaises(KeyError, c.set_type, "b", "and")
+
         c.add("b", "or")
         self.assertListEqual(c.type(["a", "b"]), ["and", "or"])
         c.set_type(["a", "b"], "xor")
         self.assertListEqual(c.type(["a", "b"]), ["xor", "xor"])
+
+        c.add("c", "input")
+        self.assertSetEqual(c.filter_type("xor"), set(["a", "b"]))
+        self.assertSetEqual(c.filter_type(["xor", "input"]), set(["a", "b", "c"]))
+        self.assertRaises(ValueError, c.filter_type, ["ad", "input"])
 
     def test_nodes(self):
         c = cg.Circuit()
@@ -90,6 +100,8 @@ class TestCircuit(unittest.TestCase):
         c.add("b", "input")
         c.add("c", "xor")
         c.add("d", "or")
+        c.add("e", "buf")
+        c.add("f", "output")
         self.assertSetEqual(c.edges(), set())
         c.connect("a", "c")
         c.connect("b", "c")
@@ -98,6 +110,13 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(
             c.edges(), set([("a", "c"), ("b", "c"), ("a", "d"), ("b", "d")])
         )
+
+        self.assertRaises(ValueError, c.connect, "q", "a")
+        self.assertRaises(ValueError, c.connect, ["a", "b"], "e")
+        c.connect("b", "e")
+        self.assertRaises(ValueError, c.connect, "a", "e")
+        self.assertRaises(ValueError, c.connect, "f", "c")
+        self.assertRaises(ValueError, c.connect, ["a", "b"], ["a", "b"])
 
     def test_disconnect(self):
         c = cg.Circuit()
@@ -130,7 +149,8 @@ class TestCircuit(unittest.TestCase):
         c.add("a", "input")
         c.add("b", "input")
         c.add("c", "input")
-        c.add("d", "input")
+        c.add("d", "output")
+        c.add("clk", "input")
         c.add("e", "xor", fanin=["a", "b"])
         c.add("f", "not", fanin="c")
         c.add("g", "or", fanin=["c", "d"])
@@ -202,8 +222,30 @@ class TestCircuit(unittest.TestCase):
         ff = cg.BlackBox("ff", ["CK", "D"], ["Q"])
         c.add_blackbox(ff, "ff0", {"CK": "clk", "D": "a", "Q": "d"})
 
-        c.add("h", "output", fanin="f")
-        c.add("i", "output", fanin="g")
+        self.assertRaises(ValueError, c.add_blackbox, ff, "ff0")
+
+        c.add("h", "output", fanin="ff0.Q")
+        # catch before adding
+        # c.add("i", "output", fanin="ff0.D")
+
+        # add node that will overlap
+        c.add("ff1_Q", "input")
+        f = cg.Circuit()
+        f.add("CK", "input")
+        f.add("D", "input")
+        f.add("Q", "output")
+        f.add("o", "or", fanin=["CK", "D"], fanout=["Q"])
+        f.add_blackbox(ff, "ff0", {"CK": "CK", "D": "D", "Q": "o"})
+
+        self.assertRaises(ValueError, c.fill_blackbox, "ff1", f)
+        c.fill_blackbox("ff0", f)
+
+        self.assertSetEqual(c.fanin("ff0_CK"), set(["clk"]))
+        self.assertSetEqual(c.fanout("ff0_CK"), set(["ff0_o", "ff0_ff0.CK"]))
+
+        self.assertEqual(c.type("ff0_Q"), "buf")
+        self.assertSetEqual(c.fanout("ff0_Q"), set(["d", "h"]))
+        self.assertSetEqual(c.fanin("ff0_Q"), set(["ff0_o"]))
 
     def test_io(self):
         c = cg.Circuit()

@@ -103,18 +103,22 @@ class VerilogCircuitGraphTransformer(Transformer):
             fanin = [fanin]
         if type(fanout) not in [list, set]:
             fanout = [fanout]
-        return self.c.add(
-            str(n),
-            node_type,
-            fanin=[str(i) for i in fanin],
-            fanout=[str(i) for i in fanout],
-            uid=uid,
-        )
+
+        fanin = [str(i) for i in fanin]
+        fanout = [str(i) for i in fanout]
+
+        for i in fanout + fanin:
+            if i not in self.c:
+                self.c.add(i, "buf")
+
+        return self.c.add(str(n), node_type, fanin=fanin, fanout=fanout, uid=uid,)
 
     def add_blackbox(self, blackbox, name, connections=dict()):
         formatted_connections = dict()
         for key in connections:
             formatted_connections[str(key)] = str(connections[key])
+            if str(connections[key]) not in self.c:
+                self.c.add(str(connections[key]), "buf")
         self.c.add_blackbox(blackbox, str(name), formatted_connections)
 
     def warn(self, message):
@@ -260,7 +264,7 @@ class VerilogCircuitGraphTransformer(Transformer):
                         name,
                         self.text,
                     )
-                for output in bb.outputs:
+                for output in bb.outputs():
                     self.add_node(connections[output], "buf")
                 self.add_blackbox(bb, name, connections)
 

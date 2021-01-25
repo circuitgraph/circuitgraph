@@ -1,5 +1,7 @@
 """Various circuit related utilities"""
 
+from circuitgraph import supported_types
+
 
 def clog2(num: int) -> int:
     r"""Return the ceiling log base two of an integer :math:`\ge 1`.
@@ -75,7 +77,7 @@ def bin_to_int(b, lend=False):
     return int(s, 2)
 
 
-def lint(c):
+def lint(c, exhaustive=False, dangling=False):
     """
     Checks circuit for missing connections.
 
@@ -84,16 +86,71 @@ def lint(c):
     c: Circuit
             The Circuit to lint.
     """
-    c.type(c.nodes())
-    for g in c.filter_type(["buf", "not", "output", "bb_input"]):
-        if len(c.fanin(g)) != 1:
-            raise ValueError(f"buf/not {g} has incorrect fanin count")
+    errors = []
+
+    def handle(s):
+        if exhaustive:
+            errors.append(s)
+        else:
+            raise ValueError(s)
+
+    # node types
+    for g in c.nodes():
+        if "type" not in c.graph.nodes[g]:
+            handle(f"no type for node {g}")
+        t = c.graph.nodes[g]["type"]
+        if t not in supported_types:
+            handle(f"node {g} has unsupported type {t}")
+        if "." in g and g.split(".")[0] not in c.blackboxes:
+            handle(f"node {g} has blackbox syntax with no instance")
+
+    # incorrect connections
     for g in c.filter_type(["input", "0", "1", "bb_output"]):
         if len(c.fanin(g)) > 0:
-            raise ValueError(f"0/1/input {g} has fanin")
-    for g in c.filter_type(["and", "nand", "or", "nor", "xor", "xnor"]):
-        if len(c.fanin(g)) < 1:
-            raise ValueError(f"{g} has no fanin")
-    for g in c.nodes():
-        if not c.fanout(g) and not c.type(g) == "output":
-            raise ValueError(f"{g} has no fanout and is not output")
+            handle(f"{c.type(g)} {g} has fanin")
+    for g in c.filter_type(["buf", "not", "output", "bb_input"]):
+        if len(c.fanin(g)) > 1:
+            handle(f"{c.type(g)} {g} has fanin count > 1")
+
+    # dangling connections
+    if dangling:
+        for g in c.filter_type(
+            [
+                "buf",
+                "not",
+                "output",
+                "bb_input",
+                "and",
+                "nand",
+                "or",
+                "nor",
+                "xor",
+                "xnor",
+            ]
+        ):
+            if len(c.fanin(g)) < 1:
+                handle(f"{c.type(g)} {g} has no fanin")
+        for g in c.nodes() - c.outputs():
+            if not c.fanout(g):
+                handle(f"{c.type(g)} {g} has no fanout")
+
+    # blackboxes
+    for name, bb in c.blackboxes.items():
+        for g in bb.inputs():
+            if f"{name}.{g}" not in c.graph.nodes:
+                handle(f"missing blackbox pin {name}.{g}")
+            else:
+                t = c.graph.nodes[f"{name}.{g}"]["type"]
+                if t != "bb_input":
+                    handle(f"blackbox pin {name}.{g} has incorrect type {t}")
+
+        for g in bb.outputs():
+            if f"{name}.{g}" not in c.graph.nodes:
+                handle(f"missing blackbox pin {name}.{g}")
+            else:
+                t = c.graph.nodes[f"{name}.{g}"]["type"]
+                if t != "bb_output":
+                    handle(f"blackbox pin {name}.{g} has incorrect type {t}")
+
+    if errors:
+        raise ValueError("\n".join(errors))

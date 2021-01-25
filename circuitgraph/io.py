@@ -209,11 +209,11 @@ def circuit_to_verilog(c):
     output_map = {}
     for name, bb in c.blackboxes.items():
         io = []
-        for n in bb.inputs:
+        for n in bb.inputs():
             driver = c.fanin(f"{name}.{n}").pop()
             io += [f".{n}({driver})"]
 
-        for n in bb.outputs:
+        for n in bb.outputs():
             w = c.uid(f"{name}_{n}_load")
             wires.append(w)
             output_map[f"{name}.{n}"] = w

@@ -97,6 +97,7 @@ def popcount(w):
     """
     c = Circuit(name="popcount")
     ps = [[c.add(f"in_{i}", "input")] for i in range(w)]
+    c.add("tie0", "0")
 
     i = 0
     while len(ps) > 1:
@@ -107,9 +108,9 @@ def popcount(w):
         # pad
         aw = max(len(ns), len(ms))
         while len(ms) < aw:
-            ms += ["null"]
+            ms += ["tie0"]
         while len(ns) < aw:
-            ns += ["null"]
+            ns += ["tie0"]
 
         # instantiate and connect adder
         c.add_subcircuit(adder(aw), f"add_{i}")
@@ -124,9 +125,6 @@ def popcount(w):
     # connect outputs
     for i, o in enumerate(ps[0]):
         c.add(f"out_{i}", "output", fanin=o)
-
-    if "null" in c:
-        c.set_type("null", "0")
 
     return c
 

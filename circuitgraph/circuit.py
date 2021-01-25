@@ -17,7 +17,7 @@ import networkx as nx
 from networkx.exception import NetworkXNoCycle
 
 
-supported_types = [
+addable_types = [
     "buf",
     "and",
     "or",
@@ -31,6 +31,8 @@ supported_types = [
     "output",
     "input",
 ]
+
+supported_types = addable_types + ["bb_input", "bb_output"]
 
 
 class Circuit:
@@ -103,7 +105,7 @@ class Circuit:
         t : str
                 Type.
         """
-        if t not in supported_types:
+        if t not in addable_types:
             raise ValueError(f"unsupported type {t}")
 
         if isinstance(ns, str):
@@ -149,10 +151,14 @@ class Circuit:
 
         """
         if isinstance(ns, str):
-            try:
-                return self.graph.nodes[ns]["type"]
-            except KeyError:
-                raise KeyError(f"Node {ns} does not have a type defined.")
+            if ns in self.graph.nodes:
+                try:
+                    return self.graph.nodes[ns]["type"]
+                except KeyError:
+                    raise KeyError(f"Node {ns} does not have a type defined.")
+            else:
+                raise KeyError(f"Node {ns} does not exist.")
+
         return [self.type(n) for n in ns]
 
     def filter_type(self, types):
@@ -190,6 +196,10 @@ class Circuit:
         if isinstance(types, str):
             types = [types]
 
+        for t in types:
+            if t not in supported_types:
+                raise ValueError(f"type {t} not supported.")
+
         return set(n for n in self.nodes() if self.type(n) in types)
 
     def add_subcircuit(self, sc, name, connections=None):
@@ -208,9 +218,20 @@ class Circuit:
                 Optional connections to make.
 
         """
+        # check if subcircuit bbs exist
+        for bb_name in sc.blackboxes:
+            if f"{name}_{bb_name}" in self.blackboxes:
+                raise ValueError(f"blackbox {name}_{bb_name} already exists.")
+
+        # check for name overlaps
+        mapping = {}
+        for n in sc:
+            if f"{name}_{n}" in self.nodes():
+                raise ValueError(f"name {n} overlaps with {name} subcircuit.")
+            mapping[n] = f"{name}_{n}"
 
         # add sub circuit
-        g = nx.relabel_nodes(sc.graph, {n: f"{name}_{n}" for n in sc})
+        g = nx.relabel_nodes(sc.graph, mapping)
         self.graph.update(g)
         for n in sc.io():
             self.set_type(f"{name}_{n}", "buf")
@@ -223,13 +244,13 @@ class Circuit:
         if connections:
             sc_inputs = sc.inputs()
             sc_outputs = sc.outputs()
-            for sc_node, node in connections.items():
-                if sc_node in sc_inputs:
-                    self.connect(node, f"{name}_{sc_node}")
-                elif sc_node in sc_outputs:
-                    self.connect(f"{name}_{sc_node}", node)
+            for sc_n, ns in connections.items():
+                if sc_n in sc_inputs:
+                    self.connect(ns, f"{name}_{sc_n}")
+                elif sc_n in sc_outputs:
+                    self.connect(f"{name}_{sc_n}", ns)
                 else:
-                    raise ValueError(f"node {sc_node} not in {name} io")
+                    raise ValueError(f"node {sc_n} not in {name} io")
 
     def add_blackbox(self, blackbox, name, connections=None):
         """
@@ -247,44 +268,79 @@ class Circuit:
                 Optional connections to make.
 
         """
-        # make nodes
-        io = []
-        for n in blackbox.inputs:
-            io += [self.add(f"{name}.{n}", "bb_input")]
-        for n in blackbox.outputs:
-            io += [self.add(f"{name}.{n}", "bb_output")]
+        # check if exists
+        if name in self.blackboxes:
+            raise ValueError(f"blackbox {name} already exists.")
 
         # save info
         self.blackboxes[name] = blackbox
 
+        # make nodes
+        io = []
+        for n in blackbox.inputs():
+            io += [self.add(f"{name}.{n}", "bb_input")]
+        for n in blackbox.outputs():
+            io += [self.add(f"{name}.{n}", "bb_output")]
+
         # make connections
         if connections:
-            for bb_node, node in connections.items():
-                if bb_node in blackbox.inputs:
-                    self.connect(node, f"{name}.{bb_node}")
-                elif bb_node in blackbox.outputs:
-                    self.connect(f"{name}.{bb_node}", node)
+            for bb_n, ns in connections.items():
+                if bb_n in blackbox.inputs():
+                    self.connect(ns, f"{name}.{bb_n}")
+                elif bb_n in blackbox.outputs():
+                    self.connect(f"{name}.{bb_n}", ns)
                 else:
-                    raise ValueError(f"node {bb_node} not defined for blackbox {name}")
+                    raise ValueError(f"node {bb_n} not defined for blackbox {name}")
 
-    def fill_blackbox(self, c, name):
+    def fill_blackbox(self, name, c):
         """
         Replaces blackbox with circuit.
 
         Parameters
         -------
-        c : Circuit
-                Circuit.
         name : str
                 Instance name.
+        c : Circuit
+                Circuit.
 
         """
+        # check if bb exists
+        if name not in self.blackboxes:
+            raise ValueError(f"blackbox {name} does not exist.")
+
+        # check if subcircuit bbs exist
+        for bb_name in c.blackboxes:
+            if f"{name}_{bb_name}" in self.blackboxes:
+                raise ValueError(f"blackbox {name}_{bb_name} already exists.")
+
+        # check if io match
+        if c.inputs() != self.blackboxes[name].inputs():
+            raise ValueError(f"circuit inputs do not match {name} blackbox.")
+        if c.outputs() != self.blackboxes[name].outputs():
+            raise ValueError(f"circuit outputs do not match {name} blackbox.")
+
+        # check for name overlaps
+        mapping = {}
+        for n in c:
+            if f"{name}_{n}" in self.nodes():
+                raise ValueError(f"name overlap with {name} blackbox.")
+            mapping[n] = f"{name}_{n}"
+
         # rename blackbox io
-        self.relabel({n: n.replace(".", "_") for n in self.blackboxes[name].io})
+        self.relabel({f"{name}.{n}": f"{name}_{n}" for n in self.blackboxes[name].io()})
 
         # extend circuit
-        g = nx.relabel_nodes(c.graph, {n: f"{name}_{n}" for n in c})
+        g = nx.relabel_nodes(c.graph, mapping)
         self.graph.update(g)
+        for n in self.blackboxes[name].io():
+            self.set_type(f"{name}_{n}", "buf")
+
+        # remove blackbox
+        self.blackboxes.pop(name)
+
+        # add subcircuit blackboxes
+        for bb_name, bb in c.blackboxes.items():
+            self.blackboxes[f"{name}_{bb_name}"] = bb
 
     def nodes(self):
         """
@@ -420,10 +476,31 @@ class Circuit:
                 Tail node(s)
 
         """
+        # clean
         if isinstance(us, str):
             us = [us]
         if isinstance(vs, str):
             vs = [vs]
+
+        # check existence
+        for n in us + vs:
+            if n not in self.graph:
+                raise ValueError(f"node {n} does not exist.")
+
+        # check for illegal connections
+        for v in vs:
+            t = self.type(v)
+            if t in ["input", "bb_output"]:
+                raise ValueError(f"cannot connect to {t} {v}")
+            if t in ["output", "bb_input", "buf", "not"]:
+                if len(self.fanin(v)) + len(us) > 1:
+                    raise ValueError(f"fanin of {t} {v} greater than 1.")
+        for u in us:
+            t = self.type(u)
+            if t in ["output", "bb_input"]:
+                raise ValueError(f"cannot connect from {t} {v}.")
+
+        # connect
         self.graph.add_edges_from((u, v) for u in us for v in vs)
 
     def disconnect(self, us, vs):
@@ -730,9 +807,16 @@ class Circuit:
         """
         return not nx.is_directed_acyclic_graph(self.graph)
 
-    def uid(self, n):
+    def uid(self, n, blocked=None):
         """
         Generates a unique net name based on input
+
+        Parameters
+        ----------
+        n : str
+                Name to uniquify
+        blocked : set of str
+                Addtional names to block
 
         Returns
         -------
@@ -740,11 +824,17 @@ class Circuit:
                 Unique name
 
         """
-        if n not in self.graph:
+        if blocked is None:
+            blocked = []
+
+        if n not in self.graph and n not in blocked:
             return n
         i = 0
-        while f"{n}_{i}" in self.graph:
-            i += 1
+        while f"{n}_{i}" in self.graph or f"{n}_{i}" in blocked:
+            if i < 10:
+                i += 1
+            else:
+                i *= 7
         return f"{n}_{i}"
 
 
@@ -765,6 +855,41 @@ class BlackBox:
         """
 
         self.name = name
-        self.inputs = inputs
-        self.outputs = outputs
-        self.io = inputs + outputs
+        self.input_set = set(inputs)
+        self.output_set = set(outputs)
+
+    def inputs(self):
+        """
+        Returns the blackbox's inputs
+
+        Returns
+        -------
+        set of str
+                Input nodes in blackbox.
+
+        """
+        return self.input_set
+
+    def outputs(self):
+        """
+        Returns the blackbox's outputs
+
+        Returns
+        -------
+        set of str
+                Output nodes in blackbox.
+
+        """
+        return self.output_set
+
+    def io(self):
+        """
+        Returns the blackbox's inputs and outputs
+
+        Returns
+        -------
+        set of str
+                IO nodes in blackbox.
+
+        """
+        return self.output_set | self.input_set
