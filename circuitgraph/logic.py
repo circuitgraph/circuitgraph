@@ -126,6 +126,9 @@ def popcount(w):
     for i, o in enumerate(ps[0]):
         c.add(f"out_{i}", "output", fanin=o)
 
+    if not c.fanout("tie0"):
+        c.remove("tie0")
+
     return c
 
 

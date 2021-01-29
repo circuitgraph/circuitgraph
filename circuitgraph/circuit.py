@@ -483,7 +483,10 @@ class Circuit:
             vs = [vs]
 
         # check existence
-        for n in us + vs:
+        for n in us:
+            if n not in self.graph:
+                raise ValueError(f"node {n} does not exist.")
+        for n in vs:
             if n not in self.graph:
                 raise ValueError(f"node {n} does not exist.")
 

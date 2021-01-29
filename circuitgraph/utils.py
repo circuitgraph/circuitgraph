@@ -77,7 +77,7 @@ def bin_to_int(b, lend=False):
     return int(s, 2)
 
 
-def lint(c, exhaustive=False, dangling=False):
+def lint(c, exhaustive=False, unloaded=False, undriven=True):
     """
     Checks circuit for missing connections.
 
@@ -113,7 +113,7 @@ def lint(c, exhaustive=False, dangling=False):
             handle(f"{c.type(g)} {g} has fanin count > 1")
 
     # dangling connections
-    if dangling:
+    if undriven:
         for g in c.filter_type(
             [
                 "buf",
@@ -130,6 +130,8 @@ def lint(c, exhaustive=False, dangling=False):
         ):
             if len(c.fanin(g)) < 1:
                 handle(f"{c.type(g)} {g} has no fanin")
+
+    if unloaded:
         for g in c.nodes() - c.outputs():
             if not c.fanout(g):
                 handle(f"{c.type(g)} {g} has no fanout")

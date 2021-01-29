@@ -106,6 +106,7 @@ class VerilogCircuitGraphTransformer(Transformer):
 
         fanin = [str(i) for i in fanin]
         fanout = [str(i) for i in fanout]
+        node_type = str(node_type)
 
         for i in fanout + fanin:
             if i not in self.c:

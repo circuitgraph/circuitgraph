@@ -32,7 +32,7 @@ class TestUtils(unittest.TestCase):
         c.set_type("c", "xor")
         c.disconnect("a", "c")
         c.disconnect("b", "c")
-        self.assertRaises(ValueError, lint, c, dangling=True)
+        self.assertRaises(ValueError, lint, c)
         c.graph.add_edge("a", "co")
         c.graph.add_edge("b", "co")
         self.assertRaises(ValueError, lint, c)

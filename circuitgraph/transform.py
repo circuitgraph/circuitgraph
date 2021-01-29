@@ -129,7 +129,7 @@ def strip_blackboxes(c):
     return Circuit(graph=g, name=c.name)
 
 
-def relabel(c):
+def relabel(c, mapping):
     """
     Builds copy with relabeled nodes.
 
@@ -145,7 +145,7 @@ def relabel(c):
     Circuit
             Circuit with removed blackboxes.
     """
-    g = nx.relabel_nodes(g, mapping)
+    g = nx.relabel_nodes(c.graph, mapping)
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
