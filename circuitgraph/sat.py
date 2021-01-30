@@ -6,7 +6,7 @@ import code
 from subprocess import PIPE, run
 
 from pysat.formula import CNF, IDPool
-from pysat.solvers import Cadical
+from pysat.solvers import Cadical, Glucose4, Lingeling
 
 
 def interrupt(s):
@@ -26,7 +26,7 @@ def remap(clauses, offset):
     return new_clauses
 
 
-def construct_solver(c, assumptions=None):
+def construct_solver(c, assumptions=None, engine="cadical"):
     """
     Constructs a SAT solver instance with the given circuit and assumptions
 
@@ -47,7 +47,14 @@ def construct_solver(c, assumptions=None):
     formula, variables = cnf(c)
     if assumptions:
         add_assumptions(formula, variables, assumptions)
-    solver = Cadical(bootstrap_with=formula)
+    if engine == "cadical":
+        solver = Cadical(bootstrap_with=formula)
+    elif engine == "glucose":
+        solver = Glucose4(bootstrap_with=formula, incr=True)
+    elif engine == "lingeling":
+        solver = Lingeling(bootstrap_with=formula)
+    else:
+        raise ValueError(f"unsupported solver: {engine}")
     return solver, variables
 
 
