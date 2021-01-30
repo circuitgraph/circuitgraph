@@ -46,7 +46,11 @@ def construct_solver(c, assumptions=None, engine="cadical"):
     """
     formula, variables = cnf(c)
     if assumptions:
+        for n in assumptions.keys():
+            if n not in c:
+                raise ValueError(f"incorrect assumption key: {n}")
         add_assumptions(formula, variables, assumptions)
+
     if engine == "cadical":
         solver = Cadical(bootstrap_with=formula)
     elif engine == "glucose":
@@ -220,7 +224,11 @@ def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
         startpoints = c.startpoints()
 
     formula, variables = cnf(c)
-    add_assumptions(formula, variables, assumptions)
+    if assumptions:
+        for n in assumptions.keys():
+            if n not in c:
+                raise ValueError(f"incorrect assumption key: {n}")
+        add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
     enc_inps = " ".join([str(variables.id(n)) for n in startpoints])
