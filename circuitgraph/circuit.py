@@ -200,7 +200,7 @@ class Circuit:
             if t not in supported_types:
                 raise ValueError(f"type {t} not supported.")
 
-        return set(n for n in self.nodes() if self.type(n) in types)
+        return set(n for n in self.graph.nodes if self.graph.nodes[n]["type"] in types)
 
     def add_subcircuit(self, sc, name, connections=None):
         """
@@ -226,7 +226,7 @@ class Circuit:
         # check for name overlaps
         mapping = {}
         for n in sc:
-            if f"{name}_{n}" in self.nodes():
+            if f"{name}_{n}" in self.graph.nodes:
                 raise ValueError(f"name {n} overlaps with {name} subcircuit.")
             mapping[n] = f"{name}_{n}"
 
@@ -322,7 +322,7 @@ class Circuit:
         # check for name overlaps
         mapping = {}
         for n in c:
-            if f"{name}_{n}" in self.nodes():
+            if f"{name}_{n}" in self.graph.nodes:
                 raise ValueError(f"name overlap with {name} blackbox.")
             mapping[n] = f"{name}_{n}"
 
