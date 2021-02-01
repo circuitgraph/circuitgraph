@@ -220,18 +220,77 @@ def syn(
                     "exit;",
                 ]
             elif engine == "dc":
-                cmd = [
-                    "dc_shell-t",
-                    "-no_gui",
-                    "-x",
+                try:
+                    lib_path = os.environ["CIRCUITGRAPH_DC_LIBRARY_PATH"]
+                except KeyError:
+                    raise ValueError(
+                        "In order to run synthesis with DC, "
+                        "please set the "
+                        "CIRCUITGRAPH_DC_LIBRARY_PATH "
+                        "variable in your os environment to the "
+                        "path to the GTECH library"
+                    )
+
+                execute = (
+                    f"set_app_var target_library {lib_path};\n"
+                    f"set_app_var link_library {lib_path};\n"
+                )
+                unusable_cells = [
+                    "GTECH_ADD*",
+                    "GTECH_AO*",
+                    "GTECH_AND_NOT",
+                    "GTECH_FD1S",
+                    "GTECH_FD2S",
+                    "GTECH_FD3S",
+                    "GTECH_FD4",
+                    "GTECH_FD4S",
+                    "GTECH_FD14",
+                    "GTECH_FD18",
+                    "GTECH_FD24",
+                    "GTECH_FD28",
+                    "GTECH_FD34",
+                    "GTECH_FD38",
+                    "GTECH_FD44",
+                    "GTECH_FD48",
+                    "GTECH_FJK1",
+                    "GTECH_FJK1S",
+                    "GTECH_FJK2",
+                    "GTECH_FJK2S",
+                    "GTECH_FJK3",
+                    "GTECH_FJK3S",
+                    "GTECH_INBUF",
+                    "GTECH_INOUTBUF",
+                    "GTECH_ISO0_EN0",
+                    "GTECH_ISO0_EN1",
+                    "GTECH_ISO1_EN0",
+                    "GTECH_ISO1_EN1",
+                    "GTECH_ISOLATCH_EN0",
+                    "GTECH_ISOLATCH_EN1",
+                    "GTECH_LD2",
+                    "GTECH_LD2_1",
+                    "GTECH_LD3",
+                    "GTECH_LD4",
+                    "GTECH_LD4_1",
+                    "GTECH_LSR0",
+                    "GTECH_MAJ23",
+                    "GTECH_MUX*",
+                    "GTECH_OA*",
+                    "GTECH_OR_NOT",
+                    "GTECH_OUTBUF",
+                    "GTECH_TBUF",
+                ]
+                for cell in unusable_cells:
+                    execute += f"set_dont_use gtech/{cell};\n"
+                execute += (
                     f"read_file {tmp_in.name}\n"
                     "link;\n"
                     "uniquify;\n"
                     "check_design;\n"
                     "compile -map_effort high;\n"
                     f"write -format verilog -output {tmp_out.name};\n"
-                    "exit;",
-                ]
+                    "exit;"
+                )
+                cmd = ["dc_shell-t", "-no_gui", "-x", execute]
             elif engine == "yosys":
                 cmd = [
                     "yosys",

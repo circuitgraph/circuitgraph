@@ -6,7 +6,7 @@ from lark import Lark, Transformer
 from circuitgraph import Circuit
 
 
-supported_gates = ["and", "nand", "or", "nor", "xor", "xnor", "buf", "not"]
+addable_types = ["and", "nand", "or", "nor", "xor", "xnor", "buf", "not"]
 
 
 def get_context_window(text, index):
@@ -149,7 +149,7 @@ class VerilogCircuitGraphTransformer(Transformer):
         return description
 
     def module(self, module_name_and_list_of_ports_and_module_items):
-        self.c.name = module_name_and_list_of_ports_and_module_items[0]
+        self.c.name = str(module_name_and_list_of_ports_and_module_items[0])
 
         # Check if ports list matches with inputs and outputs
         if not self.inputs <= self.io:
@@ -225,7 +225,7 @@ class VerilogCircuitGraphTransformer(Transformer):
         name_of_module = name_of_module_and_module_instances[0]
         module_instances = name_of_module_and_module_instances[1:]
         # Check if this is a primitive gate
-        if name_of_module in supported_gates:
+        if name_of_module in addable_types:
             for name, ports in module_instances:
                 if isinstance(ports, dict):
                     raise VerilogParsingError(
@@ -235,11 +235,14 @@ class VerilogCircuitGraphTransformer(Transformer):
                     )
                 self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
         # Check if this is a GTECH gate
-        elif (
-            name_of_module.startswith("GTECH_")
-            and name_of_module.split("_")[-1].rstrip(digits).lower() in supported_gates
-        ):
+        elif name_of_module.startswith("GTECH_") and name_of_module.split("_")[
+            -1
+        ].rstrip(digits).lower() in addable_types + ["zero", "one"]:
             gate = name_of_module.split("_")[-1].rstrip(digits).lower()
+            if gate == "zero":
+                gate = "0"
+            if gate == "one":
+                gate = "1"
             for name, connections in module_instances:
                 if not isinstance(connections, dict):
                     raise VerilogParsingError(
@@ -266,7 +269,8 @@ class VerilogCircuitGraphTransformer(Transformer):
                         self.text,
                     )
                 for output in bb.outputs():
-                    self.add_node(connections[output], "buf")
+                    if output in connections:
+                        self.add_node(connections[output], "buf")
                 self.add_blackbox(bb, name, connections)
 
     def module_instance(self, name_of_instance_and_list_of_module_connecetions):

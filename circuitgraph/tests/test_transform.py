@@ -83,7 +83,7 @@ class TestTransform(unittest.TestCase):
         self.assertFalse(different_output)
 
     @unittest.skipUnless(
-        "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ, "Genus not installed"
+        "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ, "Genus synthesis not setup"
     )
     def test_syn_genus(self):
         s = syn(self.s27, "genus", suppress_output=True)
@@ -98,7 +98,9 @@ class TestTransform(unittest.TestCase):
             os.remove(f)
         shutil.rmtree(f"{os.getcwd()}/fv")
 
-    @unittest.skipIf(shutil.which("dc_shell-t") == None, "DesignCompiler not installed")
+    @unittest.skipUnless(
+        "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
+    )
     def test_syn_dc(self):
         s = syn(self.s27, "dc", suppress_output=True)
         m = miter(self.s27, s)

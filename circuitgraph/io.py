@@ -4,11 +4,32 @@ import re
 from pathlib import Path
 
 from circuitgraph import Circuit, BlackBox
-from circuitgraph.parsing import parse_verilog_netlist
+from circuitgraph.parsing import parse_verilog_netlist, fast_parse_verilog_netlist
+
+
+genus_flops = [
+    BlackBox("flopd", ["CK", "D"], ["Q"]),
+    BlackBox("fflopd", ["CK", "D"], ["Q"]),
+    BlackBox("flopdrs", ["CK", "D", "R", "S"], ["Q"]),
+    BlackBox("fflopdrs", ["CK", "D", "R", "S"], ["Q"]),
+]
+
+
+dc_flops = [
+    BlackBox("GTECH_FD1", ["CP", "D"], ["Q", "QN"]),
+    BlackBox("GTECH_FD2", ["CP", "CD", "D"], ["Q", "QN"]),
+    BlackBox("GTECH_FD3", ["CP", "CD", "SD", "D"], ["Q", "QN"]),
+]
 
 
 def from_file(
-    path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False
+    path,
+    name=None,
+    fmt=None,
+    blackboxes=None,
+    warnings=False,
+    error_on_warning=False,
+    fast=False,
 ):
     """
     Creates a new `Circuit` from a verilog file.
@@ -28,6 +49,14 @@ def from_file(
     error_on_warning: bool
             If True, unused nets will cause raise `VerilogParsingWarning`
             exceptions.
+    fast: bool
+            If True, uses the `fast_parse_verilog_netlist` function from
+            parsing/fast_verilog.py. This function is faster for parsing
+            very large netlists, but makes stringent assumptions about
+            the netlist and does not provide error checking. Read
+            the docstring for `fast_parse_verilog_netlist` in order to
+            confirm that `netlist` adheres to these assumptions before
+            using this flag.
 
     Returns
     -------
@@ -35,12 +64,22 @@ def from_file(
             the parsed circuit.
     """
     path = Path(path)
+    infer_module_name = False
     if name is None:
+        infer_module_name = True
         name = path.stem
     with open(path, "r") as f:
         netlist = f.read()
     if fmt == "verilog" or path.suffix == ".v":
-        return verilog_to_circuit(netlist, name, blackboxes, warnings, error_on_warning)
+        return verilog_to_circuit(
+            netlist,
+            name,
+            infer_module_name,
+            blackboxes,
+            warnings,
+            error_on_warning,
+            fast,
+        )
     elif fmt == "bench" or path.suffix == ".bench":
         return bench_to_circuit(netlist, name)
     else:
@@ -114,7 +153,13 @@ def bench_to_circuit(netlist, name):
 
 
 def verilog_to_circuit(
-    netlist, name, blackboxes=None, warnings=False, error_on_warning=False
+    netlist,
+    name,
+    infer_module_name=False,
+    blackboxes=None,
+    warnings=False,
+    error_on_warning=False,
+    fast=False,
 ):
     """
     Creates a new Circuit from a module inside Verilog code.
@@ -125,6 +170,9 @@ def verilog_to_circuit(
             Verilog code.
     name: str
             Module name.
+    infer_module_name: bool
+            If True and no module named `name` is found, parse the first
+            module in the netlist.
     blackboxes: seq of BlackBox
             Blackboxes in module.
     warnings: bool
@@ -132,22 +180,42 @@ def verilog_to_circuit(
     error_on_warning: bool
             If True, unused nets will cause raise `VerilogParsingWarning`
             exceptions.
+    fast: bool
+            If True, uses the `fast_parse_verilog_netlist` function from
+            parsing/fast_verilog.py. This function is faster for parsing
+            very large netlists, but makes stringent assumptions about
+            the netlist and does not provide error checking. Read
+            the docstring for `fast_parse_verilog_netlist` in order to
+            confirm that `netlist` adheres to these assumptions before
+            using this flag.
 
     Returns
     -------
     Circuit
             Parsed circuit.
     """
+
+    if blackboxes is None:
+        blackboxes = []
+
+    if fast:
+        return fast_parse_verilog_netlist(netlist, blackboxes)
+
     # parse module
     regex = f"(module\s+{name}\s*\(.*?\);(.*?)endmodule)"
     m = re.search(regex, netlist, re.DOTALL)
     try:
         module = m.group(1)
     except AttributeError:
-        raise ValueError("Could not read netlist: no modules found")
-
-    if blackboxes is None:
-        blackboxes = []
+        if infer_module_name:
+            regex = f"(module\s+(.*?)\s*\(.*?\);(.*?)endmodule)"
+            m = re.search(regex, netlist, re.DOTALL)
+            try:
+                module = m.group(1)
+            except AttributeError:
+                raise ValueError("Could not read netlist: no modules found")
+        else:
+            raise ValueError(f"Could not read netlist: {name} module not found")
 
     return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)
 
@@ -234,16 +302,6 @@ def circuit_to_verilog(c):
             wires.append(n)
         elif c.type(n) in ["input", "output", "bb_input", "bb_output"]:
             pass
-        #     inputs.append(n)
-        # elif c.type(n) in ["output"]:
-        #     if len(c.fanin(n)):
-        #         fanin = c.fanin(n).pop()
-        #         if fanin in output_map:
-        #             fanin = output_map[fanin]
-        #         insts.append(f"assign {n} = {fanin}")
-        #     outputs.append(n)
-        # elif c.type(n) in ["bb_output", "bb_input"]:
-        #     pass
         else:
             raise ValueError(f"unknown gate type: {c.type(n)}")
 
@@ -258,11 +316,6 @@ def circuit_to_verilog(c):
     verilog += "\n"
     verilog += "".join(f"  {inst};\n" for inst in insts)
     verilog += "endmodule\n"
-
-    # de-sanitize escaped nets
-    # for node in c.nodes():
-    #     if node.startswith('\\'):
-    #         c.relabel({node: node[:-1]})
 
     return verilog
 
