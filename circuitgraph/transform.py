@@ -156,6 +156,7 @@ def syn(
     stdout_file=None,
     stderr_file=None,
     working_dir=".",
+    fast_parsing=False,
 ):
     """
     Synthesizes the circuit using yosys or genus.
@@ -177,6 +178,10 @@ def syn(
     working_dir: str
             The path to run synthesis from. If using genus, this will effect
             where the genus run files are stored.
+    fast_parsing: bool
+            If True, will use fast verilog parsing (which requires
+            specifically formatted netlists, see the documentation for
+            `verilog_to_circuit`).
 
     Returns
     -------
@@ -320,7 +325,7 @@ def syn(
 
             output_netlist = tmp_out.read().decode("utf-8")
 
-    return verilog_to_circuit(output_netlist, c.name)
+    return verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
 
 
 def ternary(c):

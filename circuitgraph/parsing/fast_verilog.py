@@ -18,13 +18,15 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
     The input netlist must conform to the following rules:
         - Only one module definition is present
         - There are no comments
-        - Only primitive gate or module instantiations, no assign statements
+        - Assign statements must have a single net as the LHS, and the RHS
+          must be a constant
+        - The only constants that may be used are `1'b0` and `1'b1` (or h/d)
         - Primitive gates can only have one output
+        - Instantiations must be named.
         - Only one instantation per line (e.g. `buf b1(a, b) b2(c, d);` is
           not allowed)
         - No expressions (e.g. `buf (a, b & c);` is not allowed)
         - No escaped identifiers
-        - The only constants that may be used are `1'b0` and `1'b1`
 
     The code does not overtly check that these rules are satisfied, and if
     they are not this function may still return a malformed Circuit object.
@@ -162,8 +164,30 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
 
             blackboxes_to_add[inst] = bb
 
+    regex = "assign\s+(.+?)\s*=\s*(.+?)\s*;"
+    for n0, n1 in re.findall(regex, module):
+        if n0 in output_drivers:
+            n0 = output_drivers[n0]
+        all_nets["buf"].append(n0)
+        if n1 == "1'b0" or "1'h0" or "1'd0":
+            all_edges.append((tie_0, n0))
+        elif n1 == "1'b1" or "1'h1" or "1'd1":
+            all_edges.append((tie_1, n1))
+        else:
+            raise ValueError(f"Non-constant assign statement RHS: {n1}")
+
     for k, v in all_nets.items():
         g.add_nodes_from(v, type=k)
     g.add_edges_from(all_edges)
+
+    try:
+        next(g.successors(tie_0))
+    except StopIteration:
+        g.remove_node(tie_0)
+
+    try:
+        next(g.successors(tie_1))
+    except StopIteration:
+        g.remove_node(tie_1)
 
     return Circuit(name=name, graph=g, blackboxes=blackboxes_to_add)
