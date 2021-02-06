@@ -27,11 +27,15 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
           not allowed)
         - No expressions (e.g. `buf (a, b & c);` is not allowed)
         - No escaped identifiers
-
+    
     The code does not overtly check that these rules are satisfied, and if
     they are not this function may still return a malformed Circuit object.
     It is up to the caller of the function to assure that these rules are
     followed.
+
+    If an output is undriven, a driver for the output will still be added to
+    the circuit, which is a discrepancy with `parse_verilog_netlist` (in which
+    no output drive will be added).
 
     Note that normal error checking that is done in `parse_verilog_netlist` is
     skipped in this function (e.g. checking if nets are declared as wires,
@@ -93,12 +97,12 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
     g.add_edges_from((v, k) for k, v in output_drivers.items())
 
     # create constants, (will be removed if unused)
-    tie_0 = "tie_0"
+    tie_0 = "tie0"
     while tie_0 in g:
-        tie_0 = "tie_0_{random.randint(1111, 9999)}"
-    tie_1 = "tie_1"
+        tie_0 = "tie0_{random.randint(1111, 9999)}"
+    tie_1 = "tie1"
     while tie_1 in g:
-        tie_1 = "tie_1_{random.randint(1111, 9999)}"
+        tie_1 = "tie1_{random.randint(1111, 9999)}"
     g.add_node(tie_0, type="0")
     g.add_node(tie_1, type="1")
 
@@ -169,10 +173,10 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
         if n0 in output_drivers:
             n0 = output_drivers[n0]
         all_nets["buf"].append(n0)
-        if n1 == "1'b0" or "1'h0" or "1'd0":
+        if n1 in ["1'b0", "1'h0", "1'd0"]:
             all_edges.append((tie_0, n0))
-        elif n1 == "1'b1" or "1'h1" or "1'd1":
-            all_edges.append((tie_1, n1))
+        elif n1 in ["1'b1", "1'h1", "1'd1"]:
+            all_edges.append((tie_1, n0))
         else:
             raise ValueError(f"Non-constant assign statement RHS: {n1}")
 

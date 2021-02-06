@@ -96,7 +96,7 @@ def strip_inputs(c):
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
-def strip_blackboxes(c):
+def strip_blackboxes(c, ignore_pins=None):
     """
     Converts blackboxes to io.
 
@@ -104,20 +104,32 @@ def strip_blackboxes(c):
     ----------
     c : Circuit
             Input circuit.
+    ingnore_pins: str or list of str
+            Pins to not create io for, just disconnect and delete.
 
     Returns
     -------
     Circuit
             Circuit with removed blackboxes.
     """
+    if not ignore_pins:
+        ignore_pins = []
+    elif isinstance(ignore_pins, str):
+        ignore_pins = [ignore_pins]
     g = c.graph.copy()
     bb_pins = []
     for n in c.filter_type("bb_input"):
-        g.nodes[n]["type"] = "output"
-        bb_pins.append(n)
+        if n.split(".")[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n]["type"] = "output"
+            bb_pins.append(n)
     for n in c.filter_type("bb_output"):
-        g.nodes[n]["type"] = "input"
-        bb_pins.append(n)
+        if n.split(".")[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n]["type"] = "input"
+            bb_pins.append(n)
 
     # rename nodes
     mapping = {n: n.replace(".", "_") for n in bb_pins}
