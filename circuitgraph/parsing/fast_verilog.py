@@ -37,8 +37,8 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
     the circuit, which is a discrepancy with `parse_verilog_netlist` (in which
     no output drive will be added).
 
-    Note that normal error checking that is done in `parse_verilog_netlist` is
-    skipped in this function (e.g. checking if nets are declared as wires,
+    Note that thorough error checking that is done in `parse_verilog_netlist`
+    is skipped in this function (e.g. checking if nets are declared as wires,
     checking if the portlist matches the input/output declarations, etc.).
 
     Note also that wires that are declared but not used will not be added to
@@ -168,17 +168,19 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
 
             blackboxes_to_add[inst] = bb
 
-    regex = "assign\s+(.+?)\s*=\s*(.+?)\s*;"
+    regex = "assign\s+([a-zA-Z][a-zA-Z\d_]*)\s*=\s*([a-zA-Z\d][a-zA-Z\d_']*)\s*;"
     for n0, n1 in re.findall(regex, module):
         if n0 in output_drivers:
             n0 = output_drivers[n0]
+        if n1 in output_drivers:
+            n1 = output_drivers[n1]
         all_nets["buf"].append(n0)
         if n1 in ["1'b0", "1'h0", "1'd0"]:
             all_edges.append((tie_0, n0))
         elif n1 in ["1'b1", "1'h1", "1'd1"]:
             all_edges.append((tie_1, n0))
         else:
-            raise ValueError(f"Non-constant assign statement RHS: {n1}")
+            all_edges.append((n1, n0))
 
     for k, v in all_nets.items():
         g.add_nodes_from(v, type=k)

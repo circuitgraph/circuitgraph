@@ -32,10 +32,6 @@ class TestIO(unittest.TestCase):
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})
-        if different_output:
-            import code
-
-            code.interact(local=dict(**globals(), **locals()))
         self.assertFalse(different_output)
 
     def test_verilog(self):
@@ -119,6 +115,19 @@ class TestIO(unittest.TestCase):
             g.outputs(), set(["G17", "G18", "G19", "G20", "G21", "G22_0", "G22_1"]),
         )
 
+    def test_fast_verilog(self):
+        g = cg.from_file(f"{self.test_path}/../c432.v")
+        gf = cg.from_file(f"{self.test_path}/../c432.v", fast=True)
+        self.assertSetEqual(g.inputs(), gf.inputs())
+        self.assertSetEqual(g.outputs(), gf.outputs())
+        self.assertSetEqual(g.nodes(), gf.nodes())
+        self.assertSetEqual(g.edges(), gf.edges())
+        m = miter(g, gf)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+
     def test_incorrect_file_type(self):
         self.assertRaises(ValueError, cg.from_file, "setup.py")
 
@@ -138,10 +147,6 @@ class TestIO(unittest.TestCase):
             live = sat(m)
             self.assertTrue(live)
             different_output = sat(m, assumptions={"sat": True})
-            if different_output:
-                import code
-
-                code.interact(local=dict(**globals(), **locals()))
             self.assertFalse(different_output)
 
     def test_verilog_incorrect_output(self):
