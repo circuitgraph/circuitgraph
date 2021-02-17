@@ -98,3 +98,7 @@ https://joss.theoj.org/papers/10.21105/joss.02646
   year={2020}
 }
 ```
+
+## Acknowledgements
+
+Circuitgraph icon designed by [ncasti](https://github.com/ncasti).
