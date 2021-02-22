@@ -1,6 +1,38 @@
 """Various circuit related utilities"""
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+import subprocess
 
 from circuitgraph import supported_types
+from circuitgraph.io import circuit_to_verilog
+
+
+def visualize(c, output_file):
+    """
+    Visualize a circuit using Yosys.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to visualize.
+    output_file: str
+            Where to write the image to.
+    """
+    verilog = circuit_to_verilog(c)
+    output_file = Path(output_file)
+    fmt = output_file.suffix[1:]
+    prefix = output_file.with_suffix("")
+    with NamedTemporaryFile(
+        prefix="circuitgraph_synthesis_input", suffix=".v"
+    ) as tmp_in:
+        tmp_in.write(bytes(verilog, "ascii"))
+        tmp_in.flush()
+        cmd = [
+            "yosys",
+            "-p",
+            f"read_verilog {tmp_in.name}; " f"show -format {fmt} -prefix {prefix}",
+        ]
+        subprocess.run(cmd)
 
 
 def clog2(num: int) -> int:
