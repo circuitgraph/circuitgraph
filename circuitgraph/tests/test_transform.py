@@ -73,6 +73,30 @@ class TestTransform(unittest.TestCase):
         different_output = sat(m, assumptions={"sat": True})
         self.assertTrue(different_output)
 
+    def test_subcircuit(self):
+        c17 = cg.from_lib("c17")
+        sc = subcircuit(c17, c17.transitive_fanin("N22") | {"N22"})
+        self.assertSetEqual(
+            sc.nodes(),
+            {"N22", "N22_driver", "N10", "N16", "N1", "N3", "N2", "N11", "N6"},
+        )
+        self.assertSetEqual(
+            sc.edges(),
+            {
+                ("N22_driver", "N22"),
+                ("N10", "N22_driver"),
+                ("N16", "N22_driver"),
+                ("N1", "N10"),
+                ("N3", "N10"),
+                ("N2", "N16"),
+                ("N11", "N16"),
+                ("N3", "N11"),
+                ("N6", "N11"),
+            },
+        )
+        for node in sc:
+            self.assertEqual(c17.type(node), sc.type(node))
+
     @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
     def test_syn_yosys(self):
         s = syn(self.s27, "yosys", suppress_output=True)

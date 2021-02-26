@@ -161,6 +161,33 @@ def relabel(c, mapping):
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
+def subcircuit(c, nodes):
+    """
+    Creates a subcircuit from a set of nodes of a given circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to create a subcircuit from.
+    nodes: list of str
+            The nodes to include in the subcircuit.
+
+    Returns
+    -------
+    Circuit
+            The subcircuit.
+    """
+    sc = Circuit()
+    for node in nodes:
+        if c.type(node) in ["bb_output", "bb_input"]:
+            raise NotImplementedError("Cannot create a subcircuit with blackboxes")
+        sc.add(node, type=c.type(node))
+    for edge in c.edges():
+        if edge[0] in nodes and edge[1] in nodes:
+            sc.connect(edge[0], edge[1])
+    return sc
+
+
 def syn(
     c,
     engine="yosys",
