@@ -300,3 +300,20 @@ class TestCircuit(unittest.TestCase):
         c.add("b", "xor", fanin="a")
         c.relabel({"a": "n"})
         self.assertSetEqual(c.nodes(), set(["b", "n"]))
+
+    def test_kcuts(self):
+        c = cg.from_lib("c432")
+        for n in c:
+            for cut in c.kcuts(n, 2):
+                clc = cg.copy(c)
+                for g in cut:
+                    clc.disconnect(clc.fanin(g), g)
+                    clc.set_type(g, "input")
+                self.assertSetEqual(clc.startpoints(n), cut)
+
+    def test_topo_sort(self):
+        c = cg.from_lib("c432")
+        visited = set()
+        for n in c.topo_sort():
+            self.assertFalse(c.transitive_fanout(n) & visited)
+            visited.add(n)

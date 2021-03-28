@@ -32,6 +32,13 @@ class TestLogic(unittest.TestCase):
         inp = {f"in_{i}": randint(0, 1) for i in range(n)}
         result = sat(h, inp)
 
+    def test_banyan(self):
+        bw = 32
+        b = banyan(bw)
+
+        inp = {n: randint(0, 1) for n in b.inputs()}
+        result = sat(b, inp)
+
     def test_popcount(self):
         w = randint(1, 66)
         p = popcount(w)

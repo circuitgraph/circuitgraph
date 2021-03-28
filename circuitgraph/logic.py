@@ -222,13 +222,104 @@ def xor_hash(n, m):
 
     for o in range(m):
         h.add(f"out_{o}", "output")
-        h.add(f"xor_{o}", "xor", fanout=f"out_{o}")
 
-        # choose between xor/xnor (well polarity.)
-        h.add(f"c_{o}", "1" if random() < 0.5 else "0", fanout=f"xor_{o}")
+        # select inputs
+        cons = [random() < 0.5 for i in range(n)]
 
-        for i in range(n):
-            if random() < 0.5:
-                h.connect(f"in_{i}", f"xor_{o}")
+        if sum(cons) == 0:
+            # constant output
+            h.add(f"c_{o}", "1" if random() < 0.5 else "0", fanout=f"out_{o}")
+        else:
+            # choose between xor/xnor
+            h.add(f"xor_{o}", "xor", fanout=f"out_{o}")
+            h.add(f"c_{o}", "1" if random() < 0.5 else "0", fanout=f"xor_{o}")
+            for i, con in enumerate(cons):
+                if con:
+                    h.connect(f"in_{i}", f"xor_{o}")
 
     return h
+
+
+def banyan(bw):
+    """
+    Create a Banyan switching network
+
+    Parameters
+    ----------
+    bw : int
+            Input/output width of the network.
+
+    Returns
+    -------
+    Circuit
+            Network circuit.
+    """
+
+    b = Circuit()
+
+    # generate switch
+    m = mux(2)
+    s = Circuit(name="switch")
+    s.add_subcircuit(m, f"m0")
+    s.add_subcircuit(m, f"m1")
+    s.add("in_0", "buf", fanout=["m0_in_0", "m1_in_1"])
+    s.add("in_1", "buf", fanout=["m0_in_1", "m1_in_0"])
+    s.add("out_0", "buf", fanin="m0_out")
+    s.add("out_1", "buf", fanin="m1_out")
+    s.add("sel", "input", fanout=["m0_sel_0", "m1_sel_0"])
+
+    # generate banyan
+    I = int(2 * clog2(bw) - 2)
+    J = int(bw / 2)
+
+    # add switches
+    for i in range(I * J):
+        b.add_subcircuit(s, f"swb_{i}")
+
+    # make connections
+    swb_ins = [f"swb_{i//2}_in_{i%2}" for i in range(I * J * 2)]
+    swb_outs = [f"swb_{i//2}_out_{i%2}" for i in range(I * J * 2)]
+
+    # connect switches
+    for i in range(clog2(J)):
+        r = J / (2 ** i)
+        for j in range(J):
+            t = (j % r) >= (r / 2)
+            # straight
+            out_i = int((i * bw) + (2 * j) + t)
+            in_i = int((i * bw + bw) + (2 * j) + t)
+            b.connect(swb_outs[out_i], swb_ins[in_i])
+
+            # cross
+            out_i = int((i * bw) + (2 * j) + (1 - t) + ((r - 1) * ((1 - t) * 2 - 1)))
+            in_i = int((i * bw + bw) + (2 * j) + (1 - t))
+            b.connect(swb_outs[out_i], swb_ins[in_i])
+
+            if r > 2:
+                # straight
+                out_i = int(((I * J * 2) - ((2 + i) * bw)) + (2 * j) + t)
+                in_i = int(((I * J * 2) - ((1 + i) * bw)) + (2 * j) + t)
+                b.connect(swb_outs[out_i], swb_ins[in_i])
+
+                # cross
+                out_i = int(
+                    ((I * J * 2) - ((2 + i) * bw))
+                    + (2 * j)
+                    + (1 - t)
+                    + ((r - 1) * ((1 - t) * 2 - 1))
+                )
+                in_i = int(((I * J * 2) - ((1 + i) * bw)) + (2 * j) + (1 - t))
+                b.connect(swb_outs[out_i], swb_ins[in_i])
+
+    # create banyan io
+    net_ins = swb_ins[:bw]
+    net_outs = swb_outs[-bw:]
+
+    for i, net_in in enumerate(net_ins):
+        b.add(f"in_{i}", "input", fanout=net_in)
+    for i, net_out in enumerate(net_outs):
+        b.add(f"out_{i}", "output", fanin=net_out)
+    for i in range(I * J):
+        b.add(f"sel_{i}", "input", fanout=f"swb_{i}_sel")
+
+    return b

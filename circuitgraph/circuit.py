@@ -15,6 +15,8 @@ an associated name and gate type. The supported types are:
 
 import networkx as nx
 from networkx.exception import NetworkXNoCycle
+from functools import reduce
+from itertools import product
 
 
 addable_types = [
@@ -839,6 +841,61 @@ class Circuit:
             else:
                 i *= 7
         return f"{n}_{i}"
+
+    def kcuts(self, n, k, computed=None):
+        """
+        Generates k-cuts
+
+        Parameters
+        ----------
+        n : str
+                Node to compute cuts for.
+        k : int
+                Maximum cut width.
+
+        Returns
+        -------
+        iter of str
+                k-cuts.
+
+        """
+
+        if computed is None:
+            computed = {}
+
+        if n in computed:
+            return computed[n]
+
+        # helper function
+        def merge_cut_sets(a_cuts, b_cuts):
+            merged_cuts = []
+            for a_cut, b_cut in product(a_cuts, b_cuts):
+                merged_cut = a_cut | b_cut
+                if len(merged_cut) <= k:
+                    merged_cuts.append(merged_cut)
+            return merged_cuts
+
+        if self.fanin(n):
+            fanin_cut_sets = [self.kcuts(f, k, computed) for f in self.fanin(n)]
+            cuts = reduce(merge_cut_sets, fanin_cut_sets) + [set([n])]
+        else:
+            cuts = [set([n])]
+
+        # add cuts
+        computed[n] = cuts
+        return cuts
+
+    def topo_sort(self):
+        """
+        Returns a generator of nodes in topologically sorted order.
+
+        Returns
+        -------
+        iter of str
+                Ordered node names.
+
+        """
+        return nx.topological_sort(self.graph)
 
 
 class BlackBox:
