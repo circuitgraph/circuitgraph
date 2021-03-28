@@ -24,6 +24,14 @@ class TestLogic(unittest.TestCase):
         out = cg.bin_to_int(enc_out, lend=True)
         self.assertEqual(a + b, out)
 
+    def test_xor_hash(self):
+        n = 5
+        m = 3
+        h = xor_hash(n, m)
+
+        inp = {f"in_{i}": randint(0, 1) for i in range(n)}
+        result = sat(h, inp)
+
     def test_popcount(self):
         w = randint(1, 66)
         p = popcount(w)

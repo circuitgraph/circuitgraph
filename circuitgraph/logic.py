@@ -1,6 +1,7 @@
 """A collection of common logic elements as `Circuit` objects"""
 
 from itertools import product
+from random import random
 
 from circuitgraph import Circuit
 from circuitgraph.utils import clog2
@@ -192,3 +193,42 @@ def popcount(w):
 #    fm.add("so", "buf", fanin="mux_out", output=True)
 #
 #    return fm
+
+
+def xor_hash(n, m):
+    """
+    Create a XOR hash function H_{xor}(n,m,3) as in:
+    Chakraborty, Supratik, Kuldeep S. Meel, and Moshe Y. Vardi. "A scalable approximate model counter." International Conference on Principles and Practice of Constraint Programming. Springer, Berlin, Heidelberg, 2013.
+
+    Each output of the hash is the xor/xnor of a random subset of the input.
+
+    Parameters
+    ----------
+    n : int
+            Input width of the hash function.
+    m : int
+            Output width of the hash function.
+
+    Returns
+    -------
+    Circuit
+            XOR hash function.
+    """
+
+    h = Circuit()
+
+    for i in range(n):
+        h.add(f"in_{i}", "input")
+
+    for o in range(m):
+        h.add(f"out_{o}", "output")
+        h.add(f"xor_{o}", "xor", fanout=f"out_{o}")
+
+        # choose between xor/xnor (well polarity.)
+        h.add(f"c_{o}", "1" if random() < 0.5 else "0", fanout=f"xor_{o}")
+
+        for i in range(n):
+            if random() < 0.5:
+                h.connect(f"in_{i}", f"xor_{o}")
+
+    return h
