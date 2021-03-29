@@ -17,6 +17,7 @@ class TestTransform(unittest.TestCase):
         # incorrect copy of s27
         self.s27m = cg.copy(self.s27)
         self.s27m.graph.nodes["n_11"]["type"] = "and"
+        self.c432 = cg.from_lib("c432")
 
     def test_strip_io(self):
         # check self equivalence
@@ -216,10 +217,14 @@ class TestTransform(unittest.TestCase):
         # check answer
         self.assertEqual(sen_s, sen_sim)
 
-    def test_kfanin(self):
+    def test_limit_fanin(self):
         k = 2
-        ck = kfanin(self.s27, 2)
+        c = self.c432
+        ck = limit_fanin(c, k)
 
         # check conversion
-        m = cg.miter(self.s27, ck)
+        m = cg.miter(c, ck)
         self.assertFalse(cg.sat(m, assumptions={"sat": True}))
+
+        for n in ck:
+            self.assertTrue(len(ck.fanin(n)) <= k)

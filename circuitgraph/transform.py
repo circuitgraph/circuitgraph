@@ -638,7 +638,7 @@ def sensitization_transform(c, n):
     return m
 
 
-def kfanin(c, k):
+def limit_fanin(c, k):
     """
     Reduces the maximum fanin of circuit gates to k
 
@@ -647,7 +647,7 @@ def kfanin(c, k):
     c : Circuit
             Input circuit.
     k : str
-            Maximum fanin.
+            Maximum fanin. (k>1)
 
     Returns
     -------
@@ -655,6 +655,8 @@ def kfanin(c, k):
             Output circuit.
 
     """
+    if k < 2:
+        raise ValueError(f"maximum fanin, k, must be > 2")
 
     ck = copy(c)
     for n in ck.nodes():

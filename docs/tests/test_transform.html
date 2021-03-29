@@ -45,6 +45,7 @@ class TestTransform(unittest.TestCase):
         # incorrect copy of s27
         self.s27m = cg.copy(self.s27)
         self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;and&#34;
+        self.c432 = cg.from_lib(&#34;c432&#34;)
 
     def test_strip_io(self):
         # check self equivalence
@@ -244,13 +245,17 @@ class TestTransform(unittest.TestCase):
         # check answer
         self.assertEqual(sen_s, sen_sim)
 
-    def test_kfanin(self):
+    def test_limit_fanin(self):
         k = 2
-        ck = kfanin(self.s27, 2)
+        c = self.c432
+        ck = limit_fanin(c, k)
 
         # check conversion
-        m = cg.miter(self.s27,ck)
-        self.assertFalse(cg.sat(m,assumptions={&#39;sat&#39;:True}))</code></pre>
+        m = cg.miter(c, ck)
+        self.assertFalse(cg.sat(m, assumptions={&#34;sat&#34;: True}))
+
+        for n in ck:
+            self.assertTrue(len(ck.fanin(n))&lt;=k)</code></pre>
 </details>
 </section>
 <section>
@@ -307,6 +312,7 @@ not have a method with the specified name.</p></div>
         # incorrect copy of s27
         self.s27m = cg.copy(self.s27)
         self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;and&#34;
+        self.c432 = cg.from_lib(&#34;c432&#34;)
 
     def test_strip_io(self):
         # check self equivalence
@@ -506,13 +512,17 @@ not have a method with the specified name.</p></div>
         # check answer
         self.assertEqual(sen_s, sen_sim)
 
-    def test_kfanin(self):
+    def test_limit_fanin(self):
         k = 2
-        ck = kfanin(self.s27, 2)
+        c = self.c432
+        ck = limit_fanin(c, k)
 
         # check conversion
-        m = cg.miter(self.s27,ck)
-        self.assertFalse(cg.sat(m,assumptions={&#39;sat&#39;:True}))</code></pre>
+        m = cg.miter(c, ck)
+        self.assertFalse(cg.sat(m, assumptions={&#34;sat&#34;: True}))
+
+        for n in ck:
+            self.assertTrue(len(ck.fanin(n))&lt;=k)</code></pre>
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">
@@ -535,11 +545,12 @@ not have a method with the specified name.</p></div>
 
     # incorrect copy of s27
     self.s27m = cg.copy(self.s27)
-    self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;and&#34;</code></pre>
+    self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;and&#34;
+    self.c432 = cg.from_lib(&#34;c432&#34;)</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.tests.test_transform.TestTransform.test_kfanin"><code class="name flex">
-<span>def <span class="ident">test_kfanin</span></span>(<span>self)</span>
+<dt id="circuitgraph.tests.test_transform.TestTransform.test_limit_fanin"><code class="name flex">
+<span>def <span class="ident">test_limit_fanin</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -547,13 +558,17 @@ not have a method with the specified name.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def test_kfanin(self):
+<pre><code class="python">def test_limit_fanin(self):
     k = 2
-    ck = kfanin(self.s27, 2)
+    c = self.c432
+    ck = limit_fanin(c, k)
 
     # check conversion
-    m = cg.miter(self.s27,ck)
-    self.assertFalse(cg.sat(m,assumptions={&#39;sat&#39;:True}))</code></pre>
+    m = cg.miter(c, ck)
+    self.assertFalse(cg.sat(m, assumptions={&#34;sat&#34;: True}))
+
+    for n in ck:
+        self.assertTrue(len(ck.fanin(n))&lt;=k)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_miter"><code class="name flex">
@@ -828,7 +843,7 @@ def test_syn_yosys(self):
 <h4><code><a title="circuitgraph.tests.test_transform.TestTransform" href="#circuitgraph.tests.test_transform.TestTransform">TestTransform</a></code></h4>
 <ul class="">
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.setUp" href="#circuitgraph.tests.test_transform.TestTransform.setUp">setUp</a></code></li>
-<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_kfanin" href="#circuitgraph.tests.test_transform.TestTransform.test_kfanin">test_kfanin</a></code></li>
+<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_limit_fanin" href="#circuitgraph.tests.test_transform.TestTransform.test_limit_fanin">test_limit_fanin</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_miter" href="#circuitgraph.tests.test_transform.TestTransform.test_miter">test_miter</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_sensitivity_transform" href="#circuitgraph.tests.test_transform.TestTransform.test_sensitivity_transform">test_sensitivity_transform</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_inputs" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_inputs">test_strip_inputs</a></code></li>

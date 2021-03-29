@@ -666,7 +666,8 @@ def sensitization_transform(c, n):
 
     return m
 
-def kfanin(c, k):
+
+def limit_fanin(c, k):
     &#34;&#34;&#34;
     Reduces the maximum fanin of circuit gates to k
 
@@ -675,7 +676,7 @@ def kfanin(c, k):
     c : Circuit
             Input circuit.
     k : str
-            Maximum fanin.
+            Maximum fanin. (k&gt;1)
 
     Returns
     -------
@@ -683,23 +684,25 @@ def kfanin(c, k):
             Output circuit.
 
     &#34;&#34;&#34;
+    if k &lt; 2:
+        raise ValueError(f&#34;maximum fanin, k, must be &gt; 2&#34;)
 
     ck = copy(c)
     for n in ck.nodes():
         i = 0
-        while len(ck.fanin(n))&gt;k:
+        while len(ck.fanin(n)) &gt; k:
             fi = ck.fanin(n)
             f0 = fi.pop()
             f1 = fi.pop()
-            ck.disconnect([f0,f1],n)
-            if ck.type(n) in [&#39;and&#39;,&#39;nand&#39;]:
-                ck.add(f&#39;{n}_new_{i}&#39;,&#39;and&#39;,fanin=[f0,f1],fanout=n)
-            elif ck.type(n) in [&#39;or&#39;,&#39;nor&#39;]:
-                ck.add(f&#39;{n}_new_{i}&#39;,&#39;or&#39;,fanin=[f0,f1],fanout=n)
-            elif ck.type(n) in [&#39;xor&#39;]:
-                ck.add(f&#39;{n}_new_{i}&#39;,&#39;xor&#39;,fanin=[f0,f1],fanout=n)
-            elif ck.type(n) in [&#39;xnor&#39;]:
-                ck.add(f&#39;{n}_new_{i}&#39;,&#39;xnor&#39;,fanin=[f0,f1],fanout=n)
+            ck.disconnect([f0, f1], n)
+            if ck.type(n) in [&#34;and&#34;, &#34;nand&#34;]:
+                ck.add(f&#34;{n}_new_{i}&#34;, &#34;and&#34;, fanin=[f0, f1], fanout=n)
+            elif ck.type(n) in [&#34;or&#34;, &#34;nor&#34;]:
+                ck.add(f&#34;{n}_new_{i}&#34;, &#34;or&#34;, fanin=[f0, f1], fanout=n)
+            elif ck.type(n) in [&#34;xor&#34;]:
+                ck.add(f&#34;{n}_new_{i}&#34;, &#34;xor&#34;, fanin=[f0, f1], fanout=n)
+            elif ck.type(n) in [&#34;xnor&#34;]:
+                ck.add(f&#34;{n}_new_{i}&#34;, &#34;xnor&#34;, fanin=[f0, f1], fanout=n)
             else:
                 raise ValueError(f&#34;Unknown gate type: {ck.type(n)}&#34;)
             i += 1
@@ -822,8 +825,8 @@ def kfanin(c, k):
     return infl</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.transform.kfanin"><code class="name flex">
-<span>def <span class="ident">kfanin</span></span>(<span>c, k)</span>
+<dt id="circuitgraph.transform.limit_fanin"><code class="name flex">
+<span>def <span class="ident">limit_fanin</span></span>(<span>c, k)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Reduces the maximum fanin of circuit gates to k</p>
@@ -832,7 +835,7 @@ def kfanin(c, k):
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>Input circuit.</dd>
 <dt><strong><code>k</code></strong> :&ensp;<code>str</code></dt>
-<dd>Maximum fanin.</dd>
+<dd>Maximum fanin. (k&gt;1)</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -843,7 +846,7 @@ def kfanin(c, k):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def kfanin(c, k):
+<pre><code class="python">def limit_fanin(c, k):
     &#34;&#34;&#34;
     Reduces the maximum fanin of circuit gates to k
 
@@ -852,7 +855,7 @@ def kfanin(c, k):
     c : Circuit
             Input circuit.
     k : str
-            Maximum fanin.
+            Maximum fanin. (k&gt;1)
 
     Returns
     -------
@@ -860,23 +863,25 @@ def kfanin(c, k):
             Output circuit.
 
     &#34;&#34;&#34;
+    if k &lt; 2:
+        raise ValueError(f&#34;maximum fanin, k, must be &gt; 2&#34;)
 
     ck = copy(c)
     for n in ck.nodes():
         i = 0
-        while len(ck.fanin(n))&gt;k:
+        while len(ck.fanin(n)) &gt; k:
             fi = ck.fanin(n)
             f0 = fi.pop()
             f1 = fi.pop()
-            ck.disconnect([f0,f1],n)
-            if ck.type(n) in [&#39;and&#39;,&#39;nand&#39;]:
-                ck.add(f&#39;{n}_new_{i}&#39;,&#39;and&#39;,fanin=[f0,f1],fanout=n)
-            elif ck.type(n) in [&#39;or&#39;,&#39;nor&#39;]:
-                ck.add(f&#39;{n}_new_{i}&#39;,&#39;or&#39;,fanin=[f0,f1],fanout=n)
-            elif ck.type(n) in [&#39;xor&#39;]:
-                ck.add(f&#39;{n}_new_{i}&#39;,&#39;xor&#39;,fanin=[f0,f1],fanout=n)
-            elif ck.type(n) in [&#39;xnor&#39;]:
-                ck.add(f&#39;{n}_new_{i}&#39;,&#39;xnor&#39;,fanin=[f0,f1],fanout=n)
+            ck.disconnect([f0, f1], n)
+            if ck.type(n) in [&#34;and&#34;, &#34;nand&#34;]:
+                ck.add(f&#34;{n}_new_{i}&#34;, &#34;and&#34;, fanin=[f0, f1], fanout=n)
+            elif ck.type(n) in [&#34;or&#34;, &#34;nor&#34;]:
+                ck.add(f&#34;{n}_new_{i}&#34;, &#34;or&#34;, fanin=[f0, f1], fanout=n)
+            elif ck.type(n) in [&#34;xor&#34;]:
+                ck.add(f&#34;{n}_new_{i}&#34;, &#34;xor&#34;, fanin=[f0, f1], fanout=n)
+            elif ck.type(n) in [&#34;xnor&#34;]:
+                ck.add(f&#34;{n}_new_{i}&#34;, &#34;xnor&#34;, fanin=[f0, f1], fanout=n)
             else:
                 raise ValueError(f&#34;Unknown gate type: {ck.type(n)}&#34;)
             i += 1
@@ -1713,7 +1718,7 @@ specifically formatted netlists, see the documentation for
 <ul class="">
 <li><code><a title="circuitgraph.transform.copy" href="#circuitgraph.transform.copy">copy</a></code></li>
 <li><code><a title="circuitgraph.transform.influence_transform" href="#circuitgraph.transform.influence_transform">influence_transform</a></code></li>
-<li><code><a title="circuitgraph.transform.kfanin" href="#circuitgraph.transform.kfanin">kfanin</a></code></li>
+<li><code><a title="circuitgraph.transform.limit_fanin" href="#circuitgraph.transform.limit_fanin">limit_fanin</a></code></li>
 <li><code><a title="circuitgraph.transform.miter" href="#circuitgraph.transform.miter">miter</a></code></li>
 <li><code><a title="circuitgraph.transform.relabel" href="#circuitgraph.transform.relabel">relabel</a></code></li>
 <li><code><a title="circuitgraph.transform.sensitivity_transform" href="#circuitgraph.transform.sensitivity_transform">sensitivity_transform</a></code></li>
