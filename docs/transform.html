@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.transform API documentation</title>
 <meta name="description" content="Functions for transforming circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -125,7 +125,7 @@ def strip_inputs(c):
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
-def strip_blackboxes(c):
+def strip_blackboxes(c, ignore_pins=None):
     &#34;&#34;&#34;
     Converts blackboxes to io.
 
@@ -133,20 +133,32 @@ def strip_blackboxes(c):
     ----------
     c : Circuit
             Input circuit.
+    ingnore_pins: str or list of str
+            Pins to not create io for, just disconnect and delete.
 
     Returns
     -------
     Circuit
             Circuit with removed blackboxes.
     &#34;&#34;&#34;
+    if not ignore_pins:
+        ignore_pins = []
+    elif isinstance(ignore_pins, str):
+        ignore_pins = [ignore_pins]
     g = c.graph.copy()
     bb_pins = []
     for n in c.filter_type(&#34;bb_input&#34;):
-        g.nodes[n][&#34;type&#34;] = &#34;output&#34;
-        bb_pins.append(n)
+        if n.split(&#34;.&#34;)[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n][&#34;type&#34;] = &#34;output&#34;
+            bb_pins.append(n)
     for n in c.filter_type(&#34;bb_output&#34;):
-        g.nodes[n][&#34;type&#34;] = &#34;input&#34;
-        bb_pins.append(n)
+        if n.split(&#34;.&#34;)[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n][&#34;type&#34;] = &#34;input&#34;
+            bb_pins.append(n)
 
     # rename nodes
     mapping = {n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in bb_pins}
@@ -158,7 +170,7 @@ def strip_blackboxes(c):
     return Circuit(graph=g, name=c.name)
 
 
-def relabel(c):
+def relabel(c, mapping):
     &#34;&#34;&#34;
     Builds copy with relabeled nodes.
 
@@ -174,8 +186,35 @@ def relabel(c):
     Circuit
             Circuit with removed blackboxes.
     &#34;&#34;&#34;
-    g = nx.relabel_nodes(g, mapping)
+    g = nx.relabel_nodes(c.graph, mapping)
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
+
+
+def subcircuit(c, nodes):
+    &#34;&#34;&#34;
+    Creates a subcircuit from a set of nodes of a given circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to create a subcircuit from.
+    nodes: list of str
+            The nodes to include in the subcircuit.
+
+    Returns
+    -------
+    Circuit
+            The subcircuit.
+    &#34;&#34;&#34;
+    sc = Circuit()
+    for node in nodes:
+        if c.type(node) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
+            raise NotImplementedError(&#34;Cannot create a subcircuit with blackboxes&#34;)
+        sc.add(node, type=c.type(node))
+    for edge in c.edges():
+        if edge[0] in nodes and edge[1] in nodes:
+            sc.connect(edge[0], edge[1])
+    return sc
 
 
 def syn(
@@ -185,6 +224,7 @@ def syn(
     stdout_file=None,
     stderr_file=None,
     working_dir=&#34;.&#34;,
+    fast_parsing=False,
 ):
     &#34;&#34;&#34;
     Synthesizes the circuit using yosys or genus.
@@ -206,6 +246,10 @@ def syn(
     working_dir: str
             The path to run synthesis from. If using genus, this will effect
             where the genus run files are stored.
+    fast_parsing: bool
+            If True, will use fast verilog parsing (which requires
+            specifically formatted netlists, see the documentation for
+            `verilog_to_circuit`).
 
     Returns
     -------
@@ -249,18 +293,77 @@ def syn(
                     &#34;exit;&#34;,
                 ]
             elif engine == &#34;dc&#34;:
-                cmd = [
-                    &#34;dc_shell-t&#34;,
-                    &#34;-no_gui&#34;,
-                    &#34;-x&#34;,
+                try:
+                    lib_path = os.environ[&#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34;]
+                except KeyError:
+                    raise ValueError(
+                        &#34;In order to run synthesis with DC, &#34;
+                        &#34;please set the &#34;
+                        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH &#34;
+                        &#34;variable in your os environment to the &#34;
+                        &#34;path to the GTECH library&#34;
+                    )
+
+                execute = (
+                    f&#34;set_app_var target_library {lib_path};\n&#34;
+                    f&#34;set_app_var link_library {lib_path};\n&#34;
+                )
+                unusable_cells = [
+                    &#34;GTECH_ADD*&#34;,
+                    &#34;GTECH_AO*&#34;,
+                    &#34;GTECH_AND_NOT&#34;,
+                    &#34;GTECH_FD1S&#34;,
+                    &#34;GTECH_FD2S&#34;,
+                    &#34;GTECH_FD3S&#34;,
+                    &#34;GTECH_FD4&#34;,
+                    &#34;GTECH_FD4S&#34;,
+                    &#34;GTECH_FD14&#34;,
+                    &#34;GTECH_FD18&#34;,
+                    &#34;GTECH_FD24&#34;,
+                    &#34;GTECH_FD28&#34;,
+                    &#34;GTECH_FD34&#34;,
+                    &#34;GTECH_FD38&#34;,
+                    &#34;GTECH_FD44&#34;,
+                    &#34;GTECH_FD48&#34;,
+                    &#34;GTECH_FJK1&#34;,
+                    &#34;GTECH_FJK1S&#34;,
+                    &#34;GTECH_FJK2&#34;,
+                    &#34;GTECH_FJK2S&#34;,
+                    &#34;GTECH_FJK3&#34;,
+                    &#34;GTECH_FJK3S&#34;,
+                    &#34;GTECH_INBUF&#34;,
+                    &#34;GTECH_INOUTBUF&#34;,
+                    &#34;GTECH_ISO0_EN0&#34;,
+                    &#34;GTECH_ISO0_EN1&#34;,
+                    &#34;GTECH_ISO1_EN0&#34;,
+                    &#34;GTECH_ISO1_EN1&#34;,
+                    &#34;GTECH_ISOLATCH_EN0&#34;,
+                    &#34;GTECH_ISOLATCH_EN1&#34;,
+                    &#34;GTECH_LD2&#34;,
+                    &#34;GTECH_LD2_1&#34;,
+                    &#34;GTECH_LD3&#34;,
+                    &#34;GTECH_LD4&#34;,
+                    &#34;GTECH_LD4_1&#34;,
+                    &#34;GTECH_LSR0&#34;,
+                    &#34;GTECH_MAJ23&#34;,
+                    &#34;GTECH_MUX*&#34;,
+                    &#34;GTECH_OA*&#34;,
+                    &#34;GTECH_OR_NOT&#34;,
+                    &#34;GTECH_OUTBUF&#34;,
+                    &#34;GTECH_TBUF&#34;,
+                ]
+                for cell in unusable_cells:
+                    execute += f&#34;set_dont_use gtech/{cell};\n&#34;
+                execute += (
                     f&#34;read_file {tmp_in.name}\n&#34;
                     &#34;link;\n&#34;
                     &#34;uniquify;\n&#34;
                     &#34;check_design;\n&#34;
                     &#34;compile -map_effort high;\n&#34;
                     f&#34;write -format verilog -output {tmp_out.name};\n&#34;
-                    &#34;exit;&#34;,
-                ]
+                    &#34;exit;&#34;
+                )
+                cmd = [&#34;dc_shell-t&#34;, &#34;-no_gui&#34;, &#34;-x&#34;, execute]
             elif engine == &#34;yosys&#34;:
                 cmd = [
                     &#34;yosys&#34;,
@@ -290,7 +393,7 @@ def syn(
 
             output_netlist = tmp_out.read().decode(&#34;utf-8&#34;)
 
-    return verilog_to_circuit(output_netlist, c.name)
+    return verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
 
 
 def ternary(c):
@@ -561,7 +664,47 @@ def sensitization_transform(c, n):
     m.set_type(f&#34;c1_{n}&#34;, &#34;not&#34;)
     m.connect(f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;)
 
-    return m</code></pre>
+    return m
+
+def kfanin(c, k):
+    &#34;&#34;&#34;
+    Reduces the maximum fanin of circuit gates to k
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    k : str
+            Maximum fanin.
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+
+    &#34;&#34;&#34;
+
+    ck = copy(c)
+    for n in ck.nodes():
+        i = 0
+        while len(ck.fanin(n))&gt;k:
+            fi = ck.fanin(n)
+            f0 = fi.pop()
+            f1 = fi.pop()
+            ck.disconnect([f0,f1],n)
+            if ck.type(n) in [&#39;and&#39;,&#39;nand&#39;]:
+                ck.add(f&#39;{n}_new_{i}&#39;,&#39;and&#39;,fanin=[f0,f1],fanout=n)
+            elif ck.type(n) in [&#39;or&#39;,&#39;nor&#39;]:
+                ck.add(f&#39;{n}_new_{i}&#39;,&#39;or&#39;,fanin=[f0,f1],fanout=n)
+            elif ck.type(n) in [&#39;xor&#39;]:
+                ck.add(f&#39;{n}_new_{i}&#39;,&#39;xor&#39;,fanin=[f0,f1],fanout=n)
+            elif ck.type(n) in [&#39;xnor&#39;]:
+                ck.add(f&#39;{n}_new_{i}&#39;,&#39;xnor&#39;,fanin=[f0,f1],fanout=n)
+            else:
+                raise ValueError(f&#34;Unknown gate type: {ck.type(n)}&#34;)
+            i += 1
+
+    return ck</code></pre>
 </details>
 </section>
 <section>
@@ -679,6 +822,68 @@ def sensitization_transform(c, n):
     return infl</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.transform.kfanin"><code class="name flex">
+<span>def <span class="ident">kfanin</span></span>(<span>c, k)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Reduces the maximum fanin of circuit gates to k</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+<dt><strong><code>k</code></strong> :&ensp;<code>str</code></dt>
+<dd>Maximum fanin.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Output circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def kfanin(c, k):
+    &#34;&#34;&#34;
+    Reduces the maximum fanin of circuit gates to k
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    k : str
+            Maximum fanin.
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+
+    &#34;&#34;&#34;
+
+    ck = copy(c)
+    for n in ck.nodes():
+        i = 0
+        while len(ck.fanin(n))&gt;k:
+            fi = ck.fanin(n)
+            f0 = fi.pop()
+            f1 = fi.pop()
+            ck.disconnect([f0,f1],n)
+            if ck.type(n) in [&#39;and&#39;,&#39;nand&#39;]:
+                ck.add(f&#39;{n}_new_{i}&#39;,&#39;and&#39;,fanin=[f0,f1],fanout=n)
+            elif ck.type(n) in [&#39;or&#39;,&#39;nor&#39;]:
+                ck.add(f&#39;{n}_new_{i}&#39;,&#39;or&#39;,fanin=[f0,f1],fanout=n)
+            elif ck.type(n) in [&#39;xor&#39;]:
+                ck.add(f&#39;{n}_new_{i}&#39;,&#39;xor&#39;,fanin=[f0,f1],fanout=n)
+            elif ck.type(n) in [&#39;xnor&#39;]:
+                ck.add(f&#39;{n}_new_{i}&#39;,&#39;xnor&#39;,fanin=[f0,f1],fanout=n)
+            else:
+                raise ValueError(f&#34;Unknown gate type: {ck.type(n)}&#34;)
+            i += 1
+
+    return ck</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.transform.miter"><code class="name flex">
 <span>def <span class="ident">miter</span></span>(<span>c0, c1=None, startpoints=None, endpoints=None)</span>
 </code></dt>
@@ -757,7 +962,7 @@ def sensitization_transform(c, n):
 </details>
 </dd>
 <dt id="circuitgraph.transform.relabel"><code class="name flex">
-<span>def <span class="ident">relabel</span></span>(<span>c)</span>
+<span>def <span class="ident">relabel</span></span>(<span>c, mapping)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Builds copy with relabeled nodes.</p>
@@ -777,7 +982,7 @@ def sensitization_transform(c, n):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def relabel(c):
+<pre><code class="python">def relabel(c, mapping):
     &#34;&#34;&#34;
     Builds copy with relabeled nodes.
 
@@ -793,7 +998,7 @@ def sensitization_transform(c, n):
     Circuit
             Circuit with removed blackboxes.
     &#34;&#34;&#34;
-    g = nx.relabel_nodes(g, mapping)
+    g = nx.relabel_nodes(c.graph, mapping)
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
 </details>
 </dd>
@@ -938,7 +1143,7 @@ def sensitization_transform(c, n):
 </details>
 </dd>
 <dt id="circuitgraph.transform.strip_blackboxes"><code class="name flex">
-<span>def <span class="ident">strip_blackboxes</span></span>(<span>c)</span>
+<span>def <span class="ident">strip_blackboxes</span></span>(<span>c, ignore_pins=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Converts blackboxes to io.</p>
@@ -946,6 +1151,8 @@ def sensitization_transform(c, n):
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>Input circuit.</dd>
+<dt><strong><code>ingnore_pins</code></strong> :&ensp;<code>str</code> or <code>list</code> of <code>str</code></dt>
+<dd>Pins to not create io for, just disconnect and delete.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -956,7 +1163,7 @@ def sensitization_transform(c, n):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def strip_blackboxes(c):
+<pre><code class="python">def strip_blackboxes(c, ignore_pins=None):
     &#34;&#34;&#34;
     Converts blackboxes to io.
 
@@ -964,20 +1171,32 @@ def sensitization_transform(c, n):
     ----------
     c : Circuit
             Input circuit.
+    ingnore_pins: str or list of str
+            Pins to not create io for, just disconnect and delete.
 
     Returns
     -------
     Circuit
             Circuit with removed blackboxes.
     &#34;&#34;&#34;
+    if not ignore_pins:
+        ignore_pins = []
+    elif isinstance(ignore_pins, str):
+        ignore_pins = [ignore_pins]
     g = c.graph.copy()
     bb_pins = []
     for n in c.filter_type(&#34;bb_input&#34;):
-        g.nodes[n][&#34;type&#34;] = &#34;output&#34;
-        bb_pins.append(n)
+        if n.split(&#34;.&#34;)[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n][&#34;type&#34;] = &#34;output&#34;
+            bb_pins.append(n)
     for n in c.filter_type(&#34;bb_output&#34;):
-        g.nodes[n][&#34;type&#34;] = &#34;input&#34;
-        bb_pins.append(n)
+        if n.split(&#34;.&#34;)[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n][&#34;type&#34;] = &#34;input&#34;
+            bb_pins.append(n)
 
     # rename nodes
     mapping = {n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in bb_pins}
@@ -1115,8 +1334,56 @@ instantiation.</p>
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.transform.subcircuit"><code class="name flex">
+<span>def <span class="ident">subcircuit</span></span>(<span>c, nodes)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a subcircuit from a set of nodes of a given circuit.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>The circuit to create a subcircuit from.</dd>
+<dt><strong><code>nodes</code></strong> :&ensp;<code>list</code> of <code>str</code></dt>
+<dd>The nodes to include in the subcircuit.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>The subcircuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def subcircuit(c, nodes):
+    &#34;&#34;&#34;
+    Creates a subcircuit from a set of nodes of a given circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to create a subcircuit from.
+    nodes: list of str
+            The nodes to include in the subcircuit.
+
+    Returns
+    -------
+    Circuit
+            The subcircuit.
+    &#34;&#34;&#34;
+    sc = Circuit()
+    for node in nodes:
+        if c.type(node) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
+            raise NotImplementedError(&#34;Cannot create a subcircuit with blackboxes&#34;)
+        sc.add(node, type=c.type(node))
+    for edge in c.edges():
+        if edge[0] in nodes and edge[1] in nodes:
+            sc.connect(edge[0], edge[1])
+    return sc</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.transform.syn"><code class="name flex">
-<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', suppress_output=False, stdout_file=None, stderr_file=None, working_dir='.')</span>
+<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', suppress_output=False, stdout_file=None, stderr_file=None, working_dir='.', fast_parsing=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Synthesizes the circuit using yosys or genus.</p>
@@ -1137,6 +1404,10 @@ of being printed.</dd>
 <dt><strong><code>working_dir</code></strong> :&ensp;<code>str</code></dt>
 <dd>The path to run synthesis from. If using genus, this will effect
 where the genus run files are stored.</dd>
+<dt><strong><code>fast_parsing</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, will use fast verilog parsing (which requires
+specifically formatted netlists, see the documentation for
+<code>verilog_to_circuit</code>).</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1154,6 +1425,7 @@ where the genus run files are stored.</dd>
     stdout_file=None,
     stderr_file=None,
     working_dir=&#34;.&#34;,
+    fast_parsing=False,
 ):
     &#34;&#34;&#34;
     Synthesizes the circuit using yosys or genus.
@@ -1175,6 +1447,10 @@ where the genus run files are stored.</dd>
     working_dir: str
             The path to run synthesis from. If using genus, this will effect
             where the genus run files are stored.
+    fast_parsing: bool
+            If True, will use fast verilog parsing (which requires
+            specifically formatted netlists, see the documentation for
+            `verilog_to_circuit`).
 
     Returns
     -------
@@ -1218,18 +1494,77 @@ where the genus run files are stored.</dd>
                     &#34;exit;&#34;,
                 ]
             elif engine == &#34;dc&#34;:
-                cmd = [
-                    &#34;dc_shell-t&#34;,
-                    &#34;-no_gui&#34;,
-                    &#34;-x&#34;,
+                try:
+                    lib_path = os.environ[&#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34;]
+                except KeyError:
+                    raise ValueError(
+                        &#34;In order to run synthesis with DC, &#34;
+                        &#34;please set the &#34;
+                        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH &#34;
+                        &#34;variable in your os environment to the &#34;
+                        &#34;path to the GTECH library&#34;
+                    )
+
+                execute = (
+                    f&#34;set_app_var target_library {lib_path};\n&#34;
+                    f&#34;set_app_var link_library {lib_path};\n&#34;
+                )
+                unusable_cells = [
+                    &#34;GTECH_ADD*&#34;,
+                    &#34;GTECH_AO*&#34;,
+                    &#34;GTECH_AND_NOT&#34;,
+                    &#34;GTECH_FD1S&#34;,
+                    &#34;GTECH_FD2S&#34;,
+                    &#34;GTECH_FD3S&#34;,
+                    &#34;GTECH_FD4&#34;,
+                    &#34;GTECH_FD4S&#34;,
+                    &#34;GTECH_FD14&#34;,
+                    &#34;GTECH_FD18&#34;,
+                    &#34;GTECH_FD24&#34;,
+                    &#34;GTECH_FD28&#34;,
+                    &#34;GTECH_FD34&#34;,
+                    &#34;GTECH_FD38&#34;,
+                    &#34;GTECH_FD44&#34;,
+                    &#34;GTECH_FD48&#34;,
+                    &#34;GTECH_FJK1&#34;,
+                    &#34;GTECH_FJK1S&#34;,
+                    &#34;GTECH_FJK2&#34;,
+                    &#34;GTECH_FJK2S&#34;,
+                    &#34;GTECH_FJK3&#34;,
+                    &#34;GTECH_FJK3S&#34;,
+                    &#34;GTECH_INBUF&#34;,
+                    &#34;GTECH_INOUTBUF&#34;,
+                    &#34;GTECH_ISO0_EN0&#34;,
+                    &#34;GTECH_ISO0_EN1&#34;,
+                    &#34;GTECH_ISO1_EN0&#34;,
+                    &#34;GTECH_ISO1_EN1&#34;,
+                    &#34;GTECH_ISOLATCH_EN0&#34;,
+                    &#34;GTECH_ISOLATCH_EN1&#34;,
+                    &#34;GTECH_LD2&#34;,
+                    &#34;GTECH_LD2_1&#34;,
+                    &#34;GTECH_LD3&#34;,
+                    &#34;GTECH_LD4&#34;,
+                    &#34;GTECH_LD4_1&#34;,
+                    &#34;GTECH_LSR0&#34;,
+                    &#34;GTECH_MAJ23&#34;,
+                    &#34;GTECH_MUX*&#34;,
+                    &#34;GTECH_OA*&#34;,
+                    &#34;GTECH_OR_NOT&#34;,
+                    &#34;GTECH_OUTBUF&#34;,
+                    &#34;GTECH_TBUF&#34;,
+                ]
+                for cell in unusable_cells:
+                    execute += f&#34;set_dont_use gtech/{cell};\n&#34;
+                execute += (
                     f&#34;read_file {tmp_in.name}\n&#34;
                     &#34;link;\n&#34;
                     &#34;uniquify;\n&#34;
                     &#34;check_design;\n&#34;
                     &#34;compile -map_effort high;\n&#34;
                     f&#34;write -format verilog -output {tmp_out.name};\n&#34;
-                    &#34;exit;&#34;,
-                ]
+                    &#34;exit;&#34;
+                )
+                cmd = [&#34;dc_shell-t&#34;, &#34;-no_gui&#34;, &#34;-x&#34;, execute]
             elif engine == &#34;yosys&#34;:
                 cmd = [
                     &#34;yosys&#34;,
@@ -1259,7 +1594,7 @@ where the genus run files are stored.</dd>
 
             output_netlist = tmp_out.read().decode(&#34;utf-8&#34;)
 
-    return verilog_to_circuit(output_netlist, c.name)</code></pre>
+    return verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.ternary"><code class="name flex">
@@ -1378,6 +1713,7 @@ where the genus run files are stored.</dd>
 <ul class="">
 <li><code><a title="circuitgraph.transform.copy" href="#circuitgraph.transform.copy">copy</a></code></li>
 <li><code><a title="circuitgraph.transform.influence_transform" href="#circuitgraph.transform.influence_transform">influence_transform</a></code></li>
+<li><code><a title="circuitgraph.transform.kfanin" href="#circuitgraph.transform.kfanin">kfanin</a></code></li>
 <li><code><a title="circuitgraph.transform.miter" href="#circuitgraph.transform.miter">miter</a></code></li>
 <li><code><a title="circuitgraph.transform.relabel" href="#circuitgraph.transform.relabel">relabel</a></code></li>
 <li><code><a title="circuitgraph.transform.sensitivity_transform" href="#circuitgraph.transform.sensitivity_transform">sensitivity_transform</a></code></li>
@@ -1386,6 +1722,7 @@ where the genus run files are stored.</dd>
 <li><code><a title="circuitgraph.transform.strip_inputs" href="#circuitgraph.transform.strip_inputs">strip_inputs</a></code></li>
 <li><code><a title="circuitgraph.transform.strip_io" href="#circuitgraph.transform.strip_io">strip_io</a></code></li>
 <li><code><a title="circuitgraph.transform.strip_outputs" href="#circuitgraph.transform.strip_outputs">strip_outputs</a></code></li>
+<li><code><a title="circuitgraph.transform.subcircuit" href="#circuitgraph.transform.subcircuit">subcircuit</a></code></li>
 <li><code><a title="circuitgraph.transform.syn" href="#circuitgraph.transform.syn">syn</a></code></li>
 <li><code><a title="circuitgraph.transform.ternary" href="#circuitgraph.transform.ternary">ternary</a></code></li>
 </ul>
@@ -1394,7 +1731,7 @@ where the genus run files are stored.</dd>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

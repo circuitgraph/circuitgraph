@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.sat API documentation</title>
 <meta name="description" content="Functions for executing SAT, #SAT, and approx-#SAT on circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -35,7 +35,7 @@ import code
 from subprocess import PIPE, run
 
 from pysat.formula import CNF, IDPool
-from pysat.solvers import Cadical
+from pysat.solvers import Cadical, Glucose4, Lingeling
 
 
 def interrupt(s):
@@ -55,7 +55,7 @@ def remap(clauses, offset):
     return new_clauses
 
 
-def construct_solver(c, assumptions=None):
+def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
     &#34;&#34;&#34;
     Constructs a SAT solver instance with the given circuit and assumptions
 
@@ -75,8 +75,19 @@ def construct_solver(c, assumptions=None):
     &#34;&#34;&#34;
     formula, variables = cnf(c)
     if assumptions:
+        for n in assumptions.keys():
+            if n not in c:
+                raise ValueError(f&#34;incorrect assumption key: {n}&#34;)
         add_assumptions(formula, variables, assumptions)
-    solver = Cadical(bootstrap_with=formula)
+
+    if engine == &#34;cadical&#34;:
+        solver = Cadical(bootstrap_with=formula)
+    elif engine == &#34;glucose&#34;:
+        solver = Glucose4(bootstrap_with=formula, incr=True)
+    elif engine == &#34;lingeling&#34;:
+        solver = Lingeling(bootstrap_with=formula)
+    else:
+        raise ValueError(f&#34;unsupported solver: {engine}&#34;)
     return solver, variables
 
 
@@ -242,7 +253,11 @@ def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
         startpoints = c.startpoints()
 
     formula, variables = cnf(c)
-    add_assumptions(formula, variables, assumptions)
+    if assumptions:
+        for n in assumptions.keys():
+            if n not in c:
+                raise ValueError(f&#34;incorrect assumption key: {n}&#34;)
+        add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
     enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in startpoints])
@@ -380,7 +395,11 @@ def model_count(c, assumptions=None):
         startpoints = c.startpoints()
 
     formula, variables = cnf(c)
-    add_assumptions(formula, variables, assumptions)
+    if assumptions:
+        for n in assumptions.keys():
+            if n not in c:
+                raise ValueError(f&#34;incorrect assumption key: {n}&#34;)
+        add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
     enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in startpoints])
@@ -528,7 +547,7 @@ def model_count(c, assumptions=None):
 </details>
 </dd>
 <dt id="circuitgraph.sat.construct_solver"><code class="name flex">
-<span>def <span class="ident">construct_solver</span></span>(<span>c, assumptions=None)</span>
+<span>def <span class="ident">construct_solver</span></span>(<span>c, assumptions=None, engine='cadical')</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Constructs a SAT solver instance with the given circuit and assumptions</p>
@@ -550,7 +569,7 @@ def model_count(c, assumptions=None):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def construct_solver(c, assumptions=None):
+<pre><code class="python">def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
     &#34;&#34;&#34;
     Constructs a SAT solver instance with the given circuit and assumptions
 
@@ -570,8 +589,19 @@ def model_count(c, assumptions=None):
     &#34;&#34;&#34;
     formula, variables = cnf(c)
     if assumptions:
+        for n in assumptions.keys():
+            if n not in c:
+                raise ValueError(f&#34;incorrect assumption key: {n}&#34;)
         add_assumptions(formula, variables, assumptions)
-    solver = Cadical(bootstrap_with=formula)
+
+    if engine == &#34;cadical&#34;:
+        solver = Cadical(bootstrap_with=formula)
+    elif engine == &#34;glucose&#34;:
+        solver = Glucose4(bootstrap_with=formula, incr=True)
+    elif engine == &#34;lingeling&#34;:
+        solver = Lingeling(bootstrap_with=formula)
+    else:
+        raise ValueError(f&#34;unsupported solver: {engine}&#34;)
     return solver, variables</code></pre>
 </details>
 </dd>
@@ -669,7 +699,7 @@ def model_count(c, assumptions=None):
 <dd>Result.</dd>
 </dl>
 <h2 id="example">Example</h2>
-<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
 &gt;&gt;&gt; c = cg.from_file('rtl/s27.v')
 &gt;&gt;&gt; cg.sat(c)
 {'G17': True, 'n_20': False, 'n_12': True, 'n_11': False,
@@ -764,7 +794,7 @@ False
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.io API documentation</title>
 <meta name="description" content="Functions for reading/writing CircuitGraphs" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -33,11 +33,32 @@ import re
 from pathlib import Path
 
 from circuitgraph import Circuit, BlackBox
-from circuitgraph.parsing import parse_verilog_netlist
+from circuitgraph.parsing import parse_verilog_netlist, fast_parse_verilog_netlist
+
+
+genus_flops = [
+    BlackBox(&#34;flopd&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;]),
+    BlackBox(&#34;fflopd&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;]),
+    BlackBox(&#34;flopdrs&#34;, [&#34;CK&#34;, &#34;D&#34;, &#34;R&#34;, &#34;S&#34;], [&#34;Q&#34;]),
+    BlackBox(&#34;fflopdrs&#34;, [&#34;CK&#34;, &#34;D&#34;, &#34;R&#34;, &#34;S&#34;], [&#34;Q&#34;]),
+]
+
+
+dc_flops = [
+    BlackBox(&#34;GTECH_FD1&#34;, [&#34;CP&#34;, &#34;D&#34;], [&#34;Q&#34;, &#34;QN&#34;]),
+    BlackBox(&#34;GTECH_FD2&#34;, [&#34;CP&#34;, &#34;CD&#34;, &#34;D&#34;], [&#34;Q&#34;, &#34;QN&#34;]),
+    BlackBox(&#34;GTECH_FD3&#34;, [&#34;CP&#34;, &#34;CD&#34;, &#34;SD&#34;, &#34;D&#34;], [&#34;Q&#34;, &#34;QN&#34;]),
+]
 
 
 def from_file(
-    path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False
+    path,
+    name=None,
+    fmt=None,
+    blackboxes=None,
+    warnings=False,
+    error_on_warning=False,
+    fast=False,
 ):
     &#34;&#34;&#34;
     Creates a new `Circuit` from a verilog file.
@@ -57,6 +78,14 @@ def from_file(
     error_on_warning: bool
             If True, unused nets will cause raise `VerilogParsingWarning`
             exceptions.
+    fast: bool
+            If True, uses the `fast_parse_verilog_netlist` function from
+            parsing/fast_verilog.py. This function is faster for parsing
+            very large netlists, but makes stringent assumptions about
+            the netlist and does not provide error checking. Read
+            the docstring for `fast_parse_verilog_netlist` in order to
+            confirm that `netlist` adheres to these assumptions before
+            using this flag.
 
     Returns
     -------
@@ -64,12 +93,22 @@ def from_file(
             the parsed circuit.
     &#34;&#34;&#34;
     path = Path(path)
+    infer_module_name = False
     if name is None:
+        infer_module_name = True
         name = path.stem
     with open(path, &#34;r&#34;) as f:
         netlist = f.read()
     if fmt == &#34;verilog&#34; or path.suffix == &#34;.v&#34;:
-        return verilog_to_circuit(netlist, name, blackboxes, warnings, error_on_warning)
+        return verilog_to_circuit(
+            netlist,
+            name,
+            infer_module_name,
+            blackboxes,
+            warnings,
+            error_on_warning,
+            fast,
+        )
     elif fmt == &#34;bench&#34; or path.suffix == &#34;.bench&#34;:
         return bench_to_circuit(netlist, name)
     else:
@@ -143,7 +182,13 @@ def bench_to_circuit(netlist, name):
 
 
 def verilog_to_circuit(
-    netlist, name, blackboxes=None, warnings=False, error_on_warning=False
+    netlist,
+    name,
+    infer_module_name=False,
+    blackboxes=None,
+    warnings=False,
+    error_on_warning=False,
+    fast=False,
 ):
     &#34;&#34;&#34;
     Creates a new Circuit from a module inside Verilog code.
@@ -154,6 +199,9 @@ def verilog_to_circuit(
             Verilog code.
     name: str
             Module name.
+    infer_module_name: bool
+            If True and no module named `name` is found, parse the first
+            module in the netlist.
     blackboxes: seq of BlackBox
             Blackboxes in module.
     warnings: bool
@@ -161,22 +209,42 @@ def verilog_to_circuit(
     error_on_warning: bool
             If True, unused nets will cause raise `VerilogParsingWarning`
             exceptions.
+    fast: bool
+            If True, uses the `fast_parse_verilog_netlist` function from
+            parsing/fast_verilog.py. This function is faster for parsing
+            very large netlists, but makes stringent assumptions about
+            the netlist and does not provide error checking. Read
+            the docstring for `fast_parse_verilog_netlist` in order to
+            confirm that `netlist` adheres to these assumptions before
+            using this flag.
 
     Returns
     -------
     Circuit
             Parsed circuit.
     &#34;&#34;&#34;
+
+    if blackboxes is None:
+        blackboxes = []
+
+    if fast:
+        return fast_parse_verilog_netlist(netlist, blackboxes)
+
     # parse module
     regex = f&#34;(module\s+{name}\s*\(.*?\);(.*?)endmodule)&#34;
     m = re.search(regex, netlist, re.DOTALL)
     try:
         module = m.group(1)
     except AttributeError:
-        raise ValueError(&#34;Could not read netlist: no modules found&#34;)
-
-    if blackboxes is None:
-        blackboxes = []
+        if infer_module_name:
+            regex = f&#34;(module\s+(.*?)\s*\(.*?\);(.*?)endmodule)&#34;
+            m = re.search(regex, netlist, re.DOTALL)
+            try:
+                module = m.group(1)
+            except AttributeError:
+                raise ValueError(&#34;Could not read netlist: no modules found&#34;)
+        else:
+            raise ValueError(f&#34;Could not read netlist: {name} module not found&#34;)
 
     return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)
 
@@ -238,11 +306,11 @@ def circuit_to_verilog(c):
     output_map = {}
     for name, bb in c.blackboxes.items():
         io = []
-        for n in bb.inputs:
+        for n in bb.inputs():
             driver = c.fanin(f&#34;{name}.{n}&#34;).pop()
             io += [f&#34;.{n}({driver})&#34;]
 
-        for n in bb.outputs:
+        for n in bb.outputs():
             w = c.uid(f&#34;{name}_{n}_load&#34;)
             wires.append(w)
             output_map[f&#34;{name}.{n}&#34;] = w
@@ -263,16 +331,6 @@ def circuit_to_verilog(c):
             wires.append(n)
         elif c.type(n) in [&#34;input&#34;, &#34;output&#34;, &#34;bb_input&#34;, &#34;bb_output&#34;]:
             pass
-        #     inputs.append(n)
-        # elif c.type(n) in [&#34;output&#34;]:
-        #     if len(c.fanin(n)):
-        #         fanin = c.fanin(n).pop()
-        #         if fanin in output_map:
-        #             fanin = output_map[fanin]
-        #         insts.append(f&#34;assign {n} = {fanin}&#34;)
-        #     outputs.append(n)
-        # elif c.type(n) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
-        #     pass
         else:
             raise ValueError(f&#34;unknown gate type: {c.type(n)}&#34;)
 
@@ -287,11 +345,6 @@ def circuit_to_verilog(c):
     verilog += &#34;\n&#34;
     verilog += &#34;&#34;.join(f&#34;  {inst};\n&#34; for inst in insts)
     verilog += &#34;endmodule\n&#34;
-
-    # de-sanitize escaped nets
-    # for node in c.nodes():
-    #     if node.startswith(&#39;\\&#39;):
-    #         c.relabel({node: node[:-1]})
 
     return verilog
 
@@ -551,11 +604,11 @@ def circuit_to_bench(c):
     output_map = {}
     for name, bb in c.blackboxes.items():
         io = []
-        for n in bb.inputs:
+        for n in bb.inputs():
             driver = c.fanin(f&#34;{name}.{n}&#34;).pop()
             io += [f&#34;.{n}({driver})&#34;]
 
-        for n in bb.outputs:
+        for n in bb.outputs():
             w = c.uid(f&#34;{name}_{n}_load&#34;)
             wires.append(w)
             output_map[f&#34;{name}.{n}&#34;] = w
@@ -576,16 +629,6 @@ def circuit_to_bench(c):
             wires.append(n)
         elif c.type(n) in [&#34;input&#34;, &#34;output&#34;, &#34;bb_input&#34;, &#34;bb_output&#34;]:
             pass
-        #     inputs.append(n)
-        # elif c.type(n) in [&#34;output&#34;]:
-        #     if len(c.fanin(n)):
-        #         fanin = c.fanin(n).pop()
-        #         if fanin in output_map:
-        #             fanin = output_map[fanin]
-        #         insts.append(f&#34;assign {n} = {fanin}&#34;)
-        #     outputs.append(n)
-        # elif c.type(n) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
-        #     pass
         else:
             raise ValueError(f&#34;unknown gate type: {c.type(n)}&#34;)
 
@@ -601,16 +644,11 @@ def circuit_to_bench(c):
     verilog += &#34;&#34;.join(f&#34;  {inst};\n&#34; for inst in insts)
     verilog += &#34;endmodule\n&#34;
 
-    # de-sanitize escaped nets
-    # for node in c.nodes():
-    #     if node.startswith(&#39;\\&#39;):
-    #         c.relabel({node: node[:-1]})
-
     return verilog</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.io.from_file"><code class="name flex">
-<span>def <span class="ident">from_file</span></span>(<span>path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False)</span>
+<span>def <span class="ident">from_file</span></span>(<span>path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False, fast=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a new <code>Circuit</code> from a verilog file.</p>
@@ -629,6 +667,14 @@ def circuit_to_bench(c):
 <dt><strong><code>error_on_warning</code></strong> :&ensp;<code>bool</code></dt>
 <dd>If True, unused nets will cause raise <code>VerilogParsingWarning</code>
 exceptions.</dd>
+<dt><strong><code>fast</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, uses the <code>fast_parse_verilog_netlist</code> function from
+parsing/fast_verilog.py. This function is faster for parsing
+very large netlists, but makes stringent assumptions about
+the netlist and does not provide error checking. Read
+the docstring for <code>fast_parse_verilog_netlist</code> in order to
+confirm that <code>netlist</code> adheres to these assumptions before
+using this flag.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -640,7 +686,13 @@ exceptions.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def from_file(
-    path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False
+    path,
+    name=None,
+    fmt=None,
+    blackboxes=None,
+    warnings=False,
+    error_on_warning=False,
+    fast=False,
 ):
     &#34;&#34;&#34;
     Creates a new `Circuit` from a verilog file.
@@ -660,6 +712,14 @@ exceptions.</dd>
     error_on_warning: bool
             If True, unused nets will cause raise `VerilogParsingWarning`
             exceptions.
+    fast: bool
+            If True, uses the `fast_parse_verilog_netlist` function from
+            parsing/fast_verilog.py. This function is faster for parsing
+            very large netlists, but makes stringent assumptions about
+            the netlist and does not provide error checking. Read
+            the docstring for `fast_parse_verilog_netlist` in order to
+            confirm that `netlist` adheres to these assumptions before
+            using this flag.
 
     Returns
     -------
@@ -667,12 +727,22 @@ exceptions.</dd>
             the parsed circuit.
     &#34;&#34;&#34;
     path = Path(path)
+    infer_module_name = False
     if name is None:
+        infer_module_name = True
         name = path.stem
     with open(path, &#34;r&#34;) as f:
         netlist = f.read()
     if fmt == &#34;verilog&#34; or path.suffix == &#34;.v&#34;:
-        return verilog_to_circuit(netlist, name, blackboxes, warnings, error_on_warning)
+        return verilog_to_circuit(
+            netlist,
+            name,
+            infer_module_name,
+            blackboxes,
+            warnings,
+            error_on_warning,
+            fast,
+        )
     elif fmt == &#34;bench&#34; or path.suffix == &#34;.bench&#34;:
         return bench_to_circuit(netlist, name)
     else:
@@ -747,7 +817,7 @@ folder</p>
 </details>
 </dd>
 <dt id="circuitgraph.io.verilog_to_circuit"><code class="name flex">
-<span>def <span class="ident">verilog_to_circuit</span></span>(<span>netlist, name, blackboxes=None, warnings=False, error_on_warning=False)</span>
+<span>def <span class="ident">verilog_to_circuit</span></span>(<span>netlist, name, infer_module_name=False, blackboxes=None, warnings=False, error_on_warning=False, fast=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a new Circuit from a module inside Verilog code.</p>
@@ -757,6 +827,9 @@ folder</p>
 <dd>Verilog code.</dd>
 <dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
 <dd>Module name.</dd>
+<dt><strong><code>infer_module_name</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True and no module named <code>name</code> is found, parse the first
+module in the netlist.</dd>
 <dt><strong><code>blackboxes</code></strong> :&ensp;<code>seq</code> of <code>BlackBox</code></dt>
 <dd>Blackboxes in module.</dd>
 <dt><strong><code>warnings</code></strong> :&ensp;<code>bool</code></dt>
@@ -764,6 +837,14 @@ folder</p>
 <dt><strong><code>error_on_warning</code></strong> :&ensp;<code>bool</code></dt>
 <dd>If True, unused nets will cause raise <code>VerilogParsingWarning</code>
 exceptions.</dd>
+<dt><strong><code>fast</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, uses the <code>fast_parse_verilog_netlist</code> function from
+parsing/fast_verilog.py. This function is faster for parsing
+very large netlists, but makes stringent assumptions about
+the netlist and does not provide error checking. Read
+the docstring for <code>fast_parse_verilog_netlist</code> in order to
+confirm that <code>netlist</code> adheres to these assumptions before
+using this flag.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -775,7 +856,13 @@ exceptions.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def verilog_to_circuit(
-    netlist, name, blackboxes=None, warnings=False, error_on_warning=False
+    netlist,
+    name,
+    infer_module_name=False,
+    blackboxes=None,
+    warnings=False,
+    error_on_warning=False,
+    fast=False,
 ):
     &#34;&#34;&#34;
     Creates a new Circuit from a module inside Verilog code.
@@ -786,6 +873,9 @@ exceptions.</dd>
             Verilog code.
     name: str
             Module name.
+    infer_module_name: bool
+            If True and no module named `name` is found, parse the first
+            module in the netlist.
     blackboxes: seq of BlackBox
             Blackboxes in module.
     warnings: bool
@@ -793,22 +883,42 @@ exceptions.</dd>
     error_on_warning: bool
             If True, unused nets will cause raise `VerilogParsingWarning`
             exceptions.
+    fast: bool
+            If True, uses the `fast_parse_verilog_netlist` function from
+            parsing/fast_verilog.py. This function is faster for parsing
+            very large netlists, but makes stringent assumptions about
+            the netlist and does not provide error checking. Read
+            the docstring for `fast_parse_verilog_netlist` in order to
+            confirm that `netlist` adheres to these assumptions before
+            using this flag.
 
     Returns
     -------
     Circuit
             Parsed circuit.
     &#34;&#34;&#34;
+
+    if blackboxes is None:
+        blackboxes = []
+
+    if fast:
+        return fast_parse_verilog_netlist(netlist, blackboxes)
+
     # parse module
     regex = f&#34;(module\s+{name}\s*\(.*?\);(.*?)endmodule)&#34;
     m = re.search(regex, netlist, re.DOTALL)
     try:
         module = m.group(1)
     except AttributeError:
-        raise ValueError(&#34;Could not read netlist: no modules found&#34;)
-
-    if blackboxes is None:
-        blackboxes = []
+        if infer_module_name:
+            regex = f&#34;(module\s+(.*?)\s*\(.*?\);(.*?)endmodule)&#34;
+            m = re.search(regex, netlist, re.DOTALL)
+            try:
+                module = m.group(1)
+            except AttributeError:
+                raise ValueError(&#34;Could not read netlist: no modules found&#34;)
+        else:
+            raise ValueError(f&#34;Could not read netlist: {name} module not found&#34;)
 
     return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)</code></pre>
 </details>
@@ -848,7 +958,7 @@ exceptions.</dd>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

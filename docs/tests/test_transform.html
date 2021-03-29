@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.tests.test_transform API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -101,6 +101,30 @@ class TestTransform(unittest.TestCase):
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
         self.assertTrue(different_output)
 
+    def test_subcircuit(self):
+        c17 = cg.from_lib(&#34;c17&#34;)
+        sc = subcircuit(c17, c17.transitive_fanin(&#34;N22&#34;) | {&#34;N22&#34;})
+        self.assertSetEqual(
+            sc.nodes(),
+            {&#34;N22&#34;, &#34;N22_driver&#34;, &#34;N10&#34;, &#34;N16&#34;, &#34;N1&#34;, &#34;N3&#34;, &#34;N2&#34;, &#34;N11&#34;, &#34;N6&#34;},
+        )
+        self.assertSetEqual(
+            sc.edges(),
+            {
+                (&#34;N22_driver&#34;, &#34;N22&#34;),
+                (&#34;N10&#34;, &#34;N22_driver&#34;),
+                (&#34;N16&#34;, &#34;N22_driver&#34;),
+                (&#34;N1&#34;, &#34;N10&#34;),
+                (&#34;N3&#34;, &#34;N10&#34;),
+                (&#34;N2&#34;, &#34;N16&#34;),
+                (&#34;N11&#34;, &#34;N16&#34;),
+                (&#34;N3&#34;, &#34;N11&#34;),
+                (&#34;N6&#34;, &#34;N11&#34;),
+            },
+        )
+        for node in sc:
+            self.assertEqual(c17.type(node), sc.type(node))
+
     @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
     def test_syn_yosys(self):
         s = syn(self.s27, &#34;yosys&#34;, suppress_output=True)
@@ -111,7 +135,7 @@ class TestTransform(unittest.TestCase):
         self.assertFalse(different_output)
 
     @unittest.skipUnless(
-        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus not installed&#34;
+        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus synthesis not setup&#34;
     )
     def test_syn_genus(self):
         s = syn(self.s27, &#34;genus&#34;, suppress_output=True)
@@ -126,7 +150,9 @@ class TestTransform(unittest.TestCase):
             os.remove(f)
         shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
 
-    @unittest.skipIf(shutil.which(&#34;dc_shell-t&#34;) == None, &#34;DesignCompiler not installed&#34;)
+    @unittest.skipUnless(
+        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+    )
     def test_syn_dc(self):
         s = syn(self.s27, &#34;dc&#34;, suppress_output=True)
         m = miter(self.s27, s)
@@ -216,7 +242,15 @@ class TestTransform(unittest.TestCase):
                 sen_sim += 1
 
         # check answer
-        self.assertEqual(sen_s, sen_sim)</code></pre>
+        self.assertEqual(sen_s, sen_sim)
+
+    def test_kfanin(self):
+        k = 2
+        ck = kfanin(self.s27, 2)
+
+        # check conversion
+        m = cg.miter(self.s27,ck)
+        self.assertFalse(cg.sat(m,assumptions={&#39;sat&#39;:True}))</code></pre>
 </details>
 </section>
 <section>
@@ -329,6 +363,30 @@ not have a method with the specified name.</p></div>
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
         self.assertTrue(different_output)
 
+    def test_subcircuit(self):
+        c17 = cg.from_lib(&#34;c17&#34;)
+        sc = subcircuit(c17, c17.transitive_fanin(&#34;N22&#34;) | {&#34;N22&#34;})
+        self.assertSetEqual(
+            sc.nodes(),
+            {&#34;N22&#34;, &#34;N22_driver&#34;, &#34;N10&#34;, &#34;N16&#34;, &#34;N1&#34;, &#34;N3&#34;, &#34;N2&#34;, &#34;N11&#34;, &#34;N6&#34;},
+        )
+        self.assertSetEqual(
+            sc.edges(),
+            {
+                (&#34;N22_driver&#34;, &#34;N22&#34;),
+                (&#34;N10&#34;, &#34;N22_driver&#34;),
+                (&#34;N16&#34;, &#34;N22_driver&#34;),
+                (&#34;N1&#34;, &#34;N10&#34;),
+                (&#34;N3&#34;, &#34;N10&#34;),
+                (&#34;N2&#34;, &#34;N16&#34;),
+                (&#34;N11&#34;, &#34;N16&#34;),
+                (&#34;N3&#34;, &#34;N11&#34;),
+                (&#34;N6&#34;, &#34;N11&#34;),
+            },
+        )
+        for node in sc:
+            self.assertEqual(c17.type(node), sc.type(node))
+
     @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
     def test_syn_yosys(self):
         s = syn(self.s27, &#34;yosys&#34;, suppress_output=True)
@@ -339,7 +397,7 @@ not have a method with the specified name.</p></div>
         self.assertFalse(different_output)
 
     @unittest.skipUnless(
-        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus not installed&#34;
+        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus synthesis not setup&#34;
     )
     def test_syn_genus(self):
         s = syn(self.s27, &#34;genus&#34;, suppress_output=True)
@@ -354,7 +412,9 @@ not have a method with the specified name.</p></div>
             os.remove(f)
         shutil.rmtree(f&#34;{os.getcwd()}/fv&#34;)
 
-    @unittest.skipIf(shutil.which(&#34;dc_shell-t&#34;) == None, &#34;DesignCompiler not installed&#34;)
+    @unittest.skipUnless(
+        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+    )
     def test_syn_dc(self):
         s = syn(self.s27, &#34;dc&#34;, suppress_output=True)
         m = miter(self.s27, s)
@@ -444,7 +504,15 @@ not have a method with the specified name.</p></div>
                 sen_sim += 1
 
         # check answer
-        self.assertEqual(sen_s, sen_sim)</code></pre>
+        self.assertEqual(sen_s, sen_sim)
+
+    def test_kfanin(self):
+        k = 2
+        ck = kfanin(self.s27, 2)
+
+        # check conversion
+        m = cg.miter(self.s27,ck)
+        self.assertFalse(cg.sat(m,assumptions={&#39;sat&#39;:True}))</code></pre>
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">
@@ -468,6 +536,24 @@ not have a method with the specified name.</p></div>
     # incorrect copy of s27
     self.s27m = cg.copy(self.s27)
     self.s27m.graph.nodes[&#34;n_11&#34;][&#34;type&#34;] = &#34;and&#34;</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_transform.TestTransform.test_kfanin"><code class="name flex">
+<span>def <span class="ident">test_kfanin</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_kfanin(self):
+    k = 2
+    ck = kfanin(self.s27, 2)
+
+    # check conversion
+    m = cg.miter(self.s27,ck)
+    self.assertFalse(cg.sat(m,assumptions={&#39;sat&#39;:True}))</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_miter"><code class="name flex">
@@ -612,6 +698,40 @@ not have a method with the specified name.</p></div>
     self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.tests.test_transform.TestTransform.test_subcircuit"><code class="name flex">
+<span>def <span class="ident">test_subcircuit</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_subcircuit(self):
+    c17 = cg.from_lib(&#34;c17&#34;)
+    sc = subcircuit(c17, c17.transitive_fanin(&#34;N22&#34;) | {&#34;N22&#34;})
+    self.assertSetEqual(
+        sc.nodes(),
+        {&#34;N22&#34;, &#34;N22_driver&#34;, &#34;N10&#34;, &#34;N16&#34;, &#34;N1&#34;, &#34;N3&#34;, &#34;N2&#34;, &#34;N11&#34;, &#34;N6&#34;},
+    )
+    self.assertSetEqual(
+        sc.edges(),
+        {
+            (&#34;N22_driver&#34;, &#34;N22&#34;),
+            (&#34;N10&#34;, &#34;N22_driver&#34;),
+            (&#34;N16&#34;, &#34;N22_driver&#34;),
+            (&#34;N1&#34;, &#34;N10&#34;),
+            (&#34;N3&#34;, &#34;N10&#34;),
+            (&#34;N2&#34;, &#34;N16&#34;),
+            (&#34;N11&#34;, &#34;N16&#34;),
+            (&#34;N3&#34;, &#34;N11&#34;),
+            (&#34;N6&#34;, &#34;N11&#34;),
+        },
+    )
+    for node in sc:
+        self.assertEqual(c17.type(node), sc.type(node))</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_syn_dc"><code class="name flex">
 <span>def <span class="ident">test_syn_dc</span></span>(<span>self)</span>
 </code></dt>
@@ -621,7 +741,9 @@ not have a method with the specified name.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">@unittest.skipIf(shutil.which(&#34;dc_shell-t&#34;) == None, &#34;DesignCompiler not installed&#34;)
+<pre><code class="python">@unittest.skipUnless(
+    &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+)
 def test_syn_dc(self):
     s = syn(self.s27, &#34;dc&#34;, suppress_output=True)
     m = miter(self.s27, s)
@@ -645,7 +767,7 @@ def test_syn_dc(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@unittest.skipUnless(
-    &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus not installed&#34;
+    &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus synthesis not setup&#34;
 )
 def test_syn_genus(self):
     s = syn(self.s27, &#34;genus&#34;, suppress_output=True)
@@ -706,11 +828,13 @@ def test_syn_yosys(self):
 <h4><code><a title="circuitgraph.tests.test_transform.TestTransform" href="#circuitgraph.tests.test_transform.TestTransform">TestTransform</a></code></h4>
 <ul class="">
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.setUp" href="#circuitgraph.tests.test_transform.TestTransform.setUp">setUp</a></code></li>
+<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_kfanin" href="#circuitgraph.tests.test_transform.TestTransform.test_kfanin">test_kfanin</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_miter" href="#circuitgraph.tests.test_transform.TestTransform.test_miter">test_miter</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_sensitivity_transform" href="#circuitgraph.tests.test_transform.TestTransform.test_sensitivity_transform">test_sensitivity_transform</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_inputs" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_inputs">test_strip_inputs</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_io" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_io">test_strip_io</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_outputs" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_outputs">test_strip_outputs</a></code></li>
+<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_subcircuit" href="#circuitgraph.tests.test_transform.TestTransform.test_subcircuit">test_subcircuit</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_dc" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_dc">test_syn_dc</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_genus" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_genus">test_syn_genus</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_yosys" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_yosys">test_syn_yosys</a></code></li>
@@ -722,7 +846,7 @@ def test_syn_yosys(self):
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.circuit API documentation</title>
 <meta name="description" content="Class for circuit graphs …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -55,9 +55,11 @@ an associated name and gate type. The supported types are:
 
 import networkx as nx
 from networkx.exception import NetworkXNoCycle
+from functools import reduce
+from itertools import product
 
 
-supported_types = [
+addable_types = [
     &#34;buf&#34;,
     &#34;and&#34;,
     &#34;or&#34;,
@@ -71,6 +73,8 @@ supported_types = [
     &#34;output&#34;,
     &#34;input&#34;,
 ]
+
+supported_types = addable_types + [&#34;bb_input&#34;, &#34;bb_output&#34;]
 
 
 class Circuit:
@@ -143,7 +147,7 @@ class Circuit:
         t : str
                 Type.
         &#34;&#34;&#34;
-        if t not in supported_types:
+        if t not in addable_types:
             raise ValueError(f&#34;unsupported type {t}&#34;)
 
         if isinstance(ns, str):
@@ -189,10 +193,14 @@ class Circuit:
 
         &#34;&#34;&#34;
         if isinstance(ns, str):
-            try:
-                return self.graph.nodes[ns][&#34;type&#34;]
-            except KeyError:
-                raise KeyError(f&#34;Node {ns} does not have a type defined.&#34;)
+            if ns in self.graph.nodes:
+                try:
+                    return self.graph.nodes[ns][&#34;type&#34;]
+                except KeyError:
+                    raise KeyError(f&#34;Node {ns} does not have a type defined.&#34;)
+            else:
+                raise KeyError(f&#34;Node {ns} does not exist.&#34;)
+
         return [self.type(n) for n in ns]
 
     def filter_type(self, types):
@@ -230,7 +238,11 @@ class Circuit:
         if isinstance(types, str):
             types = [types]
 
-        return set(n for n in self.nodes() if self.type(n) in types)
+        for t in types:
+            if t not in supported_types:
+                raise ValueError(f&#34;type {t} not supported.&#34;)
+
+        return set(n for n in self.graph.nodes if self.graph.nodes[n][&#34;type&#34;] in types)
 
     def add_subcircuit(self, sc, name, connections=None):
         &#34;&#34;&#34;
@@ -248,9 +260,20 @@ class Circuit:
                 Optional connections to make.
 
         &#34;&#34;&#34;
+        # check if subcircuit bbs exist
+        for bb_name in sc.blackboxes:
+            if f&#34;{name}_{bb_name}&#34; in self.blackboxes:
+                raise ValueError(f&#34;blackbox {name}_{bb_name} already exists.&#34;)
+
+        # check for name overlaps
+        mapping = {}
+        for n in sc:
+            if f&#34;{name}_{n}&#34; in self.graph.nodes:
+                raise ValueError(f&#34;name {n} overlaps with {name} subcircuit.&#34;)
+            mapping[n] = f&#34;{name}_{n}&#34;
 
         # add sub circuit
-        g = nx.relabel_nodes(sc.graph, {n: f&#34;{name}_{n}&#34; for n in sc})
+        g = nx.relabel_nodes(sc.graph, mapping)
         self.graph.update(g)
         for n in sc.io():
             self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
@@ -263,13 +286,13 @@ class Circuit:
         if connections:
             sc_inputs = sc.inputs()
             sc_outputs = sc.outputs()
-            for sc_node, node in connections.items():
-                if sc_node in sc_inputs:
-                    self.connect(node, f&#34;{name}_{sc_node}&#34;)
-                elif sc_node in sc_outputs:
-                    self.connect(f&#34;{name}_{sc_node}&#34;, node)
+            for sc_n, ns in connections.items():
+                if sc_n in sc_inputs:
+                    self.connect(ns, f&#34;{name}_{sc_n}&#34;)
+                elif sc_n in sc_outputs:
+                    self.connect(f&#34;{name}_{sc_n}&#34;, ns)
                 else:
-                    raise ValueError(f&#34;node {sc_node} not in {name} io&#34;)
+                    raise ValueError(f&#34;node {sc_n} not in {name} io&#34;)
 
     def add_blackbox(self, blackbox, name, connections=None):
         &#34;&#34;&#34;
@@ -287,44 +310,79 @@ class Circuit:
                 Optional connections to make.
 
         &#34;&#34;&#34;
-        # make nodes
-        io = []
-        for n in blackbox.inputs:
-            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_input&#34;)]
-        for n in blackbox.outputs:
-            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_output&#34;)]
+        # check if exists
+        if name in self.blackboxes:
+            raise ValueError(f&#34;blackbox {name} already exists.&#34;)
 
         # save info
         self.blackboxes[name] = blackbox
 
+        # make nodes
+        io = []
+        for n in blackbox.inputs():
+            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_input&#34;)]
+        for n in blackbox.outputs():
+            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_output&#34;)]
+
         # make connections
         if connections:
-            for bb_node, node in connections.items():
-                if bb_node in blackbox.inputs:
-                    self.connect(node, f&#34;{name}.{bb_node}&#34;)
-                elif bb_node in blackbox.outputs:
-                    self.connect(f&#34;{name}.{bb_node}&#34;, node)
+            for bb_n, ns in connections.items():
+                if bb_n in blackbox.inputs():
+                    self.connect(ns, f&#34;{name}.{bb_n}&#34;)
+                elif bb_n in blackbox.outputs():
+                    self.connect(f&#34;{name}.{bb_n}&#34;, ns)
                 else:
-                    raise ValueError(f&#34;node {bb_node} not defined for blackbox {name}&#34;)
+                    raise ValueError(f&#34;node {bb_n} not defined for blackbox {name}&#34;)
 
-    def fill_blackbox(self, c, name):
+    def fill_blackbox(self, name, c):
         &#34;&#34;&#34;
         Replaces blackbox with circuit.
 
         Parameters
         -------
-        c : Circuit
-                Circuit.
         name : str
                 Instance name.
+        c : Circuit
+                Circuit.
 
         &#34;&#34;&#34;
+        # check if bb exists
+        if name not in self.blackboxes:
+            raise ValueError(f&#34;blackbox {name} does not exist.&#34;)
+
+        # check if subcircuit bbs exist
+        for bb_name in c.blackboxes:
+            if f&#34;{name}_{bb_name}&#34; in self.blackboxes:
+                raise ValueError(f&#34;blackbox {name}_{bb_name} already exists.&#34;)
+
+        # check if io match
+        if c.inputs() != self.blackboxes[name].inputs():
+            raise ValueError(f&#34;circuit inputs do not match {name} blackbox.&#34;)
+        if c.outputs() != self.blackboxes[name].outputs():
+            raise ValueError(f&#34;circuit outputs do not match {name} blackbox.&#34;)
+
+        # check for name overlaps
+        mapping = {}
+        for n in c:
+            if f&#34;{name}_{n}&#34; in self.graph.nodes:
+                raise ValueError(f&#34;name overlap with {name} blackbox.&#34;)
+            mapping[n] = f&#34;{name}_{n}&#34;
+
         # rename blackbox io
-        self.relabel({n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in self.blackboxes[name].io})
+        self.relabel({f&#34;{name}.{n}&#34;: f&#34;{name}_{n}&#34; for n in self.blackboxes[name].io()})
 
         # extend circuit
-        g = nx.relabel_nodes(c.graph, {n: f&#34;{name}_{n}&#34; for n in c})
+        g = nx.relabel_nodes(c.graph, mapping)
         self.graph.update(g)
+        for n in self.blackboxes[name].io():
+            self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
+
+        # remove blackbox
+        self.blackboxes.pop(name)
+
+        # add subcircuit blackboxes
+        for bb_name, bb in c.blackboxes.items():
+            self.blackboxes[f&#34;{name}_{bb_name}&#34;] = bb
 
     def nodes(self):
         &#34;&#34;&#34;
@@ -460,10 +518,34 @@ class Circuit:
                 Tail node(s)
 
         &#34;&#34;&#34;
+        # clean
         if isinstance(us, str):
             us = [us]
         if isinstance(vs, str):
             vs = [vs]
+
+        # check existence
+        for n in us:
+            if n not in self.graph:
+                raise ValueError(f&#34;node {n} does not exist.&#34;)
+        for n in vs:
+            if n not in self.graph:
+                raise ValueError(f&#34;node {n} does not exist.&#34;)
+
+        # check for illegal connections
+        for v in vs:
+            t = self.type(v)
+            if t in [&#34;input&#34;, &#34;bb_output&#34;]:
+                raise ValueError(f&#34;cannot connect to {t} {v}&#34;)
+            if t in [&#34;output&#34;, &#34;bb_input&#34;, &#34;buf&#34;, &#34;not&#34;]:
+                if len(self.fanin(v)) + len(us) &gt; 1:
+                    raise ValueError(f&#34;fanin of {t} {v} greater than 1.&#34;)
+        for u in us:
+            t = self.type(u)
+            if t in [&#34;output&#34;, &#34;bb_input&#34;]:
+                raise ValueError(f&#34;cannot connect from {t} {v}.&#34;)
+
+        # connect
         self.graph.add_edges_from((u, v) for u in us for v in vs)
 
     def disconnect(self, us, vs):
@@ -770,9 +852,16 @@ class Circuit:
         &#34;&#34;&#34;
         return not nx.is_directed_acyclic_graph(self.graph)
 
-    def uid(self, n):
+    def uid(self, n, blocked=None):
         &#34;&#34;&#34;
         Generates a unique net name based on input
+
+        Parameters
+        ----------
+        n : str
+                Name to uniquify
+        blocked : set of str
+                Addtional names to block
 
         Returns
         -------
@@ -780,12 +869,73 @@ class Circuit:
                 Unique name
 
         &#34;&#34;&#34;
-        if n not in self.graph:
+        if blocked is None:
+            blocked = []
+
+        if n not in self.graph and n not in blocked:
             return n
         i = 0
-        while f&#34;{n}_{i}&#34; in self.graph:
-            i += 1
+        while f&#34;{n}_{i}&#34; in self.graph or f&#34;{n}_{i}&#34; in blocked:
+            if i &lt; 10:
+                i += 1
+            else:
+                i *= 7
         return f&#34;{n}_{i}&#34;
+
+    def kcuts(self, n, k, computed=None):
+        &#34;&#34;&#34;
+        Generates k-cuts
+
+        Parameters
+        ----------
+        n : str
+                Node to compute cuts for.
+        k : int
+                Maximum cut width.
+
+        Returns
+        -------
+        iter of str
+                k-cuts.
+
+        &#34;&#34;&#34;
+
+        if computed is None:
+            computed = {}
+
+        if n in computed:
+            return computed[n]
+
+        # helper function
+        def merge_cut_sets(a_cuts, b_cuts):
+            merged_cuts = []
+            for a_cut, b_cut in product(a_cuts, b_cuts):
+                merged_cut = a_cut | b_cut
+                if len(merged_cut) &lt;= k:
+                    merged_cuts.append(merged_cut)
+            return merged_cuts
+
+        if self.fanin(n):
+            fanin_cut_sets = [self.kcuts(f, k, computed) for f in self.fanin(n)]
+            cuts = reduce(merge_cut_sets, fanin_cut_sets) + [set([n])]
+        else:
+            cuts = [set([n])]
+
+        # add cuts
+        computed[n] = cuts
+        return cuts
+
+    def topo_sort(self):
+        &#34;&#34;&#34;
+        Returns a generator of nodes in topologically sorted order.
+
+        Returns
+        -------
+        iter of str
+                Ordered node names.
+
+        &#34;&#34;&#34;
+        return nx.topological_sort(self.graph)
 
 
 class BlackBox:
@@ -805,9 +955,44 @@ class BlackBox:
         &#34;&#34;&#34;
 
         self.name = name
-        self.inputs = inputs
-        self.outputs = outputs
-        self.io = inputs + outputs</code></pre>
+        self.input_set = set(inputs)
+        self.output_set = set(outputs)
+
+    def inputs(self):
+        &#34;&#34;&#34;
+        Returns the blackbox&#39;s inputs
+
+        Returns
+        -------
+        set of str
+                Input nodes in blackbox.
+
+        &#34;&#34;&#34;
+        return self.input_set
+
+    def outputs(self):
+        &#34;&#34;&#34;
+        Returns the blackbox&#39;s outputs
+
+        Returns
+        -------
+        set of str
+                Output nodes in blackbox.
+
+        &#34;&#34;&#34;
+        return self.output_set
+
+    def io(self):
+        &#34;&#34;&#34;
+        Returns the blackbox&#39;s inputs and outputs
+
+        Returns
+        -------
+        set of str
+                IO nodes in blackbox.
+
+        &#34;&#34;&#34;
+        return self.output_set | self.input_set</code></pre>
 </details>
 </section>
 <section>
@@ -855,10 +1040,129 @@ class BlackBox:
         &#34;&#34;&#34;
 
         self.name = name
-        self.inputs = inputs
-        self.outputs = outputs
-        self.io = inputs + outputs</code></pre>
+        self.input_set = set(inputs)
+        self.output_set = set(outputs)
+
+    def inputs(self):
+        &#34;&#34;&#34;
+        Returns the blackbox&#39;s inputs
+
+        Returns
+        -------
+        set of str
+                Input nodes in blackbox.
+
+        &#34;&#34;&#34;
+        return self.input_set
+
+    def outputs(self):
+        &#34;&#34;&#34;
+        Returns the blackbox&#39;s outputs
+
+        Returns
+        -------
+        set of str
+                Output nodes in blackbox.
+
+        &#34;&#34;&#34;
+        return self.output_set
+
+    def io(self):
+        &#34;&#34;&#34;
+        Returns the blackbox&#39;s inputs and outputs
+
+        Returns
+        -------
+        set of str
+                IO nodes in blackbox.
+
+        &#34;&#34;&#34;
+        return self.output_set | self.input_set</code></pre>
 </details>
+<h3>Methods</h3>
+<dl>
+<dt id="circuitgraph.circuit.BlackBox.inputs"><code class="name flex">
+<span>def <span class="ident">inputs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the blackbox's inputs</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Input nodes in blackbox.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def inputs(self):
+    &#34;&#34;&#34;
+    Returns the blackbox&#39;s inputs
+
+    Returns
+    -------
+    set of str
+            Input nodes in blackbox.
+
+    &#34;&#34;&#34;
+    return self.input_set</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.BlackBox.io"><code class="name flex">
+<span>def <span class="ident">io</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the blackbox's inputs and outputs</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>IO nodes in blackbox.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def io(self):
+    &#34;&#34;&#34;
+    Returns the blackbox&#39;s inputs and outputs
+
+    Returns
+    -------
+    set of str
+            IO nodes in blackbox.
+
+    &#34;&#34;&#34;
+    return self.output_set | self.input_set</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.BlackBox.outputs"><code class="name flex">
+<span>def <span class="ident">outputs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the blackbox's outputs</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>set</code> of <code>str</code></dt>
+<dd>Output nodes in blackbox.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def outputs(self):
+    &#34;&#34;&#34;
+    Returns the blackbox&#39;s outputs
+
+    Returns
+    -------
+    set of str
+            Output nodes in blackbox.
+
+    &#34;&#34;&#34;
+    return self.output_set</code></pre>
+</details>
+</dd>
+</dl>
 </dd>
 <dt id="circuitgraph.circuit.Circuit"><code class="flex name class">
 <span>class <span class="ident">Circuit</span></span>
@@ -877,18 +1181,18 @@ class BlackBox:
 </dl>
 <h2 id="examples">Examples</h2>
 <p>Create an empty circuit.</p>
-<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
 &gt;&gt;&gt; c = cg.Circuit()
 </code></pre>
 <p>Add an AND gate named 'x'.</p>
-<pre><code class="python">&gt;&gt;&gt; c.add('x','and')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.add('x','and')
 </code></pre>
 <p>Add an additional nodes and connect them.</p>
-<pre><code class="python">&gt;&gt;&gt; c.add('y','or',fanout='x')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.add('y','or',fanout='x')
 &gt;&gt;&gt; c.add('z','xor',fanin=['x','y'])
 </code></pre>
 <p>Another way to create the circuit is through a file.</p>
-<pre><code class="python">&gt;&gt;&gt; c = cg.from_file('path/circuit.v')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.from_file('path/circuit.v')
 </code></pre></div>
 <details class="source">
 <summary>
@@ -964,7 +1268,7 @@ class BlackBox:
         t : str
                 Type.
         &#34;&#34;&#34;
-        if t not in supported_types:
+        if t not in addable_types:
             raise ValueError(f&#34;unsupported type {t}&#34;)
 
         if isinstance(ns, str):
@@ -1010,10 +1314,14 @@ class BlackBox:
 
         &#34;&#34;&#34;
         if isinstance(ns, str):
-            try:
-                return self.graph.nodes[ns][&#34;type&#34;]
-            except KeyError:
-                raise KeyError(f&#34;Node {ns} does not have a type defined.&#34;)
+            if ns in self.graph.nodes:
+                try:
+                    return self.graph.nodes[ns][&#34;type&#34;]
+                except KeyError:
+                    raise KeyError(f&#34;Node {ns} does not have a type defined.&#34;)
+            else:
+                raise KeyError(f&#34;Node {ns} does not exist.&#34;)
+
         return [self.type(n) for n in ns]
 
     def filter_type(self, types):
@@ -1051,7 +1359,11 @@ class BlackBox:
         if isinstance(types, str):
             types = [types]
 
-        return set(n for n in self.nodes() if self.type(n) in types)
+        for t in types:
+            if t not in supported_types:
+                raise ValueError(f&#34;type {t} not supported.&#34;)
+
+        return set(n for n in self.graph.nodes if self.graph.nodes[n][&#34;type&#34;] in types)
 
     def add_subcircuit(self, sc, name, connections=None):
         &#34;&#34;&#34;
@@ -1069,9 +1381,20 @@ class BlackBox:
                 Optional connections to make.
 
         &#34;&#34;&#34;
+        # check if subcircuit bbs exist
+        for bb_name in sc.blackboxes:
+            if f&#34;{name}_{bb_name}&#34; in self.blackboxes:
+                raise ValueError(f&#34;blackbox {name}_{bb_name} already exists.&#34;)
+
+        # check for name overlaps
+        mapping = {}
+        for n in sc:
+            if f&#34;{name}_{n}&#34; in self.graph.nodes:
+                raise ValueError(f&#34;name {n} overlaps with {name} subcircuit.&#34;)
+            mapping[n] = f&#34;{name}_{n}&#34;
 
         # add sub circuit
-        g = nx.relabel_nodes(sc.graph, {n: f&#34;{name}_{n}&#34; for n in sc})
+        g = nx.relabel_nodes(sc.graph, mapping)
         self.graph.update(g)
         for n in sc.io():
             self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
@@ -1084,13 +1407,13 @@ class BlackBox:
         if connections:
             sc_inputs = sc.inputs()
             sc_outputs = sc.outputs()
-            for sc_node, node in connections.items():
-                if sc_node in sc_inputs:
-                    self.connect(node, f&#34;{name}_{sc_node}&#34;)
-                elif sc_node in sc_outputs:
-                    self.connect(f&#34;{name}_{sc_node}&#34;, node)
+            for sc_n, ns in connections.items():
+                if sc_n in sc_inputs:
+                    self.connect(ns, f&#34;{name}_{sc_n}&#34;)
+                elif sc_n in sc_outputs:
+                    self.connect(f&#34;{name}_{sc_n}&#34;, ns)
                 else:
-                    raise ValueError(f&#34;node {sc_node} not in {name} io&#34;)
+                    raise ValueError(f&#34;node {sc_n} not in {name} io&#34;)
 
     def add_blackbox(self, blackbox, name, connections=None):
         &#34;&#34;&#34;
@@ -1108,44 +1431,79 @@ class BlackBox:
                 Optional connections to make.
 
         &#34;&#34;&#34;
-        # make nodes
-        io = []
-        for n in blackbox.inputs:
-            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_input&#34;)]
-        for n in blackbox.outputs:
-            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_output&#34;)]
+        # check if exists
+        if name in self.blackboxes:
+            raise ValueError(f&#34;blackbox {name} already exists.&#34;)
 
         # save info
         self.blackboxes[name] = blackbox
 
+        # make nodes
+        io = []
+        for n in blackbox.inputs():
+            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_input&#34;)]
+        for n in blackbox.outputs():
+            io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_output&#34;)]
+
         # make connections
         if connections:
-            for bb_node, node in connections.items():
-                if bb_node in blackbox.inputs:
-                    self.connect(node, f&#34;{name}.{bb_node}&#34;)
-                elif bb_node in blackbox.outputs:
-                    self.connect(f&#34;{name}.{bb_node}&#34;, node)
+            for bb_n, ns in connections.items():
+                if bb_n in blackbox.inputs():
+                    self.connect(ns, f&#34;{name}.{bb_n}&#34;)
+                elif bb_n in blackbox.outputs():
+                    self.connect(f&#34;{name}.{bb_n}&#34;, ns)
                 else:
-                    raise ValueError(f&#34;node {bb_node} not defined for blackbox {name}&#34;)
+                    raise ValueError(f&#34;node {bb_n} not defined for blackbox {name}&#34;)
 
-    def fill_blackbox(self, c, name):
+    def fill_blackbox(self, name, c):
         &#34;&#34;&#34;
         Replaces blackbox with circuit.
 
         Parameters
         -------
-        c : Circuit
-                Circuit.
         name : str
                 Instance name.
+        c : Circuit
+                Circuit.
 
         &#34;&#34;&#34;
+        # check if bb exists
+        if name not in self.blackboxes:
+            raise ValueError(f&#34;blackbox {name} does not exist.&#34;)
+
+        # check if subcircuit bbs exist
+        for bb_name in c.blackboxes:
+            if f&#34;{name}_{bb_name}&#34; in self.blackboxes:
+                raise ValueError(f&#34;blackbox {name}_{bb_name} already exists.&#34;)
+
+        # check if io match
+        if c.inputs() != self.blackboxes[name].inputs():
+            raise ValueError(f&#34;circuit inputs do not match {name} blackbox.&#34;)
+        if c.outputs() != self.blackboxes[name].outputs():
+            raise ValueError(f&#34;circuit outputs do not match {name} blackbox.&#34;)
+
+        # check for name overlaps
+        mapping = {}
+        for n in c:
+            if f&#34;{name}_{n}&#34; in self.graph.nodes:
+                raise ValueError(f&#34;name overlap with {name} blackbox.&#34;)
+            mapping[n] = f&#34;{name}_{n}&#34;
+
         # rename blackbox io
-        self.relabel({n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in self.blackboxes[name].io})
+        self.relabel({f&#34;{name}.{n}&#34;: f&#34;{name}_{n}&#34; for n in self.blackboxes[name].io()})
 
         # extend circuit
-        g = nx.relabel_nodes(c.graph, {n: f&#34;{name}_{n}&#34; for n in c})
+        g = nx.relabel_nodes(c.graph, mapping)
         self.graph.update(g)
+        for n in self.blackboxes[name].io():
+            self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
+
+        # remove blackbox
+        self.blackboxes.pop(name)
+
+        # add subcircuit blackboxes
+        for bb_name, bb in c.blackboxes.items():
+            self.blackboxes[f&#34;{name}_{bb_name}&#34;] = bb
 
     def nodes(self):
         &#34;&#34;&#34;
@@ -1281,10 +1639,34 @@ class BlackBox:
                 Tail node(s)
 
         &#34;&#34;&#34;
+        # clean
         if isinstance(us, str):
             us = [us]
         if isinstance(vs, str):
             vs = [vs]
+
+        # check existence
+        for n in us:
+            if n not in self.graph:
+                raise ValueError(f&#34;node {n} does not exist.&#34;)
+        for n in vs:
+            if n not in self.graph:
+                raise ValueError(f&#34;node {n} does not exist.&#34;)
+
+        # check for illegal connections
+        for v in vs:
+            t = self.type(v)
+            if t in [&#34;input&#34;, &#34;bb_output&#34;]:
+                raise ValueError(f&#34;cannot connect to {t} {v}&#34;)
+            if t in [&#34;output&#34;, &#34;bb_input&#34;, &#34;buf&#34;, &#34;not&#34;]:
+                if len(self.fanin(v)) + len(us) &gt; 1:
+                    raise ValueError(f&#34;fanin of {t} {v} greater than 1.&#34;)
+        for u in us:
+            t = self.type(u)
+            if t in [&#34;output&#34;, &#34;bb_input&#34;]:
+                raise ValueError(f&#34;cannot connect from {t} {v}.&#34;)
+
+        # connect
         self.graph.add_edges_from((u, v) for u in us for v in vs)
 
     def disconnect(self, us, vs):
@@ -1591,9 +1973,16 @@ class BlackBox:
         &#34;&#34;&#34;
         return not nx.is_directed_acyclic_graph(self.graph)
 
-    def uid(self, n):
+    def uid(self, n, blocked=None):
         &#34;&#34;&#34;
         Generates a unique net name based on input
+
+        Parameters
+        ----------
+        n : str
+                Name to uniquify
+        blocked : set of str
+                Addtional names to block
 
         Returns
         -------
@@ -1601,12 +1990,73 @@ class BlackBox:
                 Unique name
 
         &#34;&#34;&#34;
-        if n not in self.graph:
+        if blocked is None:
+            blocked = []
+
+        if n not in self.graph and n not in blocked:
             return n
         i = 0
-        while f&#34;{n}_{i}&#34; in self.graph:
-            i += 1
-        return f&#34;{n}_{i}&#34;</code></pre>
+        while f&#34;{n}_{i}&#34; in self.graph or f&#34;{n}_{i}&#34; in blocked:
+            if i &lt; 10:
+                i += 1
+            else:
+                i *= 7
+        return f&#34;{n}_{i}&#34;
+
+    def kcuts(self, n, k, computed=None):
+        &#34;&#34;&#34;
+        Generates k-cuts
+
+        Parameters
+        ----------
+        n : str
+                Node to compute cuts for.
+        k : int
+                Maximum cut width.
+
+        Returns
+        -------
+        iter of str
+                k-cuts.
+
+        &#34;&#34;&#34;
+
+        if computed is None:
+            computed = {}
+
+        if n in computed:
+            return computed[n]
+
+        # helper function
+        def merge_cut_sets(a_cuts, b_cuts):
+            merged_cuts = []
+            for a_cut, b_cut in product(a_cuts, b_cuts):
+                merged_cut = a_cut | b_cut
+                if len(merged_cut) &lt;= k:
+                    merged_cuts.append(merged_cut)
+            return merged_cuts
+
+        if self.fanin(n):
+            fanin_cut_sets = [self.kcuts(f, k, computed) for f in self.fanin(n)]
+            cuts = reduce(merge_cut_sets, fanin_cut_sets) + [set([n])]
+        else:
+            cuts = [set([n])]
+
+        # add cuts
+        computed[n] = cuts
+        return cuts
+
+    def topo_sort(self):
+        &#34;&#34;&#34;
+        Returns a generator of nodes in topologically sorted order.
+
+        Returns
+        -------
+        iter of str
+                Ordered node names.
+
+        &#34;&#34;&#34;
+        return nx.topological_sort(self.graph)</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
@@ -1636,7 +2086,7 @@ exists in the circuit.</dd>
 </dl>
 <h2 id="example">Example</h2>
 <p>Add a single node</p>
-<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
 &gt;&gt;&gt; c = cg.Circuit()
 &gt;&gt;&gt; c.add('a','or')
 'a'
@@ -1644,7 +2094,7 @@ exists in the circuit.</dd>
 <p>In the above example the function returns the name of the new node.
 This allows us to quickly generate an AND tree with the following
 syntax.</p>
-<pre><code class="python">&gt;&gt;&gt; c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
 'g'
 &gt;&gt;&gt; c.fanin('g')
 {'in_1', 'in_0', 'in_3', 'in_2'}
@@ -1763,25 +2213,29 @@ syntax.</p>
             Optional connections to make.
 
     &#34;&#34;&#34;
-    # make nodes
-    io = []
-    for n in blackbox.inputs:
-        io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_input&#34;)]
-    for n in blackbox.outputs:
-        io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_output&#34;)]
+    # check if exists
+    if name in self.blackboxes:
+        raise ValueError(f&#34;blackbox {name} already exists.&#34;)
 
     # save info
     self.blackboxes[name] = blackbox
 
+    # make nodes
+    io = []
+    for n in blackbox.inputs():
+        io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_input&#34;)]
+    for n in blackbox.outputs():
+        io += [self.add(f&#34;{name}.{n}&#34;, &#34;bb_output&#34;)]
+
     # make connections
     if connections:
-        for bb_node, node in connections.items():
-            if bb_node in blackbox.inputs:
-                self.connect(node, f&#34;{name}.{bb_node}&#34;)
-            elif bb_node in blackbox.outputs:
-                self.connect(f&#34;{name}.{bb_node}&#34;, node)
+        for bb_n, ns in connections.items():
+            if bb_n in blackbox.inputs():
+                self.connect(ns, f&#34;{name}.{bb_n}&#34;)
+            elif bb_n in blackbox.outputs():
+                self.connect(f&#34;{name}.{bb_n}&#34;, ns)
             else:
-                raise ValueError(f&#34;node {bb_node} not defined for blackbox {name}&#34;)</code></pre>
+                raise ValueError(f&#34;node {bb_n} not defined for blackbox {name}&#34;)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.add_subcircuit"><code class="name flex">
@@ -1820,9 +2274,20 @@ syntax.</p>
             Optional connections to make.
 
     &#34;&#34;&#34;
+    # check if subcircuit bbs exist
+    for bb_name in sc.blackboxes:
+        if f&#34;{name}_{bb_name}&#34; in self.blackboxes:
+            raise ValueError(f&#34;blackbox {name}_{bb_name} already exists.&#34;)
+
+    # check for name overlaps
+    mapping = {}
+    for n in sc:
+        if f&#34;{name}_{n}&#34; in self.graph.nodes:
+            raise ValueError(f&#34;name {n} overlaps with {name} subcircuit.&#34;)
+        mapping[n] = f&#34;{name}_{n}&#34;
 
     # add sub circuit
-    g = nx.relabel_nodes(sc.graph, {n: f&#34;{name}_{n}&#34; for n in sc})
+    g = nx.relabel_nodes(sc.graph, mapping)
     self.graph.update(g)
     for n in sc.io():
         self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
@@ -1835,13 +2300,13 @@ syntax.</p>
     if connections:
         sc_inputs = sc.inputs()
         sc_outputs = sc.outputs()
-        for sc_node, node in connections.items():
-            if sc_node in sc_inputs:
-                self.connect(node, f&#34;{name}_{sc_node}&#34;)
-            elif sc_node in sc_outputs:
-                self.connect(f&#34;{name}_{sc_node}&#34;, node)
+        for sc_n, ns in connections.items():
+            if sc_n in sc_inputs:
+                self.connect(ns, f&#34;{name}_{sc_n}&#34;)
+            elif sc_n in sc_outputs:
+                self.connect(f&#34;{name}_{sc_n}&#34;, ns)
             else:
-                raise ValueError(f&#34;node {sc_node} not in {name} io&#34;)</code></pre>
+                raise ValueError(f&#34;node {sc_n} not in {name} io&#34;)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.connect"><code class="name flex">
@@ -1872,10 +2337,34 @@ syntax.</p>
             Tail node(s)
 
     &#34;&#34;&#34;
+    # clean
     if isinstance(us, str):
         us = [us]
     if isinstance(vs, str):
         vs = [vs]
+
+    # check existence
+    for n in us:
+        if n not in self.graph:
+            raise ValueError(f&#34;node {n} does not exist.&#34;)
+    for n in vs:
+        if n not in self.graph:
+            raise ValueError(f&#34;node {n} does not exist.&#34;)
+
+    # check for illegal connections
+    for v in vs:
+        t = self.type(v)
+        if t in [&#34;input&#34;, &#34;bb_output&#34;]:
+            raise ValueError(f&#34;cannot connect to {t} {v}&#34;)
+        if t in [&#34;output&#34;, &#34;bb_input&#34;, &#34;buf&#34;, &#34;not&#34;]:
+            if len(self.fanin(v)) + len(us) &gt; 1:
+                raise ValueError(f&#34;fanin of {t} {v} greater than 1.&#34;)
+    for u in us:
+        t = self.type(u)
+        if t in [&#34;output&#34;, &#34;bb_input&#34;]:
+            raise ValueError(f&#34;cannot connect from {t} {v}.&#34;)
+
+    # connect
     self.graph.add_edges_from((u, v) for u in us for v in vs)</code></pre>
 </details>
 </dd>
@@ -2000,7 +2489,7 @@ syntax.</p>
 <dd>Nodes in fanin.</dd>
 </dl>
 <h2 id="example">Example</h2>
-<pre><code class="python">&gt;&gt;&gt; c.fanout('n_20')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.fanout('n_20')
 {'G17'}
 &gt;&gt;&gt; c.fanout('n_11')
 {'n_12'}
@@ -2220,39 +2709,70 @@ syntax.</p>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.fill_blackbox"><code class="name flex">
-<span>def <span class="ident">fill_blackbox</span></span>(<span>self, c, name)</span>
+<span>def <span class="ident">fill_blackbox</span></span>(<span>self, name, c)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Replaces blackbox with circuit.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
-<dt><strong><code>c</code></strong> :&ensp;<code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></dt>
-<dd>Circuit.</dd>
 <dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
 <dd>Instance name.</dd>
+<dt><strong><code>c</code></strong> :&ensp;<code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></dt>
+<dd>Circuit.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def fill_blackbox(self, c, name):
+<pre><code class="python">def fill_blackbox(self, name, c):
     &#34;&#34;&#34;
     Replaces blackbox with circuit.
 
     Parameters
     -------
-    c : Circuit
-            Circuit.
     name : str
             Instance name.
+    c : Circuit
+            Circuit.
 
     &#34;&#34;&#34;
+    # check if bb exists
+    if name not in self.blackboxes:
+        raise ValueError(f&#34;blackbox {name} does not exist.&#34;)
+
+    # check if subcircuit bbs exist
+    for bb_name in c.blackboxes:
+        if f&#34;{name}_{bb_name}&#34; in self.blackboxes:
+            raise ValueError(f&#34;blackbox {name}_{bb_name} already exists.&#34;)
+
+    # check if io match
+    if c.inputs() != self.blackboxes[name].inputs():
+        raise ValueError(f&#34;circuit inputs do not match {name} blackbox.&#34;)
+    if c.outputs() != self.blackboxes[name].outputs():
+        raise ValueError(f&#34;circuit outputs do not match {name} blackbox.&#34;)
+
+    # check for name overlaps
+    mapping = {}
+    for n in c:
+        if f&#34;{name}_{n}&#34; in self.graph.nodes:
+            raise ValueError(f&#34;name overlap with {name} blackbox.&#34;)
+        mapping[n] = f&#34;{name}_{n}&#34;
+
     # rename blackbox io
-    self.relabel({n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in self.blackboxes[name].io})
+    self.relabel({f&#34;{name}.{n}&#34;: f&#34;{name}_{n}&#34; for n in self.blackboxes[name].io()})
 
     # extend circuit
-    g = nx.relabel_nodes(c.graph, {n: f&#34;{name}_{n}&#34; for n in c})
-    self.graph.update(g)</code></pre>
+    g = nx.relabel_nodes(c.graph, mapping)
+    self.graph.update(g)
+    for n in self.blackboxes[name].io():
+        self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
+
+    # remove blackbox
+    self.blackboxes.pop(name)
+
+    # add subcircuit blackboxes
+    for bb_name, bb in c.blackboxes.items():
+        self.blackboxes[f&#34;{name}_{bb_name}&#34;] = bb</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.filter_type"><code class="name flex">
@@ -2272,15 +2792,15 @@ syntax.</p>
 </dl>
 <h2 id="examples">Examples</h2>
 <p>Create a circuit with several gate types.</p>
-<pre><code class="python">&gt;&gt;&gt; c = cg.Circuit()
+<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.Circuit()
 &gt;&gt;&gt; for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}',g)
 </code></pre>
 <p>Calling <code>nodes</code> with no argument returns all nodes in the circuit</p>
-<pre><code class="python">&gt;&gt;&gt; c.nodes()
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.nodes()
 {'g0', 'g1', 'g2', 'g3'}
 </code></pre>
 <p>Passing a node type, we can selectively return nodes.</p>
-<pre><code class="python">&gt;&gt;&gt; c.filter_type('xor')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.filter_type('xor')
 {'g2', 'g0'}
 </code></pre></div>
 <details class="source">
@@ -2322,7 +2842,11 @@ syntax.</p>
     if isinstance(types, str):
         types = [types]
 
-    return set(n for n in self.nodes() if self.type(n) in types)</code></pre>
+    for t in types:
+        if t not in supported_types:
+            raise ValueError(f&#34;type {t} not supported.&#34;)
+
+    return set(n for n in self.graph.nodes if self.graph.nodes[n][&#34;type&#34;] in types)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.inputs"><code class="name flex">
@@ -2404,6 +2928,71 @@ syntax.</p>
 
     &#34;&#34;&#34;
     return not nx.is_directed_acyclic_graph(self.graph)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.kcuts"><code class="name flex">
+<span>def <span class="ident">kcuts</span></span>(<span>self, n, k, computed=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Generates k-cuts</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>Node to compute cuts for.</dd>
+<dt><strong><code>k</code></strong> :&ensp;<code>int</code></dt>
+<dd>Maximum cut width.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>iter</code> of <code>str</code></dt>
+<dd>k-cuts.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def kcuts(self, n, k, computed=None):
+    &#34;&#34;&#34;
+    Generates k-cuts
+
+    Parameters
+    ----------
+    n : str
+            Node to compute cuts for.
+    k : int
+            Maximum cut width.
+
+    Returns
+    -------
+    iter of str
+            k-cuts.
+
+    &#34;&#34;&#34;
+
+    if computed is None:
+        computed = {}
+
+    if n in computed:
+        return computed[n]
+
+    # helper function
+    def merge_cut_sets(a_cuts, b_cuts):
+        merged_cuts = []
+        for a_cut, b_cut in product(a_cuts, b_cuts):
+            merged_cut = a_cut | b_cut
+            if len(merged_cut) &lt;= k:
+                merged_cuts.append(merged_cut)
+        return merged_cuts
+
+    if self.fanin(n):
+        fanin_cut_sets = [self.kcuts(f, k, computed) for f in self.fanin(n)]
+        cuts = reduce(merge_cut_sets, fanin_cut_sets) + [set([n])]
+    else:
+        cuts = [set([n])]
+
+    # add cuts
+    computed[n] = cuts
+    return cuts</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.nodes"><code class="name flex">
@@ -2542,7 +3131,7 @@ syntax.</p>
     t : str
             Type.
     &#34;&#34;&#34;
-    if t not in supported_types:
+    if t not in addable_types:
         raise ValueError(f&#34;unsupported type {t}&#34;)
 
     if isinstance(ns, str):
@@ -2592,6 +3181,33 @@ syntax.</p>
         return (set(ns) | self.transitive_fanin(ns)) &amp; self.startpoints()
     else:
         return self.inputs() | self.filter_type(&#34;bb_output&#34;)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.topo_sort"><code class="name flex">
+<span>def <span class="ident">topo_sort</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns a generator of nodes in topologically sorted order.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>iter</code> of <code>str</code></dt>
+<dd>Ordered node names.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def topo_sort(self):
+    &#34;&#34;&#34;
+    Returns a generator of nodes in topologically sorted order.
+
+    Returns
+    -------
+    iter of str
+            Ordered node names.
+
+    &#34;&#34;&#34;
+    return nx.topological_sort(self.graph)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.transitive_fanin"><code class="name flex">
@@ -2701,15 +3317,15 @@ syntax.</p>
 </dl>
 <h2 id="examples">Examples</h2>
 <p>Create a with several gate types.</p>
-<pre><code class="python">&gt;&gt;&gt; c = cg.Circuit()
+<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.Circuit()
 &gt;&gt;&gt; for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}', g)
 </code></pre>
 <p>Calling <code>type</code> for a single gate returns a single type</p>
-<pre><code class="python">&gt;&gt;&gt; c.type('g0')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.type('g0')
 {'xor'}
 </code></pre>
 <p>Calling <code>type</code> on an iterable returns a set of types</p>
-<pre><code class="python">&gt;&gt;&gt; c.type(c.nodes())
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.type(c.nodes())
 ['xor', 'or', 'xor', 'ff']
 </code></pre></div>
 <details class="source">
@@ -2754,18 +3370,29 @@ syntax.</p>
 
     &#34;&#34;&#34;
     if isinstance(ns, str):
-        try:
-            return self.graph.nodes[ns][&#34;type&#34;]
-        except KeyError:
-            raise KeyError(f&#34;Node {ns} does not have a type defined.&#34;)
+        if ns in self.graph.nodes:
+            try:
+                return self.graph.nodes[ns][&#34;type&#34;]
+            except KeyError:
+                raise KeyError(f&#34;Node {ns} does not have a type defined.&#34;)
+        else:
+            raise KeyError(f&#34;Node {ns} does not exist.&#34;)
+
     return [self.type(n) for n in ns]</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.uid"><code class="name flex">
-<span>def <span class="ident">uid</span></span>(<span>self, n)</span>
+<span>def <span class="ident">uid</span></span>(<span>self, n, blocked=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Generates a unique net name based on input</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name to uniquify</dd>
+<dt><strong><code>blocked</code></strong> :&ensp;<code>set</code> of <code>str</code></dt>
+<dd>Addtional names to block</dd>
+</dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>str</code></dt>
@@ -2775,9 +3402,16 @@ syntax.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def uid(self, n):
+<pre><code class="python">def uid(self, n, blocked=None):
     &#34;&#34;&#34;
     Generates a unique net name based on input
+
+    Parameters
+    ----------
+    n : str
+            Name to uniquify
+    blocked : set of str
+            Addtional names to block
 
     Returns
     -------
@@ -2785,11 +3419,17 @@ syntax.</p>
             Unique name
 
     &#34;&#34;&#34;
-    if n not in self.graph:
+    if blocked is None:
+        blocked = []
+
+    if n not in self.graph and n not in blocked:
         return n
     i = 0
-    while f&#34;{n}_{i}&#34; in self.graph:
-        i += 1
+    while f&#34;{n}_{i}&#34; in self.graph or f&#34;{n}_{i}&#34; in blocked:
+        if i &lt; 10:
+            i += 1
+        else:
+            i *= 7
     return f&#34;{n}_{i}&#34;</code></pre>
 </details>
 </dd>
@@ -2817,6 +3457,11 @@ syntax.</p>
 <ul>
 <li>
 <h4><code><a title="circuitgraph.circuit.BlackBox" href="#circuitgraph.circuit.BlackBox">BlackBox</a></code></h4>
+<ul class="">
+<li><code><a title="circuitgraph.circuit.BlackBox.inputs" href="#circuitgraph.circuit.BlackBox.inputs">inputs</a></code></li>
+<li><code><a title="circuitgraph.circuit.BlackBox.io" href="#circuitgraph.circuit.BlackBox.io">io</a></code></li>
+<li><code><a title="circuitgraph.circuit.BlackBox.outputs" href="#circuitgraph.circuit.BlackBox.outputs">outputs</a></code></li>
+</ul>
 </li>
 <li>
 <h4><code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></h4>
@@ -2837,12 +3482,14 @@ syntax.</p>
 <li><code><a title="circuitgraph.circuit.Circuit.inputs" href="#circuitgraph.circuit.Circuit.inputs">inputs</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.io" href="#circuitgraph.circuit.Circuit.io">io</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.is_cyclic" href="#circuitgraph.circuit.Circuit.is_cyclic">is_cyclic</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.kcuts" href="#circuitgraph.circuit.Circuit.kcuts">kcuts</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.nodes" href="#circuitgraph.circuit.Circuit.nodes">nodes</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.outputs" href="#circuitgraph.circuit.Circuit.outputs">outputs</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.relabel" href="#circuitgraph.circuit.Circuit.relabel">relabel</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.remove" href="#circuitgraph.circuit.Circuit.remove">remove</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.set_type" href="#circuitgraph.circuit.Circuit.set_type">set_type</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.startpoints" href="#circuitgraph.circuit.Circuit.startpoints">startpoints</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.topo_sort" href="#circuitgraph.circuit.Circuit.topo_sort">topo_sort</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.transitive_fanin" href="#circuitgraph.circuit.Circuit.transitive_fanin">transitive_fanin</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.transitive_fanout" href="#circuitgraph.circuit.Circuit.transitive_fanout">transitive_fanout</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.type" href="#circuitgraph.circuit.Circuit.type">type</a></code></li>
@@ -2855,7 +3502,7 @@ syntax.</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>

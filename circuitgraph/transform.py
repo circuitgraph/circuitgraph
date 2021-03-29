@@ -636,3 +636,44 @@ def sensitization_transform(c, n):
     m.connect(f"c0_{n}", f"c1_{n}")
 
     return m
+
+
+def kfanin(c, k):
+    """
+    Reduces the maximum fanin of circuit gates to k
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    k : str
+            Maximum fanin.
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+
+    """
+
+    ck = copy(c)
+    for n in ck.nodes():
+        i = 0
+        while len(ck.fanin(n)) > k:
+            fi = ck.fanin(n)
+            f0 = fi.pop()
+            f1 = fi.pop()
+            ck.disconnect([f0, f1], n)
+            if ck.type(n) in ["and", "nand"]:
+                ck.add(f"{n}_new_{i}", "and", fanin=[f0, f1], fanout=n)
+            elif ck.type(n) in ["or", "nor"]:
+                ck.add(f"{n}_new_{i}", "or", fanin=[f0, f1], fanout=n)
+            elif ck.type(n) in ["xor"]:
+                ck.add(f"{n}_new_{i}", "xor", fanin=[f0, f1], fanout=n)
+            elif ck.type(n) in ["xnor"]:
+                ck.add(f"{n}_new_{i}", "xnor", fanin=[f0, f1], fanout=n)
+            else:
+                raise ValueError(f"Unknown gate type: {ck.type(n)}")
+            i += 1
+
+    return ck

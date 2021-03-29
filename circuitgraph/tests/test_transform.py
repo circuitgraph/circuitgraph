@@ -215,3 +215,11 @@ class TestTransform(unittest.TestCase):
 
         # check answer
         self.assertEqual(sen_s, sen_sim)
+
+    def test_kfanin(self):
+        k = 2
+        ck = kfanin(self.s27, 2)
+
+        # check conversion
+        m = cg.miter(self.s27, ck)
+        self.assertFalse(cg.sat(m, assumptions={"sat": True}))

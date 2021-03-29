@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.9.2" />
 <title>circuitgraph.utils API documentation</title>
 <meta name="description" content="Various circuit related utilities" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -28,6 +28,40 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;Various circuit related utilities&#34;&#34;&#34;
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+import subprocess
+
+from circuitgraph import supported_types
+from circuitgraph.io import circuit_to_verilog
+
+
+def visualize(c, output_file):
+    &#34;&#34;&#34;
+    Visualize a circuit using Yosys.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to visualize.
+    output_file: str
+            Where to write the image to.
+    &#34;&#34;&#34;
+    verilog = circuit_to_verilog(c)
+    output_file = Path(output_file)
+    fmt = output_file.suffix[1:]
+    prefix = output_file.with_suffix(&#34;&#34;)
+    with NamedTemporaryFile(
+        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;
+    ) as tmp_in:
+        tmp_in.write(bytes(verilog, &#34;ascii&#34;))
+        tmp_in.flush()
+        cmd = [
+            &#34;yosys&#34;,
+            &#34;-p&#34;,
+            f&#34;read_verilog {tmp_in.name}; &#34; f&#34;show -format {fmt} -prefix {prefix}&#34;,
+        ]
+        subprocess.run(cmd)
 
 
 def clog2(num: int) -&gt; int:
@@ -104,7 +138,7 @@ def bin_to_int(b, lend=False):
     return int(s, 2)
 
 
-def lint(c):
+def lint(c, exhaustive=False, unloaded=False, undriven=True):
     &#34;&#34;&#34;
     Checks circuit for missing connections.
 
@@ -113,19 +147,76 @@ def lint(c):
     c: Circuit
             The Circuit to lint.
     &#34;&#34;&#34;
-    c.type(c.nodes())
-    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;output&#34;, &#34;bb_input&#34;]):
-        if len(c.fanin(g)) != 1:
-            raise ValueError(f&#34;buf/not {g} has incorrect fanin count&#34;)
+    errors = []
+
+    def handle(s):
+        if exhaustive:
+            errors.append(s)
+        else:
+            raise ValueError(s)
+
+    # node types
+    for g in c.nodes():
+        if &#34;type&#34; not in c.graph.nodes[g]:
+            handle(f&#34;no type for node {g}&#34;)
+        t = c.graph.nodes[g][&#34;type&#34;]
+        if t not in supported_types:
+            handle(f&#34;node {g} has unsupported type {t}&#34;)
+        if &#34;.&#34; in g and g.split(&#34;.&#34;)[0] not in c.blackboxes:
+            handle(f&#34;node {g} has blackbox syntax with no instance&#34;)
+
+    # incorrect connections
     for g in c.filter_type([&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_output&#34;]):
         if len(c.fanin(g)) &gt; 0:
-            raise ValueError(f&#34;0/1/input {g} has fanin&#34;)
-    for g in c.filter_type([&#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;]):
-        if len(c.fanin(g)) &lt; 1:
-            raise ValueError(f&#34;{g} has no fanin&#34;)
-    for g in c.nodes():
-        if not c.fanout(g) and not c.type(g) == &#34;output&#34;:
-            raise ValueError(f&#34;{g} has no fanout and is not output&#34;)</code></pre>
+            handle(f&#34;{c.type(g)} {g} has fanin&#34;)
+    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;output&#34;, &#34;bb_input&#34;]):
+        if len(c.fanin(g)) &gt; 1:
+            handle(f&#34;{c.type(g)} {g} has fanin count &gt; 1&#34;)
+
+    # dangling connections
+    if undriven:
+        for g in c.filter_type(
+            [
+                &#34;buf&#34;,
+                &#34;not&#34;,
+                &#34;output&#34;,
+                &#34;bb_input&#34;,
+                &#34;and&#34;,
+                &#34;nand&#34;,
+                &#34;or&#34;,
+                &#34;nor&#34;,
+                &#34;xor&#34;,
+                &#34;xnor&#34;,
+            ]
+        ):
+            if len(c.fanin(g)) &lt; 1:
+                handle(f&#34;{c.type(g)} {g} has no fanin&#34;)
+
+    if unloaded:
+        for g in c.nodes() - c.outputs():
+            if not c.fanout(g):
+                handle(f&#34;{c.type(g)} {g} has no fanout&#34;)
+
+    # blackboxes
+    for name, bb in c.blackboxes.items():
+        for g in bb.inputs():
+            if f&#34;{name}.{g}&#34; not in c.graph.nodes:
+                handle(f&#34;missing blackbox pin {name}.{g}&#34;)
+            else:
+                t = c.graph.nodes[f&#34;{name}.{g}&#34;][&#34;type&#34;]
+                if t != &#34;bb_input&#34;:
+                    handle(f&#34;blackbox pin {name}.{g} has incorrect type {t}&#34;)
+
+        for g in bb.outputs():
+            if f&#34;{name}.{g}&#34; not in c.graph.nodes:
+                handle(f&#34;missing blackbox pin {name}.{g}&#34;)
+            else:
+                t = c.graph.nodes[f&#34;{name}.{g}&#34;][&#34;type&#34;]
+                if t != &#34;bb_output&#34;:
+                    handle(f&#34;blackbox pin {name}.{g} has incorrect type {t}&#34;)
+
+    if errors:
+        raise ValueError(&#34;\n&#34;.join(errors))</code></pre>
 </details>
 </section>
 <section>
@@ -273,7 +364,7 @@ ValueError: expected num &gt;= 1</p></div>
 </details>
 </dd>
 <dt id="circuitgraph.utils.lint"><code class="name flex">
-<span>def <span class="ident">lint</span></span>(<span>c)</span>
+<span>def <span class="ident">lint</span></span>(<span>c, exhaustive=False, unloaded=False, undriven=True)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Checks circuit for missing connections.</p>
@@ -286,7 +377,7 @@ ValueError: expected num &gt;= 1</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def lint(c):
+<pre><code class="python">def lint(c, exhaustive=False, unloaded=False, undriven=True):
     &#34;&#34;&#34;
     Checks circuit for missing connections.
 
@@ -295,19 +386,120 @@ ValueError: expected num &gt;= 1</p></div>
     c: Circuit
             The Circuit to lint.
     &#34;&#34;&#34;
-    c.type(c.nodes())
-    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;output&#34;, &#34;bb_input&#34;]):
-        if len(c.fanin(g)) != 1:
-            raise ValueError(f&#34;buf/not {g} has incorrect fanin count&#34;)
+    errors = []
+
+    def handle(s):
+        if exhaustive:
+            errors.append(s)
+        else:
+            raise ValueError(s)
+
+    # node types
+    for g in c.nodes():
+        if &#34;type&#34; not in c.graph.nodes[g]:
+            handle(f&#34;no type for node {g}&#34;)
+        t = c.graph.nodes[g][&#34;type&#34;]
+        if t not in supported_types:
+            handle(f&#34;node {g} has unsupported type {t}&#34;)
+        if &#34;.&#34; in g and g.split(&#34;.&#34;)[0] not in c.blackboxes:
+            handle(f&#34;node {g} has blackbox syntax with no instance&#34;)
+
+    # incorrect connections
     for g in c.filter_type([&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_output&#34;]):
         if len(c.fanin(g)) &gt; 0:
-            raise ValueError(f&#34;0/1/input {g} has fanin&#34;)
-    for g in c.filter_type([&#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;]):
-        if len(c.fanin(g)) &lt; 1:
-            raise ValueError(f&#34;{g} has no fanin&#34;)
-    for g in c.nodes():
-        if not c.fanout(g) and not c.type(g) == &#34;output&#34;:
-            raise ValueError(f&#34;{g} has no fanout and is not output&#34;)</code></pre>
+            handle(f&#34;{c.type(g)} {g} has fanin&#34;)
+    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;output&#34;, &#34;bb_input&#34;]):
+        if len(c.fanin(g)) &gt; 1:
+            handle(f&#34;{c.type(g)} {g} has fanin count &gt; 1&#34;)
+
+    # dangling connections
+    if undriven:
+        for g in c.filter_type(
+            [
+                &#34;buf&#34;,
+                &#34;not&#34;,
+                &#34;output&#34;,
+                &#34;bb_input&#34;,
+                &#34;and&#34;,
+                &#34;nand&#34;,
+                &#34;or&#34;,
+                &#34;nor&#34;,
+                &#34;xor&#34;,
+                &#34;xnor&#34;,
+            ]
+        ):
+            if len(c.fanin(g)) &lt; 1:
+                handle(f&#34;{c.type(g)} {g} has no fanin&#34;)
+
+    if unloaded:
+        for g in c.nodes() - c.outputs():
+            if not c.fanout(g):
+                handle(f&#34;{c.type(g)} {g} has no fanout&#34;)
+
+    # blackboxes
+    for name, bb in c.blackboxes.items():
+        for g in bb.inputs():
+            if f&#34;{name}.{g}&#34; not in c.graph.nodes:
+                handle(f&#34;missing blackbox pin {name}.{g}&#34;)
+            else:
+                t = c.graph.nodes[f&#34;{name}.{g}&#34;][&#34;type&#34;]
+                if t != &#34;bb_input&#34;:
+                    handle(f&#34;blackbox pin {name}.{g} has incorrect type {t}&#34;)
+
+        for g in bb.outputs():
+            if f&#34;{name}.{g}&#34; not in c.graph.nodes:
+                handle(f&#34;missing blackbox pin {name}.{g}&#34;)
+            else:
+                t = c.graph.nodes[f&#34;{name}.{g}&#34;][&#34;type&#34;]
+                if t != &#34;bb_output&#34;:
+                    handle(f&#34;blackbox pin {name}.{g} has incorrect type {t}&#34;)
+
+    if errors:
+        raise ValueError(&#34;\n&#34;.join(errors))</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.utils.visualize"><code class="name flex">
+<span>def <span class="ident">visualize</span></span>(<span>c, output_file)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Visualize a circuit using Yosys.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Circuit to visualize.</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>Where to write the image to.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def visualize(c, output_file):
+    &#34;&#34;&#34;
+    Visualize a circuit using Yosys.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to visualize.
+    output_file: str
+            Where to write the image to.
+    &#34;&#34;&#34;
+    verilog = circuit_to_verilog(c)
+    output_file = Path(output_file)
+    fmt = output_file.suffix[1:]
+    prefix = output_file.with_suffix(&#34;&#34;)
+    with NamedTemporaryFile(
+        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;
+    ) as tmp_in:
+        tmp_in.write(bytes(verilog, &#34;ascii&#34;))
+        tmp_in.flush()
+        cmd = [
+            &#34;yosys&#34;,
+            &#34;-p&#34;,
+            f&#34;read_verilog {tmp_in.name}; &#34; f&#34;show -format {fmt} -prefix {prefix}&#34;,
+        ]
+        subprocess.run(cmd)</code></pre>
 </details>
 </dd>
 </dl>
@@ -336,13 +528,14 @@ ValueError: expected num &gt;= 1</p></div>
 <li><code><a title="circuitgraph.utils.clog2" href="#circuitgraph.utils.clog2">clog2</a></code></li>
 <li><code><a title="circuitgraph.utils.int_to_bin" href="#circuitgraph.utils.int_to_bin">int_to_bin</a></code></li>
 <li><code><a title="circuitgraph.utils.lint" href="#circuitgraph.utils.lint">lint</a></code></li>
+<li><code><a title="circuitgraph.utils.visualize" href="#circuitgraph.utils.visualize">visualize</a></code></li>
 </ul>
 </li>
 </ul>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
 </footer>
 </body>
 </html>
