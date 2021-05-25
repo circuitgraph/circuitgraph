@@ -140,8 +140,8 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
         ).lower() in addable_types + ["zero", "one"]:
             # parse nets
             nets = [n.strip() for n in net_str.split(",")]
-            ports = [n.split("(")[0].strip(" .") for n in nets]
-            nets = [n.split("(")[-1].strip(") ") for n in nets]
+            ports = [n.split("(")[0].strip(" .\n") for n in nets]
+            nets = [n.split("(")[-1].strip(") \n") for n in nets]
             input_nets = []
             for port, net in zip(ports, nets):
                 if port == "Z":
