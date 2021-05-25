@@ -898,6 +898,38 @@ class Circuit:
         """
         return nx.topological_sort(self.graph)
 
+    def remove_unloaded(self, inputs=False):
+        """
+        Removes nodes with no load until fixed point.
+
+        Parameters
+        ----------
+        inputs : bool
+                If True, unloaded inputs will be removed too.
+
+        Returns
+        -------
+        iter of str
+                Removed nodes.
+
+        """
+        unloaded = [
+            n
+            for n in self.graph
+            if self.type(n) not in ["output", "bb_input"] and not self.fanout(n)
+        ]
+        removed = []
+        while unloaded:
+            n = unloaded.pop()
+            for fi in self.fanin(n):
+                if not inputs and self.type(fi) in ["input", "bb_output"]:
+                    continue
+                if len(self.fanout(fi)) == 1:
+                    unloaded.append(fi)
+            self.remove(n)
+            removed.append(n)
+        return removed
+
 
 class BlackBox:
     """Class for representing blackboxes"""

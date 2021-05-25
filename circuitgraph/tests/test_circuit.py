@@ -317,3 +317,26 @@ class TestCircuit(unittest.TestCase):
         for n in c.topo_sort():
             self.assertFalse(c.transitive_fanout(n) & visited)
             visited.add(n)
+
+    def test_remove_unloaded(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "input")
+        c.add("d", "xor", fanin=["a", "b"])
+        c.add("e", "output", fanin="d")
+        c.add("f", "and", fanin=["c", "d"])
+        c.add("g", "buf", fanin="f")
+        c.remove_unloaded()
+        self.assertSetEqual(c.nodes(), set(["a", "b", "c", "d", "e"]))
+
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "input")
+        c.add("d", "xor", fanin=["a", "b"])
+        c.add("e", "output", fanin="d")
+        c.add("f", "and", fanin=["c", "d"])
+        c.add("g", "buf", fanin="f")
+        c.remove_unloaded(inputs=True)
+        self.assertSetEqual(c.nodes(), set(["a", "b", "d", "e"]))
