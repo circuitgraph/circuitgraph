@@ -30,6 +30,7 @@ addable_types = [
     "xnor",
     "0",
     "1",
+    "x",
     "output",
     "input",
 ]
@@ -425,7 +426,7 @@ class Circuit:
         # raise error for invalid inputs
         if len(fanin) > 1 and type in ["buf", "not"]:
             raise ValueError(f"{type} cannot have more than one fanin")
-        if fanin and type in ["0", "1", "input"]:
+        if fanin and type in ["0", "1", "x", "input"]:
             raise ValueError(f"{type} cannot have fanin")
         if fanout and type in ["output"]:
             raise ValueError(f"{type} cannot have fanout")

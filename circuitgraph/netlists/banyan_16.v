@@ -4,7 +4,7 @@
 
 // Verification Directory fv/banyan_WINPUT16_INV1 
 
-module banyan_WINPUT16_INV1(out_15, out_14, out_13, out_12, out_11,
+module banyan_16(out_15, out_14, out_13, out_12, out_11,
      out_10, out_9, out_8, out_7, out_6, out_5, out_4, out_3, out_2,
      out_1, out_0, key_143, key_142, key_141, key_140, key_139,
      key_138, key_137, key_136, key_135, key_134, key_133, key_132,

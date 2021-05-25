@@ -4,7 +4,7 @@
 
 // Verification Directory fv/banyan_WINPUT128 
 
-module banyan_WINPUT128(out_127, out_126, out_125, out_124, out_123,
+module banyan_128(out_127, out_126, out_125, out_124, out_123,
      out_122, out_121, out_120, out_119, out_118, out_117, out_116,
      out_115, out_114, out_113, out_112, out_111, out_110, out_109,
      out_108, out_107, out_106, out_105, out_104, out_103, out_102,

@@ -4,7 +4,7 @@
 
 // Verification Directory fv/c7552 
 
-module c7552(N1, N5, N9, N12, N15, N18, N23, N26, N29, N32, N35, N38,
+module c7552g(N1, N5, N9, N12, N15, N18, N23, N26, N29, N32, N35, N38,
      N41, N44, N47, N50, N53, N54, N55, N56, N57, N58, N59, N60, N61,
      N62, N63, N64, N65, N66, N69, N70, N73, N74, N75, N76, N77, N78,
      N79, N80, N81, N82, N83, N84, N85, N86, N87, N88, N89, N94, N97,

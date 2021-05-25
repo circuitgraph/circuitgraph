@@ -4,7 +4,7 @@
 
 // Verification Directory fv/banyan_WINPUT8_INV1_LOGIC0 
 
-module banyan_WINPUT8_INV1_LOGIC0(out_7, out_6, out_5, out_4, out_3,
+module banyan_8(out_7, out_6, out_5, out_4, out_3,
      out_2, out_1, out_0, key_47, key_46, key_45, key_44, key_43,
      key_42, key_41, key_40, key_39, key_38, key_37, key_36, key_35,
      key_34, key_33, key_32, key_31, key_30, key_29, key_28, key_27,

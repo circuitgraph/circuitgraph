@@ -4,7 +4,7 @@
 
 // Verification Directory fv/banyan_WINPUT64 
 
-module banyan_WINPUT64(out_63, out_62, out_61, out_60, out_59, out_58,
+module banyan_64(out_63, out_62, out_61, out_60, out_59, out_58,
      out_57, out_56, out_55, out_54, out_53, out_52, out_51, out_50,
      out_49, out_48, out_47, out_46, out_45, out_44, out_43, out_42,
      out_41, out_40, out_39, out_38, out_37, out_36, out_35, out_34,

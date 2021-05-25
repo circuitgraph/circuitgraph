@@ -1,4 +1,4 @@
-module SWITCH(in_0,in_1,out_0,out_1,key);
+module switch(in_0,in_1,out_0,out_1,key);
   input in_0,in_1;
   input key;
   output out_0,out_1;

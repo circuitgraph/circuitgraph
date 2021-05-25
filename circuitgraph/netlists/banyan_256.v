@@ -4,7 +4,7 @@
 
 // Verification Directory fv/banyan_WINPUT256 
 
-module banyan_WINPUT256(out_255, out_254, out_253, out_252, out_251,
+module banyan_256(out_255, out_254, out_253, out_252, out_251,
      out_250, out_249, out_248, out_247, out_246, out_245, out_244,
      out_243, out_242, out_241, out_240, out_239, out_238, out_237,
      out_236, out_235, out_234, out_233, out_232, out_231, out_230,

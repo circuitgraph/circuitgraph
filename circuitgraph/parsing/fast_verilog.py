@@ -1,4 +1,5 @@
 import re
+from string import digits
 import random
 from collections import defaultdict
 
@@ -93,7 +94,7 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             driver = f"{o}_driver_{random.randint(1111, 9999)}"
         output_drivers[o] = driver
 
-    g.add_nodes_from(output_drivers.values(), type="wire")
+    g.add_nodes_from(output_drivers.values(), type="buf")
     g.add_edges_from((v, k) for k, v in output_drivers.items())
 
     # create constants, (will be removed if unused)
@@ -133,7 +134,35 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
 
             all_nets[gate].append(nets[0])
             all_edges += [(i, nets[0]) for i in nets[1:]]
+        # parse GTECH gates
+        elif gate.startswith("GTECH_") and gate.split("_")[-1].rstrip(
+            digits
+        ).lower() in addable_types + ["zero", "one"]:
+            # parse nets
+            nets = [n.strip() for n in net_str.split(",")]
+            ports = [n.split("(")[0].strip(" .") for n in nets]
+            nets = [n.split("(")[-1].strip(") ") for n in nets]
+            input_nets = []
+            for port, net in zip(ports, nets):
+                if port == "Z":
+                    output_net = net
+                else:
+                    input_nets.append(net)
 
+            # check for outputs, replace constants
+            nets = [
+                output_drivers[n]
+                if n in output_drivers
+                else tie_0
+                if n == "1'b0"
+                else tie_1
+                if n == "1'b1"
+                else n
+                for n in nets
+            ]
+
+            all_nets[gate.split("_")[-1].rstrip(digits).lower()].append(output_net)
+            all_edges += [(i, output_net) for i in input_nets]
         # parse non-generics
         else:
             # get blackbox definition

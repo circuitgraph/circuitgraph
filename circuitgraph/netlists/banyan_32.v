@@ -4,7 +4,7 @@
 
 // Verification Directory fv/banyan_WINPUT32 
 
-module banyan_WINPUT32(out_31, out_30, out_29, out_28, out_27, out_26,
+module banyan_32(out_31, out_30, out_29, out_28, out_27, out_26,
      out_25, out_24, out_23, out_22, out_21, out_20, out_19, out_18,
      out_17, out_16, out_15, out_14, out_13, out_12, out_11, out_10,
      out_9, out_8, out_7, out_6, out_5, out_4, out_3, out_2, out_1,

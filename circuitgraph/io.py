@@ -297,7 +297,7 @@ def circuit_to_verilog(c):
             fanin = ", ".join(fanin)
             insts.append(f"{c.type(n)} g_{len(insts)} " f"({n}, {fanin})")
             wires.append(n)
-        elif c.type(n) in ["0", "1"]:
+        elif c.type(n) in ["0", "1", "x"]:
             insts.append(f"assign {n} = 1'b{c.type(n)}")
             wires.append(n)
         elif c.type(n) in ["input", "output", "bb_input", "bb_output"]:

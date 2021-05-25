@@ -1,5 +1,6 @@
 import unittest
 import os
+import tempfile
 
 import circuitgraph as cg
 from circuitgraph.transform import miter
@@ -123,6 +124,32 @@ class TestIO(unittest.TestCase):
         self.assertSetEqual(g.nodes(), gf.nodes())
         self.assertSetEqual(g.edges(), gf.edges())
         m = miter(g, gf)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+
+    def test_gtech_verilog(self):
+        g = cg.from_file(f"{self.test_path}/../c432.v")
+        with tempfile.TemporaryDirectory(prefix="circuitgraph_test_dir") as tmpdirname:
+            g_syn = cg.syn(g, engine="dc", suppress_output=True, working_dir=tmpdirname)
+        m = miter(g, g_syn)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+
+    def test_gtech_fast_verilog(self):
+        g = cg.from_file(f"{self.test_path}/../c432.v")
+        with tempfile.TemporaryDirectory(prefix="circuitgraph_test_dir") as tmpdirname:
+            g_syn = cg.syn(
+                g,
+                engine="dc",
+                suppress_output=True,
+                fast_parsing=True,
+                working_dir=tmpdirname,
+            )
+        m = miter(g, g_syn)
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})

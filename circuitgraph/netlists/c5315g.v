@@ -4,7 +4,7 @@
 
 // Verification Directory fv/c5315 
 
-module c5315(N1, N4, N11, N14, N17, N20, N23, N24, N25, N26, N27, N31,
+module c5315g(N1, N4, N11, N14, N17, N20, N23, N24, N25, N26, N27, N31,
      N34, N37, N40, N43, N46, N49, N52, N53, N54, N61, N64, N67, N70,
      N73, N76, N79, N80, N81, N82, N83, N86, N87, N88, N91, N94, N97,
      N100, N103, N106, N109, N112, N113, N114, N115, N116, N117, N118,

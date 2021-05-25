@@ -4,7 +4,7 @@
 
 // Verification Directory fv/c17 
 
-module c17(N1, N2, N3, N6, N7, N22, N23);
+module c17g(N1, N2, N3, N6, N7, N22, N23);
   input N1, N2, N3, N6, N7;
   output N22, N23;
   wire N1, N2, N3, N6, N7;
