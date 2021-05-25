@@ -129,6 +129,9 @@ class TestIO(unittest.TestCase):
         different_output = sat(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
+    @unittest.skipUnless(
+        "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
+    )
     def test_gtech_verilog(self):
         g = cg.from_file(f"{self.test_path}/../c432.v")
         with tempfile.TemporaryDirectory(prefix="circuitgraph_test_dir") as tmpdirname:
@@ -139,6 +142,9 @@ class TestIO(unittest.TestCase):
         different_output = sat(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
+    @unittest.skipUnless(
+        "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
+    )
     def test_gtech_fast_verilog(self):
         g = cg.from_file(f"{self.test_path}/../c432.v")
         with tempfile.TemporaryDirectory(prefix="circuitgraph_test_dir") as tmpdirname:
