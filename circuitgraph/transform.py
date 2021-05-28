@@ -196,6 +196,8 @@ def syn(
     stderr_file=None,
     working_dir=".",
     fast_parsing=False,
+    pre_syn_file=None,
+    post_syn_file=None,
 ):
     """
     Synthesizes the circuit using yosys or genus.
@@ -221,6 +223,12 @@ def syn(
             If True, will use fast verilog parsing (which requires
             specifically formatted netlists, see the documentation for
             `verilog_to_circuit`).
+    pre_syn_file: file or str or None
+            If specified, the circuit verilog will be written to this file
+            before synthesis. If None, a temporary file will be used.
+    post_syn_file: file or str or None
+            If specified, the synthesis output verilog will be written to this
+            file. If None, a temporary file will be used.
 
     Returns
     -------
@@ -229,13 +237,15 @@ def syn(
     """
     verilog = circuit_to_verilog(c)
 
-    with NamedTemporaryFile(
-        prefix="circuitgraph_synthesis_input", suffix=".v"
+    with open(pre_syn_file, "w") if pre_syn_file else NamedTemporaryFile(
+        prefix="circuitgraph_synthesis_input", suffix=".v", mode="w"
     ) as tmp_in:
-        tmp_in.write(bytes(verilog, "ascii"))
+        # with open('test.v', 'w') as tmp_in:
+        # tmp_in.write(bytes(verilog, "ascii"))
+        tmp_in.write(verilog)
         tmp_in.flush()
-        with NamedTemporaryFile(
-            prefix="circuitgraph_synthesis_output", suffix=".v"
+        with open(post_syn_file, "w+") if post_syn_file else NamedTemporaryFile(
+            prefix="circuitgraph_synthesis_output", suffix=".v", mode="r"
         ) as tmp_out:
             if engine == "genus":
                 try:
@@ -362,7 +372,7 @@ def syn(
             if stderr_file:
                 stderr.close()
 
-            output_netlist = tmp_out.read().decode("utf-8")
+            output_netlist = tmp_out.read()
 
     return verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
 
