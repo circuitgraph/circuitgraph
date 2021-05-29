@@ -107,6 +107,27 @@ class TestTransform(unittest.TestCase):
         different_output = sat(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
+    @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
+    def test_syn_yosys_io(self):
+        s = syn(
+            self.s27,
+            "yosys",
+            suppress_output=True,
+            pre_syn_file="pre_syn.v",
+            post_syn_file="post_syn.v",
+            working_dir="syn",
+        )
+        c0 = cg.from_file("pre_syn.v")
+        c1 = cg.from_file("post_syn.v")
+        m = miter(c0, c1)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+        os.remove("pre_syn.v")
+        os.remove("post_syn.v")
+        shutil.rmtree("syn")
+
     @unittest.skipUnless(
         "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ, "Genus synthesis not setup"
     )
@@ -137,6 +158,29 @@ class TestTransform(unittest.TestCase):
             os.remove(f)
         for f in glob.glob(f"{os.getcwd()}/default.svf*"):
             os.remove(f)
+
+    @unittest.skipUnless(
+        "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
+    )
+    def test_syn_dc_io(self):
+        s = syn(
+            self.s27,
+            "dc",
+            suppress_output=True,
+            pre_syn_file="pre_syn.v",
+            post_syn_file="post_syn.v",
+            working_dir="syn",
+        )
+        c0 = cg.from_file("pre_syn.v")
+        c1 = cg.from_file("post_syn.v")
+        m = miter(c0, c1)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+        os.remove("pre_syn.v")
+        os.remove("post_syn.v")
+        shutil.rmtree("syn")
 
     # def test_ternary(self):
     #    # encode circuit

@@ -150,7 +150,7 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
                     input_nets.append(net)
 
             # check for outputs, replace constants
-            nets = [
+            input_nets = [
                 output_drivers[n]
                 if n in output_drivers
                 else tie_0
@@ -158,8 +158,11 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
                 else tie_1
                 if n == "1'b1"
                 else n
-                for n in nets
+                for n in input_nets
             ]
+
+            if output_net in output_drivers:
+                output_net = output_drivers[output_net]
 
             all_nets[gate.split("_")[-1].rstrip(digits).lower()].append(output_net)
             all_edges += [(i, output_net) for i in input_nets]

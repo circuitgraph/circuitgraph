@@ -3,6 +3,7 @@
 import subprocess
 from tempfile import NamedTemporaryFile
 import os
+from pathlib import Path
 
 import networkx as nx
 
@@ -218,7 +219,8 @@ def syn(
             of being printed.
     working_dir: str
             The path to run synthesis from. If using genus, this will effect
-            where the genus run files are stored.
+            where the genus run files are stored. Directory will be created
+            if it does not exist.
     fast_parsing: bool
             If True, will use fast verilog parsing (which requires
             specifically formatted netlists, see the documentation for
@@ -237,11 +239,19 @@ def syn(
     """
     verilog = circuit_to_verilog(c)
 
+    working_dir = Path(working_dir)
+    working_dir.mkdir(exist_ok=True)
+    working_dir = str(working_dir)
+
+    # Make paths absolute in case synthesis is run from different working dir
+    if pre_syn_file:
+        pre_syn_file = Path(pre_syn_file).absolute()
+    if post_syn_file:
+        post_syn_file = Path(post_syn_file).absolute()
+
     with open(pre_syn_file, "w") if pre_syn_file else NamedTemporaryFile(
         prefix="circuitgraph_synthesis_input", suffix=".v", mode="w"
     ) as tmp_in:
-        # with open('test.v', 'w') as tmp_in:
-        # tmp_in.write(bytes(verilog, "ascii"))
         tmp_in.write(verilog)
         tmp_in.flush()
         with open(post_syn_file, "w+") if post_syn_file else NamedTemporaryFile(
