@@ -37,18 +37,13 @@ class TestTransform(unittest.TestCase):
         self.assertFalse("input" not in c.type(c.nodes()))
         self.assertTrue("output" not in c.type(c.nodes()))
 
-    # def test_seq_graph(self):
-    #    g = seq_graph(self.s27)
-    #    self.assertSetEqual(
-    #        set(g.nodes()), set(["G1", "G3", "clk", "G5", "G6", "G0", "G2", "G7"]),
-    #    )
-    #    for n in ["G1", "G3", "G5", "G6", "G0", "G7"]:
-    #        self.assertTrue(g.output(n))
-    #    for n in ["G2", "clk"]:
-    #        self.assertFalse(g.output(n))
-
-    # def test_unroll(self):
-    #    u = unroll(self.s27, 3)
+    def test_sequential_unroll(self):
+        u = sequential_unroll(self.s27bb, 4, "D", "Q", ["clk"])
+        ug = cg.from_lib("s27_unrolled_4")
+        m = miter(u, ug)
+        live = sat(m)
+        self.assertTrue(live)
+        self.assertFalse(sat(m, assumptions={"sat": True}))
 
     def test_miter(self):
         # check self equivalence
@@ -211,35 +206,6 @@ class TestTransform(unittest.TestCase):
         os.remove("pre_syn.v")
         os.remove("post_syn.v")
         shutil.rmtree("syn")
-
-    # def test_ternary(self):
-    #    # encode circuit
-    #    t = ternary(self.s27)
-
-    #    # check that x propagates
-    #    result = cg.sat(t, {"n_11_x": True})
-    #    self.assertTrue(result)
-    #    self.assertTrue(result["n_12_x"])
-
-    #    result = cg.sat(t, {"n_11_x": False})
-    #    self.assertTrue(result)
-    #    self.assertFalse(result["n_12_x"])
-
-    #    result = cg.sat(t, {"n_2_x": True, "n_5_x": False})
-    #    self.assertTrue(result)
-    #    self.assertFalse(result["G6_x"])
-
-    #    # if no x in startpoint, no x
-    #    ass = {f"{s}_x": False for s in self.s27.startpoints()}
-    #    result = cg.sat(t, ass)
-    #    self.assertTrue(result)
-    #    self.assertFalse(any(result[f"{n}_x"] for n in self.s27))
-
-    #    # if all x in startpoint, all x
-    #    ass = {f"{s}_x": True for s in self.s27.startpoints()}
-    #    result = cg.sat(t, ass)
-    #    self.assertTrue(result)
-    #    self.assertTrue(all(result[f"{n}_x"] for n in self.s27))
 
     def test_sensitivity_transform(self):
         # pick random node and input value

@@ -526,14 +526,120 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     return m
 
 
+def sequential_unroll(c, n, reg_d_port, reg_q_port, remove_unused_ports=True):
+    """
+    Unroll a sequential circuit. Provides a higher level API than `unroll`
+    by accepting a circuit with sequential elements kept as blackboxes.
+    Assumes that all blackboxes in the circuit are sequential elements.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of times to unroll.
+    reg_d_port: str
+            The name of the D port in the blackboxes in `c`.
+    reg_q_port: str
+            The name of the Q port in the blackboxes in `cc`.
+    remove_unused_ports: bool
+            If True, any inputs to the combinational circuit without drivers will
+            be removed before returning. This can be used to remove drivers for
+            the register ports besides `reg_d_port` and `reg_q_port`, e.g. a clk 
+            or rst.
+
+    Returns
+    -------
+    Circuit
+            The unrolled circuit.
+    """
+    cs = strip_blackboxes(c)
+    blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
+
+    if reg_d_port not in blackbox.inputs():
+        raise ValueError(f"Provided d port {reg_d_port} not in bb inputs")
+    cs.remove(
+        f"{bb}_{p}" for p in blackbox.inputs() - {reg_d_port} for bb in c.blackboxes
+    )
+
+    if reg_q_port not in blackbox.outputs():
+        raise ValueError(f"Provided q port {reg_q_port} not in bb outputs")
+    cs.remove(
+        f"{bb}_{p}" for p in blackbox.outputs() - {reg_q_port} for bb in c.blackboxes
+    )
+
+    cs.remove(i for i in cs.inputs() if not cs.fanout(i))
+
+    state_io = {f"{bb}_{reg_d_port}": f"{bb}_{reg_q_port}" for bb in c.blackboxes}
+    uc = unroll(cs, n, state_io)
+    return uc
+
+
+def unroll(c, n, state_io):
+    """
+    Unrolls a circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of times to unroll.
+    state_io: dict of str:str
+            For each `(k, v)` pair in the dict, `k` of circuit iteration `n - 1` will be
+            tied to `v` of circuit iteration `n`.
+
+    Returns
+    -------
+    Circuit
+            Unrolled circuit.
+    """
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f"{c.name} contains a blackbox")
+
+    if n < 1:
+        raise ValueError(f"n must be >= 1 ({n})")
+
+    uc = Circuit()
+    for itr in range(n + 1):
+        for i in c.io():
+            if f"{i}_{itr}" in c:
+                raise ValueError(f"Naming clash: {i}_{itr} already in circuit")
+
+            if i in state_io or i in state_io.values():
+                t = "buf"
+            elif i in c.inputs():
+                t = "input"
+            elif i in c.outputs():
+                t = "output"
+
+            uc.add(f"{i}_{itr}", t)
+
+        uc.add_subcircuit(c, f"unrolled_{itr}", {i: f"{i}_{itr}" for i in c.io()})
+
+        if itr == 0:
+            for i in state_io.values():
+                uc.set_type(f"{i}_{itr}", "input")
+        else:
+            for k, v in state_io.items():
+                uc.connect(f"{k}_{itr-1}", f"{v}_{itr}")
+
+        if itr == n:
+            for i in state_io:
+                uc.set_type(f"{i}_{itr}", "output")
+
+    return uc
+
+
 def influence_transform(c, n, s):
     """
-    Creates a circuit to compute sensitivity.
+    Creates a circuit to compute influence.
 
     Parameters
     ----------
     c : Circuit
-            Sequential circuit to unroll.
+            Sequential circuit to compute influence for.
     n : str
             Node to compute influence at.
     s : str
@@ -581,7 +687,7 @@ def sensitivity_transform(c, n):
     Parameters
     ----------
     c : Circuit
-            Sequential circuit to unroll.
+            Sequential circuit to ccompute sensitivity for.
     n : str
             Node to compute sensitivity at.
 

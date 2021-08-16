@@ -140,7 +140,7 @@ class Circuit:
         Create a with several gate types.
 
         >>> c = cg.Circuit()
-        >>> for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}', g)
+        >>> for i,g in enumerate(['xor','or','xor']): c.add(f'g{i}', g)
 
         Calling `type` for a single gate returns a single type
 
@@ -150,7 +150,7 @@ class Circuit:
         Calling `type` on an iterable returns a set of types
 
         >>> c.type(c.nodes())
-        ['xor', 'or', 'xor', 'ff']
+        ['xor', 'or', 'xor']
 
         """
         if isinstance(ns, str):
@@ -183,12 +183,12 @@ class Circuit:
         Create a circuit with several gate types.
 
         >>> c = cg.Circuit()
-        >>> for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}',g)
+        >>> for i,g in enumerate(['xor','or','xor']): c.add(f'g{i}',g)
 
         Calling `nodes` with no argument returns all nodes in the circuit
 
         >>> c.nodes()
-        {'g0', 'g1', 'g2', 'g3'}
+        {'g0', 'g1', 'g2'}
 
         Passing a node type, we can selectively return nodes.
 
@@ -211,8 +211,6 @@ class Circuit:
 
         Parameters
         -------
-        type : str
-                Circuit name.
         sc : Circuit
                 Circuit to add.
         name : str

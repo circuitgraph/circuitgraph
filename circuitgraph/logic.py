@@ -133,68 +133,6 @@ def popcount(w):
     return c
 
 
-# def comb_lat():
-#    """
-#    Combinational model of a latch.
-#
-#    Returns
-#    -------
-#    Circuit
-#            Latch model circuit.
-#    """
-#    lm = Circuit(name="lat")
-#
-#    # mux
-#    m = strip_io(mux(2))
-#    lm.extend(m, {n: f"mux_{n}" for n in m.nodes()})
-#
-#    # inputs
-#    lm.add("si", "input", fanout="mux_in_0")
-#    lm.add("d", "input", fanout="mux_in_1")
-#    lm.add("clk", "input", fanout="mux_sel_0")
-#    lm.add("r", "input")
-#    lm.add("s", "input")
-#
-#    # logic
-#    lm.add("r_b", "not", fanin="r")
-#    lm.add("qr", "and", fanin=["mux_out", "r_b"])
-#    lm.add("q", "or", fanin=["qr", "s"], output=True)
-#    lm.add("so", "buf", fanin="q", output=True)
-#
-#    return lm
-#
-#
-# def comb_ff():
-#    """
-#    Combinational model of a flip-flop.
-#
-#    Returns
-#    -------
-#    Circuit
-#            Flip-flop model circuit.
-#    """
-#    fm = Circuit(name="ff")
-#
-#    # mux
-#    m = strip_io(mux(2))
-#    fm.extend(m, {n: f"mux_{n}" for n in m.nodes()})
-#
-#    # inputs
-#    fm.add("si", "input", fanout="mux_in_1")
-#    fm.add("d", "input", fanout="mux_in_0")
-#    fm.add("clk", "input", fanout="mux_sel_0")
-#    fm.add("r", "input")
-#    fm.add("s", "input")
-#
-#    # logic
-#    fm.add("r_b", "not", fanin="r")
-#    fm.add("qr", "and", fanin=["si", "r_b"])
-#    fm.add("q", "or", fanin=["qr", "s"], output=True)
-#    fm.add("so", "buf", fanin="mux_out", output=True)
-#
-#    return fm
-
-
 def xor_hash(n, m):
     """
     Create a XOR hash function H_{xor}(n,m,3) as in:
