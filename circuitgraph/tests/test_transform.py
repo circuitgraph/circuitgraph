@@ -128,6 +128,36 @@ class TestTransform(unittest.TestCase):
         os.remove("post_syn.v")
         shutil.rmtree("syn")
 
+    @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
+    def test_syn_yosys_exists(self):
+        with NamedTemporaryFile(
+            prefix="circuitgraph_synthesis_test", suffix=".v", mode="w"
+        ) as tmp_in:
+            tmp_in.write("module test(a, b, c);\n")
+            tmp_in.write("input a, b;\n")
+            tmp_in.write("output c;\n")
+            tmp_in.write("nand g_n(c, a, b);\n")
+            tmp_in.write("endmodule\n")
+            tmp_in.flush()
+
+            c = syn(
+                cg.Circuit(name="test"),
+                "yosys",
+                suppress_output=True,
+                pre_syn_file=tmp_in.name,
+                verilog_exists=True,
+            )
+            c2 = cg.Circuit()
+            c2.add("a", "input")
+            c2.add("b", "input")
+            c2.add("c", "output")
+            c2.add("c_driver", "nand", fanin=["a", "b"], fanout=["c"])
+            m = miter(c, c2)
+            live = sat(m)
+            self.assertTrue(live)
+            different_output = sat(m, assumptions={"sat": True})
+            self.assertFalse(different_output)
+
     @unittest.skipUnless(
         "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ, "Genus synthesis not setup"
     )

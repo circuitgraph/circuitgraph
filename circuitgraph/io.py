@@ -220,7 +220,7 @@ def verilog_to_circuit(
     return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)
 
 
-def to_file(c, path):
+def to_file(c, path, fmt="verilog"):
     """
     Writes a `Circuit` to a Verilog file.
 
@@ -230,9 +230,16 @@ def to_file(c, path):
             the circuit
     path: str
             the path to the file to read from.
+    fmt: str
+            the format of the file (verilog or bench)
     """
     with open(path, "w") as f:
-        f.write(circuit_to_verilog(c))
+        if fmt == "verilog":
+            f.write(circuit_to_verilog(c))
+        elif fmt == "bench":
+            f.write(circuit_to_bench(c))
+        else:
+            raise ValueError(f"Unrecognized fmt: {fmt}")
 
 
 def circuit_to_verilog(c):

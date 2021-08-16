@@ -66,12 +66,16 @@ expression: condition
 
 ?constant_value: constant_zero
                | constant_one
+               | constant_x
 
 constant_zero: "1'b0"
              | "1'h0"
 
 constant_one: "1'b1"
             | "1'h1"
+
+constant_x: "1'bx"
+          | "1'hx"
 
 ?condition : or
            | ternary

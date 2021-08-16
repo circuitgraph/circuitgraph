@@ -91,6 +91,7 @@ class VerilogCircuitGraphTransformer(Transformer):
         self.error_on_warning = error_on_warning
         self.tie0 = self.c.add("tie0", "0")
         self.tie1 = self.c.add("tie1", "1")
+        self.tieX = self.c.add("tieX", "x")
         self.io = set()
         self.inputs = set()
         self.outputs = set()
@@ -186,6 +187,8 @@ class VerilogCircuitGraphTransformer(Transformer):
             self.c.remove(self.tie0)
         if not self.c.fanout(self.tie1):
             self.c.remove(self.tie1)
+        if not self.c.fanout(self.tieX):
+            self.c.remove(self.tieX)
 
         # Check for warnings
         if self.warnings:
@@ -299,7 +302,7 @@ class VerilogCircuitGraphTransformer(Transformer):
     # 5. Behavioral Statements
     def assignment(self, lvalue_and_expression):
         [lvalue, expression] = lvalue_and_expression
-        if lvalue not in [self.tie0, self.tie1]:
+        if lvalue not in [self.tie0, self.tie1, self.tieX]:
             self.add_node(lvalue, "buf", fanin=expression)
 
     # 6. Specify Section
@@ -313,6 +316,9 @@ class VerilogCircuitGraphTransformer(Transformer):
 
     def constant_one(self, value):
         return self.tie1
+
+    def constant_x(self, value):
+        return self.tieX
 
     def not_gate(self, items):
         io = "_".join(items)

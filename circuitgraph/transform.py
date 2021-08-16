@@ -199,6 +199,8 @@ def syn(
     fast_parsing=False,
     pre_syn_file=None,
     post_syn_file=None,
+    verilog_exists=False,
+    effort="high",
 ):
     """
     Synthesizes the circuit using yosys or genus.
@@ -231,13 +233,17 @@ def syn(
     post_syn_file: file or str or None
             If specified, the synthesis output verilog will be written to this
             file. If None, a temporary file will be used.
+    verilog_exists: bool
+            If True, does not write `c` to a file, instead uses the verilog
+            already present in `pre_syn_file`.
+    effort: str
+            The effort to use for synthesis. Either 'high', 'medium', or 'low'
 
     Returns
     -------
     Circuit
             Synthesized circuit.
     """
-    verilog = circuit_to_verilog(c)
 
     working_dir = Path(working_dir)
     working_dir.mkdir(exist_ok=True)
@@ -249,11 +255,18 @@ def syn(
     if post_syn_file:
         post_syn_file = Path(post_syn_file).absolute()
 
-    with open(pre_syn_file, "w") if pre_syn_file else NamedTemporaryFile(
+    if verilog_exists and not pre_syn_file:
+        raise ValueError("Must specify pre_syn_file if using verilog_exists")
+
+    with open(pre_syn_file, "r") if verilog_exists else open(
+        pre_syn_file, "w"
+    ) if pre_syn_file else NamedTemporaryFile(
         prefix="circuitgraph_synthesis_input", suffix=".v", mode="w"
     ) as tmp_in:
-        tmp_in.write(verilog)
-        tmp_in.flush()
+        if not verilog_exists:
+            verilog = circuit_to_verilog(c)
+            tmp_in.write(verilog)
+            tmp_in.flush()
         with open(post_syn_file, "w+") if post_syn_file else NamedTemporaryFile(
             prefix="circuitgraph_synthesis_output", suffix=".v", mode="r"
         ) as tmp_out:
@@ -276,7 +289,7 @@ def syn(
                     f"{lib_path};\n"
                     f"read_hdl -sv {tmp_in.name};\n"
                     "elaborate;\n"
-                    "set_db syn_generic_effort high;\n"
+                    f"set_db syn_generic_effort {effort};\n"
                     "syn_generic;\n"
                     "syn_map;\n"
                     "syn_opt;\n"
@@ -350,7 +363,8 @@ def syn(
                     "link;\n"
                     "uniquify;\n"
                     "check_design;\n"
-                    "compile -map_effort high;\n"
+                    "simplify_constants;\n"
+                    f"compile -map_effort {effort};\n"
                     f"write -format verilog -output {tmp_out.name};\n"
                     "exit;"
                 )
@@ -364,7 +378,7 @@ def syn(
                     f"write_verilog -noattr {tmp_out.name}",
                 ]
             else:
-                raise ValueError("synthesis engine must be yosys or genus")
+                raise ValueError("synthesis engine must be yosys, dc, or genus")
 
             if suppress_output and not stdout_file:
                 stdout = subprocess.DEVNULL
