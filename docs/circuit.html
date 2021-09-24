@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.circuit API documentation</title>
 <meta name="description" content="Class for circuit graphs …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -70,6 +70,7 @@ addable_types = [
     &#34;xnor&#34;,
     &#34;0&#34;,
     &#34;1&#34;,
+    &#34;x&#34;,
     &#34;output&#34;,
     &#34;input&#34;,
 ]
@@ -179,7 +180,7 @@ class Circuit:
         Create a with several gate types.
 
         &gt;&gt;&gt; c = cg.Circuit()
-        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;, g)
+        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;]): c.add(f&#39;g{i}&#39;, g)
 
         Calling `type` for a single gate returns a single type
 
@@ -189,7 +190,7 @@ class Circuit:
         Calling `type` on an iterable returns a set of types
 
         &gt;&gt;&gt; c.type(c.nodes())
-        [&#39;xor&#39;, &#39;or&#39;, &#39;xor&#39;, &#39;ff&#39;]
+        [&#39;xor&#39;, &#39;or&#39;, &#39;xor&#39;]
 
         &#34;&#34;&#34;
         if isinstance(ns, str):
@@ -222,12 +223,12 @@ class Circuit:
         Create a circuit with several gate types.
 
         &gt;&gt;&gt; c = cg.Circuit()
-        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;,g)
+        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;]): c.add(f&#39;g{i}&#39;,g)
 
         Calling `nodes` with no argument returns all nodes in the circuit
 
         &gt;&gt;&gt; c.nodes()
-        {&#39;g0&#39;, &#39;g1&#39;, &#39;g2&#39;, &#39;g3&#39;}
+        {&#39;g0&#39;, &#39;g1&#39;, &#39;g2&#39;}
 
         Passing a node type, we can selectively return nodes.
 
@@ -250,8 +251,6 @@ class Circuit:
 
         Parameters
         -------
-        type : str
-                Circuit name.
         sc : Circuit
                 Circuit to add.
         name : str
@@ -465,7 +464,7 @@ class Circuit:
         # raise error for invalid inputs
         if len(fanin) &gt; 1 and type in [&#34;buf&#34;, &#34;not&#34;]:
             raise ValueError(f&#34;{type} cannot have more than one fanin&#34;)
-        if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;input&#34;]:
+        if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;, &#34;input&#34;]:
             raise ValueError(f&#34;{type} cannot have fanin&#34;)
         if fanout and type in [&#34;output&#34;]:
             raise ValueError(f&#34;{type} cannot have fanout&#34;)
@@ -937,6 +936,38 @@ class Circuit:
         &#34;&#34;&#34;
         return nx.topological_sort(self.graph)
 
+    def remove_unloaded(self, inputs=False):
+        &#34;&#34;&#34;
+        Removes nodes with no load until fixed point.
+
+        Parameters
+        ----------
+        inputs : bool
+                If True, unloaded inputs will be removed too.
+
+        Returns
+        -------
+        iter of str
+                Removed nodes.
+
+        &#34;&#34;&#34;
+        unloaded = [
+            n
+            for n in self.graph
+            if self.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.fanout(n)
+        ]
+        removed = []
+        while unloaded:
+            n = unloaded.pop()
+            for fi in self.fanin(n):
+                if not inputs and self.type(fi) in [&#34;input&#34;, &#34;bb_output&#34;]:
+                    continue
+                if len(self.fanout(fi)) == 1:
+                    unloaded.append(fi)
+            self.remove(n)
+            removed.append(n)
+        return removed
+
 
 class BlackBox:
     &#34;&#34;&#34;Class for representing blackboxes&#34;&#34;&#34;
@@ -1181,18 +1212,18 @@ class BlackBox:
 </dl>
 <h2 id="examples">Examples</h2>
 <p>Create an empty circuit.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
+<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
 &gt;&gt;&gt; c = cg.Circuit()
 </code></pre>
 <p>Add an AND gate named 'x'.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c.add('x','and')
+<pre><code class="python">&gt;&gt;&gt; c.add('x','and')
 </code></pre>
 <p>Add an additional nodes and connect them.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c.add('y','or',fanout='x')
+<pre><code class="python">&gt;&gt;&gt; c.add('y','or',fanout='x')
 &gt;&gt;&gt; c.add('z','xor',fanin=['x','y'])
 </code></pre>
 <p>Another way to create the circuit is through a file.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.from_file('path/circuit.v')
+<pre><code class="python">&gt;&gt;&gt; c = cg.from_file('path/circuit.v')
 </code></pre></div>
 <details class="source">
 <summary>
@@ -1300,7 +1331,7 @@ class BlackBox:
         Create a with several gate types.
 
         &gt;&gt;&gt; c = cg.Circuit()
-        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;, g)
+        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;]): c.add(f&#39;g{i}&#39;, g)
 
         Calling `type` for a single gate returns a single type
 
@@ -1310,7 +1341,7 @@ class BlackBox:
         Calling `type` on an iterable returns a set of types
 
         &gt;&gt;&gt; c.type(c.nodes())
-        [&#39;xor&#39;, &#39;or&#39;, &#39;xor&#39;, &#39;ff&#39;]
+        [&#39;xor&#39;, &#39;or&#39;, &#39;xor&#39;]
 
         &#34;&#34;&#34;
         if isinstance(ns, str):
@@ -1343,12 +1374,12 @@ class BlackBox:
         Create a circuit with several gate types.
 
         &gt;&gt;&gt; c = cg.Circuit()
-        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;,g)
+        &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;]): c.add(f&#39;g{i}&#39;,g)
 
         Calling `nodes` with no argument returns all nodes in the circuit
 
         &gt;&gt;&gt; c.nodes()
-        {&#39;g0&#39;, &#39;g1&#39;, &#39;g2&#39;, &#39;g3&#39;}
+        {&#39;g0&#39;, &#39;g1&#39;, &#39;g2&#39;}
 
         Passing a node type, we can selectively return nodes.
 
@@ -1371,8 +1402,6 @@ class BlackBox:
 
         Parameters
         -------
-        type : str
-                Circuit name.
         sc : Circuit
                 Circuit to add.
         name : str
@@ -1586,7 +1615,7 @@ class BlackBox:
         # raise error for invalid inputs
         if len(fanin) &gt; 1 and type in [&#34;buf&#34;, &#34;not&#34;]:
             raise ValueError(f&#34;{type} cannot have more than one fanin&#34;)
-        if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;input&#34;]:
+        if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;, &#34;input&#34;]:
             raise ValueError(f&#34;{type} cannot have fanin&#34;)
         if fanout and type in [&#34;output&#34;]:
             raise ValueError(f&#34;{type} cannot have fanout&#34;)
@@ -2056,7 +2085,39 @@ class BlackBox:
                 Ordered node names.
 
         &#34;&#34;&#34;
-        return nx.topological_sort(self.graph)</code></pre>
+        return nx.topological_sort(self.graph)
+
+    def remove_unloaded(self, inputs=False):
+        &#34;&#34;&#34;
+        Removes nodes with no load until fixed point.
+
+        Parameters
+        ----------
+        inputs : bool
+                If True, unloaded inputs will be removed too.
+
+        Returns
+        -------
+        iter of str
+                Removed nodes.
+
+        &#34;&#34;&#34;
+        unloaded = [
+            n
+            for n in self.graph
+            if self.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.fanout(n)
+        ]
+        removed = []
+        while unloaded:
+            n = unloaded.pop()
+            for fi in self.fanin(n):
+                if not inputs and self.type(fi) in [&#34;input&#34;, &#34;bb_output&#34;]:
+                    continue
+                if len(self.fanout(fi)) == 1:
+                    unloaded.append(fi)
+            self.remove(n)
+            removed.append(n)
+        return removed</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
@@ -2086,7 +2147,7 @@ exists in the circuit.</dd>
 </dl>
 <h2 id="example">Example</h2>
 <p>Add a single node</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
+<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
 &gt;&gt;&gt; c = cg.Circuit()
 &gt;&gt;&gt; c.add('a','or')
 'a'
@@ -2094,7 +2155,7 @@ exists in the circuit.</dd>
 <p>In the above example the function returns the name of the new node.
 This allows us to quickly generate an AND tree with the following
 syntax.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
+<pre><code class="python">&gt;&gt;&gt; c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
 'g'
 &gt;&gt;&gt; c.fanin('g')
 {'in_1', 'in_0', 'in_3', 'in_2'}
@@ -2160,7 +2221,7 @@ syntax.</p>
     # raise error for invalid inputs
     if len(fanin) &gt; 1 and type in [&#34;buf&#34;, &#34;not&#34;]:
         raise ValueError(f&#34;{type} cannot have more than one fanin&#34;)
-    if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;input&#34;]:
+    if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;, &#34;input&#34;]:
         raise ValueError(f&#34;{type} cannot have fanin&#34;)
     if fanout and type in [&#34;output&#34;]:
         raise ValueError(f&#34;{type} cannot have fanout&#34;)
@@ -2245,8 +2306,6 @@ syntax.</p>
 <div class="desc"><p>Adds a subcircuit to circuit.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
-<dt><strong><code>type</code></strong> :&ensp;<code>str</code></dt>
-<dd>Circuit name.</dd>
 <dt><strong><code>sc</code></strong> :&ensp;<code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></dt>
 <dd>Circuit to add.</dd>
 <dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
@@ -2264,8 +2323,6 @@ syntax.</p>
 
     Parameters
     -------
-    type : str
-            Circuit name.
     sc : Circuit
             Circuit to add.
     name : str
@@ -2489,7 +2546,7 @@ syntax.</p>
 <dd>Nodes in fanin.</dd>
 </dl>
 <h2 id="example">Example</h2>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c.fanout('n_20')
+<pre><code class="python">&gt;&gt;&gt; c.fanout('n_20')
 {'G17'}
 &gt;&gt;&gt; c.fanout('n_11')
 {'n_12'}
@@ -2792,15 +2849,15 @@ syntax.</p>
 </dl>
 <h2 id="examples">Examples</h2>
 <p>Create a circuit with several gate types.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.Circuit()
-&gt;&gt;&gt; for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}',g)
+<pre><code class="python">&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; for i,g in enumerate(['xor','or','xor']): c.add(f'g{i}',g)
 </code></pre>
 <p>Calling <code>nodes</code> with no argument returns all nodes in the circuit</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c.nodes()
-{'g0', 'g1', 'g2', 'g3'}
+<pre><code class="python">&gt;&gt;&gt; c.nodes()
+{'g0', 'g1', 'g2'}
 </code></pre>
 <p>Passing a node type, we can selectively return nodes.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c.filter_type('xor')
+<pre><code class="python">&gt;&gt;&gt; c.filter_type('xor')
 {'g2', 'g0'}
 </code></pre></div>
 <details class="source">
@@ -2826,12 +2883,12 @@ syntax.</p>
     Create a circuit with several gate types.
 
     &gt;&gt;&gt; c = cg.Circuit()
-    &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;,g)
+    &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;]): c.add(f&#39;g{i}&#39;,g)
 
     Calling `nodes` with no argument returns all nodes in the circuit
 
     &gt;&gt;&gt; c.nodes()
-    {&#39;g0&#39;, &#39;g1&#39;, &#39;g2&#39;, &#39;g3&#39;}
+    {&#39;g0&#39;, &#39;g1&#39;, &#39;g2&#39;}
 
     Passing a node type, we can selectively return nodes.
 
@@ -3104,6 +3161,58 @@ syntax.</p>
     self.graph.remove_nodes_from(ns)</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.circuit.Circuit.remove_unloaded"><code class="name flex">
+<span>def <span class="ident">remove_unloaded</span></span>(<span>self, inputs=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Removes nodes with no load until fixed point.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>inputs</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, unloaded inputs will be removed too.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>iter</code> of <code>str</code></dt>
+<dd>Removed nodes.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def remove_unloaded(self, inputs=False):
+    &#34;&#34;&#34;
+    Removes nodes with no load until fixed point.
+
+    Parameters
+    ----------
+    inputs : bool
+            If True, unloaded inputs will be removed too.
+
+    Returns
+    -------
+    iter of str
+            Removed nodes.
+
+    &#34;&#34;&#34;
+    unloaded = [
+        n
+        for n in self.graph
+        if self.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.fanout(n)
+    ]
+    removed = []
+    while unloaded:
+        n = unloaded.pop()
+        for fi in self.fanin(n):
+            if not inputs and self.type(fi) in [&#34;input&#34;, &#34;bb_output&#34;]:
+                continue
+            if len(self.fanout(fi)) == 1:
+                unloaded.append(fi)
+        self.remove(n)
+        removed.append(n)
+    return removed</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.circuit.Circuit.set_type"><code class="name flex">
 <span>def <span class="ident">set_type</span></span>(<span>self, ns, t)</span>
 </code></dt>
@@ -3317,16 +3426,16 @@ syntax.</p>
 </dl>
 <h2 id="examples">Examples</h2>
 <p>Create a with several gate types.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.Circuit()
-&gt;&gt;&gt; for i,g in enumerate(['xor','or','xor','ff']): c.add(f'g{i}', g)
+<pre><code class="python">&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; for i,g in enumerate(['xor','or','xor']): c.add(f'g{i}', g)
 </code></pre>
 <p>Calling <code>type</code> for a single gate returns a single type</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c.type('g0')
+<pre><code class="python">&gt;&gt;&gt; c.type('g0')
 {'xor'}
 </code></pre>
 <p>Calling <code>type</code> on an iterable returns a set of types</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; c.type(c.nodes())
-['xor', 'or', 'xor', 'ff']
+<pre><code class="python">&gt;&gt;&gt; c.type(c.nodes())
+['xor', 'or', 'xor']
 </code></pre></div>
 <details class="source">
 <summary>
@@ -3356,7 +3465,7 @@ syntax.</p>
     Create a with several gate types.
 
     &gt;&gt;&gt; c = cg.Circuit()
-    &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;,&#39;ff&#39;]): c.add(f&#39;g{i}&#39;, g)
+    &gt;&gt;&gt; for i,g in enumerate([&#39;xor&#39;,&#39;or&#39;,&#39;xor&#39;]): c.add(f&#39;g{i}&#39;, g)
 
     Calling `type` for a single gate returns a single type
 
@@ -3366,7 +3475,7 @@ syntax.</p>
     Calling `type` on an iterable returns a set of types
 
     &gt;&gt;&gt; c.type(c.nodes())
-    [&#39;xor&#39;, &#39;or&#39;, &#39;xor&#39;, &#39;ff&#39;]
+    [&#39;xor&#39;, &#39;or&#39;, &#39;xor&#39;]
 
     &#34;&#34;&#34;
     if isinstance(ns, str):
@@ -3487,6 +3596,7 @@ syntax.</p>
 <li><code><a title="circuitgraph.circuit.Circuit.outputs" href="#circuitgraph.circuit.Circuit.outputs">outputs</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.relabel" href="#circuitgraph.circuit.Circuit.relabel">relabel</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.remove" href="#circuitgraph.circuit.Circuit.remove">remove</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.remove_unloaded" href="#circuitgraph.circuit.Circuit.remove_unloaded">remove_unloaded</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.set_type" href="#circuitgraph.circuit.Circuit.set_type">set_type</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.startpoints" href="#circuitgraph.circuit.Circuit.startpoints">startpoints</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.topo_sort" href="#circuitgraph.circuit.Circuit.topo_sort">topo_sort</a></code></li>
@@ -3502,7 +3612,7 @@ syntax.</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

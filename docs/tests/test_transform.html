@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.tests.test_transform API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -65,18 +65,13 @@ class TestTransform(unittest.TestCase):
         self.assertFalse(&#34;input&#34; not in c.type(c.nodes()))
         self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))
 
-    # def test_seq_graph(self):
-    #    g = seq_graph(self.s27)
-    #    self.assertSetEqual(
-    #        set(g.nodes()), set([&#34;G1&#34;, &#34;G3&#34;, &#34;clk&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G2&#34;, &#34;G7&#34;]),
-    #    )
-    #    for n in [&#34;G1&#34;, &#34;G3&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G7&#34;]:
-    #        self.assertTrue(g.output(n))
-    #    for n in [&#34;G2&#34;, &#34;clk&#34;]:
-    #        self.assertFalse(g.output(n))
-
-    # def test_unroll(self):
-    #    u = unroll(self.s27, 3)
+    def test_sequential_unroll(self):
+        u = sequential_unroll(self.s27bb, 4, &#34;D&#34;, &#34;Q&#34;, [&#34;clk&#34;])
+        ug = cg.from_lib(&#34;s27_unrolled_4&#34;)
+        m = miter(u, ug)
+        live = sat(m)
+        self.assertTrue(live)
+        self.assertFalse(sat(m, assumptions={&#34;sat&#34;: True}))
 
     def test_miter(self):
         # check self equivalence
@@ -135,6 +130,57 @@ class TestTransform(unittest.TestCase):
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
         self.assertFalse(different_output)
 
+    @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
+    def test_syn_yosys_io(self):
+        s = syn(
+            self.s27,
+            &#34;yosys&#34;,
+            suppress_output=True,
+            pre_syn_file=&#34;pre_syn.v&#34;,
+            post_syn_file=&#34;post_syn.v&#34;,
+            working_dir=&#34;syn&#34;,
+        )
+        c0 = cg.from_file(&#34;pre_syn.v&#34;)
+        c1 = cg.from_file(&#34;post_syn.v&#34;)
+        m = miter(c0, c1)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+        os.remove(&#34;pre_syn.v&#34;)
+        os.remove(&#34;post_syn.v&#34;)
+        shutil.rmtree(&#34;syn&#34;)
+
+    @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
+    def test_syn_yosys_exists(self):
+        with NamedTemporaryFile(
+            prefix=&#34;circuitgraph_synthesis_test&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
+        ) as tmp_in:
+            tmp_in.write(&#34;module test(a, b, c);\n&#34;)
+            tmp_in.write(&#34;input a, b;\n&#34;)
+            tmp_in.write(&#34;output c;\n&#34;)
+            tmp_in.write(&#34;nand g_n(c, a, b);\n&#34;)
+            tmp_in.write(&#34;endmodule\n&#34;)
+            tmp_in.flush()
+
+            c = syn(
+                cg.Circuit(name=&#34;test&#34;),
+                &#34;yosys&#34;,
+                suppress_output=True,
+                pre_syn_file=tmp_in.name,
+                verilog_exists=True,
+            )
+            c2 = cg.Circuit()
+            c2.add(&#34;a&#34;, &#34;input&#34;)
+            c2.add(&#34;b&#34;, &#34;input&#34;)
+            c2.add(&#34;c&#34;, &#34;output&#34;)
+            c2.add(&#34;c_driver&#34;, &#34;nand&#34;, fanin=[&#34;a&#34;, &#34;b&#34;], fanout=[&#34;c&#34;])
+            m = miter(c, c2)
+            live = sat(m)
+            self.assertTrue(live)
+            different_output = sat(m, assumptions={&#34;sat&#34;: True})
+            self.assertFalse(different_output)
+
     @unittest.skipUnless(
         &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus synthesis not setup&#34;
     )
@@ -166,34 +212,28 @@ class TestTransform(unittest.TestCase):
         for f in glob.glob(f&#34;{os.getcwd()}/default.svf*&#34;):
             os.remove(f)
 
-    # def test_ternary(self):
-    #    # encode circuit
-    #    t = ternary(self.s27)
-
-    #    # check that x propagates
-    #    result = cg.sat(t, {&#34;n_11_x&#34;: True})
-    #    self.assertTrue(result)
-    #    self.assertTrue(result[&#34;n_12_x&#34;])
-
-    #    result = cg.sat(t, {&#34;n_11_x&#34;: False})
-    #    self.assertTrue(result)
-    #    self.assertFalse(result[&#34;n_12_x&#34;])
-
-    #    result = cg.sat(t, {&#34;n_2_x&#34;: True, &#34;n_5_x&#34;: False})
-    #    self.assertTrue(result)
-    #    self.assertFalse(result[&#34;G6_x&#34;])
-
-    #    # if no x in startpoint, no x
-    #    ass = {f&#34;{s}_x&#34;: False for s in self.s27.startpoints()}
-    #    result = cg.sat(t, ass)
-    #    self.assertTrue(result)
-    #    self.assertFalse(any(result[f&#34;{n}_x&#34;] for n in self.s27))
-
-    #    # if all x in startpoint, all x
-    #    ass = {f&#34;{s}_x&#34;: True for s in self.s27.startpoints()}
-    #    result = cg.sat(t, ass)
-    #    self.assertTrue(result)
-    #    self.assertTrue(all(result[f&#34;{n}_x&#34;] for n in self.s27))
+    @unittest.skipUnless(
+        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+    )
+    def test_syn_dc_io(self):
+        s = syn(
+            self.s27,
+            &#34;dc&#34;,
+            suppress_output=True,
+            pre_syn_file=&#34;pre_syn.v&#34;,
+            post_syn_file=&#34;post_syn.v&#34;,
+            working_dir=&#34;syn&#34;,
+        )
+        c0 = cg.from_file(&#34;pre_syn.v&#34;)
+        c1 = cg.from_file(&#34;post_syn.v&#34;)
+        m = miter(c0, c1)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+        os.remove(&#34;pre_syn.v&#34;)
+        os.remove(&#34;post_syn.v&#34;)
+        shutil.rmtree(&#34;syn&#34;)
 
     def test_sensitivity_transform(self):
         # pick random node and input value
@@ -255,7 +295,7 @@ class TestTransform(unittest.TestCase):
         self.assertFalse(cg.sat(m, assumptions={&#34;sat&#34;: True}))
 
         for n in ck:
-            self.assertTrue(len(ck.fanin(n))&lt;=k)</code></pre>
+            self.assertTrue(len(ck.fanin(n)) &lt;= k)</code></pre>
 </details>
 </section>
 <section>
@@ -332,18 +372,13 @@ not have a method with the specified name.</p></div>
         self.assertFalse(&#34;input&#34; not in c.type(c.nodes()))
         self.assertTrue(&#34;output&#34; not in c.type(c.nodes()))
 
-    # def test_seq_graph(self):
-    #    g = seq_graph(self.s27)
-    #    self.assertSetEqual(
-    #        set(g.nodes()), set([&#34;G1&#34;, &#34;G3&#34;, &#34;clk&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G2&#34;, &#34;G7&#34;]),
-    #    )
-    #    for n in [&#34;G1&#34;, &#34;G3&#34;, &#34;G5&#34;, &#34;G6&#34;, &#34;G0&#34;, &#34;G7&#34;]:
-    #        self.assertTrue(g.output(n))
-    #    for n in [&#34;G2&#34;, &#34;clk&#34;]:
-    #        self.assertFalse(g.output(n))
-
-    # def test_unroll(self):
-    #    u = unroll(self.s27, 3)
+    def test_sequential_unroll(self):
+        u = sequential_unroll(self.s27bb, 4, &#34;D&#34;, &#34;Q&#34;, [&#34;clk&#34;])
+        ug = cg.from_lib(&#34;s27_unrolled_4&#34;)
+        m = miter(u, ug)
+        live = sat(m)
+        self.assertTrue(live)
+        self.assertFalse(sat(m, assumptions={&#34;sat&#34;: True}))
 
     def test_miter(self):
         # check self equivalence
@@ -402,6 +437,57 @@ not have a method with the specified name.</p></div>
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
         self.assertFalse(different_output)
 
+    @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
+    def test_syn_yosys_io(self):
+        s = syn(
+            self.s27,
+            &#34;yosys&#34;,
+            suppress_output=True,
+            pre_syn_file=&#34;pre_syn.v&#34;,
+            post_syn_file=&#34;post_syn.v&#34;,
+            working_dir=&#34;syn&#34;,
+        )
+        c0 = cg.from_file(&#34;pre_syn.v&#34;)
+        c1 = cg.from_file(&#34;post_syn.v&#34;)
+        m = miter(c0, c1)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+        os.remove(&#34;pre_syn.v&#34;)
+        os.remove(&#34;post_syn.v&#34;)
+        shutil.rmtree(&#34;syn&#34;)
+
+    @unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
+    def test_syn_yosys_exists(self):
+        with NamedTemporaryFile(
+            prefix=&#34;circuitgraph_synthesis_test&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
+        ) as tmp_in:
+            tmp_in.write(&#34;module test(a, b, c);\n&#34;)
+            tmp_in.write(&#34;input a, b;\n&#34;)
+            tmp_in.write(&#34;output c;\n&#34;)
+            tmp_in.write(&#34;nand g_n(c, a, b);\n&#34;)
+            tmp_in.write(&#34;endmodule\n&#34;)
+            tmp_in.flush()
+
+            c = syn(
+                cg.Circuit(name=&#34;test&#34;),
+                &#34;yosys&#34;,
+                suppress_output=True,
+                pre_syn_file=tmp_in.name,
+                verilog_exists=True,
+            )
+            c2 = cg.Circuit()
+            c2.add(&#34;a&#34;, &#34;input&#34;)
+            c2.add(&#34;b&#34;, &#34;input&#34;)
+            c2.add(&#34;c&#34;, &#34;output&#34;)
+            c2.add(&#34;c_driver&#34;, &#34;nand&#34;, fanin=[&#34;a&#34;, &#34;b&#34;], fanout=[&#34;c&#34;])
+            m = miter(c, c2)
+            live = sat(m)
+            self.assertTrue(live)
+            different_output = sat(m, assumptions={&#34;sat&#34;: True})
+            self.assertFalse(different_output)
+
     @unittest.skipUnless(
         &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34; in os.environ, &#34;Genus synthesis not setup&#34;
     )
@@ -433,34 +519,28 @@ not have a method with the specified name.</p></div>
         for f in glob.glob(f&#34;{os.getcwd()}/default.svf*&#34;):
             os.remove(f)
 
-    # def test_ternary(self):
-    #    # encode circuit
-    #    t = ternary(self.s27)
-
-    #    # check that x propagates
-    #    result = cg.sat(t, {&#34;n_11_x&#34;: True})
-    #    self.assertTrue(result)
-    #    self.assertTrue(result[&#34;n_12_x&#34;])
-
-    #    result = cg.sat(t, {&#34;n_11_x&#34;: False})
-    #    self.assertTrue(result)
-    #    self.assertFalse(result[&#34;n_12_x&#34;])
-
-    #    result = cg.sat(t, {&#34;n_2_x&#34;: True, &#34;n_5_x&#34;: False})
-    #    self.assertTrue(result)
-    #    self.assertFalse(result[&#34;G6_x&#34;])
-
-    #    # if no x in startpoint, no x
-    #    ass = {f&#34;{s}_x&#34;: False for s in self.s27.startpoints()}
-    #    result = cg.sat(t, ass)
-    #    self.assertTrue(result)
-    #    self.assertFalse(any(result[f&#34;{n}_x&#34;] for n in self.s27))
-
-    #    # if all x in startpoint, all x
-    #    ass = {f&#34;{s}_x&#34;: True for s in self.s27.startpoints()}
-    #    result = cg.sat(t, ass)
-    #    self.assertTrue(result)
-    #    self.assertTrue(all(result[f&#34;{n}_x&#34;] for n in self.s27))
+    @unittest.skipUnless(
+        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+    )
+    def test_syn_dc_io(self):
+        s = syn(
+            self.s27,
+            &#34;dc&#34;,
+            suppress_output=True,
+            pre_syn_file=&#34;pre_syn.v&#34;,
+            post_syn_file=&#34;post_syn.v&#34;,
+            working_dir=&#34;syn&#34;,
+        )
+        c0 = cg.from_file(&#34;pre_syn.v&#34;)
+        c1 = cg.from_file(&#34;post_syn.v&#34;)
+        m = miter(c0, c1)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+        os.remove(&#34;pre_syn.v&#34;)
+        os.remove(&#34;post_syn.v&#34;)
+        shutil.rmtree(&#34;syn&#34;)
 
     def test_sensitivity_transform(self):
         # pick random node and input value
@@ -522,7 +602,7 @@ not have a method with the specified name.</p></div>
         self.assertFalse(cg.sat(m, assumptions={&#34;sat&#34;: True}))
 
         for n in ck:
-            self.assertTrue(len(ck.fanin(n))&lt;=k)</code></pre>
+            self.assertTrue(len(ck.fanin(n)) &lt;= k)</code></pre>
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">
@@ -568,7 +648,7 @@ not have a method with the specified name.</p></div>
     self.assertFalse(cg.sat(m, assumptions={&#34;sat&#34;: True}))
 
     for n in ck:
-        self.assertTrue(len(ck.fanin(n))&lt;=k)</code></pre>
+        self.assertTrue(len(ck.fanin(n)) &lt;= k)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_miter"><code class="name flex">
@@ -663,6 +743,24 @@ not have a method with the specified name.</p></div>
 
     # check answer
     self.assertEqual(sen_s, sen_sim)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_transform.TestTransform.test_sequential_unroll"><code class="name flex">
+<span>def <span class="ident">test_sequential_unroll</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_sequential_unroll(self):
+    u = sequential_unroll(self.s27bb, 4, &#34;D&#34;, &#34;Q&#34;, [&#34;clk&#34;])
+    ug = cg.from_lib(&#34;s27_unrolled_4&#34;)
+    m = miter(u, ug)
+    live = sat(m)
+    self.assertTrue(live)
+    self.assertFalse(sat(m, assumptions={&#34;sat&#34;: True}))</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_strip_inputs"><code class="name flex">
@@ -772,6 +870,39 @@ def test_syn_dc(self):
         os.remove(f)</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.tests.test_transform.TestTransform.test_syn_dc_io"><code class="name flex">
+<span>def <span class="ident">test_syn_dc_io</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@unittest.skipUnless(
+    &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+)
+def test_syn_dc_io(self):
+    s = syn(
+        self.s27,
+        &#34;dc&#34;,
+        suppress_output=True,
+        pre_syn_file=&#34;pre_syn.v&#34;,
+        post_syn_file=&#34;post_syn.v&#34;,
+        working_dir=&#34;syn&#34;,
+    )
+    c0 = cg.from_file(&#34;pre_syn.v&#34;)
+    c1 = cg.from_file(&#34;post_syn.v&#34;)
+    m = miter(c0, c1)
+    live = sat(m)
+    self.assertTrue(live)
+    different_output = sat(m, assumptions={&#34;sat&#34;: True})
+    self.assertFalse(different_output)
+    os.remove(&#34;pre_syn.v&#34;)
+    os.remove(&#34;post_syn.v&#34;)
+    shutil.rmtree(&#34;syn&#34;)</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.tests.test_transform.TestTransform.test_syn_genus"><code class="name flex">
 <span>def <span class="ident">test_syn_genus</span></span>(<span>self)</span>
 </code></dt>
@@ -817,6 +948,77 @@ def test_syn_yosys(self):
     self.assertFalse(different_output)</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.tests.test_transform.TestTransform.test_syn_yosys_exists"><code class="name flex">
+<span>def <span class="ident">test_syn_yosys_exists</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
+def test_syn_yosys_exists(self):
+    with NamedTemporaryFile(
+        prefix=&#34;circuitgraph_synthesis_test&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
+    ) as tmp_in:
+        tmp_in.write(&#34;module test(a, b, c);\n&#34;)
+        tmp_in.write(&#34;input a, b;\n&#34;)
+        tmp_in.write(&#34;output c;\n&#34;)
+        tmp_in.write(&#34;nand g_n(c, a, b);\n&#34;)
+        tmp_in.write(&#34;endmodule\n&#34;)
+        tmp_in.flush()
+
+        c = syn(
+            cg.Circuit(name=&#34;test&#34;),
+            &#34;yosys&#34;,
+            suppress_output=True,
+            pre_syn_file=tmp_in.name,
+            verilog_exists=True,
+        )
+        c2 = cg.Circuit()
+        c2.add(&#34;a&#34;, &#34;input&#34;)
+        c2.add(&#34;b&#34;, &#34;input&#34;)
+        c2.add(&#34;c&#34;, &#34;output&#34;)
+        c2.add(&#34;c_driver&#34;, &#34;nand&#34;, fanin=[&#34;a&#34;, &#34;b&#34;], fanout=[&#34;c&#34;])
+        m = miter(c, c2)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_transform.TestTransform.test_syn_yosys_io"><code class="name flex">
+<span>def <span class="ident">test_syn_yosys_io</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@unittest.skipIf(shutil.which(&#34;yosys&#34;) == None, &#34;Yosys is not installed&#34;)
+def test_syn_yosys_io(self):
+    s = syn(
+        self.s27,
+        &#34;yosys&#34;,
+        suppress_output=True,
+        pre_syn_file=&#34;pre_syn.v&#34;,
+        post_syn_file=&#34;post_syn.v&#34;,
+        working_dir=&#34;syn&#34;,
+    )
+    c0 = cg.from_file(&#34;pre_syn.v&#34;)
+    c1 = cg.from_file(&#34;post_syn.v&#34;)
+    m = miter(c0, c1)
+    live = sat(m)
+    self.assertTrue(live)
+    different_output = sat(m, assumptions={&#34;sat&#34;: True})
+    self.assertFalse(different_output)
+    os.remove(&#34;pre_syn.v&#34;)
+    os.remove(&#34;post_syn.v&#34;)
+    shutil.rmtree(&#34;syn&#34;)</code></pre>
+</details>
+</dd>
 </dl>
 </dd>
 </dl>
@@ -846,13 +1048,17 @@ def test_syn_yosys(self):
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_limit_fanin" href="#circuitgraph.tests.test_transform.TestTransform.test_limit_fanin">test_limit_fanin</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_miter" href="#circuitgraph.tests.test_transform.TestTransform.test_miter">test_miter</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_sensitivity_transform" href="#circuitgraph.tests.test_transform.TestTransform.test_sensitivity_transform">test_sensitivity_transform</a></code></li>
+<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_sequential_unroll" href="#circuitgraph.tests.test_transform.TestTransform.test_sequential_unroll">test_sequential_unroll</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_inputs" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_inputs">test_strip_inputs</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_io" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_io">test_strip_io</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_strip_outputs" href="#circuitgraph.tests.test_transform.TestTransform.test_strip_outputs">test_strip_outputs</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_subcircuit" href="#circuitgraph.tests.test_transform.TestTransform.test_subcircuit">test_subcircuit</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_dc" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_dc">test_syn_dc</a></code></li>
+<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_dc_io" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_dc_io">test_syn_dc_io</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_genus" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_genus">test_syn_genus</a></code></li>
 <li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_yosys" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_yosys">test_syn_yosys</a></code></li>
+<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_yosys_exists" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_yosys_exists">test_syn_yosys_exists</a></code></li>
+<li><code><a title="circuitgraph.tests.test_transform.TestTransform.test_syn_yosys_io" href="#circuitgraph.tests.test_transform.TestTransform.test_syn_yosys_io">test_syn_yosys_io</a></code></li>
 </ul>
 </li>
 </ul>
@@ -861,7 +1067,7 @@ def test_syn_yosys(self):
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

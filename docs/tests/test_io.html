@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.tests.test_io API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -28,6 +28,7 @@
 </summary>
 <pre><code class="python">import unittest
 import os
+import tempfile
 
 import circuitgraph as cg
 from circuitgraph.transform import miter
@@ -151,6 +152,38 @@ class TestIO(unittest.TestCase):
         self.assertSetEqual(g.nodes(), gf.nodes())
         self.assertSetEqual(g.edges(), gf.edges())
         m = miter(g, gf)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+
+    @unittest.skipUnless(
+        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+    )
+    def test_gtech_verilog(self):
+        g = cg.from_file(f&#34;{self.test_path}/../c432.v&#34;)
+        with tempfile.TemporaryDirectory(prefix=&#34;circuitgraph_test_dir&#34;) as tmpdirname:
+            g_syn = cg.syn(g, engine=&#34;dc&#34;, suppress_output=True, working_dir=tmpdirname)
+        m = miter(g, g_syn)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+
+    @unittest.skipUnless(
+        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+    )
+    def test_gtech_fast_verilog(self):
+        g = cg.from_file(f&#34;{self.test_path}/../c432.v&#34;)
+        with tempfile.TemporaryDirectory(prefix=&#34;circuitgraph_test_dir&#34;) as tmpdirname:
+            g_syn = cg.syn(
+                g,
+                engine=&#34;dc&#34;,
+                suppress_output=True,
+                fast_parsing=True,
+                working_dir=tmpdirname,
+            )
+        m = miter(g, g_syn)
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
@@ -353,6 +386,38 @@ not have a method with the specified name.</p></div>
         different_output = sat(m, assumptions={&#34;sat&#34;: True})
         self.assertFalse(different_output)
 
+    @unittest.skipUnless(
+        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+    )
+    def test_gtech_verilog(self):
+        g = cg.from_file(f&#34;{self.test_path}/../c432.v&#34;)
+        with tempfile.TemporaryDirectory(prefix=&#34;circuitgraph_test_dir&#34;) as tmpdirname:
+            g_syn = cg.syn(g, engine=&#34;dc&#34;, suppress_output=True, working_dir=tmpdirname)
+        m = miter(g, g_syn)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+
+    @unittest.skipUnless(
+        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+    )
+    def test_gtech_fast_verilog(self):
+        g = cg.from_file(f&#34;{self.test_path}/../c432.v&#34;)
+        with tempfile.TemporaryDirectory(prefix=&#34;circuitgraph_test_dir&#34;) as tmpdirname:
+            g_syn = cg.syn(
+                g,
+                engine=&#34;dc&#34;,
+                suppress_output=True,
+                fast_parsing=True,
+                working_dir=tmpdirname,
+            )
+        m = miter(g, g_syn)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={&#34;sat&#34;: True})
+        self.assertFalse(different_output)
+
     def test_incorrect_file_type(self):
         self.assertRaises(ValueError, cg.from_file, &#34;setup.py&#34;)
 
@@ -461,6 +526,58 @@ not have a method with the specified name.</p></div>
     self.assertSetEqual(g.nodes(), gf.nodes())
     self.assertSetEqual(g.edges(), gf.edges())
     m = miter(g, gf)
+    live = sat(m)
+    self.assertTrue(live)
+    different_output = sat(m, assumptions={&#34;sat&#34;: True})
+    self.assertFalse(different_output)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_io.TestIO.test_gtech_fast_verilog"><code class="name flex">
+<span>def <span class="ident">test_gtech_fast_verilog</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@unittest.skipUnless(
+    &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+)
+def test_gtech_fast_verilog(self):
+    g = cg.from_file(f&#34;{self.test_path}/../c432.v&#34;)
+    with tempfile.TemporaryDirectory(prefix=&#34;circuitgraph_test_dir&#34;) as tmpdirname:
+        g_syn = cg.syn(
+            g,
+            engine=&#34;dc&#34;,
+            suppress_output=True,
+            fast_parsing=True,
+            working_dir=tmpdirname,
+        )
+    m = miter(g, g_syn)
+    live = sat(m)
+    self.assertTrue(live)
+    different_output = sat(m, assumptions={&#34;sat&#34;: True})
+    self.assertFalse(different_output)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tests.test_io.TestIO.test_gtech_verilog"><code class="name flex">
+<span>def <span class="ident">test_gtech_verilog</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@unittest.skipUnless(
+    &#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34; in os.environ, &#34;DC synthesis not setup&#34;
+)
+def test_gtech_verilog(self):
+    g = cg.from_file(f&#34;{self.test_path}/../c432.v&#34;)
+    with tempfile.TemporaryDirectory(prefix=&#34;circuitgraph_test_dir&#34;) as tmpdirname:
+        g_syn = cg.syn(g, engine=&#34;dc&#34;, suppress_output=True, working_dir=tmpdirname)
+    m = miter(g, g_syn)
     live = sat(m)
     self.assertTrue(live)
     different_output = sat(m, assumptions={&#34;sat&#34;: True})
@@ -645,6 +762,8 @@ not have a method with the specified name.</p></div>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_bench" href="#circuitgraph.tests.test_io.TestIO.test_bench">test_bench</a></code></li>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_bench_output" href="#circuitgraph.tests.test_io.TestIO.test_bench_output">test_bench_output</a></code></li>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_fast_verilog" href="#circuitgraph.tests.test_io.TestIO.test_fast_verilog">test_fast_verilog</a></code></li>
+<li><code><a title="circuitgraph.tests.test_io.TestIO.test_gtech_fast_verilog" href="#circuitgraph.tests.test_io.TestIO.test_gtech_fast_verilog">test_gtech_fast_verilog</a></code></li>
+<li><code><a title="circuitgraph.tests.test_io.TestIO.test_gtech_verilog" href="#circuitgraph.tests.test_io.TestIO.test_gtech_verilog">test_gtech_verilog</a></code></li>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_incorrect_file_type" href="#circuitgraph.tests.test_io.TestIO.test_incorrect_file_type">test_incorrect_file_type</a></code></li>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_verilog" href="#circuitgraph.tests.test_io.TestIO.test_verilog">test_verilog</a></code></li>
 <li><code><a title="circuitgraph.tests.test_io.TestIO.test_verilog_incorrect_output" href="#circuitgraph.tests.test_io.TestIO.test_verilog_incorrect_output">test_verilog_incorrect_output</a></code></li>
@@ -657,7 +776,7 @@ not have a method with the specified name.</p></div>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

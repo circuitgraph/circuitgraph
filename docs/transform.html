@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.transform API documentation</title>
 <meta name="description" content="Functions for transforming circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -32,6 +32,7 @@
 import subprocess
 from tempfile import NamedTemporaryFile
 import os
+from pathlib import Path
 
 import networkx as nx
 
@@ -225,6 +226,10 @@ def syn(
     stderr_file=None,
     working_dir=&#34;.&#34;,
     fast_parsing=False,
+    pre_syn_file=None,
+    post_syn_file=None,
+    verilog_exists=False,
+    effort=&#34;high&#34;,
 ):
     &#34;&#34;&#34;
     Synthesizes the circuit using yosys or genus.
@@ -245,26 +250,54 @@ def syn(
             of being printed.
     working_dir: str
             The path to run synthesis from. If using genus, this will effect
-            where the genus run files are stored.
+            where the genus run files are stored. Directory will be created
+            if it does not exist.
     fast_parsing: bool
             If True, will use fast verilog parsing (which requires
             specifically formatted netlists, see the documentation for
             `verilog_to_circuit`).
+    pre_syn_file: file or str or None
+            If specified, the circuit verilog will be written to this file
+            before synthesis. If None, a temporary file will be used.
+    post_syn_file: file or str or None
+            If specified, the synthesis output verilog will be written to this
+            file. If None, a temporary file will be used.
+    verilog_exists: bool
+            If True, does not write `c` to a file, instead uses the verilog
+            already present in `pre_syn_file`.
+    effort: str
+            The effort to use for synthesis. Either &#39;high&#39;, &#39;medium&#39;, or &#39;low&#39;
 
     Returns
     -------
     Circuit
             Synthesized circuit.
     &#34;&#34;&#34;
-    verilog = circuit_to_verilog(c)
 
-    with NamedTemporaryFile(
-        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;
+    working_dir = Path(working_dir)
+    working_dir.mkdir(exist_ok=True)
+    working_dir = str(working_dir)
+
+    # Make paths absolute in case synthesis is run from different working dir
+    if pre_syn_file:
+        pre_syn_file = Path(pre_syn_file).absolute()
+    if post_syn_file:
+        post_syn_file = Path(post_syn_file).absolute()
+
+    if verilog_exists and not pre_syn_file:
+        raise ValueError(&#34;Must specify pre_syn_file if using verilog_exists&#34;)
+
+    with open(pre_syn_file, &#34;r&#34;) if verilog_exists else open(
+        pre_syn_file, &#34;w&#34;
+    ) if pre_syn_file else NamedTemporaryFile(
+        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
     ) as tmp_in:
-        tmp_in.write(bytes(verilog, &#34;ascii&#34;))
-        tmp_in.flush()
-        with NamedTemporaryFile(
-            prefix=&#34;circuitgraph_synthesis_output&#34;, suffix=&#34;.v&#34;
+        if not verilog_exists:
+            verilog = circuit_to_verilog(c)
+            tmp_in.write(verilog)
+            tmp_in.flush()
+        with open(post_syn_file, &#34;w+&#34;) if post_syn_file else NamedTemporaryFile(
+            prefix=&#34;circuitgraph_synthesis_output&#34;, suffix=&#34;.v&#34;, mode=&#34;r&#34;
         ) as tmp_out:
             if engine == &#34;genus&#34;:
                 try:
@@ -285,7 +318,7 @@ def syn(
                     f&#34;{lib_path};\n&#34;
                     f&#34;read_hdl -sv {tmp_in.name};\n&#34;
                     &#34;elaborate;\n&#34;
-                    &#34;set_db syn_generic_effort high;\n&#34;
+                    f&#34;set_db syn_generic_effort {effort};\n&#34;
                     &#34;syn_generic;\n&#34;
                     &#34;syn_map;\n&#34;
                     &#34;syn_opt;\n&#34;
@@ -359,7 +392,8 @@ def syn(
                     &#34;link;\n&#34;
                     &#34;uniquify;\n&#34;
                     &#34;check_design;\n&#34;
-                    &#34;compile -map_effort high;\n&#34;
+                    &#34;simplify_constants;\n&#34;
+                    f&#34;compile -map_effort {effort};\n&#34;
                     f&#34;write -format verilog -output {tmp_out.name};\n&#34;
                     &#34;exit;&#34;
                 )
@@ -373,7 +407,7 @@ def syn(
                     f&#34;write_verilog -noattr {tmp_out.name}&#34;,
                 ]
             else:
-                raise ValueError(&#34;synthesis engine must be yosys or genus&#34;)
+                raise ValueError(&#34;synthesis engine must be yosys, dc, or genus&#34;)
 
             if suppress_output and not stdout_file:
                 stdout = subprocess.DEVNULL
@@ -391,7 +425,7 @@ def syn(
             if stderr_file:
                 stderr.close()
 
-            output_netlist = tmp_out.read().decode(&#34;utf-8&#34;)
+            output_netlist = tmp_out.read()
 
     return verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
 
@@ -521,14 +555,120 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     return m
 
 
+def sequential_unroll(c, n, reg_d_port, reg_q_port, remove_unused_ports=True):
+    &#34;&#34;&#34;
+    Unroll a sequential circuit. Provides a higher level API than `unroll`
+    by accepting a circuit with sequential elements kept as blackboxes.
+    Assumes that all blackboxes in the circuit are sequential elements.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of times to unroll.
+    reg_d_port: str
+            The name of the D port in the blackboxes in `c`.
+    reg_q_port: str
+            The name of the Q port in the blackboxes in `cc`.
+    remove_unused_ports: bool
+            If True, any inputs to the combinational circuit without drivers will
+            be removed before returning. This can be used to remove drivers for
+            the register ports besides `reg_d_port` and `reg_q_port`, e.g. a clk 
+            or rst.
+
+    Returns
+    -------
+    Circuit
+            The unrolled circuit.
+    &#34;&#34;&#34;
+    cs = strip_blackboxes(c)
+    blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
+
+    if reg_d_port not in blackbox.inputs():
+        raise ValueError(f&#34;Provided d port {reg_d_port} not in bb inputs&#34;)
+    cs.remove(
+        f&#34;{bb}_{p}&#34; for p in blackbox.inputs() - {reg_d_port} for bb in c.blackboxes
+    )
+
+    if reg_q_port not in blackbox.outputs():
+        raise ValueError(f&#34;Provided q port {reg_q_port} not in bb outputs&#34;)
+    cs.remove(
+        f&#34;{bb}_{p}&#34; for p in blackbox.outputs() - {reg_q_port} for bb in c.blackboxes
+    )
+
+    cs.remove(i for i in cs.inputs() if not cs.fanout(i))
+
+    state_io = {f&#34;{bb}_{reg_d_port}&#34;: f&#34;{bb}_{reg_q_port}&#34; for bb in c.blackboxes}
+    uc = unroll(cs, n, state_io)
+    return uc
+
+
+def unroll(c, n, state_io):
+    &#34;&#34;&#34;
+    Unrolls a circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of times to unroll.
+    state_io: dict of str:str
+            For each `(k, v)` pair in the dict, `k` of circuit iteration `n - 1` will be
+            tied to `v` of circuit iteration `n`.
+
+    Returns
+    -------
+    Circuit
+            Unrolled circuit.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+
+    if n &lt; 1:
+        raise ValueError(f&#34;n must be &gt;= 1 ({n})&#34;)
+
+    uc = Circuit()
+    for itr in range(n + 1):
+        for i in c.io():
+            if f&#34;{i}_{itr}&#34; in c:
+                raise ValueError(f&#34;Naming clash: {i}_{itr} already in circuit&#34;)
+
+            if i in state_io or i in state_io.values():
+                t = &#34;buf&#34;
+            elif i in c.inputs():
+                t = &#34;input&#34;
+            elif i in c.outputs():
+                t = &#34;output&#34;
+
+            uc.add(f&#34;{i}_{itr}&#34;, t)
+
+        uc.add_subcircuit(c, f&#34;unrolled_{itr}&#34;, {i: f&#34;{i}_{itr}&#34; for i in c.io()})
+
+        if itr == 0:
+            for i in state_io.values():
+                uc.set_type(f&#34;{i}_{itr}&#34;, &#34;input&#34;)
+        else:
+            for k, v in state_io.items():
+                uc.connect(f&#34;{k}_{itr-1}&#34;, f&#34;{v}_{itr}&#34;)
+
+        if itr == n:
+            for i in state_io:
+                uc.set_type(f&#34;{i}_{itr}&#34;, &#34;output&#34;)
+
+    return uc
+
+
 def influence_transform(c, n, s):
     &#34;&#34;&#34;
-    Creates a circuit to compute sensitivity.
+    Creates a circuit to compute influence.
 
     Parameters
     ----------
     c : Circuit
-            Sequential circuit to unroll.
+            Sequential circuit to compute influence for.
     n : str
             Node to compute influence at.
     s : str
@@ -576,7 +716,7 @@ def sensitivity_transform(c, n):
     Parameters
     ----------
     c : Circuit
-            Sequential circuit to unroll.
+            Sequential circuit to ccompute sensitivity for.
     n : str
             Node to compute sensitivity at.
 
@@ -758,11 +898,11 @@ def limit_fanin(c, k):
 <span>def <span class="ident">influence_transform</span></span>(<span>c, n, s)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a circuit to compute sensitivity.</p>
+<div class="desc"><p>Creates a circuit to compute influence.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>Sequential circuit to unroll.</dd>
+<dd>Sequential circuit to compute influence for.</dd>
 <dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
 <dd>Node to compute influence at.</dd>
 <dt><strong><code>s</code></strong> :&ensp;<code>str</code></dt>
@@ -779,12 +919,12 @@ def limit_fanin(c, k):
 </summary>
 <pre><code class="python">def influence_transform(c, n, s):
     &#34;&#34;&#34;
-    Creates a circuit to compute sensitivity.
+    Creates a circuit to compute influence.
 
     Parameters
     ----------
     c : Circuit
-            Sequential circuit to unroll.
+            Sequential circuit to compute influence for.
     n : str
             Node to compute influence at.
     s : str
@@ -1015,7 +1155,7 @@ def limit_fanin(c, k):
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>Sequential circuit to unroll.</dd>
+<dd>Sequential circuit to ccompute sensitivity for.</dd>
 <dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
 <dd>Node to compute sensitivity at.</dd>
 </dl>
@@ -1035,7 +1175,7 @@ def limit_fanin(c, k):
     Parameters
     ----------
     c : Circuit
-            Sequential circuit to unroll.
+            Sequential circuit to ccompute sensitivity for.
     n : str
             Node to compute sensitivity at.
 
@@ -1145,6 +1285,87 @@ def limit_fanin(c, k):
     m.connect(f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;)
 
     return m</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.transform.sequential_unroll"><code class="name flex">
+<span>def <span class="ident">sequential_unroll</span></span>(<span>c, n, reg_d_port, reg_q_port, remove_unused_ports=True)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Unroll a sequential circuit. Provides a higher level API than <code><a title="circuitgraph.transform.unroll" href="#circuitgraph.transform.unroll">unroll()</a></code>
+by accepting a circuit with sequential elements kept as blackboxes.
+Assumes that all blackboxes in the circuit are sequential elements.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Circuit to unroll.</dd>
+<dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of times to unroll.</dd>
+<dt><strong><code>reg_d_port</code></strong> :&ensp;<code>str</code></dt>
+<dd>The name of the D port in the blackboxes in <code>c</code>.</dd>
+<dt><strong><code>reg_q_port</code></strong> :&ensp;<code>str</code></dt>
+<dd>The name of the Q port in the blackboxes in <code>cc</code>.</dd>
+<dt><strong><code>remove_unused_ports</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, any inputs to the combinational circuit without drivers will
+be removed before returning. This can be used to remove drivers for
+the register ports besides <code>reg_d_port</code> and <code>reg_q_port</code>, e.g. a clk
+or rst.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>The unrolled circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sequential_unroll(c, n, reg_d_port, reg_q_port, remove_unused_ports=True):
+    &#34;&#34;&#34;
+    Unroll a sequential circuit. Provides a higher level API than `unroll`
+    by accepting a circuit with sequential elements kept as blackboxes.
+    Assumes that all blackboxes in the circuit are sequential elements.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of times to unroll.
+    reg_d_port: str
+            The name of the D port in the blackboxes in `c`.
+    reg_q_port: str
+            The name of the Q port in the blackboxes in `cc`.
+    remove_unused_ports: bool
+            If True, any inputs to the combinational circuit without drivers will
+            be removed before returning. This can be used to remove drivers for
+            the register ports besides `reg_d_port` and `reg_q_port`, e.g. a clk 
+            or rst.
+
+    Returns
+    -------
+    Circuit
+            The unrolled circuit.
+    &#34;&#34;&#34;
+    cs = strip_blackboxes(c)
+    blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
+
+    if reg_d_port not in blackbox.inputs():
+        raise ValueError(f&#34;Provided d port {reg_d_port} not in bb inputs&#34;)
+    cs.remove(
+        f&#34;{bb}_{p}&#34; for p in blackbox.inputs() - {reg_d_port} for bb in c.blackboxes
+    )
+
+    if reg_q_port not in blackbox.outputs():
+        raise ValueError(f&#34;Provided q port {reg_q_port} not in bb outputs&#34;)
+    cs.remove(
+        f&#34;{bb}_{p}&#34; for p in blackbox.outputs() - {reg_q_port} for bb in c.blackboxes
+    )
+
+    cs.remove(i for i in cs.inputs() if not cs.fanout(i))
+
+    state_io = {f&#34;{bb}_{reg_d_port}&#34;: f&#34;{bb}_{reg_q_port}&#34; for bb in c.blackboxes}
+    uc = unroll(cs, n, state_io)
+    return uc</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.transform.strip_blackboxes"><code class="name flex">
@@ -1388,7 +1609,7 @@ instantiation.</p>
 </details>
 </dd>
 <dt id="circuitgraph.transform.syn"><code class="name flex">
-<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', suppress_output=False, stdout_file=None, stderr_file=None, working_dir='.', fast_parsing=False)</span>
+<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', suppress_output=False, stdout_file=None, stderr_file=None, working_dir='.', fast_parsing=False, pre_syn_file=None, post_syn_file=None, verilog_exists=False, effort='high')</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Synthesizes the circuit using yosys or genus.</p>
@@ -1408,11 +1629,23 @@ of being printed.</dd>
 of being printed.</dd>
 <dt><strong><code>working_dir</code></strong> :&ensp;<code>str</code></dt>
 <dd>The path to run synthesis from. If using genus, this will effect
-where the genus run files are stored.</dd>
+where the genus run files are stored. Directory will be created
+if it does not exist.</dd>
 <dt><strong><code>fast_parsing</code></strong> :&ensp;<code>bool</code></dt>
 <dd>If True, will use fast verilog parsing (which requires
 specifically formatted netlists, see the documentation for
 <code>verilog_to_circuit</code>).</dd>
+<dt><strong><code>pre_syn_file</code></strong> :&ensp;<code>file</code> or <code>str</code> or <code>None</code></dt>
+<dd>If specified, the circuit verilog will be written to this file
+before synthesis. If None, a temporary file will be used.</dd>
+<dt><strong><code>post_syn_file</code></strong> :&ensp;<code>file</code> or <code>str</code> or <code>None</code></dt>
+<dd>If specified, the synthesis output verilog will be written to this
+file. If None, a temporary file will be used.</dd>
+<dt><strong><code>verilog_exists</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, does not write <code>c</code> to a file, instead uses the verilog
+already present in <code>pre_syn_file</code>.</dd>
+<dt><strong><code>effort</code></strong> :&ensp;<code>str</code></dt>
+<dd>The effort to use for synthesis. Either 'high', 'medium', or 'low'</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1431,6 +1664,10 @@ specifically formatted netlists, see the documentation for
     stderr_file=None,
     working_dir=&#34;.&#34;,
     fast_parsing=False,
+    pre_syn_file=None,
+    post_syn_file=None,
+    verilog_exists=False,
+    effort=&#34;high&#34;,
 ):
     &#34;&#34;&#34;
     Synthesizes the circuit using yosys or genus.
@@ -1451,26 +1688,54 @@ specifically formatted netlists, see the documentation for
             of being printed.
     working_dir: str
             The path to run synthesis from. If using genus, this will effect
-            where the genus run files are stored.
+            where the genus run files are stored. Directory will be created
+            if it does not exist.
     fast_parsing: bool
             If True, will use fast verilog parsing (which requires
             specifically formatted netlists, see the documentation for
             `verilog_to_circuit`).
+    pre_syn_file: file or str or None
+            If specified, the circuit verilog will be written to this file
+            before synthesis. If None, a temporary file will be used.
+    post_syn_file: file or str or None
+            If specified, the synthesis output verilog will be written to this
+            file. If None, a temporary file will be used.
+    verilog_exists: bool
+            If True, does not write `c` to a file, instead uses the verilog
+            already present in `pre_syn_file`.
+    effort: str
+            The effort to use for synthesis. Either &#39;high&#39;, &#39;medium&#39;, or &#39;low&#39;
 
     Returns
     -------
     Circuit
             Synthesized circuit.
     &#34;&#34;&#34;
-    verilog = circuit_to_verilog(c)
 
-    with NamedTemporaryFile(
-        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;
+    working_dir = Path(working_dir)
+    working_dir.mkdir(exist_ok=True)
+    working_dir = str(working_dir)
+
+    # Make paths absolute in case synthesis is run from different working dir
+    if pre_syn_file:
+        pre_syn_file = Path(pre_syn_file).absolute()
+    if post_syn_file:
+        post_syn_file = Path(post_syn_file).absolute()
+
+    if verilog_exists and not pre_syn_file:
+        raise ValueError(&#34;Must specify pre_syn_file if using verilog_exists&#34;)
+
+    with open(pre_syn_file, &#34;r&#34;) if verilog_exists else open(
+        pre_syn_file, &#34;w&#34;
+    ) if pre_syn_file else NamedTemporaryFile(
+        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
     ) as tmp_in:
-        tmp_in.write(bytes(verilog, &#34;ascii&#34;))
-        tmp_in.flush()
-        with NamedTemporaryFile(
-            prefix=&#34;circuitgraph_synthesis_output&#34;, suffix=&#34;.v&#34;
+        if not verilog_exists:
+            verilog = circuit_to_verilog(c)
+            tmp_in.write(verilog)
+            tmp_in.flush()
+        with open(post_syn_file, &#34;w+&#34;) if post_syn_file else NamedTemporaryFile(
+            prefix=&#34;circuitgraph_synthesis_output&#34;, suffix=&#34;.v&#34;, mode=&#34;r&#34;
         ) as tmp_out:
             if engine == &#34;genus&#34;:
                 try:
@@ -1491,7 +1756,7 @@ specifically formatted netlists, see the documentation for
                     f&#34;{lib_path};\n&#34;
                     f&#34;read_hdl -sv {tmp_in.name};\n&#34;
                     &#34;elaborate;\n&#34;
-                    &#34;set_db syn_generic_effort high;\n&#34;
+                    f&#34;set_db syn_generic_effort {effort};\n&#34;
                     &#34;syn_generic;\n&#34;
                     &#34;syn_map;\n&#34;
                     &#34;syn_opt;\n&#34;
@@ -1565,7 +1830,8 @@ specifically formatted netlists, see the documentation for
                     &#34;link;\n&#34;
                     &#34;uniquify;\n&#34;
                     &#34;check_design;\n&#34;
-                    &#34;compile -map_effort high;\n&#34;
+                    &#34;simplify_constants;\n&#34;
+                    f&#34;compile -map_effort {effort};\n&#34;
                     f&#34;write -format verilog -output {tmp_out.name};\n&#34;
                     &#34;exit;&#34;
                 )
@@ -1579,7 +1845,7 @@ specifically formatted netlists, see the documentation for
                     f&#34;write_verilog -noattr {tmp_out.name}&#34;,
                 ]
             else:
-                raise ValueError(&#34;synthesis engine must be yosys or genus&#34;)
+                raise ValueError(&#34;synthesis engine must be yosys, dc, or genus&#34;)
 
             if suppress_output and not stdout_file:
                 stdout = subprocess.DEVNULL
@@ -1597,7 +1863,7 @@ specifically formatted netlists, see the documentation for
             if stderr_file:
                 stderr.close()
 
-            output_netlist = tmp_out.read().decode(&#34;utf-8&#34;)
+            output_netlist = tmp_out.read()
 
     return verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)</code></pre>
 </details>
@@ -1694,6 +1960,87 @@ specifically formatted netlists, see the documentation for
     return t</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.transform.unroll"><code class="name flex">
+<span>def <span class="ident">unroll</span></span>(<span>c, n, state_io)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Unrolls a circuit.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Circuit to unroll.</dd>
+<dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of times to unroll.</dd>
+<dt><strong><code>state_io</code></strong> :&ensp;<code>dict</code> of <code>str:str</code></dt>
+<dd>For each <code>(k, v)</code> pair in the dict, <code>k</code> of circuit iteration <code>n - 1</code> will be
+tied to <code>v</code> of circuit iteration <code>n</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Unrolled circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unroll(c, n, state_io):
+    &#34;&#34;&#34;
+    Unrolls a circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of times to unroll.
+    state_io: dict of str:str
+            For each `(k, v)` pair in the dict, `k` of circuit iteration `n - 1` will be
+            tied to `v` of circuit iteration `n`.
+
+    Returns
+    -------
+    Circuit
+            Unrolled circuit.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+
+    if n &lt; 1:
+        raise ValueError(f&#34;n must be &gt;= 1 ({n})&#34;)
+
+    uc = Circuit()
+    for itr in range(n + 1):
+        for i in c.io():
+            if f&#34;{i}_{itr}&#34; in c:
+                raise ValueError(f&#34;Naming clash: {i}_{itr} already in circuit&#34;)
+
+            if i in state_io or i in state_io.values():
+                t = &#34;buf&#34;
+            elif i in c.inputs():
+                t = &#34;input&#34;
+            elif i in c.outputs():
+                t = &#34;output&#34;
+
+            uc.add(f&#34;{i}_{itr}&#34;, t)
+
+        uc.add_subcircuit(c, f&#34;unrolled_{itr}&#34;, {i: f&#34;{i}_{itr}&#34; for i in c.io()})
+
+        if itr == 0:
+            for i in state_io.values():
+                uc.set_type(f&#34;{i}_{itr}&#34;, &#34;input&#34;)
+        else:
+            for k, v in state_io.items():
+                uc.connect(f&#34;{k}_{itr-1}&#34;, f&#34;{v}_{itr}&#34;)
+
+        if itr == n:
+            for i in state_io:
+                uc.set_type(f&#34;{i}_{itr}&#34;, &#34;output&#34;)
+
+    return uc</code></pre>
+</details>
+</dd>
 </dl>
 </section>
 <section>
@@ -1723,6 +2070,7 @@ specifically formatted netlists, see the documentation for
 <li><code><a title="circuitgraph.transform.relabel" href="#circuitgraph.transform.relabel">relabel</a></code></li>
 <li><code><a title="circuitgraph.transform.sensitivity_transform" href="#circuitgraph.transform.sensitivity_transform">sensitivity_transform</a></code></li>
 <li><code><a title="circuitgraph.transform.sensitization_transform" href="#circuitgraph.transform.sensitization_transform">sensitization_transform</a></code></li>
+<li><code><a title="circuitgraph.transform.sequential_unroll" href="#circuitgraph.transform.sequential_unroll">sequential_unroll</a></code></li>
 <li><code><a title="circuitgraph.transform.strip_blackboxes" href="#circuitgraph.transform.strip_blackboxes">strip_blackboxes</a></code></li>
 <li><code><a title="circuitgraph.transform.strip_inputs" href="#circuitgraph.transform.strip_inputs">strip_inputs</a></code></li>
 <li><code><a title="circuitgraph.transform.strip_io" href="#circuitgraph.transform.strip_io">strip_io</a></code></li>
@@ -1730,13 +2078,14 @@ specifically formatted netlists, see the documentation for
 <li><code><a title="circuitgraph.transform.subcircuit" href="#circuitgraph.transform.subcircuit">subcircuit</a></code></li>
 <li><code><a title="circuitgraph.transform.syn" href="#circuitgraph.transform.syn">syn</a></code></li>
 <li><code><a title="circuitgraph.transform.ternary" href="#circuitgraph.transform.ternary">ternary</a></code></li>
+<li><code><a title="circuitgraph.transform.unroll" href="#circuitgraph.transform.unroll">unroll</a></code></li>
 </ul>
 </li>
 </ul>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

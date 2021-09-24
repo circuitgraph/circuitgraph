@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.8.4" />
 <title>circuitgraph.parsing.verilog API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -119,6 +119,7 @@ class VerilogCircuitGraphTransformer(Transformer):
         self.error_on_warning = error_on_warning
         self.tie0 = self.c.add(&#34;tie0&#34;, &#34;0&#34;)
         self.tie1 = self.c.add(&#34;tie1&#34;, &#34;1&#34;)
+        self.tieX = self.c.add(&#34;tieX&#34;, &#34;x&#34;)
         self.io = set()
         self.inputs = set()
         self.outputs = set()
@@ -214,6 +215,8 @@ class VerilogCircuitGraphTransformer(Transformer):
             self.c.remove(self.tie0)
         if not self.c.fanout(self.tie1):
             self.c.remove(self.tie1)
+        if not self.c.fanout(self.tieX):
+            self.c.remove(self.tieX)
 
         # Check for warnings
         if self.warnings:
@@ -327,7 +330,7 @@ class VerilogCircuitGraphTransformer(Transformer):
     # 5. Behavioral Statements
     def assignment(self, lvalue_and_expression):
         [lvalue, expression] = lvalue_and_expression
-        if lvalue not in [self.tie0, self.tie1]:
+        if lvalue not in [self.tie0, self.tie1, self.tieX]:
             self.add_node(lvalue, &#34;buf&#34;, fanin=expression)
 
     # 6. Specify Section
@@ -341,6 +344,9 @@ class VerilogCircuitGraphTransformer(Transformer):
 
     def constant_one(self, value):
         return self.tie1
+
+    def constant_x(self, value):
+        return self.tieX
 
     def not_gate(self, items):
         io = &#34;_&#34;.join(items)
@@ -564,6 +570,7 @@ exceptions.</dd>
         self.error_on_warning = error_on_warning
         self.tie0 = self.c.add(&#34;tie0&#34;, &#34;0&#34;)
         self.tie1 = self.c.add(&#34;tie1&#34;, &#34;1&#34;)
+        self.tieX = self.c.add(&#34;tieX&#34;, &#34;x&#34;)
         self.io = set()
         self.inputs = set()
         self.outputs = set()
@@ -659,6 +666,8 @@ exceptions.</dd>
             self.c.remove(self.tie0)
         if not self.c.fanout(self.tie1):
             self.c.remove(self.tie1)
+        if not self.c.fanout(self.tieX):
+            self.c.remove(self.tieX)
 
         # Check for warnings
         if self.warnings:
@@ -772,7 +781,7 @@ exceptions.</dd>
     # 5. Behavioral Statements
     def assignment(self, lvalue_and_expression):
         [lvalue, expression] = lvalue_and_expression
-        if lvalue not in [self.tie0, self.tie1]:
+        if lvalue not in [self.tie0, self.tie1, self.tieX]:
             self.add_node(lvalue, &#34;buf&#34;, fanin=expression)
 
     # 6. Specify Section
@@ -786,6 +795,9 @@ exceptions.</dd>
 
     def constant_one(self, value):
         return self.tie1
+
+    def constant_x(self, value):
+        return self.tieX
 
     def not_gate(self, items):
         io = &#34;_&#34;.join(items)
@@ -891,7 +903,7 @@ exceptions.</dd>
 </summary>
 <pre><code class="python">def assignment(self, lvalue_and_expression):
     [lvalue, expression] = lvalue_and_expression
-    if lvalue not in [self.tie0, self.tie1]:
+    if lvalue not in [self.tie0, self.tie1, self.tieX]:
         self.add_node(lvalue, &#34;buf&#34;, fanin=expression)</code></pre>
 </details>
 </dd>
@@ -932,6 +944,19 @@ exceptions.</dd>
 </summary>
 <pre><code class="python">def constant_one(self, value):
     return self.tie1</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_x"><code class="name flex">
+<span>def <span class="ident">constant_x</span></span>(<span>self, value)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def constant_x(self, value):
+    return self.tieX</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_zero"><code class="name flex">
@@ -1069,6 +1094,8 @@ exceptions.</dd>
         self.c.remove(self.tie0)
     if not self.c.fanout(self.tie1):
         self.c.remove(self.tie1)
+    if not self.c.fanout(self.tieX):
+        self.c.remove(self.tieX)
 
     # Check for warnings
     if self.warnings:
@@ -1356,7 +1383,7 @@ exceptions.</dd>
 </dd>
 <dt id="circuitgraph.parsing.verilog.VerilogParsingWarning"><code class="flex name class">
 <span>class <span class="ident">VerilogParsingWarning</span></span>
-<span>(</span><span>*args, **kwargs)</span>
+<span>(</span><span>...)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Potentially raised if there is a warning parsing verilog.</p></div>
@@ -1412,6 +1439,7 @@ exceptions.</dd>
 <li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.assignment" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.assignment">assignment</a></code></li>
 <li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.check_for_warnings" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.check_for_warnings">check_for_warnings</a></code></li>
 <li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_one" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_one">constant_one</a></code></li>
+<li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_x" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_x">constant_x</a></code></li>
 <li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_zero" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.constant_zero">constant_zero</a></code></li>
 <li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.expression" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.expression">expression</a></code></li>
 <li><code><a title="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.input_declaration" href="#circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.input_declaration">input_declaration</a></code></li>
@@ -1446,7 +1474,7 @@ exceptions.</dd>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
 </footer>
 </body>
 </html>

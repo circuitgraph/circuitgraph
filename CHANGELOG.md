@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2021-09-24
+### Added
+- More robust checks for incorrect circuit construction
+- More robust parsing, including faster parsing using regex
+- Simple circuit visualization
+- `X` type for nodes (similar to `0`, and `1`)
+- Sequential unroll transform
+
 ## [0.1.2] - 2021-01-24
 ### FIXED
 - Synthesis now works with python3.6 again
