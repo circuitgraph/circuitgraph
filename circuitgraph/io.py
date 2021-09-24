@@ -124,6 +124,8 @@ def bench_to_circuit(netlist, name):
     # create circuit
     c = Circuit(name=name)
 
+    dff = BlackBox("dff", ["D"], ["Q"])
+
     # get inputs
     in_regex = r"(?:INPUT|input)\s*\(\s*([a-zA-Z][a-zA-Z\d_]*)\s*\)"
     for net_str in re.findall(in_regex, netlist, re.DOTALL):
@@ -139,6 +141,13 @@ def bench_to_circuit(netlist, name):
             input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
         )
         c.add(net, gate.lower(), fanin=inputs)
+
+    regex = r"([a-zA-Z][a-zA-Z\d_]*)\s*=\s*(DFF|dff)\(([^\)]+)\)"
+    for net, gate, input_str in re.findall(regex, netlist):
+        # parse all nets
+        inputs = input_str.replace(" ", "").replace("\n", "").replace("\t", "")
+        c.add(net, "buf")
+        c.add_blackbox(dff, f"{net}_dff", connections={"D": inputs, "Q": net})
 
     # get outputs
     in_regex = r"(?:OUTPUT|output)\s*\(\s*([a-zA-Z][a-zA-Z\d_]*)\s*\)"
