@@ -134,12 +134,14 @@ def bench_to_circuit(netlist, name):
             c.add(n, "input")
 
     # handle gates
-    regex = r"([a-zA-Z][a-zA-Z\d_]*)\s*=\s*(BUF|NOT|OR|NOR|AND|NAND|XOR|XNOR|buf|not|or|nor|and|nand|not|xor|xnor)\(([^\)]+)\)"
+    regex = r"([a-zA-Z][a-zA-Z\d_]*)\s*=\s*(BUF|BUFF|NOT|OR|NOR|AND|NAND|XOR|XNOR|buf|buff|not|or|nor|and|nand|not|xor|xnor)\(([^\)]+)\)"
     for net, gate, input_str in re.findall(regex, netlist):
         # parse all nets
         inputs = (
             input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
         )
+        if gate == "BUFF" or gate == "buff":
+            gate = "buf"
         c.add(net, gate.lower(), fanin=inputs)
 
     regex = r"([a-zA-Z][a-zA-Z\d_]*)\s*=\s*(DFF|dff)\(([^\)]+)\)"
@@ -229,7 +231,7 @@ def verilog_to_circuit(
     return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)
 
 
-def to_file(c, path, fmt="verilog"):
+def to_file(c, path, fmt="verilog", behavioral=False):
     """
     Writes a `Circuit` to a Verilog file.
 
@@ -244,14 +246,14 @@ def to_file(c, path, fmt="verilog"):
     """
     with open(path, "w") as f:
         if fmt == "verilog":
-            f.write(circuit_to_verilog(c))
+            f.write(circuit_to_verilog(c, behavioral=behavioral))
         elif fmt == "bench":
             f.write(circuit_to_bench(c))
         else:
             raise ValueError(f"Unrecognized fmt: {fmt}")
 
 
-def circuit_to_verilog(c):
+def circuit_to_verilog(c, behavioral=False):
     """
     Generates a str of Verilog code from a `CircuitGraph`.
 
@@ -259,6 +261,8 @@ def circuit_to_verilog(c):
     ----------
     c: Circuit
             the circuit to turn into Verilog.
+    behavioral: bool
+            if True, use assign statements instead of primitive gates.
 
     Returns
     -------
@@ -310,8 +314,26 @@ def circuit_to_verilog(c):
     for n in c.nodes():
         if c.type(n) in ["xor", "xnor", "buf", "not", "nor", "or", "and", "nand"]:
             fanin = [output_map[f] if f in output_map else f for f in c.fanin(n)]
-            fanin = ", ".join(fanin)
-            insts.append(f"{c.type(n)} g_{len(insts)} " f"({n}, {fanin})")
+            if behavioral:
+                if c.type(n) == "buf":
+                    insts.append(f"assign {n} = {fanin[0]}")
+                elif c.type(n) == "not":
+                    insts.append(f"assign {n} = ~{fanin[0]}")
+                else:
+                    if c.type(n) in ["xor", "xnor"]:
+                        symbol = "^"
+                    elif c.type(n) in ["and", "nand"]:
+                        symbol = "&"
+                    elif c.type(n) in ["nor", "or"]:
+                        symbol = "|"
+                    fanin = f" {symbol} ".join(fanin)
+                    if c.type(n) in ["xnor", "nor", "nand"]:
+                        insts.append(f"assign {n} = ~({fanin})")
+                    else:
+                        insts.append(f"assign {n} = {fanin}")
+            else:
+                fanin = ", ".join(fanin)
+                insts.append(f"{c.type(n)} g_{len(insts)} " f"({n}, {fanin})")
             wires.append(n)
         elif c.type(n) in ["0", "1", "x"]:
             insts.append(f"assign {n} = 1'b{c.type(n)}")
