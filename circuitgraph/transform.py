@@ -526,7 +526,15 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     return m
 
 
-def sequential_unroll(c, n, reg_d_port, reg_q_port, remove_unused_ports=True):
+def sequential_unroll(
+    c,
+    n,
+    reg_d_port,
+    reg_q_port,
+    remove_unused_ports=True,
+    final_flop_outputs=False,
+    initial_values=None,
+):
     """
     Unroll a sequential circuit. Provides a higher level API than `unroll`
     by accepting a circuit with sequential elements kept as blackboxes.
@@ -547,6 +555,14 @@ def sequential_unroll(c, n, reg_d_port, reg_q_port, remove_unused_ports=True):
             be removed before returning. This can be used to remove drivers for
             the register ports besides `reg_d_port` and `reg_q_port`, e.g. a clk 
             or rst.
+    final_flop_outputs: bool
+            If True, the data ports of the flops of the last timestep will be
+            added as primary outputs to the circuit.
+    initial_values: str or dict of str:str
+            The initial values of the data ports for the first timestep.
+            If None, the ports will be added as primary inputs.
+            If a single value ('0', '1', or 'x'), every flop will get that value.
+            Can also pass in dict mapping flop names to values.
 
     Returns
     -------
@@ -572,6 +588,20 @@ def sequential_unroll(c, n, reg_d_port, reg_q_port, remove_unused_ports=True):
 
     state_io = {f"{bb}_{reg_d_port}": f"{bb}_{reg_q_port}" for bb in c.blackboxes}
     uc = unroll(cs, n, state_io)
+
+    if initial_values:
+        flop_inputs = [f"{bb}_{reg_q_port}_0" for bb in c.blackboxes]
+        if isinstance(initial_values, str):
+            for fi in flop_inputs:
+                uc.set_type(fi, initial_values)
+        else:
+            for k, v in initial_values.items():
+                uc.set_type(f"{k}_{reg_q_port}_0", v)
+
+    if not final_flop_outputs:
+        flop_outputs = [f"{bb}_{reg_d_port}_{n}" for bb in c.blackboxes]
+        uc.set_type(flop_outputs, "buf")
+
     return uc
 
 
