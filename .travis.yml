@@ -10,6 +10,7 @@ before_install:
   - sudo apt-get -y install yosys
 install: 
   - pip install -r requirements.txt
+  - pip install python-sat
   - pip install .
 script: coverage run -m unittest
 after_success: codecov

@@ -25,5 +25,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
-    install_requires=["python-sat", "lark", "networkx",],
+    install_requires=["lark", "networkx",],
 )

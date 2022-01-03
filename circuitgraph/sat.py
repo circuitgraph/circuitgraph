@@ -5,9 +5,6 @@ import re
 import code
 from subprocess import PIPE, run
 
-from pysat.formula import CNF, IDPool
-from pysat.solvers import Cadical, Glucose4, Lingeling
-
 
 def interrupt(s):
     s.interrupt()
@@ -44,6 +41,13 @@ def construct_solver(c, assumptions=None, engine="cadical"):
     variables : pysat.IDPool
             solver variable mapping
     """
+    try:
+        from pysat.solvers import Cadical, Glucose4, Lingeling
+    except ImportError:
+        raise ImportError(
+            "Run 'pip install python-sat' to use satisfiability functionality"
+        )
+
     formula, variables = cnf(c)
     if assumptions:
         for n in assumptions.keys():
@@ -78,6 +82,12 @@ def cnf(c):
     formula : pysat.CNF
             CNF formula
     """
+    try:
+        from pysat.formula import CNF, IDPool
+    except ImportError:
+        raise ImportError(
+            "Run 'pip install python-sat' to use satisfiability functionality"
+        )
     variables = IDPool()
     formula = CNF()
 

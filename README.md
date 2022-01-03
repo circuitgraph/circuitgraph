@@ -50,6 +50,8 @@ pip install -e .
 
 In addition to the packages enumerated in `requirements.txt`, there are a few tools you can install to enable additional functionality.
 
+If you would like to use the satisfiability functionality, install [PySAT](https://pysathq.github.io).
+
 If you would like to perform synthesis you can install either Cadence Genus or [Yosys](http://www.clifford.at/yosys/). If you're going to use Genus, you must provide the path to a synthesis library to use by setting the `CIRCUITGRAPH_GENUS_LIBRARY_PATH` variable. 
 
 ## Contributing
