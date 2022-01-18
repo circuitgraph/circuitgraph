@@ -38,7 +38,7 @@ class TestTransform(unittest.TestCase):
         self.assertTrue("output" not in c.type(c.nodes()))
 
     def test_sequential_unroll(self):
-        u = sequential_unroll(self.s27bb, 4, "D", "Q", ["clk"])
+        u = sequential_unroll(self.s27bb, 4, "D", "Q", ["clk"], final_flop_outputs=True)
         ug = cg.from_lib("s27_unrolled_4")
         m = miter(u, ug)
         live = sat(m)

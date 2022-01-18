@@ -502,7 +502,7 @@ class Circuit:
         for u in us:
             t = self.type(u)
             if t in ["output", "bb_input"]:
-                raise ValueError(f"cannot connect from {t} {v}.")
+                raise ValueError(f"cannot connect from {t} {u}.")
 
         # connect
         self.graph.add_edges_from((u, v) for u in us for v in vs)

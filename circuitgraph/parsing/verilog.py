@@ -210,8 +210,6 @@ class VerilogCircuitGraphTransformer(Transformer):
     def output_declaration(self, list_of_variables):
         [list_of_variables] = list_of_variables
         self.outputs.update(list_of_variables)
-        for variable in list_of_variables:
-            self.add_node(variable, "output")
 
     def net_declaration(self, list_of_variables):
         [list_of_variables] = list_of_variables

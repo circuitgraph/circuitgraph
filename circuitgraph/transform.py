@@ -531,7 +531,7 @@ def sequential_unroll(
     n,
     reg_d_port,
     reg_q_port,
-    remove_unused_ports=True,
+    ignore_pins=None,
     final_flop_outputs=False,
     initial_values=None,
 ):
@@ -569,7 +569,7 @@ def sequential_unroll(
     Circuit
             The unrolled circuit.
     """
-    cs = strip_blackboxes(c)
+    cs = strip_blackboxes(c, ignore_pins=ignore_pins)
     blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
 
     if reg_d_port not in blackbox.inputs():
@@ -584,22 +584,21 @@ def sequential_unroll(
         f"{bb}_{p}" for p in blackbox.outputs() - {reg_q_port} for bb in c.blackboxes
     )
 
-    cs.remove(i for i in cs.inputs() if not cs.fanout(i))
-
     state_io = {f"{bb}_{reg_d_port}": f"{bb}_{reg_q_port}" for bb in c.blackboxes}
     uc = unroll(cs, n, state_io)
 
+    prefix = "cg_unroll"
     if initial_values:
-        flop_inputs = [f"{bb}_{reg_q_port}_0" for bb in c.blackboxes]
+        flop_inputs = [f"{bb}_{reg_q_port}_{prefix}_0" for bb in c.blackboxes]
         if isinstance(initial_values, str):
             for fi in flop_inputs:
                 uc.set_type(fi, initial_values)
         else:
             for k, v in initial_values.items():
-                uc.set_type(f"{k}_{reg_q_port}_0", v)
+                uc.set_type(f"{k}_{reg_q_port}_{prefix}_0", v)
 
     if not final_flop_outputs:
-        flop_outputs = [f"{bb}_{reg_d_port}_{n}" for bb in c.blackboxes]
+        flop_outputs = [f"{bb}_{reg_d_port}_{prefix}_{n}" for bb in c.blackboxes]
         uc.set_type(flop_outputs, "buf")
 
     return uc
@@ -631,11 +630,13 @@ def unroll(c, n, state_io):
     if n < 1:
         raise ValueError(f"n must be >= 1 ({n})")
 
+    prefix = "cg_unroll"
+
     uc = Circuit()
     for itr in range(n + 1):
         for i in c.io():
-            if f"{i}_{itr}" in c:
-                raise ValueError(f"Naming clash: {i}_{itr} already in circuit")
+            if f"{i}_{prefix}_{itr}" in c:
+                raise ValueError(f"Naming clash: {i}_{prefix}_{itr} already in circuit")
 
             if i in state_io or i in state_io.values():
                 t = "buf"
@@ -644,20 +645,22 @@ def unroll(c, n, state_io):
             elif i in c.outputs():
                 t = "output"
 
-            uc.add(f"{i}_{itr}", t)
+            uc.add(f"{i}_{prefix}_{itr}", t)
 
-        uc.add_subcircuit(c, f"unrolled_{itr}", {i: f"{i}_{itr}" for i in c.io()})
+        uc.add_subcircuit(
+            c, f"unrolled_{itr}", {i: f"{i}_{prefix}_{itr}" for i in c.io()}
+        )
 
         if itr == 0:
             for i in state_io.values():
-                uc.set_type(f"{i}_{itr}", "input")
+                uc.set_type(f"{i}_{prefix}_{itr}", "input")
         else:
             for k, v in state_io.items():
-                uc.connect(f"{k}_{itr-1}", f"{v}_{itr}")
+                uc.connect(f"{k}_{prefix}_{itr-1}", f"{v}_{prefix}_{itr}")
 
         if itr == n:
             for i in state_io:
-                uc.set_type(f"{i}_{itr}", "output")
+                uc.set_type(f"{i}_{prefix}_{itr}", "output")
 
     return uc
 
