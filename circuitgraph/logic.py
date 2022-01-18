@@ -27,8 +27,7 @@ def adder(w):
         # sum
         c.add(f"a_{i}", "input")
         c.add(f"b_{i}", "input")
-        c.add(f"sum_{i}", "xor", fanin=[f"a_{i}", f"b_{i}", carry])
-        c.add(f"out_{i}", "output", fanin=f"sum_{i}")
+        c.add(f"out_{i}", "xor", fanin=[f"a_{i}", f"b_{i}", carry], output=True)
 
         # carry
         c.add(f"and_ab_{i}", "and", fanin=[f"a_{i}", f"b_{i}"])
@@ -38,7 +37,7 @@ def adder(w):
             f"carry_{i}", "or", fanin=[f"and_ab_{i}", f"and_ac_{i}", f"and_bc_{i}"],
         )
 
-    c.add(f"out_{w}", "output", fanin=carry)
+    c.add(f"out_{w}", "buf", fanin=carry, output=True)
     return c
 
 
@@ -68,12 +67,11 @@ def mux(w):
         sels.append([f"not_sel_{i}", f"sel_{i}"])
 
     # create output or
-    c.add("or", "or")
-    c.add("out", "output", fanin="or")
+    c.add("out", "or", output=True)
 
     i = 0
     for sel in product(*sels[::-1]):
-        c.add(f"and_{i}", "and", fanin=[*sel, f"in_{i}"], fanout="or")
+        c.add(f"and_{i}", "and", fanin=[*sel, f"in_{i}"], fanout="out")
 
         i += 1
         if i == w:
@@ -125,7 +123,7 @@ def popcount(w):
 
     # connect outputs
     for i, o in enumerate(ps[0]):
-        c.add(f"out_{i}", "output", fanin=o)
+        c.add(f"out_{i}", "buf", fanin=o, output=True)
 
     if not c.fanout("tie0"):
         c.remove("tie0")
@@ -136,7 +134,10 @@ def popcount(w):
 def xor_hash(n, m):
     """
     Create a XOR hash function H_{xor}(n,m,3) as in:
-    Chakraborty, Supratik, Kuldeep S. Meel, and Moshe Y. Vardi. "A scalable approximate model counter." International Conference on Principles and Practice of Constraint Programming. Springer, Berlin, Heidelberg, 2013.
+    Chakraborty, Supratik, Kuldeep S. Meel, and Moshe Y. Vardi.
+    "A scalable approximate model counter." International Conference on
+    Principles and Practice of Constraint Programming. Springer, 
+    Berlin, Heidelberg, 2013.
 
     Each output of the hash is the xor/xnor of a random subset of the input.
 
@@ -159,7 +160,7 @@ def xor_hash(n, m):
         h.add(f"in_{i}", "input")
 
     for o in range(m):
-        h.add(f"out_{o}", "output")
+        h.add(f"out_{o}", "buf", output=True)
 
         # select inputs
         cons = [random() < 0.5 for i in range(n)]
@@ -256,7 +257,7 @@ def banyan(bw):
     for i, net_in in enumerate(net_ins):
         b.add(f"in_{i}", "input", fanout=net_in)
     for i, net_out in enumerate(net_outs):
-        b.add(f"out_{i}", "output", fanin=net_out)
+        b.add(f"out_{i}", "buf", fanin=net_out, output=True)
     for i in range(I * J):
         b.add(f"sel_{i}", "input", fanout=f"swb_{i}_sel")
 

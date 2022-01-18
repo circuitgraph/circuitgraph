@@ -241,8 +241,10 @@ class Circuit:
         # add sub circuit
         g = nx.relabel_nodes(sc.graph, mapping)
         self.graph.update(g)
-        for n in sc.io():
+        for n in sc.inputs():
             self.set_type(f"{name}_{n}", "buf")
+        for n in sc.outputs():
+            self.set_output(f"{name}_{n}", False)
 
         # add blackboxes
         for bb_name, bb in sc.blackboxes.items():
@@ -429,7 +431,7 @@ class Circuit:
             fanout = [fanout]
 
         if type not in supported_types:
-            raise ValueError(f"Cannot add unknown type {type}")
+            raise ValueError(f"Cannot add unknown type '{type}'")
 
         # raise error for invalid inputs
         if len(fanin) > 1 and type in ["buf", "not"]:
