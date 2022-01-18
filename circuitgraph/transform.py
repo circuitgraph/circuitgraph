@@ -47,8 +47,10 @@ def strip_io(c):
             Circuit with removed io
     """
     g = c.graph.copy()
-    for o in c.io():
+    for i in c.inputs():
         g.nodes[o]["type"] = "buf"
+    for o in c.outputs():
+        g.nodes[i]["output"] = False
 
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
@@ -70,7 +72,7 @@ def strip_outputs(c):
     """
     g = c.graph.copy()
     for o in c.outputs():
-        g.nodes[o]["type"] = "buf"
+        g.nodes[o]["output"] = False
 
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 

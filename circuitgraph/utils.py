@@ -129,36 +129,31 @@ def lint(c, exhaustive=False, unloaded=False, undriven=True):
     # node types
     for g in c.nodes():
         if "type" not in c.graph.nodes[g]:
-            handle(f"no type for node {g}")
+            handle(f"no type for node '{g}'")
         t = c.graph.nodes[g]["type"]
         if t not in supported_types:
-            handle(f"node {g} has unsupported type {t}")
+            handle(f"node '{g}' has unsupported type '{t}'")
         if "." in g and g.split(".")[0] not in c.blackboxes:
-            handle(f"node {g} has blackbox syntax with no instance")
+            handle(f"node '{g}' has blackbox syntax with no instance")
 
     # incorrect connections
     for g in c.filter_type(["input", "0", "1", "bb_output"]):
         if len(c.fanin(g)) > 0:
-            handle(f"{c.type(g)} {g} has fanin")
-    for g in c.filter_type(["buf", "not", "output", "bb_input"]):
+            handle(f"{c.type(g)} '{g}' has fanin")
+        if c.type(g) == "bb_output":
+            if len(c.fanout(g) > 1):
+                handle(f"{c.type(g)} '{g}' has fanout greater than 1")
+            if c.type(c.fanout(g).pop()) != "buf":
+                handle(f"{c.type(g)} '{g}' has non-buf fanout")
+
+    for g in c.filter_type(["buf", "not", "bb_input"]):
         if len(c.fanin(g)) > 1:
             handle(f"{c.type(g)} {g} has fanin count > 1")
 
     # dangling connections
     if undriven:
         for g in c.filter_type(
-            [
-                "buf",
-                "not",
-                "output",
-                "bb_input",
-                "and",
-                "nand",
-                "or",
-                "nor",
-                "xor",
-                "xnor",
-            ]
+            ["buf", "not", "bb_input", "and", "nand", "or", "nor", "xor", "xnor",]
         ):
             if len(c.fanin(g)) < 1:
                 handle(f"{c.type(g)} {g} has no fanin")
