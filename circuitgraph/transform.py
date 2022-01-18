@@ -710,8 +710,7 @@ def influence_transform(c, n, s):
         else:
             infl.add(f"not_{g}", "not", fanout=f"c1_{s}")
             infl.add(g, "input", fanout=[f"c0_{g}", f"not_{g}"])
-    infl.add("dif", "xor", fanin=[f"c0_{n}", f"c1_{n}"])
-    infl.add("sat", "output", fanin="dif")
+    infl.add("sat", "xor", fanin=[f"c0_{n}", f"c1_{n}"], output=True)
 
     return infl
 
