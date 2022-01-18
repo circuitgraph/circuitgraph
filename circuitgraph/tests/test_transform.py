@@ -23,13 +23,13 @@ class TestTransform(unittest.TestCase):
         # check self equivalence
         c = cg.strip_io(self.s27)
         self.assertTrue("input" not in c.type(c.nodes()))
-        self.assertTrue("output" not in c.type(c.nodes()))
+        self.assertFalse([i for i in c if c.is_output(i)])
 
     def test_strip_inputs(self):
         # check self equivalence
         c = cg.strip_inputs(self.s27)
         self.assertTrue("input" not in c.type(c.nodes()))
-        self.assertFalse("output" not in c.type(c.nodes()))
+        self.assertTrue([i for i in c if c.is_output(i)])
 
     def test_strip_outputs(self):
         # check self equivalence
@@ -73,15 +73,13 @@ class TestTransform(unittest.TestCase):
         c17 = cg.from_lib("c17")
         sc = subcircuit(c17, c17.transitive_fanin("N22") | {"N22"})
         self.assertSetEqual(
-            sc.nodes(),
-            {"N22", "N22_driver", "N10", "N16", "N1", "N3", "N2", "N11", "N6"},
+            sc.nodes(), {"N22", "N10", "N16", "N1", "N3", "N2", "N11", "N6"},
         )
         self.assertSetEqual(
             sc.edges(),
             {
-                ("N22_driver", "N22"),
-                ("N10", "N22_driver"),
-                ("N16", "N22_driver"),
+                ("N10", "N22"),
+                ("N16", "N22"),
                 ("N1", "N10"),
                 ("N3", "N10"),
                 ("N2", "N16"),
@@ -145,8 +143,7 @@ class TestTransform(unittest.TestCase):
             c2 = cg.Circuit()
             c2.add("a", "input")
             c2.add("b", "input")
-            c2.add("c", "output")
-            c2.add("c_driver", "nand", fanin=["a", "b"], fanout=["c"])
+            c2.add("c", "nand", fanin=["a", "b"], fanout=["c"], output=True)
             m = miter(c, c2)
             live = sat(m)
             self.assertTrue(live)

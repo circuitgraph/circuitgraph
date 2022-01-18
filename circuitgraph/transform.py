@@ -48,9 +48,9 @@ def strip_io(c):
     """
     g = c.graph.copy()
     for i in c.inputs():
-        g.nodes[o]["type"] = "buf"
+        g.nodes[i]["type"] = "buf"
     for o in c.outputs():
-        g.nodes[i]["output"] = False
+        g.nodes[o]["output"] = False
 
     return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
@@ -426,7 +426,7 @@ def ternary(c):
     # add dual nodes
     for n in c:
         if c.type(n) in ["and", "nand"]:
-            t.add(f"{n}_x", "and")
+            t.add(f"{n}_x", "and", output=c.is_output(n))
             t.add(
                 f"{n}_x_in_fi",
                 "or",
@@ -441,7 +441,7 @@ def ternary(c):
                 )
 
         elif c.type(n) in ["or", "nor"]:
-            t.add(f"{n}_x", "and")
+            t.add(f"{n}_x", "and", output=c.is_output(n))
             t.add(
                 f"{n}_x_in_fi",
                 "or",
@@ -456,17 +456,18 @@ def ternary(c):
 
         elif c.type(n) in ["buf", "not"]:
             p = c.fanin(n).pop()
-            t.add(f"{n}_x", "buf", fanin=f"{p}_x")
-
-        elif c.type(n) in ["output"]:
-            p = c.fanin(n).pop()
-            t.add(f"{n}_x", "output", fanin=f"{p}_x")
+            t.add(f"{n}_x", "buf", fanin=f"{p}_x", output=c.is_output(n))
 
         elif c.type(n) in ["xor", "xnor"]:
-            t.add(f"{n}_x", "or", fanin=(f"{p}_x" for p in c.fanin(n)))
+            t.add(
+                f"{n}_x",
+                "or",
+                fanin=(f"{p}_x" for p in c.fanin(n)),
+                output=c.is_output(n),
+            )
 
         elif c.type(n) in ["0", "1"]:
-            t.add(f"{n}_x", "0")
+            t.add(f"{n}_x", "0", output=c.is_output(n))
 
         elif c.type(n) in ["input"]:
             t.add(f"{n}_x", "input")
@@ -601,7 +602,7 @@ def sequential_unroll(
 
     if not final_flop_outputs:
         flop_outputs = [f"{bb}_{reg_d_port}_{prefix}_{n}" for bb in c.blackboxes]
-        uc.set_type(flop_outputs, "buf")
+        uc.set_output(flop_outputs, False)
 
     return uc
 
@@ -644,10 +645,10 @@ def unroll(c, n, state_io):
                 t = "buf"
             elif i in c.inputs():
                 t = "input"
-            elif i in c.outputs():
-                t = "output"
+            else:
+                t = c.type(i)
 
-            uc.add(f"{i}_{prefix}_{itr}", t)
+            uc.add(f"{i}_{prefix}_{itr}", t, output=c.is_output(i))
 
         uc.add_subcircuit(
             c, f"unrolled_{itr}", {i: f"{i}_{prefix}_{itr}" for i in c.io()}
@@ -662,7 +663,7 @@ def unroll(c, n, state_io):
 
         if itr == n:
             for i in state_io:
-                uc.set_type(f"{i}_{prefix}_{itr}", "output")
+                uc.set_output(f"{i}_{prefix}_{itr}")
 
     return uc
 
@@ -770,16 +771,16 @@ def sensitivity_transform(c, n):
 
         # compare to orig
         sen.add(
-            f"dif_{s0}",
+            f"dif_out_{s0}",
             "xor",
             fanin=[f"orig_{n}", f"inv_{s0}_{n}"],
             fanout=f"pc_in_{i}",
+            output=True,
         )
-        sen.add(f"dif_out_{s0}", "output", fanin=f"dif_{s0}")
 
     # instantiate population count
     for o in range(clog2(len(startpoints) + 1)):
-        sen.add(f"sen_out_{o}", "output", fanin=f"pc_out_{o}")
+        sen.add(f"sen_out_{o}", "buf", fanin=f"pc_out_{o}", output=True)
 
     return sen
 
