@@ -31,7 +31,6 @@ addable_types = [
     "0",
     "1",
     "x",
-    "output",
     "input",
 ]
 
@@ -231,6 +230,14 @@ class Circuit:
                 raise ValueError(f"name {n} overlaps with {name} subcircuit.")
             mapping[n] = f"{name}_{n}"
 
+        # check connections
+        sc_inputs = sc.inputs()
+        sc_outputs = sc.outputs()
+        if connections:
+            for sc_n, ns in connections.items():
+                if sc_n not in sc_inputs and sc_n not in sc_outputs:
+                    raise ValueError(f"node {sc_n} not in {name} io")
+
         # add sub circuit
         g = nx.relabel_nodes(sc.graph, mapping)
         self.graph.update(g)
@@ -243,15 +250,11 @@ class Circuit:
 
         # make connections
         if connections:
-            sc_inputs = sc.inputs()
-            sc_outputs = sc.outputs()
             for sc_n, ns in connections.items():
                 if sc_n in sc_inputs:
                     self.connect(ns, f"{name}_{sc_n}")
                 elif sc_n in sc_outputs:
                     self.connect(f"{name}_{sc_n}", ns)
-                else:
-                    raise ValueError(f"node {sc_n} not in {name} io")
 
     def add_blackbox(self, blackbox, name, connections=None):
         """
@@ -333,8 +336,10 @@ class Circuit:
         # extend circuit
         g = nx.relabel_nodes(c.graph, mapping)
         self.graph.update(g)
-        for n in self.blackboxes[name].io():
+        for n in self.blackboxes[name].inputs():
             self.set_type(f"{name}_{n}", "buf")
+        for n in self.blackboxes[name].outputs():
+            self.set_output(f"{name}_{n}", False)
 
         # remove blackbox
         self.blackboxes.pop(name)
@@ -367,7 +372,7 @@ class Circuit:
         """
         return set(self.graph.edges)
 
-    def add(self, n, type, fanin=None, fanout=None, uid=False):
+    def add(self, n, type, fanin=None, fanout=None, output=False, uid=False):
         """
         Adds a new node to the circuit, optionally connecting it
 
@@ -381,6 +386,8 @@ class Circuit:
                 Nodes to add to new node's fanin
         fanout : iterable of str
                 Nodes to add to new node's fanout
+        output: bool
+                If True, the node is added as an output
         uid: bool
                 If True, the node is given a unique name if it already
                 exists in the circuit.
@@ -421,22 +428,23 @@ class Circuit:
         elif isinstance(fanout, str):
             fanout = [fanout]
 
+        if type not in supported_types:
+            raise ValueError(f"Cannot add unknown type {type}")
+
         # raise error for invalid inputs
         if len(fanin) > 1 and type in ["buf", "not"]:
             raise ValueError(f"{type} cannot have more than one fanin")
         if fanin and type in ["0", "1", "x", "input"]:
             raise ValueError(f"{type} cannot have fanin")
-        if fanout and type in ["output"]:
-            raise ValueError(f"{type} cannot have fanout")
         if n[0] in "0123456789":
             raise ValueError(f"cannot add node starting with int: {n}")
 
         # add node
-        self.graph.add_node(n, type=type)
+        self.graph.add_node(n, type=type, output=output)
 
         # connect
-        self.graph.add_edges_from((n, f) for f in fanout)
-        self.graph.add_edges_from((f, n) for f in fanin)
+        self.connect(n, fanout)
+        self.connect(fanin, n)
 
         return n
 
@@ -478,6 +486,9 @@ class Circuit:
 
         """
         # clean
+        if not us or not vs:
+            return
+
         if isinstance(us, str):
             us = [us]
         if isinstance(vs, str):
@@ -486,23 +497,28 @@ class Circuit:
         # check existence
         for n in us:
             if n not in self.graph:
-                raise ValueError(f"node {n} does not exist.")
+                raise ValueError(f"node '{n}' does not exist.")
         for n in vs:
             if n not in self.graph:
-                raise ValueError(f"node {n} does not exist.")
+                raise ValueError(f"node '{n}' does not exist.")
 
         # check for illegal connections
         for v in vs:
             t = self.type(v)
-            if t in ["input", "bb_output"]:
-                raise ValueError(f"cannot connect to {t} {v}")
-            if t in ["output", "bb_input", "buf", "not"]:
+            if t in ["input", "0", "1", "x", "bb_output"]:
+                raise ValueError(f"cannot connect to {t} '{v}'")
+            if t in ["bb_input", "buf", "not"]:
                 if len(self.fanin(v)) + len(us) > 1:
-                    raise ValueError(f"fanin of {t} {v} greater than 1.")
+                    raise ValueError(f"fanin of {t} '{v}' cannot be greater than 1.")
         for u in us:
             t = self.type(u)
-            if t in ["output", "bb_input"]:
-                raise ValueError(f"cannot connect from {t} {u}.")
+            if t in ["bb_input"]:
+                raise ValueError(f"cannot connect from {t} '{u}'.")
+            if t in ["bb_output"]:
+                if self.type(v) != "buf":
+                    raise ValueError(f"cannot connect from {t} '{u}' to non-buf '{v}'")
+                if len(self.fanout(u)) + len(vs) > 1:
+                    raise ValueError(f"fanout of {t} '{u}' cannot be greater than 1.")
 
         # connect
         self.graph.add_edges_from((u, v) for u in us for v in vs)
@@ -729,6 +745,47 @@ class Circuit:
         """
         return self.filter_type("input")
 
+    def is_output(self, node):
+        """
+        Returns True if a node is an output.
+
+        Parameters
+        ----------
+        ns : str
+                Node.
+
+        Returns
+        -------
+        bool
+                Wheter or not the node is an output
+        
+        Raises
+        ------
+        KeyError
+                If node is not in circuit.
+        """
+        if node in self.graph.nodes:
+            try:
+                return self.graph.nodes[node]["output"]
+            except KeyError:
+                return False
+        else:
+            raise KeyError(f"Node {node} does not exist.")
+
+    def set_output(self, node, output=True):
+        """
+        Set a node as an output or not an output.
+
+        Parameters
+        ----------
+        node: str
+                Node.
+        output: bool
+                Whether or not node is an output
+       
+        """
+        self.graph.nodes[node]["output"] = output
+
     def outputs(self):
         """
         Returns the circuit's outputs
@@ -739,7 +796,7 @@ class Circuit:
                 Output nodes in circuit.
 
         """
-        return self.filter_type("output")
+        return set(n for n in self.graph.nodes if self.graph.nodes[n]["output"])
 
     def io(self):
         """
@@ -751,7 +808,7 @@ class Circuit:
                 Output and input nodes in circuit.
 
         """
-        return self.filter_type(["input", "output"])
+        return self.inputs() | self.outputs()
 
     def startpoints(self, ns=None):
         """
@@ -914,7 +971,9 @@ class Circuit:
         unloaded = [
             n
             for n in self.graph
-            if self.type(n) not in ["output", "bb_input"] and not self.fanout(n)
+            if self.type(n) not in ["bb_input"]
+            and not self.is_output(n)
+            and not self.fanout(n)
         ]
         removed = []
         while unloaded:
@@ -922,7 +981,7 @@ class Circuit:
             for fi in self.fanin(n):
                 if not inputs and self.type(fi) in ["input", "bb_output"]:
                     continue
-                if len(self.fanout(fi)) == 1:
+                if not self.is_output(fi) and len(self.fanout(fi)) == 1:
                     unloaded.append(fi)
             self.remove(n)
             removed.append(n)
@@ -930,7 +989,17 @@ class Circuit:
 
 
 class BlackBox:
-    """Class for representing blackboxes"""
+    """
+    Class for representing blackboxes.
+
+    Blackboxes can be used to represent arbitrary sub-modules such as
+    sequential elements. `Circuit` objects hold references to all added
+    `BlackBox` objects. They connect with the rest of the circuit as nodes
+    with `bb_input` and `bb_output` types. These are the ports to the blackbox.
+    `bb_input` nodes are like `buf` types: they can be driven by a single driver.
+    Each `bb_output` node must be connected to a single `buf` node.
+
+    """
 
     def __init__(self, name=None, inputs=None, outputs=None):
         """
@@ -943,8 +1012,36 @@ class BlackBox:
         outputs : seq of str
                 Blackbox outputs.
 
-        """
+        Examples
+        --------
+        Define a BlackBox for a flop
 
+        >>> import circuitgraph as cg
+        >>> dff = cg.BlackBox("dff", ["D", "CK"], ["Q"])
+
+        This corresponds to a verilog module with the header:
+        `module dff(input D, input CK, output Q);`
+
+        Create an example circuit
+
+        >>> c = cg.Circuit()
+        >>> c.add("i0", "input")
+        >>> c.add("i1", "input")
+        >>> c.add("a", "and", fanin=["i0", "i1"])
+        >>> c.add("clock", "input")
+        >>> c.add("data_out", "buf", output=True)
+
+        Add the BlackBox to a circuit
+
+        >>> c.add_blackbox(dff, "dff0", {"D": "a", "CK": "clock", "Q": "data_out"})
+
+        This corresnponds to instantiating the verilog module as such:
+        `dff dff0(.D(a), .CK(clock), .Q(data_out));`
+
+        This will add the bb_input nodes `dff0.D` and `dff0.CK`, driven by `a` and `clock`,
+        and bb_output node `dff0.Q`, which drives `data_out`.
+        
+        """
         self.name = name
         self.input_set = set(inputs)
         self.output_set = set(outputs)
