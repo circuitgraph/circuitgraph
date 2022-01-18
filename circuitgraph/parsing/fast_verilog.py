@@ -78,25 +78,6 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             inputs.add(net.strip())
     g.add_nodes_from(inputs, type="input")
 
-    regex = "(output)\s(.+?);"
-    outputs = set()
-    for net_type, net_str in re.findall(regex, module, re.DOTALL):
-        nets = net_str.split(",")
-        for net in nets:
-            outputs.add(net.strip())
-    g.add_nodes_from(outputs, type="output")
-
-    # create output drivers, ensure unique names
-    output_drivers = dict()
-    for o in outputs:
-        driver = f"{o}_driver"
-        while driver in g:
-            driver = f"{o}_driver_{random.randint(1111, 9999)}"
-        output_drivers[o] = driver
-
-    g.add_nodes_from(output_drivers.values(), type="buf")
-    g.add_edges_from((v, k) for k, v in output_drivers.items())
-
     # create constants, (will be removed if unused)
     tie_0 = "tie0"
     while tie_0 in g:
@@ -120,17 +101,8 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             # parse nets
             nets = [n.strip() for n in net_str.split(",")]
 
-            # check for outputs, replace constants
-            nets = [
-                output_drivers[n]
-                if n in output_drivers
-                else tie_0
-                if n == "1'b0"
-                else tie_1
-                if n == "1'b1"
-                else n
-                for n in nets
-            ]
+            # replace constants
+            nets = [tie_0 if n == "1'b0" else tie_1 if n == "1'b1" else n for n in nets]
 
             all_nets[gate].append(nets[0])
             all_edges += [(i, nets[0]) for i in nets[1:]]
@@ -149,20 +121,11 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
                 else:
                     input_nets.append(net)
 
-            # check for outputs, replace constants
+            # replace constants
             input_nets = [
-                output_drivers[n]
-                if n in output_drivers
-                else tie_0
-                if n == "1'b0"
-                else tie_1
-                if n == "1'b1"
-                else n
+                tie_0 if n == "1'b0" else tie_1 if n == "1'b1" else n
                 for n in input_nets
             ]
-
-            if output_net in output_drivers:
-                output_net = output_drivers[output_net]
 
             all_nets[gate.split("_")[-1].rstrip(digits).lower()].append(output_net)
             all_edges += [(i, output_net) for i in input_nets]
@@ -181,10 +144,8 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             regex = "\.\s*(\S+)\s*\(\s*(\S+)\s*\)"
             connections = {}
             for pin, net in re.findall(regex, net_str):
-                # check for outputs
-                if net in output_drivers:
-                    net = output_drivers[net]
-                elif net == "1'b1":
+                # replace constants
+                if net == "1'b1":
                     net = tie_1
                 elif net == "1'b0":
                     net = tie_0
@@ -202,10 +163,6 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
 
     regex = "assign\s+([a-zA-Z][a-zA-Z\d_]*)\s*=\s*([a-zA-Z\d][a-zA-Z\d_']*)\s*;"
     for n0, n1 in re.findall(regex, module):
-        if n0 in output_drivers:
-            n0 = output_drivers[n0]
-        if n1 in output_drivers:
-            n1 = output_drivers[n1]
         all_nets["buf"].append(n0)
         if n1 in ["1'b0", "1'h0", "1'd0"]:
             all_edges.append((tie_0, n0))
@@ -215,8 +172,15 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             all_edges.append((n1, n0))
 
     for k, v in all_nets.items():
-        g.add_nodes_from(v, type=k)
+        g.add_nodes_from(v, type=k, output=False)
     g.add_edges_from(all_edges)
+
+    regex = "(output)\s(.+?);"
+    outputs = set()
+    for net_type, net_str in re.findall(regex, module, re.DOTALL):
+        nets = net_str.split(",")
+        for net in nets:
+            g.nodes[net.strip()]["output"] = True
 
     try:
         next(g.successors(tie_0))

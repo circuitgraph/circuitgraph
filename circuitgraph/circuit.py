@@ -374,7 +374,16 @@ class Circuit:
         """
         return set(self.graph.edges)
 
-    def add(self, n, type, fanin=None, fanout=None, output=False, uid=False):
+    def add(
+        self,
+        n,
+        type,
+        fanin=None,
+        fanout=None,
+        output=False,
+        add_connected_nodes=False,
+        uid=False,
+    ):
         """
         Adds a new node to the circuit, optionally connecting it
 
@@ -390,6 +399,10 @@ class Circuit:
                 Nodes to add to new node's fanout
         output: bool
                 If True, the node is added as an output
+        add_connected_nodes: bool
+                If True, nodes in the fanin/fanout will be added to the
+                circuit as buffers if not already present. Useful when
+                parsing circuits.
         uid: bool
                 If True, the node is given a unique name if it already
                 exists in the circuit.
@@ -445,6 +458,10 @@ class Circuit:
         self.graph.add_node(n, type=type, output=output)
 
         # connect
+        if add_connected_nodes:
+            for f in fanin + fanout:
+                if f not in self:
+                    self.add(f, "buf")
         self.connect(n, fanout)
         self.connect(fanin, n)
 
@@ -798,7 +815,7 @@ class Circuit:
                 Output nodes in circuit.
 
         """
-        return set(n for n in self.graph.nodes if self.graph.nodes[n]["output"])
+        return set(n for n in self.graph.nodes if self.is_output(n))
 
     def io(self):
         """

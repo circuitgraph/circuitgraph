@@ -142,7 +142,7 @@ def bench_to_circuit(netlist, name):
         )
         if gate == "BUFF" or gate == "buff":
             gate = "buf"
-        c.add(net, gate.lower(), fanin=inputs)
+        c.add(net, gate.lower(), fanin=inputs, add_connected_nodes=True)
 
     regex = r"([a-zA-Z][a-zA-Z\d_]*)\s*=\s*(DFF|dff)\(([^\)]+)\)"
     for net, gate, input_str in re.findall(regex, netlist):
@@ -156,9 +156,7 @@ def bench_to_circuit(netlist, name):
     for net_str in re.findall(in_regex, netlist, re.DOTALL):
         nets = net_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
         for n in nets:
-            driver = c.uid(f"{n}_driver")
-            c.relabel({n: driver})
-            c.add(n, "output", fanin=driver)
+            c.set_output(n)
 
     return c
 
@@ -280,21 +278,7 @@ def circuit_to_verilog(c, behavioral=False):
     insts = []
     wires = []
 
-    # remove outputs drivers
-    driver_mapping = dict()
-    for output in outputs:
-        if len(c.fanin(output)) > 1:
-            raise ValueError(f"Output {output} has multiple drivers.")
-        elif len(c.fanin(output)) == 1:
-            driver = c.fanin(output).pop()
-            if c.type(driver) in ["input", "1", "0"]:
-                driver = c.add(f"{output}_driver", type="buf", fanin=driver, uid=True)
-            driver_mapping[driver] = output
-    c.remove(c.outputs())
-    c.relabel(driver_mapping)
-
     # blackboxes
-    output_map = {}
     for name, bb in c.blackboxes.items():
         io = []
         for n in bb.inputs():
@@ -302,10 +286,10 @@ def circuit_to_verilog(c, behavioral=False):
             io += [f".{n}({driver})"]
 
         for n in bb.outputs():
-            w = c.uid(f"{name}_{n}_load")
-            wires.append(w)
-            output_map[f"{name}.{n}"] = w
-            io += [f".{n}({w})"]
+            driven = c.fanout(f"{name}.{n}").pop()
+            # Disconnect so no buffer is created
+            c.disconnect(f"{name}.{n}", driven)
+            io += [f".{n}({driven})"]
 
         io_def = ", ".join(io)
         insts.append(f"{bb.name} {name} ({io_def})")
@@ -313,7 +297,10 @@ def circuit_to_verilog(c, behavioral=False):
     # gates
     for n in c.nodes():
         if c.type(n) in ["xor", "xnor", "buf", "not", "nor", "or", "and", "nand"]:
-            fanin = [output_map[f] if f in output_map else f for f in c.fanin(n)]
+            wires.append(n)
+            fanin = list(c.fanin(n))
+            if not fanin:
+                continue
             if behavioral:
                 if c.type(n) == "buf":
                     insts.append(f"assign {n} = {fanin[0]}")
@@ -334,11 +321,10 @@ def circuit_to_verilog(c, behavioral=False):
             else:
                 fanin = ", ".join(fanin)
                 insts.append(f"{c.type(n)} g_{len(insts)} " f"({n}, {fanin})")
-            wires.append(n)
         elif c.type(n) in ["0", "1", "x"]:
             insts.append(f"assign {n} = 1'b{c.type(n)}")
             wires.append(n)
-        elif c.type(n) in ["input", "output", "bb_input", "bb_output"]:
+        elif c.type(n) in ["input", "bb_input", "bb_output"]:
             pass
         else:
             raise ValueError(f"unknown gate type: {c.type(n)}")
@@ -381,7 +367,7 @@ def circuit_to_bench(c):
 
     # gates
     const_inp = c.inputs().pop()
-    for n in c.nodes():
+    for n in c.nodes() - c.inputs():
         if c.type(n) in ["xor", "xnor", "buf", "not", "nor", "or", "and", "nand"]:
             fanin = ", ".join(c.fanin(n))
             insts.append(f"{n} = {c.type(n).upper()}({fanin})")
@@ -389,19 +375,13 @@ def circuit_to_bench(c):
             insts.append(f"{n} = XOR({const_inp}, {const_inp})")
         elif c.type(n) in ["1"]:
             insts.append(f"{n} = XNOR({const_inp}, {const_inp})")
-        elif c.type(n) in ["input"]:
-            inputs.append(n)
-        elif c.type(n) in ["output"]:
-            fanin = c.fanin(n).pop()
-            insts.append(f"{n} = BUF({fanin})")
-            outputs.append(n)
         else:
             raise ValueError(f"unknown gate type: {c.type(n)}")
 
     bench = f"# {c.name}\n"
-    bench += "".join(f"INPUT({inp})\n" for inp in inputs)
+    bench += "".join(f"INPUT({inp})\n" for inp in c.inputs())
     bench += "\n"
-    bench += "".join(f"OUTPUT({out};)\n" for out in outputs)
+    bench += "".join(f"OUTPUT({out};)\n" for out in c.outputs())
     bench += "\n"
     bench += "\n".join(insts)
 

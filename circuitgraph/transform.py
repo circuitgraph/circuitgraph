@@ -123,7 +123,8 @@ def strip_blackboxes(c, ignore_pins=None):
         if n.split(".")[-1] in ignore_pins:
             g.remove_node(n)
         else:
-            g.nodes[n]["type"] = "output"
+            g.nodes[n]["type"] = "buf"
+            g.nodes[n]["output"] = True
             bb_pins.append(n)
     for n in c.filter_type("bb_output"):
         if n.split(".")[-1] in ignore_pins:
@@ -518,10 +519,9 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
         m.add(n, "input", fanout=[f"c0_{n}", f"c1_{n}"])
 
     # compare outputs
-    m.add("miter", "or")
-    m.add("sat", "output", fanin="miter")
+    m.add("sat", "or", output=True)
     for n in endpoints:
-        m.add(f"dif_{n}", "xor", fanin=[f"c0_{n}", f"c1_{n}"], fanout="miter")
+        m.add(f"dif_{n}", "xor", fanin=[f"c0_{n}", f"c1_{n}"], fanout="sat")
 
     return m
 

@@ -14,15 +14,14 @@ class TestIO(unittest.TestCase):
 
     def test_bench(self):
         g = cg.from_lib(f"b17_C")
-        self.assertEqual(len(g), 2943)
-        self.assertSetEqual(g.fanin("n2905"), set(["n2516", "n2904"]))
-        self.assertSetEqual(g.fanin("out789"), set(["out789_driver"]))
-        self.assertSetEqual(g.fanin("out789_driver"), set(["n2942"]))
-        self.assertSetEqual(g.fanout("in382"), set(["n2484"]))
+        self.assertEqual(len(g), 2942)
+        self.assertSetEqual(g.fanin("n2905"), {"n2516", "n2904"})
+        self.assertSetEqual(g.fanin("out789"), {"n2942"})
+        self.assertSetEqual(g.fanout("in382"), {"n2484"})
 
         self.assertEqual(g.type("n2905"), "and")
-        self.assertEqual(g.type("out789"), "output")
-        self.assertEqual(g.type("out789_driver"), "not")
+        self.assertEqual(g.type("out789"), "not")
+        self.assertTrue(g.is_output("out789"))
         self.assertEqual(g.type("in382"), "input")
 
     def test_bench_output(self):
@@ -57,11 +56,6 @@ class TestIO(unittest.TestCase):
                     "G22_1",
                     "G8_0",
                     "G8_1",
-                    "G19_driver",
-                    "G18_driver",
-                    "G20_driver",
-                    "G21_driver",
-                    "G17_driver",
                     "and_G1_G2",
                     "tie0",
                     "tie1",
@@ -72,39 +66,35 @@ class TestIO(unittest.TestCase):
                     "and_and_G1_G2_xor_G3_G4",
                     "and_G1_or_not_G2_tie1",
                     "or_not_G2_tie1",
-                    "G22_0_driver",
-                    "G22_1_driver",
                 ]
             ),
         )
         self.assertSetEqual(g.fanin("G8_0"), set(["G1", "G3"]))
-        self.assertSetEqual(g.fanin("G17"), set(["G17_driver"]))
-        self.assertSetEqual(g.fanin("G18"), set(["G18_driver"]))
-        self.assertSetEqual(g.fanin("G17_driver"), set(["G8_1", "tie1"]))
+        self.assertSetEqual(g.fanin("G17"), set(["G8_1", "tie1"]))
         self.assertEqual(g.type("G8_1"), "buf")
         self.assertEqual(g.fanin("G8_1"), set(["tie1"]))
 
         self.assertEqual(g.type("G8_0"), "nand")
-        self.assertEqual(g.type("G17_driver"), "nor")
-        self.assertEqual(g.type("G18_driver"), "and")
-        self.assertEqual(g.type("G18"), "output")
-        self.assertEqual(g.type("G22_0"), "output")
-        self.assertEqual(g.type("G22_0_driver"), "xor")
+        self.assertEqual(g.type("G17"), "nor")
+        self.assertEqual(g.type("G18"), "and")
+        self.assertTrue(g.is_output("G18"))
+        self.assertEqual(g.type("G22_0"), "xor")
+        self.assertTrue(g.is_output("G22_0"))
         self.assertEqual(g.type("tie1"), "1")
         self.assertEqual(g.type("tie0"), "0")
 
-        self.assertSetEqual(g.fanin("G19_driver"), set(["and_and_G1_G2_xor_G3_G4"]))
+        self.assertSetEqual(g.fanin("G19"), set(["and_and_G1_G2_xor_G3_G4"]))
         self.assertSetEqual(
             g.fanin("and_and_G1_G2_xor_G3_G4"), set(["and_G1_G2", "xor_G3_G4"])
         )
         self.assertSetEqual(g.fanin("and_G1_G2"), set(["G1", "G2"]))
         self.assertSetEqual(g.fanin("xor_G3_G4"), set(["G3", "G4"]))
-        self.assertSetEqual(g.fanin("G20_driver"), set(["xor_G17_and_G8_0_G5_0"]))
+        self.assertSetEqual(g.fanin("G20"), set(["xor_G17_and_G8_0_G5_0"]))
         self.assertSetEqual(
-            g.fanin("xor_G17_and_G8_0_G5_0"), set(["G17_driver", "and_G8_0_G5_0"]),
+            g.fanin("xor_G17_and_G8_0_G5_0"), set(["G17", "and_G8_0_G5_0"]),
         )
         self.assertSetEqual(g.fanin("and_G8_0_G5_0"), set(["G8_0", "G5_0"]))
-        self.assertSetEqual(g.fanin("G22_1_driver"), set(["and_G1_or_not_G2_tie1"]))
+        self.assertSetEqual(g.fanin("G22_1"), set(["and_G1_or_not_G2_tie1"]))
         self.assertSetEqual(
             g.fanin("and_G1_or_not_G2_tie1"), set(["G1", "or_not_G2_tie1"])
         )
@@ -164,6 +154,79 @@ class TestIO(unittest.TestCase):
     def test_incorrect_file_type(self):
         self.assertRaises(ValueError, cg.from_file, "setup.py")
 
+    def test_blackbox_io(self):
+        c = cg.from_file(f"{self.test_path}/test_blackbox_io_0.v", blackboxes=self.bbs)
+        self.assertSetEqual(c.inputs(), {"clk", "i0", "i1"})
+        self.assertSetEqual(c.outputs(), {"o0"})
+        self.assertSetEqual(
+            c.nodes(),
+            c.inputs() | c.outputs() | {"w0", "w1", "ff0.D", "ff0.CK", "ff0.Q"},
+        )
+        self.assertDictEqual(c.blackboxes, {"ff0": self.bbs[0]})
+
+        v = cg.circuit_to_verilog(c)
+        c2 = cg.verilog_to_circuit(v, c.name, blackboxes=self.bbs)
+        m = miter(cg.strip_blackboxes(c), cg.strip_blackboxes(c2))
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+
+        c = cg.from_file(f"{self.test_path}/test_blackbox_io_1.v", blackboxes=self.bbs)
+        self.assertSetEqual(c.inputs(), {"clk", "i0"})
+        self.assertSetEqual(c.outputs(), {"o0"})
+        self.assertSetEqual(
+            c.nodes(), c.inputs() | c.outputs() | {"ff0.D", "ff0.CK", "ff0.Q"}
+        )
+        self.assertDictEqual(c.blackboxes, {"ff0": self.bbs[0]})
+
+        v = cg.circuit_to_verilog(c)
+        c2 = cg.verilog_to_circuit(v, c.name, blackboxes=self.bbs)
+        m = miter(cg.strip_blackboxes(c), cg.strip_blackboxes(c2))
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+
+    def test_blackbox_io_fast(self):
+        c = cg.from_file(
+            f"{self.test_path}/test_blackbox_io_0.v", blackboxes=self.bbs, fast=True
+        )
+        self.assertSetEqual(c.inputs(), {"clk", "i0", "i1"})
+        self.assertSetEqual(c.outputs(), {"o0"})
+        self.assertSetEqual(
+            c.nodes(),
+            c.inputs() | c.outputs() | {"w0", "w1", "ff0.D", "ff0.CK", "ff0.Q"},
+        )
+        self.assertDictEqual(c.blackboxes, {"ff0": self.bbs[0]})
+
+        v = cg.circuit_to_verilog(c)
+        c2 = cg.verilog_to_circuit(v, c.name, blackboxes=self.bbs, fast=True)
+        m = miter(cg.strip_blackboxes(c), cg.strip_blackboxes(c2))
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+
+        c = cg.from_file(
+            f"{self.test_path}/test_blackbox_io_1.v", blackboxes=self.bbs, fast=True
+        )
+        self.assertSetEqual(c.inputs(), {"clk", "i0"})
+        self.assertSetEqual(c.outputs(), {"o0"})
+        self.assertSetEqual(
+            c.nodes(), c.inputs() | c.outputs() | {"ff0.D", "ff0.CK", "ff0.Q"}
+        )
+        self.assertDictEqual(c.blackboxes, {"ff0": self.bbs[0]})
+
+        v = cg.circuit_to_verilog(c)
+        c2 = cg.verilog_to_circuit(v, c.name, blackboxes=self.bbs, fast=True)
+        m = miter(cg.strip_blackboxes(c), cg.strip_blackboxes(c2))
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+        cg.to_file(c2, "test.v")
+
     def test_verilog_output(self):
         for g in [
             cg.from_file(
@@ -181,10 +244,3 @@ class TestIO(unittest.TestCase):
             self.assertTrue(live)
             different_output = sat(m, assumptions={"sat": True})
             self.assertFalse(different_output)
-
-    def test_verilog_incorrect_output(self):
-        c = cg.Circuit()
-        c.add("a", "input")
-        c.add("b", "input")
-        c.add("c", "fake_gate", fanin=["a", "b"])
-        self.assertRaises(ValueError, cg.circuit_to_verilog, c)

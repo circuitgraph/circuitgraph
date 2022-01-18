@@ -135,7 +135,11 @@ class VerilogCircuitGraphTransformer(Transformer):
                 self.warn(f"{wire} declared as wire but isn't connected.")
 
         for n in self.c.nodes():
-            if self.c.type(n) not in ["output", "bb_input"] and not self.c.fanout(n):
+            if (
+                self.c.type(n) != "bb_input"
+                and not self.c.is_output(n)
+                and not self.c.fanout(n)
+            ):
                 self.warn(f"{n} doesn't drive any nets.")
             elif self.c.type(n) not in [
                 "input",
@@ -173,14 +177,7 @@ class VerilogCircuitGraphTransformer(Transformer):
 
         # Relabel outputs using drivers
         for o in self.outputs:
-            o = str(o)
-            if self.c.fanin(o):
-                o_driver = f"{o}_driver"
-                while o_driver in self.c.nodes():
-                    o_driver += "_0"
-                self.c.relabel({o: o_driver})
-                self.add_node(o, "output")
-                self.c.connect(o_driver, o)
+            self.c.set_output(str(o))
 
         # Remove tie0, tie1 if not used
         if not self.c.fanout(self.tie0):
