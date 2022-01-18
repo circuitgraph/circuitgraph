@@ -225,7 +225,6 @@ class TestIO(unittest.TestCase):
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})
         self.assertFalse(different_output)
-        cg.to_file(c2, "test.v")
 
     def test_verilog_output(self):
         for g in [
