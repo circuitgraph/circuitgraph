@@ -27,10 +27,25 @@ def visualize(c, output_file):
     ) as tmp_in:
         tmp_in.write(bytes(verilog, "ascii"))
         tmp_in.flush()
+
+        # Write dummy modules for blackboxes to show port directions
+        for bb in set(c.blackboxes.values()):
+            bb_verilog = (
+                f"\n\nmodule {bb.name} ({','.join(bb.inputs() | bb.outputs())});\n"
+            )
+            for i in bb.inputs():
+                bb_verilog += f"  input {i};\n"
+            for o in bb.outputs():
+                bb_verilog += f"  output {o};\n"
+            bb_verilog += "endmodule\n"
+            tmp_in.write(bytes(bb_verilog, "ascii"))
+            tmp_in.flush()
+
         cmd = [
             "yosys",
             "-p",
-            f"read_verilog {tmp_in.name}; " f"show -format {fmt} -prefix {prefix}",
+            f"read_verilog {tmp_in.name}; "
+            f"show -format {fmt} -prefix {prefix} {c.name}",
         ]
         subprocess.run(cmd)
 
