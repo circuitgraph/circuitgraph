@@ -7,7 +7,7 @@ an associated name and gate type. The supported types are:
 - Standard input-order-independent gates:
     ['and','nand','or','nor','not','buf','xor','xnor']
 - IO and Constant values:
-    ['output','input','1','0']
+    ['input','1','0']
 - Blackbox IO (must be added through `add_blackbox`)
     ['bb_output','bb_input']
 

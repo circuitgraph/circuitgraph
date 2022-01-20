@@ -156,9 +156,9 @@ def lint(c, exhaustive=False, unloaded=False, undriven=True):
         if len(c.fanin(g)) > 0:
             handle(f"{c.type(g)} '{g}' has fanin")
         if c.type(g) == "bb_output":
-            if len(c.fanout(g) > 1):
+            if len(c.fanout(g)) > 1:
                 handle(f"{c.type(g)} '{g}' has fanout greater than 1")
-            if c.type(c.fanout(g).pop()) != "buf":
+            if c.fanout(g) and c.type(c.fanout(g).pop()) != "buf":
                 handle(f"{c.type(g)} '{g}' has non-buf fanout")
 
     for g in c.filter_type(["buf", "not", "bb_input"]):

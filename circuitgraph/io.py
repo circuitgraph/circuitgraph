@@ -282,14 +282,20 @@ def circuit_to_verilog(c, behavioral=False):
     for name, bb in c.blackboxes.items():
         io = []
         for n in bb.inputs():
-            driver = c.fanin(f"{name}.{n}").pop()
-            io += [f".{n}({driver})"]
+            try:
+                driver = c.fanin(f"{name}.{n}").pop()
+                io += [f".{n}({driver})"]
+            except KeyError:
+                io += [f".{n}()"]
 
         for n in bb.outputs():
-            driven = c.fanout(f"{name}.{n}").pop()
-            # Disconnect so no buffer is created
-            c.disconnect(f"{name}.{n}", driven)
-            io += [f".{n}({driven})"]
+            try:
+                driven = c.fanout(f"{name}.{n}").pop()
+                # Disconnect so no buffer is created
+                c.disconnect(f"{name}.{n}", driven)
+                io += [f".{n}({driven})"]
+            except KeyError:
+                io += [f".{n}()"]
 
         io_def = ", ".join(io)
         insts.append(f"{bb.name} {name} ({io_def})")
