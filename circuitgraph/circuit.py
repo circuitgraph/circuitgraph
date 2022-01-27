@@ -791,9 +791,9 @@ class Circuit:
         else:
             raise KeyError(f"Node {node} does not exist.")
 
-    def set_output(self, node, output=True):
+    def set_output(self, ns, output=True):
         """
-        Set a node as an output or not an output.
+        Set a node or nodes as an output or not an output.
 
         Parameters
         ----------
@@ -803,7 +803,10 @@ class Circuit:
                 Whether or not node is an output
        
         """
-        self.graph.nodes[node]["output"] = output
+        if isinstance(ns, str):
+            ns = [ns]
+        for n in ns:
+            self.graph.nodes[n]["output"] = output
 
     def outputs(self):
         """

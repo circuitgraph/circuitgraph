@@ -185,7 +185,7 @@ def subcircuit(c, nodes):
     for node in nodes:
         if c.type(node) in ["bb_output", "bb_input"]:
             raise NotImplementedError("Cannot create a subcircuit with blackboxes")
-        sc.add(node, type=c.type(node))
+        sc.add(node, type=c.type(node), output=c.is_output(node))
     for edge in c.edges():
         if edge[0] in nodes and edge[1] in nodes:
             sc.connect(edge[0], edge[1])

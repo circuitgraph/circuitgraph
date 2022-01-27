@@ -3,7 +3,7 @@
 import tempfile
 import re
 import code
-from subprocess import PIPE, run
+import subprocess
 
 
 def interrupt(s):
@@ -206,7 +206,9 @@ def sat(c, assumptions=None):
         return False
 
 
-def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
+def approx_model_count(
+    c, assumptions=None, startpoints=None, e=0.9, d=0.1, log_file=None
+):
     """
     Approximates the number of solutions to circuit
 
@@ -222,6 +224,8 @@ def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
             epsilon of approxmc
     d : float (0-1)
             delta of approxmc
+    log_file: str
+            If specified, approxmc output will be written to this file.
 
     Returns
     -------
@@ -256,17 +260,24 @@ def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
 
         # run approxmc
         cmd = f"approxmc --epsilon={e} --delta={d} {tmp.name}".split()
-        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        if log_file:
+            with open(log_file, "w+") as f:
+                subprocess.run(
+                    cmd, stdout=f, stderr=f, check=True, universal_newlines=True
+                )
+                f.seek(0)
+                result = f.read()
+        else:
+            result = subprocess.run(
+                cmd, capture_output=True, check=True, universal_newlines=True
+            )
+            result = result.stdout
 
     # parse results
-    # approxmc version < 4
-    m = re.search(r"Number of solutions is: (\d+) x 2\^(\d+)", result.stdout)
-    # approxmc version 4
+    m = re.search(r"s mc (\d+)", result)
     if not m:
-        m = re.search(r"Number of solutions is: (\d+)\*2\*\*(\d+)", result.stdout)
-    if not m:
-        return None
-    return int(m.group(1)) * (2 ** int(m.group(2)))
+        raise ValueError(f"approxmc produced unexpected result:\n\n{result}")
+    return int(m.group(1))
 
 
 def model_count(c, assumptions=None):
