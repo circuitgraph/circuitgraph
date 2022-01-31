@@ -232,7 +232,10 @@ def approx_model_count(
     int
             Estimate.
     """
+    import shutil
 
+    if shutil.which("approxmc") == None:
+        raise OSError("Please install 'approxmc' before using 'approx_model_count'")
     if startpoints is None:
         startpoints = c.startpoints()
 
