@@ -2,12 +2,13 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 import subprocess
+import shutil
 
 from circuitgraph import supported_types
 from circuitgraph.io import circuit_to_verilog
 
 
-def visualize(c, output_file):
+def visualize(c, output_file, suppress_output=True):
     """
     Visualize a circuit using Yosys.
 
@@ -17,11 +18,20 @@ def visualize(c, output_file):
             Circuit to visualize.
     output_file: str
             Where to write the image to.
+    suppress_output: bool
+            If True, yosys stdout will not be printed.
     """
+    if shutil.which("yosys") == None:
+        raise OSError("Install 'yosys' to use 'cg.visualize'")
+
     verilog = circuit_to_verilog(c)
     output_file = Path(output_file)
     fmt = output_file.suffix[1:]
     prefix = output_file.with_suffix("")
+    if suppress_output:
+        stdout = subprocess.DEVNULL
+    else:
+        stdout = None
     with NamedTemporaryFile(
         prefix="circuitgraph_synthesis_input", suffix=".v"
     ) as tmp_in:
@@ -47,7 +57,11 @@ def visualize(c, output_file):
             f"read_verilog {tmp_in.name}; "
             f"show -format {fmt} -prefix {prefix} {c.name}",
         ]
-        subprocess.run(cmd)
+        subprocess.run(cmd, stdout=stdout)
+
+    # Remove intermediate dot files if necessary
+    if fmt != "dot":
+        prefix.with_suffix(".dot").unlink()
 
 
 def clog2(num: int) -> int:

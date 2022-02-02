@@ -7,10 +7,8 @@ from pathlib import Path
 
 import networkx as nx
 
-from circuitgraph import Circuit
-from circuitgraph.utils import clog2
+import circuitgraph as cg
 from circuitgraph.logic import popcount
-from circuitgraph.io import verilog_to_circuit, circuit_to_verilog
 
 
 def copy(c):
@@ -28,7 +26,7 @@ def copy(c):
             Circuit copy.
 
     """
-    return Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
+    return cg.Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def strip_io(c):
@@ -52,7 +50,7 @@ def strip_io(c):
     for o in c.outputs():
         g.nodes[o]["output"] = False
 
-    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def strip_outputs(c):
@@ -74,7 +72,7 @@ def strip_outputs(c):
     for o in c.outputs():
         g.nodes[o]["output"] = False
 
-    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def strip_inputs(c):
@@ -96,7 +94,7 @@ def strip_inputs(c):
     for i in c.inputs():
         g.nodes[i]["type"] = "buf"
 
-    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def strip_blackboxes(c, ignore_pins=None):
@@ -142,7 +140,7 @@ def strip_blackboxes(c, ignore_pins=None):
             raise ValueError(f"Overlapping blackbox name: {k}")
     nx.relabel_nodes(g, mapping, copy=False)
 
-    return Circuit(graph=g, name=c.name)
+    return cg.Circuit(graph=g, name=c.name)
 
 
 def relabel(c, mapping):
@@ -181,7 +179,7 @@ def subcircuit(c, nodes):
     Circuit
             The subcircuit.
     """
-    sc = Circuit()
+    sc = cg.Circuit()
     for node in nodes:
         if c.type(node) in ["bb_output", "bb_input"]:
             raise NotImplementedError("Cannot create a subcircuit with blackboxes")
@@ -247,6 +245,18 @@ def syn(
     Circuit
             Synthesized circuit.
     """
+    if engine == "yosys" and shutil.which("yosys") == None:
+        raise OSError("'yosys' installation not found")
+
+    if engine == "genus" and shutil.which("genus") == None:
+        raise OSError("'genus' installation not found")
+
+    if engine == "dc":
+        dc_engine == "dc_shell-t"
+        if shutil.which("dc_shell-t") == None:
+            dc_engine == "dc_shell"
+            if shutil.which("dc_shell") == None:
+                raise OSError("'dc_shell-t' or 'dc_shell' installation not found")
 
     working_dir = Path(working_dir)
     working_dir.mkdir(exist_ok=True)
@@ -267,7 +277,7 @@ def syn(
         prefix="circuitgraph_synthesis_input", suffix=".v", mode="w"
     ) as tmp_in:
         if not verilog_exists:
-            verilog = circuit_to_verilog(c)
+            verilog = cg.circuit_to_verilog(c)
             tmp_in.write(verilog)
             tmp_in.flush()
         with open(post_syn_file, "w+") if post_syn_file else NamedTemporaryFile(
@@ -371,7 +381,7 @@ def syn(
                     f"write -format verilog -output {tmp_out.name};\n"
                     "exit;"
                 )
-                cmd = ["dc_shell-t", "-no_gui", "-x", execute]
+                cmd = [dc_engine, "-no_gui", "-x", execute]
             elif engine == "yosys":
                 cmd = [
                     "yosys",
@@ -401,7 +411,7 @@ def syn(
 
             output_netlist = tmp_out.read()
 
-    return verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
+    return cg.verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
 
 
 def ternary(c):
@@ -513,7 +523,7 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
         endpoints = c0.endpoints() & c1.endpoints()
 
     # create miter, relabel
-    m = Circuit(name=f"miter_{c0.name}_{c1.name}")
+    m = cg.Circuit(name=f"miter_{c0.name}_{c1.name}")
     m.add_subcircuit(c0, "c0")
     m.add_subcircuit(c1, "c1")
 
@@ -635,7 +645,7 @@ def unroll(c, n, state_io):
 
     prefix = "cg_unroll"
 
-    uc = Circuit()
+    uc = cg.Circuit()
     for itr in range(n + 1):
         for i in c.io():
             if f"{i}_{prefix}_{itr}" in c:
@@ -698,10 +708,10 @@ def influence_transform(c, n, s):
 
     # get input cone
     fi_nodes = c.transitive_fanin(n) | set([n])
-    sub_c = Circuit("sub_cone", c.graph.subgraph(fi_nodes).copy())
+    sub_c = cg.Circuit("sub_cone", c.graph.subgraph(fi_nodes).copy())
 
     # create two copies of sub circuit, share inputs except s
-    infl = Circuit(name=f"infl_{s}_on_{n}")
+    infl = cg.Circuit(name=f"infl_{s}_on_{n}")
     infl.add_subcircuit(sub_c, "c0")
     infl.add_subcircuit(sub_c, "c1")
     for g in sp:
@@ -744,10 +754,10 @@ def sensitivity_transform(c, n):
 
     # get input cone
     fi_nodes = c.transitive_fanin(n) | set([n])
-    sub_c = Circuit(graph=c.graph.subgraph(fi_nodes).copy())
+    sub_c = cg.Circuit(graph=c.graph.subgraph(fi_nodes).copy())
 
     # create sensitivity circuit
-    sen = Circuit()
+    sen = cg.Circuit()
     sen.add_subcircuit(sub_c, "orig")
     for s in startpoints:
         sen.add(s, "input", fanout=f"orig_{s}")
@@ -778,7 +788,7 @@ def sensitivity_transform(c, n):
         )
 
     # instantiate population count
-    for o in range(clog2(len(startpoints) + 1)):
+    for o in range(cg.clog2(len(startpoints) + 1)):
         sen.add(f"sen_out_{o}", "buf", fanin=f"pc_out_{o}", output=True)
 
     return sen
@@ -854,3 +864,105 @@ def limit_fanin(c, k):
             i += 1
 
     return ck
+
+
+def acyclic_unroll(c):
+    """
+    Unrolls a cyclic circuit to remove cycles
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll
+
+    Returns
+    -------
+    Circuit
+            The unrolled circuit
+    """
+    if c.blackboxes:
+        raise ValueError("Cannot perform acyclic unroll with blackboxes")
+
+    def approx_min_fas(DG):
+        DGC = DG.copy()
+        s1, s2 = [], []
+        while DGC.nodes:
+            # find sinks
+            sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+            while sinks:
+                s2 += sinks
+                DGC.remove_nodes_from(sinks)
+                sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+
+            # find sources
+            sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+            while sources:
+                s1 += sources
+                DGC.remove_nodes_from(sources)
+                sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+
+            # choose max in/out degree difference
+            if DGC.nodes:
+                n = max(DGC.nodes, key=lambda x: DGC.out_degree(x) - DGC.in_degree(x))
+                s1.append(n)
+                DGC.remove_node(n)
+
+        ordering = s1 + list(reversed(s2))
+        feedback_edges = [
+            e for e in DG.edges if ordering.index(e[0]) > ordering.index(e[1])
+        ]
+        feedback_edges = [
+            (u, v) for u, v in feedback_edges if u in nx.descendants(DG, v)
+        ]
+
+        DGC = DG.copy()
+        DGC.remove_edges_from(feedback_edges)
+        try:
+            if nx.find_cycle(DGC):
+                raise ValueError("approx_min_fas has failed")
+        except nx.NetworkXNoCycle:
+            pass
+
+        return feedback_edges
+
+    # find feedback nodes
+    feedback = set([e[0] for e in approx_min_fas(c.graph)])
+
+    # get startpoints
+    sp = c.startpoints()
+
+    # create acyclic circuit
+    acyc = cg.Circuit(name=f"acyc_{c.name}")
+    for n in sp:
+        acyc.add(n, "input")
+
+    # create copy with broken feedback
+    c_cut = cg.copy(c)
+    for f in feedback:
+        fanout = c.fanout(f)
+        c_cut.disconnect(f, fanout)
+        c_cut.add(f"aux_in_{f}", "buf", fanout=fanout)
+    c_cut.set_output(c.outputs(), False)
+
+    # cut feedback
+    for i in range(len(feedback) + 1):
+        # instantiate copy
+        acyc.add_subcircuit(c_cut, f"c{i}", {n: n for n in sp})
+
+        if i > 0:
+            # connect to last
+            for f in feedback:
+                acyc.connect(f"c{i-1}_{f}", f"c{i}_aux_in_{f}")
+        else:
+            # make feedback inputs
+            for f in feedback:
+                acyc.set_type(f"c{i}_aux_in_{f}", "input")
+
+    # connect outputs
+    for o in c.outputs():
+        acyc.add(o, "buf", fanin=f"c{i}_{o}", output=True)
+
+    cg.lint(acyc)
+    if acyc.is_cyclic():
+        raise ValueError("Circuit still cyclic")
+    return acyc

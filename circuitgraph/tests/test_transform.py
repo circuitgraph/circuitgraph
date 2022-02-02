@@ -1,4 +1,5 @@
 import unittest
+import tempfile
 import os
 import shutil
 import glob
@@ -102,28 +103,27 @@ class TestTransform(unittest.TestCase):
 
     @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
     def test_syn_yosys_io(self):
+        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_yosys_io")
         s = syn(
             self.s27,
             "yosys",
             suppress_output=True,
-            pre_syn_file="pre_syn.v",
-            post_syn_file="post_syn.v",
-            working_dir="syn",
+            pre_syn_file=f"{tmpdir}/pre_syn.v",
+            post_syn_file=f"{tmpdir}/post_syn.v",
+            working_dir=tmpdir,
         )
-        c0 = cg.from_file("pre_syn.v")
-        c1 = cg.from_file("post_syn.v")
+        c0 = cg.from_file(f"{tmpdir}/pre_syn.v")
+        c1 = cg.from_file(f"{tmpdir}/post_syn.v")
         m = miter(c0, c1)
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})
         self.assertFalse(different_output)
-        os.remove("pre_syn.v")
-        os.remove("post_syn.v")
-        shutil.rmtree("syn")
+        shutil.rmtree(tmpdir)
 
     @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
     def test_syn_yosys_exists(self):
-        with NamedTemporaryFile(
+        with tempfile.NamedTemporaryFile(
             prefix="circuitgraph_synthesis_test", suffix=".v", mode="w"
         ) as tmp_in:
             tmp_in.write("module test(a, b, c);\n")
@@ -154,55 +154,49 @@ class TestTransform(unittest.TestCase):
         "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ, "Genus synthesis not setup"
     )
     def test_syn_genus(self):
-        s = syn(self.s27, "genus", suppress_output=True)
+        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_genus")
+        s = syn(self.s27, "genus", suppress_output=True, working_dir=tmpdir)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})
         self.assertFalse(different_output)
-        for f in glob.glob(f"{os.getcwd()}/genus.cmd*"):
-            os.remove(f)
-        for f in glob.glob(f"{os.getcwd()}/genus.log*"):
-            os.remove(f)
-        shutil.rmtree(f"{os.getcwd()}/fv")
+        shutil.rmtree(tmpdir)
 
     @unittest.skipUnless(
         "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
     )
     def test_syn_dc(self):
-        s = syn(self.s27, "dc", suppress_output=True)
+        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_dc")
+        s = syn(self.s27, "dc", suppress_output=True, working_dir=tmpdir)
         m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})
         self.assertFalse(different_output)
-        for f in glob.glob(f"{os.getcwd()}/command.log*"):
-            os.remove(f)
-        for f in glob.glob(f"{os.getcwd()}/default.svf*"):
-            os.remove(f)
+        shutil.rmtree(tmpdir)
 
     @unittest.skipUnless(
         "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
     )
     def test_syn_dc_io(self):
+        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_dc_io")
         s = syn(
             self.s27,
             "dc",
             suppress_output=True,
-            pre_syn_file="pre_syn.v",
-            post_syn_file="post_syn.v",
-            working_dir="syn",
+            pre_syn_file=f"{tmpdir}/pre_syn.v",
+            post_syn_file=f"{tmpdir}/post_syn.v",
+            working_dir=tmpdir,
         )
-        c0 = cg.from_file("pre_syn.v")
-        c1 = cg.from_file("post_syn.v")
+        c0 = cg.from_file(f"{tmpdir}/pre_syn.v")
+        c1 = cg.from_file(f"{tmpdir}/post_syn.v")
         m = miter(c0, c1)
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})
         self.assertFalse(different_output)
-        os.remove("pre_syn.v")
-        os.remove("post_syn.v")
-        shutil.rmtree("syn")
+        shutil.rmtree(tmpdir)
 
     def test_sensitivity_transform(self):
         # pick random node and input value
@@ -265,3 +259,21 @@ class TestTransform(unittest.TestCase):
 
         for n in ck:
             self.assertTrue(len(ck.fanin(n)) <= k)
+
+    def test_acyclic_unroll(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+
+        c.add("g1", "and", fanin=["a"], output=True)
+        c.add("g2", "buf", fanin=["g1"])
+        # Add feedback edge
+        c.connect("g2", "g1")
+
+        self.assertTrue(c.is_cyclic())
+
+        acyc = cg.acyclic_unroll(c)
+        self.assertFalse(acyc.is_cyclic())
+
+        self.assertSetEqual(c.outputs(), acyc.outputs())
+        self.assertEqual(len(acyc.inputs()), 2)
+        self.assertTrue("a" in acyc.inputs())
