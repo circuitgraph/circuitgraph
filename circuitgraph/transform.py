@@ -160,7 +160,7 @@ def relabel(c, mapping):
             Circuit with removed blackboxes.
     """
     g = nx.relabel_nodes(c.graph, mapping)
-    return Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def subcircuit(c, nodes):
