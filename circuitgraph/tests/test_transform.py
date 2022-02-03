@@ -277,3 +277,28 @@ class TestTransform(unittest.TestCase):
         self.assertSetEqual(c.outputs(), acyc.outputs())
         self.assertEqual(len(acyc.inputs()), 2)
         self.assertTrue("a" in acyc.inputs())
+
+    def test_supergates(self):
+        c = cg.Circuit()
+        for i in range(1, 7):
+            c.add(f"i{i}", "input")
+
+        c.add("g7", "nand", fanin=["i1", "i2"])
+        c.add("g8", "nand", fanin=["i3", "i4"])
+        c.add("g9", "nand", fanin=["i5", "i6"])
+        c.add("g10", "not", fanin=["i6"])
+        c.add("g11", "nand", fanin=["g7", "g8"])
+        c.add("g12", "nand", fanin=["g9", "g10"])
+        c.add("g13", "nand", fanin=["g11", "g12"])
+        c.add("g13", "nand", fanin=["g11", "g12"])
+        c.add("i14", "input")
+        c.add("g15", "nand", fanin=["g13", "i14"])
+        c.add("g16", "nand", fanin=["g12", "g13"])
+        c.add("i17", "input")
+        c.add("g18", "nand", fanin=["g15", "i17"])
+        c.add("g19", "nand", fanin=["g16", "g18"], output=True)
+
+        scs_per_output, g_per_output = supergates(c)
+        for o, g in g_per_output.items():
+            for node in g:
+                self.assertTrue(len(list(g.successors(node))) <= 1)

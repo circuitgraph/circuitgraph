@@ -444,6 +444,36 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(c.startpoints("c"), set(["c"]))
         self.assertSetEqual(c.endpoints("e"), set(["ff1.D"]))
 
+    def test_reconvergent_fanout_nodes(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "input")
+
+        c.add("g0", "and", fanin=["a", "b"])
+        c.add("g1", "and", fanin=["c", "g0"])
+        c.add("g2", "not", fanin=["g0"])
+        c.add("g3", "and", fanin=["g1", "g2"])
+        c.add("g4", "not", fanin=["c"])
+        c.add("g5", "and", fanin=["g3", "g4"], output=True)
+
+        self.assertSetEqual(set(c.reconvergent_fanout_nodes()), {"c", "g0"})
+
+    def test_has_reconvergent_fanout(self):
+        c = cg.Circuit()
+        c.add("a", "input")
+        c.add("b", "input")
+        c.add("c", "input")
+
+        c.add("g0", "and", fanin=["a", "b"])
+        c.add("g1", "and", fanin=["c", "g0"], output=True)
+        self.assertFalse(c.has_reconvergent_fanout())
+        c.add("g2", "not", fanin=["g0"])
+        c.add("g3", "and", fanin=["g1", "g2"])
+        c.add("g4", "not", fanin=["c"])
+        c.add("g5", "and", fanin=["g3", "g4"], output=True)
+        self.assertTrue(c.has_reconvergent_fanout())
+
     def test_is_cyclic(self):
         c = cg.Circuit()
         c.add("a", "input")

@@ -1,9 +1,10 @@
 """Functions for transforming circuits"""
-
 import subprocess
 from tempfile import NamedTemporaryFile
 import os
 from pathlib import Path
+from collections import defaultdict
+from queue import SimpleQueue
 
 import networkx as nx
 
@@ -966,3 +967,75 @@ def acyclic_unroll(c):
     if acyc.is_cyclic():
         raise ValueError("Circuit still cyclic")
     return acyc
+
+
+def supergates(c):
+    """
+    Calculate the supergates of a circuit. That is, find the
+    maximal covering of minimal subcircuits with logically 
+    independent inputs. This is done on a per-output basis.
+
+    For more information, see
+    Seth, Sharad C., and Vishwani D. Agrawal. "A new model for computation
+    of probabilistic testability in combinational circuits." Integration 7.1
+    (1989): 49-75.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to compute supergates for
+
+    Returns
+    -------
+    dict of str to list of Circuit, dict of str to networkx.DiGraph
+            The supergates per each output, as Circuit objects,
+            and the connections between supergates per each output,
+            as a networkx.Digraph object.
+    """
+    scs_per_output = dict()
+    g_per_output = dict()
+    for output in c.outputs():
+        co = cg.subcircuit(c, c.transitive_fanin(output) | {output})
+        G = co.graph.copy()
+        rm_edges = []
+        for u, v in G.edges:
+            G.add_edge(v, u)
+            if v == output:
+                rm_edges.append((u, v))
+
+        for u, v in rm_edges:
+            G.remove_edge(u, v)
+
+        doms = nx.immediate_dominators(G, output)
+        dom_tree = defaultdict(set)
+        for k, v in doms.items():
+            dom_tree[v].add(k)
+
+        dom_tree[output].remove(output)
+
+        frontier = SimpleQueue()
+        frontier.put(output)
+        scs = []
+
+        super_G = nx.DiGraph()
+        super_G.add_node(output)
+
+        while not frontier.empty():
+            node = frontier.get()
+            sg = {node}
+            fanins = SimpleQueue()
+            for fi in dom_tree[node]:
+                fanins.put(fi)
+            while not fanins.empty():
+                fi = fanins.get()
+                sg.add(fi)
+                if len(dom_tree[fi]) > 1:
+                    frontier.put(fi)
+                    super_G.add_node(fi)
+                    super_G.add_edge(fi, node)
+                elif len(dom_tree[fi]) == 1:
+                    fanins.put(dom_tree[fi].pop())
+            scs.append(cg.subcircuit(co, sg))
+        scs_per_output[output] = scs
+        g_per_output[output] = super_G
+    return scs_per_output, g_per_output

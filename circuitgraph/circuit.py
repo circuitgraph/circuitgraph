@@ -878,6 +878,40 @@ class Circuit:
         else:
             return self.outputs() | self.filter_type("bb_input")
 
+    def reconvergent_fanout_nodes(self):
+        """
+        Get nodes that have fanout that reconverges somewhere later
+        in the circuit.
+        
+        Returns
+        -------
+        generator of str
+                A generator of nodes that have reconvergent fanout
+        """
+        for node in self.nodes():
+            fo = self.fanout(node)
+            if len(fo) > 1 and reduce(
+                lambda a, b: a & b, (self.transitive_fanout(n) for n in fo)
+            ):
+                yield node
+
+    def has_reconvergent_fanout(self):
+        """
+        Check if a circuit has any reconvergent fanout present
+
+        Returns
+        -------
+        bool
+            Whether or not reconvergent fanout is present
+        """
+        for node in self.nodes():
+            fo = self.fanout(node)
+            if len(fo) > 1 and reduce(
+                lambda a, b: a & b, (self.transitive_fanout(n) for n in fo)
+            ):
+                return True
+        return False
+
     def is_cyclic(self):
         """
         Checks for combinational loops in circuit
