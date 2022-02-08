@@ -4,6 +4,7 @@ import tempfile
 import re
 import code
 import subprocess
+import shutil
 
 
 def interrupt(s):
@@ -232,8 +233,6 @@ def approx_model_count(
     int
             Estimate.
     """
-    import shutil
-
     if shutil.which("approxmc") == None:
         raise OSError("Please install 'approxmc' before using 'approx_model_count'")
     if startpoints is None:
@@ -243,14 +242,14 @@ def approx_model_count(
     if assumptions:
         for n in assumptions.keys():
             if n not in c:
-                raise ValueError(f"incorrect assumption key: {n}")
+                raise ValueError(f"Assumption key '{n}' not node in circuit")
         add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
     enc_inps = " ".join([str(variables.id(n)) for n in startpoints])
 
     # write dimacs to tmp
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(prefix=f"circuitgraph_approxmc_{c.name}_") as tmp:
         clause_str = "\n".join(
             " ".join(str(v) for v in c) + " 0" for c in formula.clauses
         )

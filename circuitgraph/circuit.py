@@ -10,11 +10,9 @@ an associated name and gate type. The supported types are:
     ['input','1','0']
 - Blackbox IO (must be added through `add_blackbox`)
     ['bb_output','bb_input']
-
 """
 
 import networkx as nx
-from networkx.exception import NetworkXNoCycle
 from functools import reduce
 from itertools import product
 
@@ -70,7 +68,6 @@ class Circuit:
         Another way to create the circuit is through a file.
 
         >>> c = cg.from_file('path/circuit.v')
-
         """
         if name:
             self.name = name
@@ -150,7 +147,6 @@ class Circuit:
 
         >>> c.type(c.nodes())
         ['xor', 'or', 'xor']
-
         """
         if isinstance(ns, str):
             if ns in self.graph.nodes:
@@ -193,7 +189,6 @@ class Circuit:
 
         >>> c.filter_type('xor')
         {'g2', 'g0'}
-
         """
         if isinstance(types, str):
             types = [types]
@@ -216,7 +211,6 @@ class Circuit:
                 Instance name.
         connections : dict of str:str
                 Optional connections to make.
-
         """
         # check if subcircuit bbs exist
         for bb_name in sc.blackboxes:
@@ -272,7 +266,6 @@ class Circuit:
                 Instance name.
         connections : dict of str:str
                 Optional connections to make.
-
         """
         # check if exists
         if name in self.blackboxes:
@@ -308,7 +301,6 @@ class Circuit:
                 Instance name.
         c : Circuit
                 Circuit.
-
         """
         # check if bb exists
         if name not in self.blackboxes:
@@ -358,7 +350,6 @@ class Circuit:
         -------
         set of str
                 Nodes
-
         """
         return set(self.graph.nodes)
 
@@ -370,7 +361,6 @@ class Circuit:
         -------
         networkx.EdgeView
                 Edges in circuit
-
         """
         return set(self.graph.edges)
 
@@ -429,7 +419,6 @@ class Circuit:
         'g'
         >>> c.fanin('g')
         {'in_1', 'in_0', 'in_3', 'in_2'}
-
         """
         # clean arguments
         if uid:
@@ -488,7 +477,6 @@ class Circuit:
         ----------
         mapping : dict of str:str
                 mapping of old to new names
-
         """
         nx.relabel_nodes(self.graph, mapping, copy=False)
 
@@ -502,7 +490,6 @@ class Circuit:
                 Head node(s)
         vs : str or iterable of str
                 Tail node(s)
-
         """
         # clean
         if not us or not vs:
@@ -552,7 +539,6 @@ class Circuit:
                 Head node(s)
         vs : str or iterable of str
                 Tail node(s)
-
         """
         if isinstance(us, str):
             us = [us]
@@ -582,7 +568,6 @@ class Circuit:
         {'n_12'}
         >>> c.fanout(['n_11','n_20'])
         {'n_12', 'G17'}
-
         """
         gates = set()
         if isinstance(ns, str):
@@ -604,9 +589,7 @@ class Circuit:
         -------
         set of str
                 Nodes in fanout.
-
         """
-
         gates = set()
         if isinstance(ns, str):
             ns = [ns]
@@ -627,9 +610,7 @@ class Circuit:
         -------
         set of str
                 Nodes in transitive fanin.
-
         """
-
         if isinstance(ns, str):
             ns = [ns]
         gates = set()
@@ -650,7 +631,6 @@ class Circuit:
         -------
         set of str
                 Nodes in transitive fanout.
-
         """
         if isinstance(ns, str):
             ns = [ns]
@@ -676,7 +656,7 @@ class Circuit:
         if visited is None:
             # is acyclic
             if self.is_cyclic():
-                raise ValueError(f"Cannot compute depth of cyclic circuit")
+                raise ValueError("Cannot compute depth of cyclic circuit")
 
             # find reachable group and init visited
             reachable = self.transitive_fanout(ns)
@@ -718,12 +698,11 @@ class Circuit:
         -------
         int
                 Depth.
-
         """
         if visited is None:
             # is acyclic
             if self.is_cyclic():
-                raise ValueError(f"Cannot compute depth of cyclic circuit")
+                raise ValueError("Cannot compute depth of cyclic circuit")
 
             # find reachable group and init visited
             reachable = self.transitive_fanin(ns)
@@ -760,7 +739,6 @@ class Circuit:
         -------
         set of str
                 Input nodes in circuit.
-
         """
         return self.filter_type("input")
 
@@ -777,7 +755,7 @@ class Circuit:
         -------
         bool
                 Wheter or not the node is an output
-        
+
         Raises
         ------
         KeyError
@@ -801,7 +779,6 @@ class Circuit:
                 Node.
         output: bool
                 Whether or not node is an output
-       
         """
         if isinstance(ns, str):
             ns = [ns]
@@ -816,7 +793,6 @@ class Circuit:
         -------
         set of str
                 Output nodes in circuit.
-
         """
         return set(n for n in self.graph.nodes if self.is_output(n))
 
@@ -828,7 +804,6 @@ class Circuit:
         -------
         set of str
                 Output and input nodes in circuit.
-
         """
         return self.inputs() | self.outputs()
 
@@ -845,7 +820,6 @@ class Circuit:
         -------
         set of str
                 Startpoints of ns.
-
         """
         if isinstance(ns, str):
             ns = [ns]
@@ -868,7 +842,6 @@ class Circuit:
         -------
         set of str
                 Endpoints of ns.
-
         """
         if isinstance(ns, str):
             ns = [ns]
@@ -882,7 +855,7 @@ class Circuit:
         """
         Get nodes that have fanout that reconverges somewhere later
         in the circuit.
-        
+
         Returns
         -------
         generator of str
@@ -920,7 +893,6 @@ class Circuit:
         -------
         bool
                 Existence of cycle
-
         """
         return not nx.is_directed_acyclic_graph(self.graph)
 
@@ -939,7 +911,6 @@ class Circuit:
         -------
         str
                 Unique name
-
         """
         if blocked is None:
             blocked = []
@@ -969,9 +940,7 @@ class Circuit:
         -------
         iter of str
                 k-cuts.
-
         """
-
         if computed is None:
             computed = {}
 
@@ -1005,7 +974,6 @@ class Circuit:
         -------
         iter of str
                 Ordered node names.
-
         """
         return nx.topological_sort(self.graph)
 
@@ -1022,7 +990,6 @@ class Circuit:
         -------
         iter of str
                 Removed nodes.
-
         """
         unloaded = [
             n
@@ -1054,7 +1021,6 @@ class BlackBox:
     with `bb_input` and `bb_output` types. These are the ports to the blackbox.
     `bb_input` nodes are like `buf` types: they can be driven by a single driver.
     Each `bb_output` node must be connected to a single `buf` node.
-
     """
 
     def __init__(self, name=None, inputs=None, outputs=None):
@@ -1094,9 +1060,8 @@ class BlackBox:
         This corresnponds to instantiating the verilog module as such:
         `dff dff0(.D(a), .CK(clock), .Q(data_out));`
 
-        This will add the bb_input nodes `dff0.D` and `dff0.CK`, driven by `a` and `clock`,
-        and bb_output node `dff0.Q`, which drives `data_out`.
-        
+        This will add the bb_input nodes `dff0.D` and `dff0.CK`, driven by `a` and
+        `clock`, and bb_output node `dff0.Q`, which drives `data_out`.
         """
         self.name = name
         self.input_set = set(inputs)
@@ -1110,7 +1075,6 @@ class BlackBox:
         -------
         set of str
                 Input nodes in blackbox.
-
         """
         return self.input_set
 
@@ -1122,7 +1086,6 @@ class BlackBox:
         -------
         set of str
                 Output nodes in blackbox.
-
         """
         return self.output_set
 
@@ -1134,6 +1097,5 @@ class BlackBox:
         -------
         set of str
                 IO nodes in blackbox.
-
         """
         return self.output_set | self.input_set

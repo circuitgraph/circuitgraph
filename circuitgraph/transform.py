@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from collections import defaultdict
 from queue import SimpleQueue
+import shutil
 
 import networkx as nx
 
