@@ -4,7 +4,7 @@ from tempfile import NamedTemporaryFile
 import os
 from pathlib import Path
 from collections import defaultdict
-from queue import SimpleQueue
+from queue import Queue
 import shutil
 
 import networkx as nx
@@ -1022,7 +1022,7 @@ def supergates(c):
 
         dom_tree[output].remove(output)
 
-        frontier = SimpleQueue()
+        frontier = Queue()
         frontier.put(output)
         scs = []
 
@@ -1032,7 +1032,7 @@ def supergates(c):
         while not frontier.empty():
             node = frontier.get()
             sg = {node}
-            fanins = SimpleQueue()
+            fanins = Queue()
             for fi in dom_tree[node]:
                 fanins.put(fi)
             while not fanins.empty():

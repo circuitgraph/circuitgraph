@@ -28,7 +28,7 @@ The documentation can be found [here](https://circuitgraph.github.io/circuitgrap
 
 ## Installation
 
-CircuitGraph requires Python3. 
+CircuitGraph requires Python3.6 or greater 
 The easiest way to install is via PyPi:
 ```shell
 pip install circuitgraph
