@@ -72,8 +72,9 @@ pip install pdoc3
 make doc
 ```
 
-Tests are run using the builtin unittest framework.
+Tests are run using the builtin unittest framework. Some basic linting is performed using flake8.
 ```shell
+pip instsall flake8
 make test
 ```
 

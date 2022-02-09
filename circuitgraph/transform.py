@@ -247,17 +247,17 @@ def syn(
     Circuit
             Synthesized circuit.
     """
-    if engine == "yosys" and shutil.which("yosys") == None:
+    if engine == "yosys" and shutil.which("yosys") is None:
         raise OSError("'yosys' installation not found")
 
-    if engine == "genus" and shutil.which("genus") == None:
+    if engine == "genus" and shutil.which("genus") is None:
         raise OSError("'genus' installation not found")
 
     if engine == "dc":
-        dc_engine == "dc_shell-t"
-        if shutil.which("dc_shell-t") == None:
-            dc_engine == "dc_shell"
-            if shutil.which("dc_shell") == None:
+        dc_engine = "dc_shell-t"
+        if shutil.which("dc_shell-t") is None:
+            dc_engine = "dc_shell"
+            if shutil.which("dc_shell") is None:
                 raise OSError("'dc_shell-t' or 'dc_shell' installation not found")
 
     working_dir = Path(working_dir)
