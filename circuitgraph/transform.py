@@ -562,7 +562,7 @@ def sequential_unroll(
     c: Circuit
             Circuit to unroll.
     n: int
-            The number of times to unroll.
+            The number of unrolled copies of the circuit to create.
     reg_d_port: str
             The name of the D port in the blackboxes in `c`.
     reg_q_port: str
@@ -634,7 +634,7 @@ def unroll(c, n, state_io, prefix="cg_unroll"):
     c: Circuit
             Circuit to unroll.
     n: int
-            The number of times to unroll.
+            The number of unrolled copies of the circuit to create.
     state_io: dict of str:str
             For each `(k, v)` pair in the dict, `k` of circuit iteration `n - 1` will be
             tied to `v` of circuit iteration `n`.
@@ -654,10 +654,16 @@ def unroll(c, n, state_io, prefix="cg_unroll"):
     if n < 1:
         raise ValueError(f"n must be >= 1 ({n})")
 
+    for k, v in state_io.items():
+        if k not in c.io():
+            raise ValueError(f"Node '{k}' in state_io dict but not in io of circuit")
+        if v not in c.io():
+            raise ValueError(f"Node '{v}' in state_io dict but not in io of circuit")
+
     uc = cg.Circuit()
 
     io_map = {io: [] for io in c.io()}
-    for itr in range(n + 1):
+    for itr in range(n):
         for io in c.io():
             new_io = c.uid(f"{io}_{prefix}_{itr}")
             if io in state_io or io in state_io.values():
@@ -665,7 +671,7 @@ def unroll(c, n, state_io, prefix="cg_unroll"):
             elif io in c.inputs():
                 t = "input"
             else:
-                t = c.type(io)
+                t = "buf"
 
             uc.add(new_io, t, output=c.is_output(io))
             io_map[io].append(new_io)
@@ -680,10 +686,6 @@ def unroll(c, n, state_io, prefix="cg_unroll"):
         else:
             for k, v in state_io.items():
                 uc.connect(f"{k}_{prefix}_{itr-1}", f"{v}_{prefix}_{itr}")
-
-        if itr == n:
-            for i in state_io:
-                uc.set_output(f"{i}_{prefix}_{itr}")
 
     return uc, io_map
 

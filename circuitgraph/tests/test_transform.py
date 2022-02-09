@@ -41,7 +41,7 @@ class TestTransform(unittest.TestCase):
     def test_sequential_unroll(self):
         c = cg.from_lib("s27")
         num_unroll = 4
-        cu, io_map = sequential_unroll(c, num_unroll - 1, "D", "Q", ["clk"])
+        cu, io_map = sequential_unroll(c, num_unroll, "D", "Q", ["clk"])
         self.assertEqual(
             len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll + len(c.blackboxes)
         )
@@ -52,7 +52,7 @@ class TestTransform(unittest.TestCase):
         num_unroll = 4
         initial_values = {f: str(random.getrandbits(1)) for f in c.blackboxes}
         cu, io_map = sequential_unroll(
-            c, num_unroll - 1, "D", "Q", ["clk"], initial_values=initial_values,
+            c, num_unroll, "D", "Q", ["CK"], initial_values=initial_values,
         )
         self.assertEqual(len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll)
         self.assertEqual(len(cu.outputs()), len(c.outputs()) * num_unroll)
@@ -63,7 +63,7 @@ class TestTransform(unittest.TestCase):
         c = cg.from_lib("s27")
         num_unroll = 4
         cu, io_map = sequential_unroll(
-            c, num_unroll - 1, "D", "Q", ["clk"], add_flop_outputs=True,
+            c, num_unroll, "D", "Q", ["CK"], add_flop_outputs=True,
         )
         self.assertEqual(
             len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll + len(c.blackboxes)
@@ -71,6 +71,63 @@ class TestTransform(unittest.TestCase):
         self.assertEqual(
             len(cu.outputs()), (len(c.outputs()) + len(c.blackboxes)) * num_unroll
         )
+
+    def test_unroll(self):
+        c = cg.Circuit()
+        c.add("i0", "input")
+        c.add("i1", "input")
+        c.add("ff0_Q", "input")
+
+        c.add("g0", "xor", fanin=["i0", "i1", "ff0_Q"])
+        c.add("ff0_D", "xnor", fanin=["g0", "i1"], output=True)
+        c.add("o0", "and", fanin=["g0", "i0"], output=True)
+        cg.visualize(c, "ckt.png")
+
+        prefix = "unrolled"
+        uc = cg.Circuit()
+
+        num_copies = 2
+        for idx in range(num_copies):
+            uc.add(f"i0_{prefix}_{idx}", "input")
+            uc.add(f"i1_{prefix}_{idx}", "input")
+            if idx == 0:
+                uc.add(f"ff0_Q_{prefix}_{idx}", "input")
+            else:
+                uc.add(f"ff0_Q_{prefix}_{idx}", "buf")
+
+            uc.add(
+                f"g0_{prefix}_{idx}",
+                "xor",
+                fanin=[
+                    f"i0_{prefix}_{idx}",
+                    f"i1_{prefix}_{idx}",
+                    f"ff0_Q_{prefix}_{idx}",
+                ],
+            )
+            uc.add(
+                f"ff0_D_{prefix}_{idx}",
+                "xnor",
+                fanin=[f"g0_{prefix}_{idx}", f"i1_{prefix}_{idx}"],
+                output=True,
+            )
+            uc.add(
+                f"o0_{prefix}_{idx}",
+                "and",
+                fanin=[f"g0_{prefix}_{idx}", f"i0_{prefix}_{idx}"],
+                output=True,
+            )
+
+            if idx > 0:
+                uc.connect(f"ff0_D_{prefix}_{idx-1}", f"ff0_Q_{prefix}_{idx}")
+
+        unroll_uc, io_map = unroll(c, num_copies, {"ff0_D": "ff0_Q"}, prefix=prefix)
+        self.assertSetEqual(uc.inputs(), unroll_uc.inputs())
+        self.assertSetEqual(uc.outputs(), unroll_uc.outputs())
+        m = miter(uc, unroll_uc)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
 
     def test_miter(self):
         # check self equivalence
