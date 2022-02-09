@@ -2,8 +2,7 @@
 
 # CircuitGraph
 
-[![Build Status](https://app.travis-ci.com/circuitgraph/circuitgraph.svg?branch=master)](https://app.travis-ci.com/github/circuitgraph/circuitgraph)
-[![codecov](https://codecov.io/gh/circuitgraph/circuitgraph/branch/master/graph/badge.svg)](https://codecov.io/gh/circuitgraph/circuitgraph)
+[![CircuitGraph Python package](https://github.com/cmu-actl/circuitgraph/actions/workflows/python-package.yml/badge.svg)](https://github.com/cmu-actl/circuitgraph/actions/workflows/python-package.yml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
