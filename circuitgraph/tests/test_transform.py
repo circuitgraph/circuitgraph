@@ -1,4 +1,5 @@
 import unittest
+import random
 import tempfile
 import os
 import shutil
@@ -13,7 +14,6 @@ from random import choice, randint
 class TestTransform(unittest.TestCase):
     def setUp(self):
         self.s27 = cg.strip_blackboxes(cg.from_lib("s27"))
-        self.s27bb = cg.from_lib("s27")
 
         # incorrect copy of s27
         self.s27m = cg.copy(self.s27)
@@ -39,12 +39,38 @@ class TestTransform(unittest.TestCase):
         self.assertTrue("output" not in c.type(c.nodes()))
 
     def test_sequential_unroll(self):
-        u = sequential_unroll(self.s27bb, 4, "D", "Q", ["clk"], final_flop_outputs=True)
-        ug = cg.from_lib("s27_unrolled_4")
-        m = miter(u, ug)
-        live = sat(m)
-        self.assertTrue(live)
-        self.assertFalse(sat(m, assumptions={"sat": True}))
+        c = cg.from_lib("s27")
+        num_unroll = 4
+        cu, io_map = sequential_unroll(c, num_unroll - 1, "D", "Q", ["clk"])
+        self.assertEqual(
+            len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll + len(c.blackboxes)
+        )
+        self.assertEqual(len(cu.outputs()), len(c.outputs()) * num_unroll)
+
+    def test_sequential_unroll_initial_values(self):
+        c = cg.from_lib("s27")
+        num_unroll = 4
+        initial_values = {f: str(random.getrandbits(1)) for f in c.blackboxes}
+        cu, io_map = sequential_unroll(
+            c, num_unroll - 1, "D", "Q", ["clk"], initial_values=initial_values,
+        )
+        self.assertEqual(len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll)
+        self.assertEqual(len(cu.outputs()), len(c.outputs()) * num_unroll)
+        for k, v in initial_values.items():
+            self.assertEqual(cu.type(io_map[f"{k}_Q"][0]), v)
+
+    def test_sequential_unroll_add_flop_outputs(self):
+        c = cg.from_lib("s27")
+        num_unroll = 4
+        cu, io_map = sequential_unroll(
+            c, num_unroll - 1, "D", "Q", ["clk"], add_flop_outputs=True,
+        )
+        self.assertEqual(
+            len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll + len(c.blackboxes)
+        )
+        self.assertEqual(
+            len(cu.outputs()), (len(c.outputs()) + len(c.blackboxes)) * num_unroll
+        )
 
     def test_miter(self):
         # check self equivalence

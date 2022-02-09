@@ -547,8 +547,9 @@ def sequential_unroll(
     reg_d_port,
     reg_q_port,
     ignore_pins=None,
-    final_flop_outputs=False,
+    add_flop_outputs=False,
     initial_values=None,
+    remove_unloaded=True,
     prefix="cg_unroll",
 ):
     """
@@ -572,21 +573,24 @@ def sequential_unroll(
             The name of the Q port in the blackboxes in `c`.
     ignore_pins: str or list of str
             The names of pins in the blackboxes to ignore.
-    final_flop_outputs: bool
-            If True, the data ports of the flops of the last timestep will be
-            added as primary outputs to the circuit.
+    add_flop_outputs: bool
+            If True, the Q port of the flops will be added as primary outputs.
     initial_values: str or dict of str:str
             The initial values of the data ports for the first timestep.
             If None, the ports will be added as primary inputs.
             If a single value ('0', '1', or 'x'), every flop will get that value.
             Can also pass in dict mapping flop names to values.
+    remove_unloaded: bool
+            If True, unloaded inputs will be removed after unrolling. This can remove
+            unused sequential signals such as the clock and reset.
     prefix: str
             The prefix to use for naming unrolled nodes.
 
     Returns
     -------
-    Circuit
-            The unrolled circuit.
+    Circuit, dict of str:list of str
+            Unrolled circuit and mapping of original circuit io to list of unrolled
+            circuit io. The lists are in order of the unroll iterations.
     """
     cs = strip_blackboxes(c, ignore_pins=ignore_pins)
     blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
@@ -603,26 +607,29 @@ def sequential_unroll(
         f"{bb}_{p}" for p in blackbox.outputs() - {reg_q_port} for bb in c.blackboxes
     )
 
+    if remove_unloaded:
+        for i in cs.inputs():
+            if not cs.fanout(i):
+                cs.remove(i)
+
     state_io = {f"{bb}_{reg_d_port}": f"{bb}_{reg_q_port}" for bb in c.blackboxes}
-    uc = unroll(cs, n, state_io)
+    uc, io_map = unroll(cs, n, state_io)
+
+    for state_output in (f"{bb}_{reg_d_port}" for bb in c.blackboxes):
+        uc.set_output(io_map[state_output], add_flop_outputs)
 
     if initial_values:
-        flop_inputs = [f"{bb}_{reg_q_port}_{prefix}_0" for bb in c.blackboxes]
         if isinstance(initial_values, str):
-            for fi in flop_inputs:
+            for fi in [io_map[f"{bb}_{reg_q_port}"][0] for bb in c.blackboxes]:
                 uc.set_type(fi, initial_values)
         else:
             for k, v in initial_values.items():
-                uc.set_type(f"{k}_{reg_q_port}_{prefix}_0", v)
+                uc.set_type(io_map[f"{k}_{reg_q_port}"][0], v)
 
-    if not final_flop_outputs:
-        flop_outputs = [f"{bb}_{reg_d_port}_{prefix}_{n}" for bb in c.blackboxes]
-        uc.set_output(flop_outputs, False)
-
-    return uc
+    return uc, io_map
 
 
-def unroll(c, n, state_io):
+def unroll(c, n, state_io, prefix="cg_unroll"):
     """
     Unrolls a circuit.
 
@@ -635,11 +642,14 @@ def unroll(c, n, state_io):
     state_io: dict of str:str
             For each `(k, v)` pair in the dict, `k` of circuit iteration `n - 1` will be
             tied to `v` of circuit iteration `n`.
+    prefix: str
+            The prefix to use for naming new io for each iteration
 
     Returns
     -------
-    Circuit
-            Unrolled circuit.
+    Circuit, dict of str:list of str
+            Unrolled circuit and mapping of original circuit io to list of unrolled
+            circuit io. The lists are in order of the unroll iterations.
     """
     # check for blackboxes
     if c.blackboxes:
@@ -648,22 +658,21 @@ def unroll(c, n, state_io):
     if n < 1:
         raise ValueError(f"n must be >= 1 ({n})")
 
-    prefix = "cg_unroll"
-
     uc = cg.Circuit()
-    for itr in range(n + 1):
-        for i in c.io():
-            if f"{i}_{prefix}_{itr}" in c:
-                raise ValueError(f"Naming clash: {i}_{prefix}_{itr} already in circuit")
 
-            if i in state_io or i in state_io.values():
+    io_map = {io: [] for io in c.io()}
+    for itr in range(n + 1):
+        for io in c.io():
+            new_io = c.uid(f"{io}_{prefix}_{itr}")
+            if io in state_io or io in state_io.values():
                 t = "buf"
-            elif i in c.inputs():
+            elif io in c.inputs():
                 t = "input"
             else:
-                t = c.type(i)
+                t = c.type(io)
 
-            uc.add(f"{i}_{prefix}_{itr}", t, output=c.is_output(i))
+            uc.add(new_io, t, output=c.is_output(io))
+            io_map[io].append(new_io)
 
         uc.add_subcircuit(
             c, f"unrolled_{itr}", {i: f"{i}_{prefix}_{itr}" for i in c.io()}
@@ -680,7 +689,7 @@ def unroll(c, n, state_io):
             for i in state_io:
                 uc.set_output(f"{i}_{prefix}_{itr}")
 
-    return uc
+    return uc, io_map
 
 
 def influence_transform(c, n, s):
