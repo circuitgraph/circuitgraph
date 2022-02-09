@@ -557,10 +557,6 @@ def sequential_unroll(
     by accepting a circuit with sequential elements kept as blackboxes.
     Assumes that all blackboxes in the circuit are sequential elements.
 
-    Note that this function uses the `prefix` variable to identify unrolled
-    nodes, so choosing a prefix that is already used in nodes in the sequential
-    circuit can cause undefined behavior.
-
     Parameters
     ----------
     c: Circuit
@@ -613,7 +609,7 @@ def sequential_unroll(
                 cs.remove(i)
 
     state_io = {f"{bb}_{reg_d_port}": f"{bb}_{reg_q_port}" for bb in c.blackboxes}
-    uc, io_map = unroll(cs, n, state_io)
+    uc, io_map = unroll(cs, n, state_io, prefix=prefix)
 
     for state_output in (f"{bb}_{reg_d_port}" for bb in c.blackboxes):
         uc.set_output(io_map[state_output], add_flop_outputs)
