@@ -81,7 +81,6 @@ class TestTransform(unittest.TestCase):
         c.add("g0", "xor", fanin=["i0", "i1", "ff0_Q"])
         c.add("ff0_D", "xnor", fanin=["g0", "i1"], output=True)
         c.add("o0", "and", fanin=["g0", "i0"], output=True)
-        cg.visualize(c, "ckt.png")
 
         prefix = "unrolled"
         uc = cg.Circuit()
