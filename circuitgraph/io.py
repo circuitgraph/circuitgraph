@@ -134,7 +134,9 @@ def bench_to_circuit(netlist, name):
             c.add(n, "input")
 
     # handle gates
-    regex = r"([a-zA-Z][a-zA-Z\d_]*)\s*=\s*(BUF|BUFF|NOT|OR|NOR|AND|NAND|XOR|XNOR|buf|buff|not|or|nor|and|nand|not|xor|xnor)\(([^\)]+)\)"
+    gate_types = ["buf", "buff", "not", "or", "nor", "and", "nand", "xor", "xnor"]
+    gate_types = "|".join(gate_types + [s.upper() for s in gate_types])
+    regex = rf"([a-zA-Z][a-zA-Z\d_]*)\s*=\s*({gate_types})\(([^\)]+)\)"
     for net, gate, input_str in re.findall(regex, netlist):
         # parse all nets
         inputs = (
@@ -211,13 +213,13 @@ def verilog_to_circuit(
         return fast_parse_verilog_netlist(netlist, blackboxes)
 
     # parse module
-    regex = f"(module\s+{name}\s*\(.*?\);(.*?)endmodule)"
+    regex = rf"(module\s+{name}\s*\(.*?\);(.*?)endmodule)"
     m = re.search(regex, netlist, re.DOTALL)
     try:
         module = m.group(1)
     except AttributeError:
         if infer_module_name:
-            regex = f"(module\s+(.*?)\s*\(.*?\);(.*?)endmodule)"
+            regex = r"(module\s+(.*?)\s*\(.*?\);(.*?)endmodule)"
             m = re.search(regex, netlist, re.DOTALL)
             try:
                 module = m.group(1)
@@ -364,8 +366,6 @@ def circuit_to_bench(c):
     str
         Bench code.
     """
-    inputs = []
-    outputs = []
     insts = []
 
     if c.blackboxes:

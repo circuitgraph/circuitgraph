@@ -549,11 +549,16 @@ def sequential_unroll(
     ignore_pins=None,
     final_flop_outputs=False,
     initial_values=None,
+    prefix="cg_unroll",
 ):
     """
     Unroll a sequential circuit. Provides a higher level API than `unroll`
     by accepting a circuit with sequential elements kept as blackboxes.
     Assumes that all blackboxes in the circuit are sequential elements.
+
+    Note that this function uses the `prefix` variable to identify unrolled
+    nodes, so choosing a prefix that is already used in nodes in the sequential
+    circuit can cause undefined behavior.
 
     Parameters
     ----------
@@ -564,12 +569,9 @@ def sequential_unroll(
     reg_d_port: str
             The name of the D port in the blackboxes in `c`.
     reg_q_port: str
-            The name of the Q port in the blackboxes in `cc`.
-    remove_unused_ports: bool
-            If True, any inputs to the combinational circuit without drivers will
-            be removed before returning. This can be used to remove drivers for
-            the register ports besides `reg_d_port` and `reg_q_port`, e.g. a clk 
-            or rst.
+            The name of the Q port in the blackboxes in `c`.
+    ignore_pins: str or list of str
+            The names of pins in the blackboxes to ignore.
     final_flop_outputs: bool
             If True, the data ports of the flops of the last timestep will be
             added as primary outputs to the circuit.
@@ -578,6 +580,8 @@ def sequential_unroll(
             If None, the ports will be added as primary inputs.
             If a single value ('0', '1', or 'x'), every flop will get that value.
             Can also pass in dict mapping flop names to values.
+    prefix: str
+            The prefix to use for naming unrolled nodes.
 
     Returns
     -------
@@ -602,7 +606,6 @@ def sequential_unroll(
     state_io = {f"{bb}_{reg_d_port}": f"{bb}_{reg_q_port}" for bb in c.blackboxes}
     uc = unroll(cs, n, state_io)
 
-    prefix = "cg_unroll"
     if initial_values:
         flop_inputs = [f"{bb}_{reg_q_port}_{prefix}_0" for bb in c.blackboxes]
         if isinstance(initial_values, str):
@@ -973,7 +976,7 @@ def acyclic_unroll(c):
 def supergates(c):
     """
     Calculate the supergates of a circuit. That is, find the
-    maximal covering of minimal subcircuits with logically 
+    maximal covering of minimal subcircuits with logically
     independent inputs. This is done on a per-output basis.
 
     For more information, see

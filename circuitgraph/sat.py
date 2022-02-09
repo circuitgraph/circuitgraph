@@ -53,7 +53,7 @@ def construct_solver(c, assumptions=None, engine="cadical"):
     if assumptions:
         for n in assumptions.keys():
             if n not in c:
-                raise ValueError(f"incorrect assumption key: {n}")
+                raise ValueError(f"Node '{n}' in assumptions is not in circuit")
         add_assumptions(formula, variables, assumptions)
 
     if engine == "cadical":
