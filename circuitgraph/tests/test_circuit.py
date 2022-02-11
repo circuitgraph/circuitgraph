@@ -50,6 +50,20 @@ class TestCircuit(unittest.TestCase):
         self.assertFalse(c.is_output("b"))
         self.assertTrue(c.is_output("c"))
 
+    def test_copy(self):
+        c = cg.Circuit(name="test_circuit")
+        c.add("i0", "input")
+        c.add("i1", "input")
+        c.add("g0", "xor", fanin=["i0", "i1"])
+        c.add("o0", "not", fanin=["g0"], output=True)
+
+        c2 = c.copy()
+        self.assertSetEqual(c.inputs(), c2.inputs())
+        self.assertSetEqual(c.outputs(), c2.outputs())
+        self.assertSetEqual(c.nodes(), c2.nodes())
+        self.assertSetEqual(c.edges(), c2.edges())
+        self.assertEqual(c.name, c2.name)
+
     def test_type(self):
         c = cg.Circuit()
         c.graph.add_node("a")

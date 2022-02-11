@@ -26,7 +26,6 @@ def copy(c):
     -------
     Circuit
             Circuit copy.
-
     """
     return cg.Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
 
@@ -44,7 +43,7 @@ def strip_io(c):
     Returns
     -------
     Circuit
-            Circuit with removed io
+            Circuit with removed io.
     """
     g = c.graph.copy()
     for i in c.inputs():
@@ -68,7 +67,7 @@ def strip_outputs(c):
     Returns
     -------
     Circuit
-            Circuit with removed io
+            Circuit with removed io.
     """
     g = c.graph.copy()
     for o in c.outputs():
@@ -90,7 +89,7 @@ def strip_inputs(c):
     Returns
     -------
     Circuit
-            Circuit with removed io
+            Circuit with removed io.
     """
     g = c.graph.copy()
     for i in c.inputs():
@@ -213,7 +212,7 @@ def syn(
     c : Circuit
             Circuit to synthesize.
     engine : str
-            Synthesis tool to use ('genus', 'dc', or 'yosys')
+            Synthesis tool to use ('genus', 'dc', or 'yosys').
     suppress_output: bool
             If True, synthesis stdout will not be printed.
     stdout_file: file or str or None
@@ -240,7 +239,7 @@ def syn(
             If True, does not write `c` to a file, instead uses the verilog
             already present in `pre_syn_file`.
     effort: str
-            The effort to use for synthesis. Either 'high', 'medium', or 'low'
+            The effort to use for synthesis. Either 'high', 'medium', or 'low'.
 
     Returns
     -------
@@ -418,81 +417,102 @@ def syn(
 
 def ternary(c):
     """
-    Encodes the circuit with ternary values
+    Encodes the circuit with ternary values. The ternary circuit adds a second net
+    for each net in the original circuit. The second net encodes a don't care,
+    or X, value. That net being high corresponds to a don't care value on original net.
+    If the second net is low, the logical value on the original net is valid.
 
     Parameters
     ----------
     c : Circuit
             Circuit to encode.
+    suffix: str
+            The suffix to give the added nets. Note that it is safest to use
+            the returned dictionary to refer to the added nets because they
+            are uniquified when they are added to the circuit.
 
     Returns
     -------
-    Circuit
-            Encoded circuit.
-
+    Circuit, dict of str:str
+            Encoded circuit and dictionary mapping original net names to added ternary
+            net names.
     """
     if c.blackboxes:
         raise ValueError(f"{c.name} contains a blackbox")
-    t = copy(c)
+    t = c.copy()
 
     # add dual nodes
+    mapping = {n: c.uid(f"{n}_X") for n in c}
     for n in c:
         if c.type(n) in ["and", "nand"]:
-            t.add(f"{n}_x", "and", output=c.is_output(n))
+            t.add(mapping[n], "and", output=c.is_output(n))
             t.add(
                 f"{n}_x_in_fi",
                 "or",
-                fanout=f"{n}_x",
-                fanin=[f"{p}_x" for p in c.fanin(n)],
+                fanout=mapping[n],
+                fanin=[mapping[p] for p in c.fanin(n)],
+                uid=True,
+                add_connected_nodes=True,
             )
-            t.add(f"{n}_0_not_in_fi", "nor", fanout=f"{n}_x")
-
+            zero_not_in_fi = t.add(
+                f"{n}_0_not_in_fi", "nor", fanout=mapping[n], uid=True
+            )
             for p in c.fanin(n):
                 t.add(
-                    f"{p}_is_0", "nor", fanout=f"{n}_0_not_in_fi", fanin=[p, f"{p}_x"]
+                    f"{p}_is_0",
+                    "nor",
+                    fanout=zero_not_in_fi,
+                    fanin=[p, mapping[p]],
+                    uid=True,
                 )
-
         elif c.type(n) in ["or", "nor"]:
-            t.add(f"{n}_x", "and", output=c.is_output(n))
+            t.add(mapping[n], "and", output=c.is_output(n))
             t.add(
                 f"{n}_x_in_fi",
                 "or",
-                fanout=f"{n}_x",
-                fanin=[f"{p}_x" for p in c.fanin(n)],
+                fanout=mapping[n],
+                fanin=[mapping[p] for p in c.fanin(n)],
+                uid=True,
+                add_connected_nodes=True,
             )
-            t.add(f"{n}_1_not_in_fi", "nor", fanout=f"{n}_x")
-
+            one_not_in_fi = t.add(
+                f"{n}_1_not_in_fi", "nor", fanout=mapping[n], uid=True
+            )
             for p in c.fanin(n):
-                t.add(f"{p}_is_1", "and", fanout=f"{n}_1_not_in_fi", fanin=p)
-                t.add(f"{p}_not_x", "not", fanout=f"{p}_is_1", fanin=f"{p}_x")
-
+                is_one = t.add(
+                    f"{p}_is_1", "and", fanout=one_not_in_fi, fanin=p, uid=True
+                )
+                t.add(f"{p}_not_x", "not", fanout=is_one, fanin=mapping[p], uid=True)
         elif c.type(n) in ["buf", "not"]:
             p = c.fanin(n).pop()
-            t.add(f"{n}_x", "buf", fanin=f"{p}_x", output=c.is_output(n))
-
+            t.add(
+                mapping[n],
+                "buf",
+                fanin=mapping[p],
+                output=c.is_output(n),
+                add_connected_nodes=True,
+            )
         elif c.type(n) in ["xor", "xnor"]:
             t.add(
-                f"{n}_x",
+                mapping[n],
                 "or",
-                fanin=(f"{p}_x" for p in c.fanin(n)),
+                fanin=(mapping[p] for p in c.fanin(n)),
                 output=c.is_output(n),
+                add_connected_nodes=True,
             )
-
         elif c.type(n) in ["0", "1"]:
-            t.add(f"{n}_x", "0", output=c.is_output(n))
-
+            t.add(mapping[n], "0", output=c.is_output(n))
         elif c.type(n) in ["input"]:
-            t.add(f"{n}_x", "input")
-
+            t.add(mapping[n], "input")
         else:
-            raise ValueError(f"Node {n} has unrecognized type: {c.type(n)}")
+            raise ValueError(f"Node '{n}' has invalid type: '{c.type(n)}'")
 
-    return t
+    return t, mapping
 
 
 def miter(c0, c1=None, startpoints=None, endpoints=None):
     """
-    Creates a miter circuit
+    Creates a miter circuit.
 
     Parameters
     ----------
@@ -639,7 +659,7 @@ def unroll(c, n, state_io, prefix="cg_unroll"):
             For each `(k, v)` pair in the dict, `k` of circuit iteration `n - 1` will be
             tied to `v` of circuit iteration `n`.
     prefix: str
-            The prefix to use for naming new io for each iteration
+            The prefix to use for naming new io for each iteration.
 
     Returns
     -------
@@ -690,56 +710,64 @@ def unroll(c, n, state_io, prefix="cg_unroll"):
     return uc, io_map
 
 
-def influence_transform(c, n, s):
+def sensitization_transform(c, n, endpoints=None):
     """
-    Creates a circuit to compute influence.
+    Creates a circuit to sensitize a node to an endpoint, in the form of a miter
+    circuit with that node inverted in one circuit copy.
 
     Parameters
     ----------
     c : Circuit
-            Sequential circuit to compute influence for.
+            Input circuit.
     n : str
-            Node to compute influence at.
-    s : str
-            Startpoint to compute influence for.
+            Node to sensitize.
+    endpoints: str or list of str
+            Endpoints to sensitize to. If None, any output
+            can be used for sensitization.
 
     Returns
     -------
     Circuit
-            Influence circuit.
-
+            Output circuit.
     """
     # check for blackboxes
     if c.blackboxes:
-        raise ValueError(f"{c.name} contains a blackbox")
+        raise ValueError(f"Circuit contains a blackbox")
 
-    # check if s is in startpoints
-    sp = c.startpoints(n)
-    if s not in sp:
-        raise ValueError(f"{s} is not in startpoints of {n}")
-
-    # get input cone
-    fi_nodes = c.transitive_fanin(n) | set([n])
-    sub_c = cg.Circuit("sub_cone", c.graph.subgraph(fi_nodes).copy())
-
-    # create two copies of sub circuit, share inputs except s
-    infl = cg.Circuit(name=f"infl_{s}_on_{n}")
-    infl.add_subcircuit(sub_c, "c0")
-    infl.add_subcircuit(sub_c, "c1")
-    for g in sp:
-        if g != s:
-            infl.add(g, "input", fanout=[f"c0_{g}", f"c1_{g}"])
+    if endpoints:
+        if isinstance(endpoints, str):
+            endpoints = {endpoints}
         else:
-            infl.add(f"not_{g}", "not", fanout=f"c1_{s}")
-            infl.add(g, "input", fanout=[f"c0_{g}", f"not_{g}"])
-    infl.add("sat", "xor", fanin=[f"c0_{n}", f"c1_{n}"], output=True)
+            endpoints = set(endpoints)
+        fi = c.transitive_fanin(endpoints)
+        if n not in fi:
+            raise ValueError(f"'{n}' is not in fanin of given endpoints")
+        subc = cg.subcircuit(c, endpoints | fi)
+        for node in subc:
+            subc.set_output(node, node in endpoints)
+    else:
+        subc = c
 
-    return infl
+    # create miter
+    m = miter(subc)
+    m.name = f"{c.name}_sensitized_{n}"
+
+    # flip node in c1
+    m.disconnect(m.fanin(f"c1_{n}"), f"c1_{n}")
+    m.set_type(f"c1_{n}", "not")
+    m.connect(f"c0_{n}", f"c1_{n}")
+
+    return m
 
 
 def sensitivity_transform(c, n):
     """
-    Creates a circuit to compute sensitivity.
+    Creates a circuit to compute sensitivity by creating a miter circuit for each input
+    'i' with the fanin cone of `n` where the second circuit has 'i' inverted, so that
+    the miter output is high when `n` is sensitive to 'i'. The uninverted circuit is
+    shared across all miters and the outputs of the miters are fed into a population
+    count circuit so that the output of the population count circuit gives the
+    sensitivity of `n` for a given input pattern.
 
     Parameters
     ----------
@@ -752,9 +780,7 @@ def sensitivity_transform(c, n):
     -------
     Circuit
             Sensitivity circuit.
-
     """
-
     # check for blackboxes
     if c.blackboxes:
         raise ValueError(f"{c.name} contains a blackbox")
@@ -806,54 +832,33 @@ def sensitivity_transform(c, n):
     return sen
 
 
-def sensitization_transform(c, n):
-    """
-    Creates a circuit to sensitize a node to an endpoint.
-
-    Parameters
-    ----------
-    c : Circuit
-            Input circuit.
-    n : str
-            Node to sensitize.
-
-    Returns
-    -------
-    Circuit
-            Output circuit.
-
-    """
-    # create miter
-    m = miter(c)
-    m.name = f"{c.name}_sensitized_{n}"
-
-    # flip node in c1
-    m.disconnect(m.fanin(f"c1_{n}"), f"c1_{n}")
-    m.set_type(f"c1_{n}", "not")
-    m.connect(f"c0_{n}", f"c1_{n}")
-
-    return m
-
-
 def limit_fanin(c, k):
     """
-    Reduces the maximum fanin of circuit gates to k
+    Reduces the maximum fanin of circuit gates to k.
 
     Parameters
     ----------
     c : Circuit
             Input circuit.
     k : str
-            Maximum fanin. (k>1)
+            Maximum fanin. (k > 2)
 
     Returns
     -------
     Circuit
             Output circuit.
-
     """
     if k < 2:
         raise ValueError(f"maximum fanin, k, must be > 2")
+
+    gatemap = {
+        "and": "and",
+        "nand": "and",
+        "or": "or",
+        "nor": "or",
+        "xor": "xor",
+        "xnor": "xnor",
+    }
 
     ck = copy(c)
     for n in ck.nodes():
@@ -863,16 +868,13 @@ def limit_fanin(c, k):
             f0 = fi.pop()
             f1 = fi.pop()
             ck.disconnect([f0, f1], n)
-            if ck.type(n) in ["and", "nand"]:
-                ck.add(f"{n}_new_{i}", "and", fanin=[f0, f1], fanout=n)
-            elif ck.type(n) in ["or", "nor"]:
-                ck.add(f"{n}_new_{i}", "or", fanin=[f0, f1], fanout=n)
-            elif ck.type(n) in ["xor"]:
-                ck.add(f"{n}_new_{i}", "xor", fanin=[f0, f1], fanout=n)
-            elif ck.type(n) in ["xnor"]:
-                ck.add(f"{n}_new_{i}", "xnor", fanin=[f0, f1], fanout=n)
-            else:
-                raise ValueError(f"Unknown gate type: {ck.type(n)}")
+            ck.add(
+                f"{n}_limit_fanin_{i}",
+                gatemap[ck.type(n)],
+                fanin=[f0, f1],
+                fanout=n,
+                uid=True,
+            )
             i += 1
 
     return ck
@@ -880,17 +882,17 @@ def limit_fanin(c, k):
 
 def acyclic_unroll(c):
     """
-    Unrolls a cyclic circuit to remove cycles
+    Unrolls a cyclic circuit to remove cycles.
 
     Parameters
     ----------
     c: Circuit
-            Circuit to unroll
+            Circuit to unroll.
 
     Returns
     -------
     Circuit
-            The unrolled circuit
+            The unrolled circuit.
     """
     if c.blackboxes:
         raise ValueError("Cannot perform acyclic unroll with blackboxes")

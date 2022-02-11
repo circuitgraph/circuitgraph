@@ -2,7 +2,6 @@
 
 from circuitgraph.transform import (
     sensitivity_transform,
-    influence_transform,
     sensitization_transform,
 )
 from circuitgraph.sat import sat, approx_model_count, model_count
@@ -37,7 +36,8 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1):
     avg_sen = 0
     for s in sp:
         # create influence circuit
-        i = influence_transform(c, n, s)
+        # i = influence_transform(c, n, s)
+        i = sensitization_transform(c, s, n)
 
         # compute influence
         if approx:
@@ -81,7 +81,7 @@ def sensitivity(c, n):
     return sen
 
 
-def sensitize(c, n, assumptions):
+def sensitize(c, n, assumptions={}):
     """
     Finds an input that sensitizes n to an endpoint
     under assumptions.

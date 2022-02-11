@@ -62,11 +62,6 @@ class TestAnalysis(unittest.TestCase):
                     input_sen += 1
             sen_sim = max(sen_sim, input_sen)
 
-        # check answer
-        if sen != sen_sim:
-            import code
-
-            code.interact(local=dict(**globals(), **locals()))
         self.assertEqual(sen, sen_sim)
 
     def test_sensitize(self):
@@ -84,17 +79,9 @@ class TestAnalysis(unittest.TestCase):
         for n in [nr, ns, ne]:
             # get input
             input_val = sensitize(self.s27, n, {f"c0_{n}": True})
-            if not input_val:
-                import code
-
-                code.interact(local=dict(**globals(), **locals()))
 
             # simulate input
             result = sat(self.s27, input_val)
-            if not result[n]:
-                import code
-
-                code.interact(local=dict(**globals(), **locals()))
             self.assertTrue(result[n])
 
             # remove constrained input
@@ -126,8 +113,4 @@ class TestAnalysis(unittest.TestCase):
         for vs in product([False, True], repeat=len(sp)):
             asmp = {i: v for i, v in zip(sp, vs)}
             m += cg.sat(self.s27, asmp)[n]
-        if m / (2 ** len(sp)) != p:
-            import code
-
-            code.interact(local=dict(globals(), **locals()))
         self.assertEqual(m / (2 ** len(sp)), p)

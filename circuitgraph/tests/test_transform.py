@@ -280,6 +280,64 @@ class TestTransform(unittest.TestCase):
         self.assertFalse(different_output)
         shutil.rmtree(tmpdir)
 
+    def test_ternary(self):
+        # Test AND gate behavior
+        c = cg.Circuit()
+        c.add("i0", "input")
+        c.add("i1", "input")
+        c.add("g0", "and", fanin=["i0", "i1"], output=True)
+
+        ct, mapping = ternary(c)
+
+        assumptions = {
+            "i0": True,
+            mapping["i0"]: False,
+            "i1": True,
+            mapping["i1"]: False,
+        }
+        result = sat(ct, assumptions)
+        self.assertTrue(result["g0"])
+        self.assertFalse(result[mapping["g0"]])
+
+        assumptions[mapping["i1"]] = True
+        result = sat(ct, assumptions)
+        self.assertTrue(result[mapping["g0"]])
+
+        assumptions["i0"] = False
+        result = sat(ct, assumptions)
+        self.assertFalse(result["g0"])
+        self.assertFalse(result[mapping["g0"]])
+
+        # Test original circuit equivalence
+        c = cg.from_lib("c880")
+        ct, mapping = ternary(c)
+        for i in c.inputs():
+            ct.set_type(mapping[i], "0")
+        m = miter(c, ct)
+        live = sat(m)
+        self.assertTrue(live)
+        different_output = sat(
+            m,
+            assumptions={
+                **{"sat": True},
+                **{f"c1_{mapping[i]}": False for i in c.outputs()},
+            },
+        )
+        self.assertFalse(different_output)
+
+        # Sensitize inputs, set to X, make sure output is X
+        for output in c.outputs():
+            subc = cg.subcircuit(c, {output} | c.transitive_fanin(output))
+            # Make sure we're sensitizing to this output
+            for n in subc:
+                if n != output:
+                    subc.set_output(n, False)
+            subc_t, mapping = ternary(subc)
+            for inp in subc.inputs():
+                pattern = cg.sensitize(subc, inp)
+                result = sat(subc_t, {**pattern, **{mapping[inp]: True, inp: True}})
+                self.assertTrue(result[mapping[output]])
+
     def test_sensitivity_transform(self):
         # pick random node and input value
         n = choice(tuple(self.s27.nodes() - self.s27.startpoints()))

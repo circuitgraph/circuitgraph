@@ -20,5 +20,6 @@ from circuitgraph.circuit import *
 from circuitgraph.sat import *
 from circuitgraph.io import *
 from circuitgraph.transform import *
+from circuitgraph.analysis import *
 from circuitgraph.logic import *
 from circuitgraph.utils import *

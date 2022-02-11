@@ -93,6 +93,11 @@ class Circuit:
     def __iter__(self):
         return self.graph.__iter__()
 
+    def copy(self):
+        return Circuit(
+            graph=self.graph.copy(), name=self.name, blackboxes=self.blackboxes.copy()
+        )
+
     def set_type(self, ns, t):
         """
         Returns node(s) type(s).
