@@ -232,23 +232,6 @@ class VerilogCircuitGraphTransformer(Transformer):
                         self.text,
                     )
                 self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
-        # Check if this is a GTECH gate
-        elif name_of_module.startswith("GTECH_") and name_of_module.split("_")[
-            -1
-        ].rstrip(digits).lower() in addable_types + ["zero", "one"]:
-            gate = name_of_module.split("_")[-1].rstrip(digits).lower()
-            if gate == "zero":
-                gate = "0"
-            if gate == "one":
-                gate = "1"
-            for name, connections in module_instances:
-                if not isinstance(connections, dict):
-                    raise VerilogParsingError(
-                        "GTECH gates must use named port connections", name, self.text,
-                    )
-                output = connections["Z"]
-                inputs = set(connections.values()) - {output}
-                self.add_node(output, gate, fanin=inputs)
         # Otherwise, try to parse as blackbox
         else:
             try:

@@ -3,7 +3,6 @@ import random
 import tempfile
 import os
 import shutil
-import glob
 
 import circuitgraph as cg
 from circuitgraph.transform import *
@@ -246,12 +245,21 @@ class TestTransform(unittest.TestCase):
         shutil.rmtree(tmpdir)
 
     @unittest.skipUnless(
-        "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
+        "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ, "Genus synthesis not setup"
     )
-    def test_syn_dc(self):
-        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_dc")
-        s = syn(self.s27, "dc", suppress_output=True, working_dir=tmpdir)
-        m = miter(self.s27, s)
+    def test_syn_genus_io(self):
+        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_genus_io")
+        s = syn(
+            self.s27,
+            "genus",
+            suppress_output=True,
+            pre_syn_file=f"{tmpdir}/pre_syn.v",
+            post_syn_file=f"{tmpdir}/post_syn.v",
+            working_dir=tmpdir,
+        )
+        c0 = cg.from_file(f"{tmpdir}/pre_syn.v")
+        c1 = cg.from_file(f"{tmpdir}/post_syn.v")
+        m = miter(c0, c1)
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})
@@ -261,19 +269,10 @@ class TestTransform(unittest.TestCase):
     @unittest.skipUnless(
         "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
     )
-    def test_syn_dc_io(self):
-        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_dc_io")
-        s = syn(
-            self.s27,
-            "dc",
-            suppress_output=True,
-            pre_syn_file=f"{tmpdir}/pre_syn.v",
-            post_syn_file=f"{tmpdir}/post_syn.v",
-            working_dir=tmpdir,
-        )
-        c0 = cg.from_file(f"{tmpdir}/pre_syn.v")
-        c1 = cg.from_file(f"{tmpdir}/post_syn.v")
-        m = miter(c0, c1)
+    def test_syn_dc(self):
+        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_dc")
+        s = syn(self.s27, "dc", suppress_output=True, working_dir=tmpdir)
+        m = miter(self.s27, s)
         live = sat(m)
         self.assertTrue(live)
         different_output = sat(m, assumptions={"sat": True})

@@ -2,6 +2,7 @@
 import subprocess
 from tempfile import NamedTemporaryFile
 import os
+import re
 from pathlib import Path
 from collections import defaultdict
 from queue import Queue
@@ -321,64 +322,27 @@ def syn(
                         "variable in your os environment to the "
                         "path to the GTECH library"
                     )
-
+                libname = "GTECH"
+                usable_cells = [f"{libname.lower()}/{libname}_NOT"]
+                for gate in ["OR", "NOR", "AND", "NAND", "XOR", "XNOR"]:
+                    usable_cells += [
+                        f"{libname.lower()}/{libname}_{gate}{i}" for i in range(2, 5)
+                    ]
+                usable_cells += [
+                    f"{libname.lower()}/{libname}_FD{i}" for i in range(1, 4)
+                ]
                 execute = (
                     f"set_app_var target_library {lib_path};\n"
                     f"set_app_var link_library {lib_path};\n"
-                )
-                unusable_cells = [
-                    "GTECH_ADD*",
-                    "GTECH_AO*",
-                    "GTECH_AND_NOT",
-                    "GTECH_FD1S",
-                    "GTECH_FD2S",
-                    "GTECH_FD3S",
-                    "GTECH_FD4",
-                    "GTECH_FD4S",
-                    "GTECH_FD14",
-                    "GTECH_FD18",
-                    "GTECH_FD24",
-                    "GTECH_FD28",
-                    "GTECH_FD34",
-                    "GTECH_FD38",
-                    "GTECH_FD44",
-                    "GTECH_FD48",
-                    "GTECH_FJK1",
-                    "GTECH_FJK1S",
-                    "GTECH_FJK2",
-                    "GTECH_FJK2S",
-                    "GTECH_FJK3",
-                    "GTECH_FJK3S",
-                    "GTECH_INBUF",
-                    "GTECH_INOUTBUF",
-                    "GTECH_ISO0_EN0",
-                    "GTECH_ISO0_EN1",
-                    "GTECH_ISO1_EN0",
-                    "GTECH_ISO1_EN1",
-                    "GTECH_ISOLATCH_EN0",
-                    "GTECH_ISOLATCH_EN1",
-                    "GTECH_LD2",
-                    "GTECH_LD2_1",
-                    "GTECH_LD3",
-                    "GTECH_LD4",
-                    "GTECH_LD4_1",
-                    "GTECH_LSR0",
-                    "GTECH_MAJ23",
-                    "GTECH_MUX*",
-                    "GTECH_OA*",
-                    "GTECH_OR_NOT",
-                    "GTECH_OUTBUF",
-                    "GTECH_TBUF",
-                ]
-                for cell in unusable_cells:
-                    execute += f"set_dont_use gtech/{cell};\n"
-                execute += (
+                    "set_dont_use [remove_from_collection "
+                    f"[get_lib_cells {libname.lower()}/*] "
+                    f"\"{' '.join(usable_cells)}\"];\n"
                     f"read_file {tmp_in.name}\n"
                     "link;\n"
                     "uniquify;\n"
                     "check_design;\n"
                     "simplify_constants;\n"
-                    f"compile -map_effort {effort};\n"
+                    f"compile;\n"
                     f"write -format verilog -output {tmp_out.name};\n"
                     "exit;"
                 )
@@ -411,6 +375,27 @@ def syn(
                 stderr.close()
 
             output_netlist = tmp_out.read()
+
+            # Rename dc library gates
+            if engine == "dc":
+
+                def replace_gate(match):
+                    # Keep flops as they are
+                    if match.group(1).startswith(f"{libname}_FD"):
+                        return match
+                    ports = [
+                        i.strip().split("(")[-1].strip(")")
+                        for i in match.group(3).split(",")
+                    ]
+                    portlist = ", ".join(reversed(ports))
+                    return f"{match.group(1).lower()} {match.group(2)}({portlist});"
+
+                output_netlist = re.sub(
+                    rf"{libname}_([A-Z]+)[1-4]?\s+"
+                    r"([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);",
+                    replace_gate,
+                    output_netlist,
+                )
 
     return cg.verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
 
