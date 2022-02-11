@@ -18,7 +18,7 @@ setuptools.setup(
         "Source": "https://github.com/circuitgraph/circuitgraph",
     },
     include_package_data=True,
-    packages=["circuitgraph", "circuitgraph.parsing", "circuitgraph.tests"],
+    packages=["circuitgraph", "circuitgraph.parsing"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

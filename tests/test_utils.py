@@ -20,14 +20,17 @@ class TestUtils(unittest.TestCase):
             raise AssertionError("Image not created")
 
     def test_clog2(self):
-        self.assertEqual(cg.clog2(13), 4)
-        self.assertEqual(cg.clog2(16), 4)
-        self.assertRaises(ValueError, cg.clog2, 0)
+        self.assertEqual(cg.utils.clog2(13), 4)
+        self.assertEqual(cg.utils.clog2(16), 4)
+        self.assertRaises(ValueError, cg.utils.clog2, 0)
 
     def test_int_to_bin(self):
-        self.assertEqual(cg.int_to_bin(4, 6), (False, False, False, True, False, False))
         self.assertEqual(
-            cg.int_to_bin(4, 6, lend=True), (False, False, True, False, False, False)
+            cg.utils.int_to_bin(4, 6), (False, False, False, True, False, False)
+        )
+        self.assertEqual(
+            cg.utils.int_to_bin(4, 6, lend=True),
+            (False, False, True, False, False, False),
         )
 
     def test_lint(self):

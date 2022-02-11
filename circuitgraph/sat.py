@@ -1,14 +1,9 @@
 """Functions for executing SAT, #SAT, and approx-#SAT on circuits"""
-
 import tempfile
 import re
 import code
 import subprocess
 import shutil
-
-
-def interrupt(s):
-    s.interrupt()
 
 
 def add_assumptions(formula, variables, assumptions):
@@ -26,28 +21,26 @@ def remap(clauses, offset):
 
 def construct_solver(c, assumptions=None, engine="cadical"):
     """
-    Constructs a SAT solver instance with the given circuit and assumptions
+    Constructs a SAT solver instance with the given circuit and assumptions.
 
     Parameters
     ----------
     c : Circuit
-            circuit to encode
+            circuit to encode.
     assumptions : dict of str:int
-            Assumptions to add to solver
+            Assumptions to add to solver.
 
     Returns
     -------
     solver : pysat.Cadical
-            SAT solver instance
+            SAT solver instance.
     variables : pysat.IDPool
-            solver variable mapping
+            solver variable mapping.
     """
     try:
         from pysat.solvers import Cadical, Glucose4, Lingeling
     except ImportError:
-        raise ImportError(
-            "Run 'pip install python-sat' to use satisfiability functionality"
-        )
+        raise ImportError("Install 'python-sat' to use satisfiability functionality")
 
     formula, variables = cnf(c)
     if assumptions:
@@ -69,26 +62,24 @@ def construct_solver(c, assumptions=None, engine="cadical"):
 
 def cnf(c):
     """
-    Converts circuit to CNF using the Tseitin transformation
+    Converts circuit to CNF using the Tseitin transformation.
 
     Parameters
     ----------
     c : Circuit
-            circuit to transform
+            circuit to transform.
 
     Returns
     -------
     variables : pysat.IDPool
-            formula variable mapping
+            formula variable mapping.
     formula : pysat.CNF
-            CNF formula
+            CNF formula.
     """
     try:
         from pysat.formula import CNF, IDPool
     except ImportError:
-        raise ImportError(
-            "Run 'pip install python-sat' to use satisfiability functionality"
-        )
+        raise ImportError("Install 'python-sat' to use satisfiability functionality")
     variables = IDPool()
     formula = CNF()
 
@@ -166,9 +157,9 @@ def cnf(c):
     return formula, variables
 
 
-def sat(c, assumptions=None):
+def solve(c, assumptions=None):
     """
-    Trys to find satisfying assignment, with optional assumptions
+    Trys to find satisfying assignment, with optional assumptions.
 
     Parameters
     ----------
@@ -185,8 +176,8 @@ def sat(c, assumptions=None):
     Example
     -------
     >>> import circuitgraph as cg
-    >>> c = cg.from_file('rtl/s27.v')
-    >>> cg.sat(c)
+    >>> c = cg.from_lib('s27')
+    >>> cg.sat.solve(c)
     {'G17': True, 'n_20': False, 'n_12': True, 'n_11': False,
      'G0': True, 'n_9': True, 'n_10': True, 'n_7': False, 'n_8': False,
      'n_1': False, 'G7': True, 'n_4': True, 'n_5': True, 'n_6': True,
@@ -195,9 +186,8 @@ def sat(c, assumptions=None):
      'r[G5]': True, 'clk[G5]': True, 'clk': True, 'd[G6]': False,
      'r[G6]': True, 'clk[G6]': True, 'd[G7]': True, 'r[G7]': True,
      'clk[G7]': True, 'output[G17]': True}
-    >>> cg.sat(c,assumptions={'G17':True,'n_20':True,'G6':False})
+    >>> cg.sat.solve(c, assumptions={'G17': True, 'n_20': True, 'G6': False})
     False
-
     """
     solver, variables = construct_solver(c, assumptions)
     if solver.solve():
@@ -211,7 +201,7 @@ def approx_model_count(
     c, assumptions=None, startpoints=None, e=0.9, d=0.1, log_file=None
 ):
     """
-    Approximates the number of solutions to circuit
+    Approximates the number of solutions to circuit.
 
     Parameters
     ----------
@@ -220,11 +210,11 @@ def approx_model_count(
     assumptions : dict of str:int
             Nodes to assume True or False.
     startpoints : iter of str
-            Startpoints to use for approxmc
+            Startpoints to use for approxmc.
     e : float (>0)
-            epsilon of approxmc
+            epsilon of approxmc,
     d : float (0-1)
-            delta of approxmc
+            delta of approxmc.
     log_file: str
             If specified, approxmc output will be written to this file.
 
@@ -234,7 +224,7 @@ def approx_model_count(
             Estimate.
     """
     if shutil.which("approxmc") == None:
-        raise OSError("Please install 'approxmc' before using 'approx_model_count'")
+        raise OSError("Install 'approxmc' to use 'approx_model_count'")
     if startpoints is None:
         startpoints = c.startpoints()
 
@@ -284,7 +274,7 @@ def approx_model_count(
 
 def model_count(c, assumptions=None):
     """
-    Determines the number of solutions to circuit
+    Determines the number of solutions to circuit.
 
     Parameters
     ----------
@@ -298,7 +288,6 @@ def model_count(c, assumptions=None):
     int
             Count.
     """
-
     startpoints = c.startpoints()
     solver, variables = construct_solver(c, assumptions)
     count = 0

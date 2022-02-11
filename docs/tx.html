@@ -1,0 +1,2529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>circuitgraph.tx API documentation</title>
+<meta name="description" content="Functions for transforming circuits" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js" integrity="sha256-eOgo0OtLL4cdq7RdwRUiGKLX9XsIJ7nGhWEKbohmVAQ=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>circuitgraph.tx</code></h1>
+</header>
+<section id="section-intro">
+<p>Functions for transforming circuits</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;Functions for transforming circuits&#34;&#34;&#34;
+import subprocess
+from tempfile import NamedTemporaryFile
+import os
+import re
+from pathlib import Path
+from collections import defaultdict
+from queue import Queue
+import shutil
+
+import networkx as nx
+
+import circuitgraph as cg
+
+
+def strip_io(c):
+    &#34;&#34;&#34;
+    Removes circuit&#39;s outputs and converts inputs to buffers for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io.
+    &#34;&#34;&#34;
+    g = c.graph.copy()
+    for i in c.inputs():
+        g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
+    for o in c.outputs():
+        g.nodes[o][&#34;output&#34;] = False
+
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
+
+
+def strip_outputs(c):
+    &#34;&#34;&#34;
+    Removes a circuit&#39;s outputs for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io.
+    &#34;&#34;&#34;
+    g = c.graph.copy()
+    for o in c.outputs():
+        g.nodes[o][&#34;output&#34;] = False
+
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
+
+
+def strip_inputs(c):
+    &#34;&#34;&#34;
+    Converts inputs to buffers for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io.
+    &#34;&#34;&#34;
+    g = c.graph.copy()
+    for i in c.inputs():
+        g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
+
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
+
+
+def strip_blackboxes(c, ignore_pins=None):
+    &#34;&#34;&#34;
+    Converts blackboxes to io.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    ingnore_pins: str or list of str
+            Pins to not create io for, just disconnect and delete.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed blackboxes.
+    &#34;&#34;&#34;
+    if not ignore_pins:
+        ignore_pins = []
+    elif isinstance(ignore_pins, str):
+        ignore_pins = [ignore_pins]
+    g = c.graph.copy()
+    bb_pins = []
+    for n in c.filter_type(&#34;bb_input&#34;):
+        if n.split(&#34;.&#34;)[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n][&#34;type&#34;] = &#34;buf&#34;
+            g.nodes[n][&#34;output&#34;] = True
+            bb_pins.append(n)
+    for n in c.filter_type(&#34;bb_output&#34;):
+        if n.split(&#34;.&#34;)[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n][&#34;type&#34;] = &#34;input&#34;
+            bb_pins.append(n)
+
+    # rename nodes
+    mapping = {n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in bb_pins}
+    for k in mapping.values():
+        if k in g:
+            raise ValueError(f&#34;Overlapping blackbox name: {k}&#34;)
+    nx.relabel_nodes(g, mapping, copy=False)
+
+    return cg.Circuit(graph=g, name=c.name)
+
+
+def relabel(c, mapping):
+    &#34;&#34;&#34;
+    Builds copy with relabeled nodes.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    mapping : dict of str:str
+            Relabeling of nodes.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed blackboxes.
+    &#34;&#34;&#34;
+    g = nx.relabel_nodes(c.graph, mapping)
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
+
+
+def subcircuit(c, nodes):
+    &#34;&#34;&#34;
+    Creates a subcircuit from a set of nodes of a given circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to create a subcircuit from.
+    nodes: list of str
+            The nodes to include in the subcircuit.
+
+    Returns
+    -------
+    Circuit
+            The subcircuit.
+    &#34;&#34;&#34;
+    sc = cg.Circuit()
+    for node in nodes:
+        if c.type(node) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
+            raise NotImplementedError(&#34;Cannot create a subcircuit with blackboxes&#34;)
+        sc.add(node, type=c.type(node), output=c.is_output(node))
+    for edge in c.edges():
+        if edge[0] in nodes and edge[1] in nodes:
+            sc.connect(edge[0], edge[1])
+    return sc
+
+
+def syn(
+    c,
+    engine=&#34;yosys&#34;,
+    suppress_output=False,
+    stdout_file=None,
+    stderr_file=None,
+    working_dir=&#34;.&#34;,
+    fast_parsing=False,
+    pre_syn_file=None,
+    post_syn_file=None,
+    verilog_exists=False,
+    effort=&#34;high&#34;,
+):
+    &#34;&#34;&#34;
+    Synthesizes the circuit using yosys or genus.
+
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to synthesize.
+    engine : str
+            Synthesis tool to use (&#39;genus&#39;, &#39;dc&#39;, or &#39;yosys&#39;).
+    suppress_output: bool
+            If True, synthesis stdout will not be printed.
+    stdout_file: file or str or None
+            If defined, synthesis stdout will be directed to this file instead
+            of being printed.
+    output_file: file or str or None
+            If defined, synthesis stderr will be written to this file instead
+            of being printed.
+    working_dir: str
+            The path to run synthesis from. If using genus, this will effect
+            where the genus run files are stored. Directory will be created
+            if it does not exist.
+    fast_parsing: bool
+            If True, will use fast verilog parsing (which requires
+            specifically formatted netlists, see the documentation for
+            `verilog_to_circuit`).
+    pre_syn_file: file or str or None
+            If specified, the circuit verilog will be written to this file
+            before synthesis. If None, a temporary file will be used.
+    post_syn_file: file or str or None
+            If specified, the synthesis output verilog will be written to this
+            file. If None, a temporary file will be used.
+    verilog_exists: bool
+            If True, does not write `c` to a file, instead uses the verilog
+            already present in `pre_syn_file`.
+    effort: str
+            The effort to use for synthesis. Either &#39;high&#39;, &#39;medium&#39;, or &#39;low&#39;.
+
+    Returns
+    -------
+    Circuit
+            Synthesized circuit.
+    &#34;&#34;&#34;
+    if engine == &#34;yosys&#34; and shutil.which(&#34;yosys&#34;) is None:
+        raise OSError(&#34;&#39;yosys&#39; installation not found&#34;)
+
+    if engine == &#34;genus&#34; and shutil.which(&#34;genus&#34;) is None:
+        raise OSError(&#34;&#39;genus&#39; installation not found&#34;)
+
+    if engine == &#34;dc&#34;:
+        dc_engine = &#34;dc_shell-t&#34;
+        if shutil.which(&#34;dc_shell-t&#34;) is None:
+            dc_engine = &#34;dc_shell&#34;
+            if shutil.which(&#34;dc_shell&#34;) is None:
+                raise OSError(&#34;&#39;dc_shell-t&#39; or &#39;dc_shell&#39; installation not found&#34;)
+
+    working_dir = Path(working_dir)
+    working_dir.mkdir(exist_ok=True)
+    working_dir = str(working_dir)
+
+    # Make paths absolute in case synthesis is run from different working dir
+    if pre_syn_file:
+        pre_syn_file = Path(pre_syn_file).absolute()
+    if post_syn_file:
+        post_syn_file = Path(post_syn_file).absolute()
+
+    if verilog_exists and not pre_syn_file:
+        raise ValueError(&#34;Must specify pre_syn_file if using verilog_exists&#34;)
+
+    with open(pre_syn_file, &#34;r&#34;) if verilog_exists else open(
+        pre_syn_file, &#34;w&#34;
+    ) if pre_syn_file else NamedTemporaryFile(
+        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
+    ) as tmp_in:
+        if not verilog_exists:
+            verilog = cg.io.circuit_to_verilog(c)
+            tmp_in.write(verilog)
+            tmp_in.flush()
+        with open(post_syn_file, &#34;w+&#34;) if post_syn_file else NamedTemporaryFile(
+            prefix=&#34;circuitgraph_synthesis_output&#34;, suffix=&#34;.v&#34;, mode=&#34;r&#34;
+        ) as tmp_out:
+            if engine == &#34;genus&#34;:
+                try:
+                    lib_path = os.environ[&#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34;]
+                except KeyError:
+                    raise ValueError(
+                        &#34;In order to run synthesis with Genus, &#34;
+                        &#34;please set the &#34;
+                        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH &#34;
+                        &#34;variable in your os environment to the &#34;
+                        &#34;path to the tech library to use&#34;
+                    )
+                cmd = [
+                    &#34;genus&#34;,
+                    &#34;-no_gui&#34;,
+                    &#34;-execute&#34;,
+                    &#34;set_db / .library &#34;
+                    f&#34;{lib_path};\n&#34;
+                    f&#34;read_hdl -sv {tmp_in.name};\n&#34;
+                    &#34;elaborate;\n&#34;
+                    f&#34;set_db syn_generic_effort {effort};\n&#34;
+                    &#34;syn_generic;\n&#34;
+                    &#34;syn_map;\n&#34;
+                    &#34;syn_opt;\n&#34;
+                    f&#39;redirect {tmp_out.name} &#34;write_hdl -generic&#34;;\n&#39;
+                    &#34;exit;&#34;,
+                ]
+            elif engine == &#34;dc&#34;:
+                try:
+                    lib_path = os.environ[&#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34;]
+                except KeyError:
+                    raise ValueError(
+                        &#34;In order to run synthesis with DC, &#34;
+                        &#34;please set the &#34;
+                        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH &#34;
+                        &#34;variable in your os environment to the &#34;
+                        &#34;path to the GTECH library&#34;
+                    )
+                libname = &#34;GTECH&#34;
+                usable_cells = [f&#34;{libname.lower()}/{libname}_NOT&#34;]
+                for gate in [&#34;OR&#34;, &#34;NOR&#34;, &#34;AND&#34;, &#34;NAND&#34;, &#34;XOR&#34;, &#34;XNOR&#34;]:
+                    usable_cells += [
+                        f&#34;{libname.lower()}/{libname}_{gate}{i}&#34; for i in range(2, 5)
+                    ]
+                usable_cells += [
+                    f&#34;{libname.lower()}/{libname}_FD{i}&#34; for i in range(1, 4)
+                ]
+                execute = (
+                    f&#34;set_app_var target_library {lib_path};\n&#34;
+                    f&#34;set_app_var link_library {lib_path};\n&#34;
+                    &#34;set_dont_use [remove_from_collection &#34;
+                    f&#34;[get_lib_cells {libname.lower()}/*] &#34;
+                    f&#34;\&#34;{&#39; &#39;.join(usable_cells)}\&#34;];\n&#34;
+                    f&#34;read_file {tmp_in.name}\n&#34;
+                    &#34;link;\n&#34;
+                    &#34;uniquify;\n&#34;
+                    &#34;check_design;\n&#34;
+                    &#34;simplify_constants;\n&#34;
+                    f&#34;compile;\n&#34;
+                    f&#34;write -format verilog -output {tmp_out.name};\n&#34;
+                    &#34;exit;&#34;
+                )
+                cmd = [dc_engine, &#34;-no_gui&#34;, &#34;-x&#34;, execute]
+            elif engine == &#34;yosys&#34;:
+                cmd = [
+                    &#34;yosys&#34;,
+                    &#34;-p&#34;,
+                    f&#34;read_verilog {tmp_in.name}; &#34;
+                    &#34;synth; &#34;
+                    f&#34;write_verilog -noattr {tmp_out.name}&#34;,
+                ]
+            else:
+                raise ValueError(&#34;synthesis engine must be yosys, dc, or genus&#34;)
+
+            if suppress_output and not stdout_file:
+                stdout = subprocess.DEVNULL
+            elif stdout_file:
+                stdout = open(stdout_file, &#34;w&#34;)
+            else:
+                stdout = None
+            if stderr_file:
+                stderr = open(stderr_file, &#34;w&#34;)
+            else:
+                stderr = None
+            subprocess.run(cmd, stdout=stdout, stderr=stderr, cwd=working_dir)
+            if stdout_file:
+                stdout.close()
+            if stderr_file:
+                stderr.close()
+
+            output_netlist = tmp_out.read()
+
+            # Rename dc library gates
+            if engine == &#34;dc&#34;:
+
+                def replace_gate(match):
+                    # Keep flops as they are
+                    if match.group(1).startswith(f&#34;{libname}_FD&#34;):
+                        return match
+                    ports = [
+                        i.strip().split(&#34;(&#34;)[-1].strip(&#34;)&#34;)
+                        for i in match.group(3).split(&#34;,&#34;)
+                    ]
+                    portlist = &#34;, &#34;.join(reversed(ports))
+                    return f&#34;{match.group(1).lower()} {match.group(2)}({portlist});&#34;
+
+                output_netlist = re.sub(
+                    rf&#34;{libname}_([A-Z]+)[1-4]?\s+&#34;
+                    r&#34;([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);&#34;,
+                    replace_gate,
+                    output_netlist,
+                )
+
+    return cg.io.verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
+
+
+def ternary(c):
+    &#34;&#34;&#34;
+    Encodes the circuit with ternary values. The ternary circuit adds a second net
+    for each net in the original circuit. The second net encodes a don&#39;t care,
+    or X, value. That net being high corresponds to a don&#39;t care value on original net.
+    If the second net is low, the logical value on the original net is valid.
+
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to encode.
+    suffix: str
+            The suffix to give the added nets. Note that it is safest to use
+            the returned dictionary to refer to the added nets because they
+            are uniquified when they are added to the circuit.
+
+    Returns
+    -------
+    Circuit, dict of str:str
+            Encoded circuit and dictionary mapping original net names to added ternary
+            net names.
+    &#34;&#34;&#34;
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+    t = c.copy()
+
+    # add dual nodes
+    mapping = {n: c.uid(f&#34;{n}_X&#34;) for n in c}
+    for n in c:
+        if c.type(n) in [&#34;and&#34;, &#34;nand&#34;]:
+            t.add(mapping[n], &#34;and&#34;, output=c.is_output(n), allow_redefinition=True)
+            t.add(
+                f&#34;{n}_x_in_fi&#34;,
+                &#34;or&#34;,
+                fanout=mapping[n],
+                fanin=[mapping[p] for p in c.fanin(n)],
+                uid=True,
+                add_connected_nodes=True,
+            )
+            zero_not_in_fi = t.add(
+                f&#34;{n}_0_not_in_fi&#34;, &#34;nor&#34;, fanout=mapping[n], uid=True
+            )
+            for p in c.fanin(n):
+                t.add(
+                    f&#34;{p}_is_0&#34;,
+                    &#34;nor&#34;,
+                    fanout=zero_not_in_fi,
+                    fanin=[p, mapping[p]],
+                    uid=True,
+                )
+        elif c.type(n) in [&#34;or&#34;, &#34;nor&#34;]:
+            t.add(mapping[n], &#34;and&#34;, output=c.is_output(n), allow_redefinition=True)
+            t.add(
+                f&#34;{n}_x_in_fi&#34;,
+                &#34;or&#34;,
+                fanout=mapping[n],
+                fanin=[mapping[p] for p in c.fanin(n)],
+                uid=True,
+                add_connected_nodes=True,
+            )
+            one_not_in_fi = t.add(
+                f&#34;{n}_1_not_in_fi&#34;, &#34;nor&#34;, fanout=mapping[n], uid=True
+            )
+            for p in c.fanin(n):
+                is_one = t.add(
+                    f&#34;{p}_is_1&#34;, &#34;and&#34;, fanout=one_not_in_fi, fanin=p, uid=True
+                )
+                t.add(f&#34;{p}_not_x&#34;, &#34;not&#34;, fanout=is_one, fanin=mapping[p], uid=True)
+        elif c.type(n) in [&#34;buf&#34;, &#34;not&#34;]:
+            p = c.fanin(n).pop()
+            t.add(
+                mapping[n],
+                &#34;buf&#34;,
+                fanin=mapping[p],
+                output=c.is_output(n),
+                add_connected_nodes=True,
+                allow_redefinition=True,
+            )
+        elif c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;]:
+            t.add(
+                mapping[n],
+                &#34;or&#34;,
+                fanin=(mapping[p] for p in c.fanin(n)),
+                output=c.is_output(n),
+                add_connected_nodes=True,
+                allow_redefinition=True,
+            )
+        elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
+            t.add(mapping[n], &#34;0&#34;, output=c.is_output(n), allow_redefinition=True)
+        elif c.type(n) in [&#34;input&#34;]:
+            t.add(mapping[n], &#34;input&#34;, allow_redefinition=True)
+        else:
+            raise ValueError(f&#34;Node &#39;{n}&#39; has invalid type: &#39;{c.type(n)}&#39;&#34;)
+
+    return t, mapping
+
+
+def miter(c0, c1=None, startpoints=None, endpoints=None):
+    &#34;&#34;&#34;
+    Creates a miter circuit.
+
+    Parameters
+    ----------
+    c0 : Circuit
+            First circuit.
+    c1 : Circuit
+            Optional second circuit, if None c0 is mitered with itself.
+    startpoints : set of str
+            Nodes to be tied together, must exist in both circuits.
+    endpoints : set of str
+            Nodes to be compared, must exist in both circuits.
+
+    Returns
+    -------
+    Circuit
+            Miter circuit.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c0.blackboxes:
+        raise ValueError(f&#34;{c0.name} contains a blackbox&#34;)
+    if c1 and c1.blackboxes:
+        raise ValueError(f&#34;{c1.name} contains a blackbox&#34;)
+
+    # clean inputs
+    if not c1:
+        c1 = c0
+    if not startpoints:
+        startpoints = c0.startpoints() &amp; c1.startpoints()
+    if not endpoints:
+        endpoints = c0.endpoints() &amp; c1.endpoints()
+
+    # create miter, relabel
+    m = cg.Circuit(name=f&#34;miter_{c0.name}_{c1.name}&#34;)
+    m.add_subcircuit(c0, &#34;c0&#34;)
+    m.add_subcircuit(c1, &#34;c1&#34;)
+
+    # tie inputs
+    for n in startpoints:
+        m.add(n, &#34;input&#34;, fanout=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;])
+
+    # compare outputs
+    m.add(&#34;sat&#34;, &#34;or&#34;, output=True)
+    for n in endpoints:
+        m.add(f&#34;dif_{n}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;], fanout=&#34;sat&#34;)
+
+    return m
+
+
+def sequential_unroll(
+    c,
+    n,
+    reg_d_port,
+    reg_q_port,
+    ignore_pins=None,
+    add_flop_outputs=False,
+    initial_values=None,
+    remove_unloaded=True,
+    prefix=&#34;cg_unroll&#34;,
+):
+    &#34;&#34;&#34;
+    Unroll a sequential circuit. Provides a higher level API than `unroll`
+    by accepting a circuit with sequential elements kept as blackboxes.
+    Assumes that all blackboxes in the circuit are sequential elements.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of unrolled copies of the circuit to create.
+    reg_d_port: str
+            The name of the D port in the blackboxes in `c`.
+    reg_q_port: str
+            The name of the Q port in the blackboxes in `c`.
+    ignore_pins: str or list of str
+            The names of pins in the blackboxes to ignore.
+    add_flop_outputs: bool
+            If True, the Q port of the flops will be added as primary outputs.
+    initial_values: str or dict of str:str
+            The initial values of the data ports for the first timestep.
+            If None, the ports will be added as primary inputs.
+            If a single value (&#39;0&#39;, &#39;1&#39;, or &#39;x&#39;), every flop will get that value.
+            Can also pass in dict mapping flop names to values.
+    remove_unloaded: bool
+            If True, unloaded inputs will be removed after unrolling. This can remove
+            unused sequential signals such as the clock and reset.
+    prefix: str
+            The prefix to use for naming unrolled nodes.
+
+    Returns
+    -------
+    Circuit, dict of str:list of str
+            Unrolled circuit and mapping of original circuit io to list of unrolled
+            circuit io. The lists are in order of the unroll iterations.
+    &#34;&#34;&#34;
+    cs = strip_blackboxes(c, ignore_pins=ignore_pins)
+    blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
+
+    if reg_d_port not in blackbox.inputs():
+        raise ValueError(f&#34;Provided d port {reg_d_port} not in bb inputs&#34;)
+    cs.remove(
+        f&#34;{bb}_{p}&#34; for p in blackbox.inputs() - {reg_d_port} for bb in c.blackboxes
+    )
+
+    if reg_q_port not in blackbox.outputs():
+        raise ValueError(f&#34;Provided q port {reg_q_port} not in bb outputs&#34;)
+    cs.remove(
+        f&#34;{bb}_{p}&#34; for p in blackbox.outputs() - {reg_q_port} for bb in c.blackboxes
+    )
+
+    if remove_unloaded:
+        for i in cs.inputs():
+            if not cs.fanout(i):
+                cs.remove(i)
+
+    state_io = {f&#34;{bb}_{reg_d_port}&#34;: f&#34;{bb}_{reg_q_port}&#34; for bb in c.blackboxes}
+    uc, io_map = unroll(cs, n, state_io, prefix=prefix)
+
+    for state_output in (f&#34;{bb}_{reg_d_port}&#34; for bb in c.blackboxes):
+        uc.set_output(io_map[state_output], add_flop_outputs)
+
+    if initial_values:
+        if isinstance(initial_values, str):
+            for fi in [io_map[f&#34;{bb}_{reg_q_port}&#34;][0] for bb in c.blackboxes]:
+                uc.set_type(fi, initial_values)
+        else:
+            for k, v in initial_values.items():
+                uc.set_type(io_map[f&#34;{k}_{reg_q_port}&#34;][0], v)
+
+    return uc, io_map
+
+
+def unroll(c, n, state_io, prefix=&#34;cg_unroll&#34;):
+    &#34;&#34;&#34;
+    Unrolls a circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of unrolled copies of the circuit to create.
+    state_io: dict of str:str
+            For each `(k, v)` pair in the dict, `k` of circuit iteration `n - 1` will be
+            tied to `v` of circuit iteration `n`.
+    prefix: str
+            The prefix to use for naming new io for each iteration.
+
+    Returns
+    -------
+    Circuit, dict of str:list of str
+            Unrolled circuit and mapping of original circuit io to list of unrolled
+            circuit io. The lists are in order of the unroll iterations.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+
+    if n &lt; 1:
+        raise ValueError(f&#34;n must be &gt;= 1 ({n})&#34;)
+
+    for k, v in state_io.items():
+        if k not in c.io():
+            raise ValueError(f&#34;Node &#39;{k}&#39; in state_io dict but not in io of circuit&#34;)
+        if v not in c.io():
+            raise ValueError(f&#34;Node &#39;{v}&#39; in state_io dict but not in io of circuit&#34;)
+
+    uc = cg.Circuit()
+
+    io_map = {io: [] for io in c.io()}
+    for itr in range(n):
+        for io in c.io():
+            new_io = c.uid(f&#34;{io}_{prefix}_{itr}&#34;)
+            if io in state_io or io in state_io.values():
+                t = &#34;buf&#34;
+            elif io in c.inputs():
+                t = &#34;input&#34;
+            else:
+                t = &#34;buf&#34;
+
+            uc.add(new_io, t, output=c.is_output(io))
+            io_map[io].append(new_io)
+
+        uc.add_subcircuit(
+            c, f&#34;unrolled_{itr}&#34;, {i: f&#34;{i}_{prefix}_{itr}&#34; for i in c.io()}
+        )
+
+        if itr == 0:
+            for i in state_io.values():
+                uc.set_type(f&#34;{i}_{prefix}_{itr}&#34;, &#34;input&#34;)
+        else:
+            for k, v in state_io.items():
+                uc.connect(f&#34;{k}_{prefix}_{itr-1}&#34;, f&#34;{v}_{prefix}_{itr}&#34;)
+
+    return uc, io_map
+
+
+def sensitization_transform(c, n, endpoints=None):
+    &#34;&#34;&#34;
+    Creates a circuit to sensitize a node to an endpoint, in the form of a miter
+    circuit with that node inverted in one circuit copy.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    n : str
+            Node to sensitize.
+    endpoints: str or list of str
+            Endpoints to sensitize to. If None, any output
+            can be used for sensitization.
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;Circuit contains a blackbox&#34;)
+
+    if endpoints:
+        if isinstance(endpoints, str):
+            endpoints = {endpoints}
+        else:
+            endpoints = set(endpoints)
+        fi = c.transitive_fanin(endpoints)
+        if n not in fi:
+            raise ValueError(f&#34;&#39;{n}&#39; is not in fanin of given endpoints&#34;)
+        subc = subcircuit(c, endpoints | fi)
+        for node in subc:
+            subc.set_output(node, node in endpoints)
+    else:
+        subc = c
+
+    # create miter
+    m = miter(subc)
+    m.name = f&#34;{c.name}_sensitized_{n}&#34;
+
+    # flip node in c1
+    m.disconnect(m.fanin(f&#34;c1_{n}&#34;), f&#34;c1_{n}&#34;)
+    m.set_type(f&#34;c1_{n}&#34;, &#34;not&#34;)
+    m.connect(f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;)
+
+    return m
+
+
+def sensitivity_transform(c, n):
+    &#34;&#34;&#34;
+    Creates a circuit to compute sensitivity by creating a miter circuit for each input
+    &#39;i&#39; with the fanin cone of `n` where the second circuit has &#39;i&#39; inverted, so that
+    the miter output is high when `n` is sensitive to &#39;i&#39;. The uninverted circuit is
+    shared across all miters and the outputs of the miters are fed into a population
+    count circuit so that the output of the population count circuit gives the
+    sensitivity of `n` for a given input pattern.
+
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to ccompute sensitivity for.
+    n : str
+            Node to compute sensitivity at.
+
+    Returns
+    -------
+    Circuit
+            Sensitivity circuit.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+
+    # check for startpoints
+    startpoints = c.startpoints(n)
+    if len(startpoints) &lt; 1:
+        raise ValueError(f&#34;{n} has no startpoints&#34;)
+
+    # get input cone
+    fi_nodes = c.transitive_fanin(n) | set([n])
+    sub_c = cg.Circuit(graph=c.graph.subgraph(fi_nodes).copy())
+
+    # create sensitivity circuit
+    sen = cg.Circuit()
+    sen.add_subcircuit(sub_c, &#34;orig&#34;)
+    for s in startpoints:
+        sen.add(s, &#34;input&#34;, fanout=f&#34;orig_{s}&#34;)
+
+    # add popcount
+    sen.add_subcircuit(cg.logic.popcount(len(startpoints)), &#34;pc&#34;)
+
+    # add inverted input copies
+    for i, s0 in enumerate(startpoints):
+        sen.add_subcircuit(sub_c, f&#34;inv_{s0}&#34;)
+
+        # connect inputs
+        for s1 in startpoints:
+            if s0 != s1:
+                sen.connect(s1, f&#34;inv_{s0}_{s1}&#34;)
+            else:
+                # connect inverted input
+                sen.set_type(f&#34;inv_{s0}_{s1}&#34;, &#34;not&#34;)
+                sen.connect(s0, f&#34;inv_{s0}_{s1}&#34;)
+
+        # compare to orig
+        sen.add(
+            f&#34;dif_out_{s0}&#34;,
+            &#34;xor&#34;,
+            fanin=[f&#34;orig_{n}&#34;, f&#34;inv_{s0}_{n}&#34;],
+            fanout=f&#34;pc_in_{i}&#34;,
+            output=True,
+        )
+
+    # instantiate population count
+    for o in range(cg.utils.clog2(len(startpoints) + 1)):
+        sen.add(f&#34;sen_out_{o}&#34;, &#34;buf&#34;, fanin=f&#34;pc_out_{o}&#34;, output=True)
+
+    return sen
+
+
+def limit_fanin(c, k):
+    &#34;&#34;&#34;
+    Reduces the maximum fanin of circuit gates to k.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    k : str
+            Maximum fanin. (k &gt; 2)
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+    &#34;&#34;&#34;
+    if k &lt; 2:
+        raise ValueError(f&#34;maximum fanin, k, must be &gt; 2&#34;)
+
+    gatemap = {
+        &#34;and&#34;: &#34;and&#34;,
+        &#34;nand&#34;: &#34;and&#34;,
+        &#34;or&#34;: &#34;or&#34;,
+        &#34;nor&#34;: &#34;or&#34;,
+        &#34;xor&#34;: &#34;xor&#34;,
+        &#34;xnor&#34;: &#34;xnor&#34;,
+    }
+
+    ck = c.copy()
+    for n in ck.nodes():
+        i = 0
+        while len(ck.fanin(n)) &gt; k:
+            fi = ck.fanin(n)
+            f0 = fi.pop()
+            f1 = fi.pop()
+            ck.disconnect([f0, f1], n)
+            ck.add(
+                f&#34;{n}_limit_fanin_{i}&#34;,
+                gatemap[ck.type(n)],
+                fanin=[f0, f1],
+                fanout=n,
+                uid=True,
+            )
+            i += 1
+
+    return ck
+
+
+def acyclic_unroll(c):
+    &#34;&#34;&#34;
+    Unrolls a cyclic circuit to remove cycles.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+
+    Returns
+    -------
+    Circuit
+            The unrolled circuit.
+    &#34;&#34;&#34;
+    if c.blackboxes:
+        raise ValueError(&#34;Cannot perform acyclic unroll with blackboxes&#34;)
+
+    def approx_min_fas(DG):
+        DGC = DG.copy()
+        s1, s2 = [], []
+        while DGC.nodes:
+            # find sinks
+            sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+            while sinks:
+                s2 += sinks
+                DGC.remove_nodes_from(sinks)
+                sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+
+            # find sources
+            sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+            while sources:
+                s1 += sources
+                DGC.remove_nodes_from(sources)
+                sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+
+            # choose max in/out degree difference
+            if DGC.nodes:
+                n = max(DGC.nodes, key=lambda x: DGC.out_degree(x) - DGC.in_degree(x))
+                s1.append(n)
+                DGC.remove_node(n)
+
+        ordering = s1 + list(reversed(s2))
+        feedback_edges = [
+            e for e in DG.edges if ordering.index(e[0]) &gt; ordering.index(e[1])
+        ]
+        feedback_edges = [
+            (u, v) for u, v in feedback_edges if u in nx.descendants(DG, v)
+        ]
+
+        DGC = DG.copy()
+        DGC.remove_edges_from(feedback_edges)
+        try:
+            if nx.find_cycle(DGC):
+                raise ValueError(&#34;approx_min_fas has failed&#34;)
+        except nx.NetworkXNoCycle:
+            pass
+
+        return feedback_edges
+
+    # find feedback nodes
+    feedback = set([e[0] for e in approx_min_fas(c.graph)])
+
+    # get startpoints
+    sp = c.startpoints()
+
+    # create acyclic circuit
+    acyc = cg.Circuit(name=f&#34;acyc_{c.name}&#34;)
+    for n in sp:
+        acyc.add(n, &#34;input&#34;)
+
+    # create copy with broken feedback
+    c_cut = c.copy()
+    for f in feedback:
+        fanout = c.fanout(f)
+        c_cut.disconnect(f, fanout)
+        c_cut.add(f&#34;aux_in_{f}&#34;, &#34;buf&#34;, fanout=fanout)
+    c_cut.set_output(c.outputs(), False)
+
+    # cut feedback
+    for i in range(len(feedback) + 1):
+        # instantiate copy
+        acyc.add_subcircuit(c_cut, f&#34;c{i}&#34;, {n: n for n in sp})
+
+        if i &gt; 0:
+            # connect to last
+            for f in feedback:
+                acyc.connect(f&#34;c{i-1}_{f}&#34;, f&#34;c{i}_aux_in_{f}&#34;)
+        else:
+            # make feedback inputs
+            for f in feedback:
+                acyc.set_type(f&#34;c{i}_aux_in_{f}&#34;, &#34;input&#34;)
+
+    # connect outputs
+    for o in c.outputs():
+        acyc.add(o, &#34;buf&#34;, fanin=f&#34;c{i}_{o}&#34;, output=True)
+
+    cg.lint(acyc)
+    if acyc.is_cyclic():
+        raise ValueError(&#34;Circuit still cyclic&#34;)
+    return acyc
+
+
+def supergates(c):
+    &#34;&#34;&#34;
+    Calculate the supergates of a circuit. That is, find the
+    maximal covering of minimal subcircuits with logically
+    independent inputs. This is done on a per-output basis.
+
+    For more information, see
+    Seth, Sharad C., and Vishwani D. Agrawal. &#34;A new model for computation
+    of probabilistic testability in combinational circuits.&#34; Integration 7.1
+    (1989): 49-75.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to compute supergates for
+
+    Returns
+    -------
+    dict of str to list of Circuit, dict of str to networkx.DiGraph
+            The supergates per each output, as Circuit objects,
+            and the connections between supergates per each output,
+            as a networkx.Digraph object.
+    &#34;&#34;&#34;
+    scs_per_output = dict()
+    g_per_output = dict()
+    for output in c.outputs():
+        co = subcircuit(c, c.transitive_fanin(output) | {output})
+        G = co.graph.copy()
+        rm_edges = []
+        for u, v in G.edges:
+            G.add_edge(v, u)
+            if v == output:
+                rm_edges.append((u, v))
+
+        for u, v in rm_edges:
+            G.remove_edge(u, v)
+
+        doms = nx.immediate_dominators(G, output)
+        dom_tree = defaultdict(set)
+        for k, v in doms.items():
+            dom_tree[v].add(k)
+
+        dom_tree[output].remove(output)
+
+        frontier = Queue()
+        frontier.put(output)
+        scs = []
+
+        super_G = nx.DiGraph()
+        super_G.add_node(output)
+
+        while not frontier.empty():
+            node = frontier.get()
+            sg = {node}
+            fanins = Queue()
+            for fi in dom_tree[node]:
+                fanins.put(fi)
+            while not fanins.empty():
+                fi = fanins.get()
+                sg.add(fi)
+                if len(dom_tree[fi]) &gt; 1:
+                    frontier.put(fi)
+                    super_G.add_node(fi)
+                    super_G.add_edge(fi, node)
+                elif len(dom_tree[fi]) == 1:
+                    fanins.put(dom_tree[fi].pop())
+            scs.append(subcircuit(co, sg))
+        scs_per_output[output] = scs
+        g_per_output[output] = super_G
+    return scs_per_output, g_per_output</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="circuitgraph.tx.acyclic_unroll"><code class="name flex">
+<span>def <span class="ident">acyclic_unroll</span></span>(<span>c)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Unrolls a cyclic circuit to remove cycles.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Circuit to unroll.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>The unrolled circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def acyclic_unroll(c):
+    &#34;&#34;&#34;
+    Unrolls a cyclic circuit to remove cycles.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+
+    Returns
+    -------
+    Circuit
+            The unrolled circuit.
+    &#34;&#34;&#34;
+    if c.blackboxes:
+        raise ValueError(&#34;Cannot perform acyclic unroll with blackboxes&#34;)
+
+    def approx_min_fas(DG):
+        DGC = DG.copy()
+        s1, s2 = [], []
+        while DGC.nodes:
+            # find sinks
+            sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+            while sinks:
+                s2 += sinks
+                DGC.remove_nodes_from(sinks)
+                sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+
+            # find sources
+            sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+            while sources:
+                s1 += sources
+                DGC.remove_nodes_from(sources)
+                sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+
+            # choose max in/out degree difference
+            if DGC.nodes:
+                n = max(DGC.nodes, key=lambda x: DGC.out_degree(x) - DGC.in_degree(x))
+                s1.append(n)
+                DGC.remove_node(n)
+
+        ordering = s1 + list(reversed(s2))
+        feedback_edges = [
+            e for e in DG.edges if ordering.index(e[0]) &gt; ordering.index(e[1])
+        ]
+        feedback_edges = [
+            (u, v) for u, v in feedback_edges if u in nx.descendants(DG, v)
+        ]
+
+        DGC = DG.copy()
+        DGC.remove_edges_from(feedback_edges)
+        try:
+            if nx.find_cycle(DGC):
+                raise ValueError(&#34;approx_min_fas has failed&#34;)
+        except nx.NetworkXNoCycle:
+            pass
+
+        return feedback_edges
+
+    # find feedback nodes
+    feedback = set([e[0] for e in approx_min_fas(c.graph)])
+
+    # get startpoints
+    sp = c.startpoints()
+
+    # create acyclic circuit
+    acyc = cg.Circuit(name=f&#34;acyc_{c.name}&#34;)
+    for n in sp:
+        acyc.add(n, &#34;input&#34;)
+
+    # create copy with broken feedback
+    c_cut = c.copy()
+    for f in feedback:
+        fanout = c.fanout(f)
+        c_cut.disconnect(f, fanout)
+        c_cut.add(f&#34;aux_in_{f}&#34;, &#34;buf&#34;, fanout=fanout)
+    c_cut.set_output(c.outputs(), False)
+
+    # cut feedback
+    for i in range(len(feedback) + 1):
+        # instantiate copy
+        acyc.add_subcircuit(c_cut, f&#34;c{i}&#34;, {n: n for n in sp})
+
+        if i &gt; 0:
+            # connect to last
+            for f in feedback:
+                acyc.connect(f&#34;c{i-1}_{f}&#34;, f&#34;c{i}_aux_in_{f}&#34;)
+        else:
+            # make feedback inputs
+            for f in feedback:
+                acyc.set_type(f&#34;c{i}_aux_in_{f}&#34;, &#34;input&#34;)
+
+    # connect outputs
+    for o in c.outputs():
+        acyc.add(o, &#34;buf&#34;, fanin=f&#34;c{i}_{o}&#34;, output=True)
+
+    cg.lint(acyc)
+    if acyc.is_cyclic():
+        raise ValueError(&#34;Circuit still cyclic&#34;)
+    return acyc</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.limit_fanin"><code class="name flex">
+<span>def <span class="ident">limit_fanin</span></span>(<span>c, k)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Reduces the maximum fanin of circuit gates to k.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+<dt><strong><code>k</code></strong> :&ensp;<code>str</code></dt>
+<dd>Maximum fanin. (k &gt; 2)</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Output circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def limit_fanin(c, k):
+    &#34;&#34;&#34;
+    Reduces the maximum fanin of circuit gates to k.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    k : str
+            Maximum fanin. (k &gt; 2)
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+    &#34;&#34;&#34;
+    if k &lt; 2:
+        raise ValueError(f&#34;maximum fanin, k, must be &gt; 2&#34;)
+
+    gatemap = {
+        &#34;and&#34;: &#34;and&#34;,
+        &#34;nand&#34;: &#34;and&#34;,
+        &#34;or&#34;: &#34;or&#34;,
+        &#34;nor&#34;: &#34;or&#34;,
+        &#34;xor&#34;: &#34;xor&#34;,
+        &#34;xnor&#34;: &#34;xnor&#34;,
+    }
+
+    ck = c.copy()
+    for n in ck.nodes():
+        i = 0
+        while len(ck.fanin(n)) &gt; k:
+            fi = ck.fanin(n)
+            f0 = fi.pop()
+            f1 = fi.pop()
+            ck.disconnect([f0, f1], n)
+            ck.add(
+                f&#34;{n}_limit_fanin_{i}&#34;,
+                gatemap[ck.type(n)],
+                fanin=[f0, f1],
+                fanout=n,
+                uid=True,
+            )
+            i += 1
+
+    return ck</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.miter"><code class="name flex">
+<span>def <span class="ident">miter</span></span>(<span>c0, c1=None, startpoints=None, endpoints=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a miter circuit.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c0</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>First circuit.</dd>
+<dt><strong><code>c1</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Optional second circuit, if None c0 is mitered with itself.</dd>
+<dt><strong><code>startpoints</code></strong> :&ensp;<code>set</code> of <code>str</code></dt>
+<dd>Nodes to be tied together, must exist in both circuits.</dd>
+<dt><strong><code>endpoints</code></strong> :&ensp;<code>set</code> of <code>str</code></dt>
+<dd>Nodes to be compared, must exist in both circuits.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Miter circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def miter(c0, c1=None, startpoints=None, endpoints=None):
+    &#34;&#34;&#34;
+    Creates a miter circuit.
+
+    Parameters
+    ----------
+    c0 : Circuit
+            First circuit.
+    c1 : Circuit
+            Optional second circuit, if None c0 is mitered with itself.
+    startpoints : set of str
+            Nodes to be tied together, must exist in both circuits.
+    endpoints : set of str
+            Nodes to be compared, must exist in both circuits.
+
+    Returns
+    -------
+    Circuit
+            Miter circuit.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c0.blackboxes:
+        raise ValueError(f&#34;{c0.name} contains a blackbox&#34;)
+    if c1 and c1.blackboxes:
+        raise ValueError(f&#34;{c1.name} contains a blackbox&#34;)
+
+    # clean inputs
+    if not c1:
+        c1 = c0
+    if not startpoints:
+        startpoints = c0.startpoints() &amp; c1.startpoints()
+    if not endpoints:
+        endpoints = c0.endpoints() &amp; c1.endpoints()
+
+    # create miter, relabel
+    m = cg.Circuit(name=f&#34;miter_{c0.name}_{c1.name}&#34;)
+    m.add_subcircuit(c0, &#34;c0&#34;)
+    m.add_subcircuit(c1, &#34;c1&#34;)
+
+    # tie inputs
+    for n in startpoints:
+        m.add(n, &#34;input&#34;, fanout=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;])
+
+    # compare outputs
+    m.add(&#34;sat&#34;, &#34;or&#34;, output=True)
+    for n in endpoints:
+        m.add(f&#34;dif_{n}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;], fanout=&#34;sat&#34;)
+
+    return m</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.relabel"><code class="name flex">
+<span>def <span class="ident">relabel</span></span>(<span>c, mapping)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Builds copy with relabeled nodes.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+<dt><strong><code>mapping</code></strong> :&ensp;<code>dict</code> of <code>str:str</code></dt>
+<dd>Relabeling of nodes.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Circuit with removed blackboxes.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def relabel(c, mapping):
+    &#34;&#34;&#34;
+    Builds copy with relabeled nodes.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    mapping : dict of str:str
+            Relabeling of nodes.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed blackboxes.
+    &#34;&#34;&#34;
+    g = nx.relabel_nodes(c.graph, mapping)
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.sensitivity_transform"><code class="name flex">
+<span>def <span class="ident">sensitivity_transform</span></span>(<span>c, n)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a circuit to compute sensitivity by creating a miter circuit for each input
+'i' with the fanin cone of <code>n</code> where the second circuit has 'i' inverted, so that
+the miter output is high when <code>n</code> is sensitive to 'i'. The uninverted circuit is
+shared across all miters and the outputs of the miters are fed into a population
+count circuit so that the output of the population count circuit gives the
+sensitivity of <code>n</code> for a given input pattern.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Sequential circuit to ccompute sensitivity for.</dd>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>Node to compute sensitivity at.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Sensitivity circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sensitivity_transform(c, n):
+    &#34;&#34;&#34;
+    Creates a circuit to compute sensitivity by creating a miter circuit for each input
+    &#39;i&#39; with the fanin cone of `n` where the second circuit has &#39;i&#39; inverted, so that
+    the miter output is high when `n` is sensitive to &#39;i&#39;. The uninverted circuit is
+    shared across all miters and the outputs of the miters are fed into a population
+    count circuit so that the output of the population count circuit gives the
+    sensitivity of `n` for a given input pattern.
+
+    Parameters
+    ----------
+    c : Circuit
+            Sequential circuit to ccompute sensitivity for.
+    n : str
+            Node to compute sensitivity at.
+
+    Returns
+    -------
+    Circuit
+            Sensitivity circuit.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+
+    # check for startpoints
+    startpoints = c.startpoints(n)
+    if len(startpoints) &lt; 1:
+        raise ValueError(f&#34;{n} has no startpoints&#34;)
+
+    # get input cone
+    fi_nodes = c.transitive_fanin(n) | set([n])
+    sub_c = cg.Circuit(graph=c.graph.subgraph(fi_nodes).copy())
+
+    # create sensitivity circuit
+    sen = cg.Circuit()
+    sen.add_subcircuit(sub_c, &#34;orig&#34;)
+    for s in startpoints:
+        sen.add(s, &#34;input&#34;, fanout=f&#34;orig_{s}&#34;)
+
+    # add popcount
+    sen.add_subcircuit(cg.logic.popcount(len(startpoints)), &#34;pc&#34;)
+
+    # add inverted input copies
+    for i, s0 in enumerate(startpoints):
+        sen.add_subcircuit(sub_c, f&#34;inv_{s0}&#34;)
+
+        # connect inputs
+        for s1 in startpoints:
+            if s0 != s1:
+                sen.connect(s1, f&#34;inv_{s0}_{s1}&#34;)
+            else:
+                # connect inverted input
+                sen.set_type(f&#34;inv_{s0}_{s1}&#34;, &#34;not&#34;)
+                sen.connect(s0, f&#34;inv_{s0}_{s1}&#34;)
+
+        # compare to orig
+        sen.add(
+            f&#34;dif_out_{s0}&#34;,
+            &#34;xor&#34;,
+            fanin=[f&#34;orig_{n}&#34;, f&#34;inv_{s0}_{n}&#34;],
+            fanout=f&#34;pc_in_{i}&#34;,
+            output=True,
+        )
+
+    # instantiate population count
+    for o in range(cg.utils.clog2(len(startpoints) + 1)):
+        sen.add(f&#34;sen_out_{o}&#34;, &#34;buf&#34;, fanin=f&#34;pc_out_{o}&#34;, output=True)
+
+    return sen</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.sensitization_transform"><code class="name flex">
+<span>def <span class="ident">sensitization_transform</span></span>(<span>c, n, endpoints=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a circuit to sensitize a node to an endpoint, in the form of a miter
+circuit with that node inverted in one circuit copy.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+<dt><strong><code>n</code></strong> :&ensp;<code>str</code></dt>
+<dd>Node to sensitize.</dd>
+<dt><strong><code>endpoints</code></strong> :&ensp;<code>str</code> or <code>list</code> of <code>str</code></dt>
+<dd>Endpoints to sensitize to. If None, any output
+can be used for sensitization.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Output circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sensitization_transform(c, n, endpoints=None):
+    &#34;&#34;&#34;
+    Creates a circuit to sensitize a node to an endpoint, in the form of a miter
+    circuit with that node inverted in one circuit copy.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    n : str
+            Node to sensitize.
+    endpoints: str or list of str
+            Endpoints to sensitize to. If None, any output
+            can be used for sensitization.
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;Circuit contains a blackbox&#34;)
+
+    if endpoints:
+        if isinstance(endpoints, str):
+            endpoints = {endpoints}
+        else:
+            endpoints = set(endpoints)
+        fi = c.transitive_fanin(endpoints)
+        if n not in fi:
+            raise ValueError(f&#34;&#39;{n}&#39; is not in fanin of given endpoints&#34;)
+        subc = subcircuit(c, endpoints | fi)
+        for node in subc:
+            subc.set_output(node, node in endpoints)
+    else:
+        subc = c
+
+    # create miter
+    m = miter(subc)
+    m.name = f&#34;{c.name}_sensitized_{n}&#34;
+
+    # flip node in c1
+    m.disconnect(m.fanin(f&#34;c1_{n}&#34;), f&#34;c1_{n}&#34;)
+    m.set_type(f&#34;c1_{n}&#34;, &#34;not&#34;)
+    m.connect(f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;)
+
+    return m</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.sequential_unroll"><code class="name flex">
+<span>def <span class="ident">sequential_unroll</span></span>(<span>c, n, reg_d_port, reg_q_port, ignore_pins=None, add_flop_outputs=False, initial_values=None, remove_unloaded=True, prefix='cg_unroll')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Unroll a sequential circuit. Provides a higher level API than <code><a title="circuitgraph.tx.unroll" href="#circuitgraph.tx.unroll">unroll()</a></code>
+by accepting a circuit with sequential elements kept as blackboxes.
+Assumes that all blackboxes in the circuit are sequential elements.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Circuit to unroll.</dd>
+<dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of unrolled copies of the circuit to create.</dd>
+<dt><strong><code>reg_d_port</code></strong> :&ensp;<code>str</code></dt>
+<dd>The name of the D port in the blackboxes in <code>c</code>.</dd>
+<dt><strong><code>reg_q_port</code></strong> :&ensp;<code>str</code></dt>
+<dd>The name of the Q port in the blackboxes in <code>c</code>.</dd>
+<dt><strong><code>ignore_pins</code></strong> :&ensp;<code>str</code> or <code>list</code> of <code>str</code></dt>
+<dd>The names of pins in the blackboxes to ignore.</dd>
+<dt><strong><code>add_flop_outputs</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, the Q port of the flops will be added as primary outputs.</dd>
+<dt><strong><code>initial_values</code></strong> :&ensp;<code>str</code> or <code>dict</code> of <code>str:str</code></dt>
+<dd>The initial values of the data ports for the first timestep.
+If None, the ports will be added as primary inputs.
+If a single value ('0', '1', or 'x'), every flop will get that value.
+Can also pass in dict mapping flop names to values.</dd>
+<dt><strong><code>remove_unloaded</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, unloaded inputs will be removed after unrolling. This can remove
+unused sequential signals such as the clock and reset.</dd>
+<dt><strong><code>prefix</code></strong> :&ensp;<code>str</code></dt>
+<dd>The prefix to use for naming unrolled nodes.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit, dict</code> of <code>str:list</code> of <code>str</code></dt>
+<dd>Unrolled circuit and mapping of original circuit io to list of unrolled
+circuit io. The lists are in order of the unroll iterations.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sequential_unroll(
+    c,
+    n,
+    reg_d_port,
+    reg_q_port,
+    ignore_pins=None,
+    add_flop_outputs=False,
+    initial_values=None,
+    remove_unloaded=True,
+    prefix=&#34;cg_unroll&#34;,
+):
+    &#34;&#34;&#34;
+    Unroll a sequential circuit. Provides a higher level API than `unroll`
+    by accepting a circuit with sequential elements kept as blackboxes.
+    Assumes that all blackboxes in the circuit are sequential elements.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of unrolled copies of the circuit to create.
+    reg_d_port: str
+            The name of the D port in the blackboxes in `c`.
+    reg_q_port: str
+            The name of the Q port in the blackboxes in `c`.
+    ignore_pins: str or list of str
+            The names of pins in the blackboxes to ignore.
+    add_flop_outputs: bool
+            If True, the Q port of the flops will be added as primary outputs.
+    initial_values: str or dict of str:str
+            The initial values of the data ports for the first timestep.
+            If None, the ports will be added as primary inputs.
+            If a single value (&#39;0&#39;, &#39;1&#39;, or &#39;x&#39;), every flop will get that value.
+            Can also pass in dict mapping flop names to values.
+    remove_unloaded: bool
+            If True, unloaded inputs will be removed after unrolling. This can remove
+            unused sequential signals such as the clock and reset.
+    prefix: str
+            The prefix to use for naming unrolled nodes.
+
+    Returns
+    -------
+    Circuit, dict of str:list of str
+            Unrolled circuit and mapping of original circuit io to list of unrolled
+            circuit io. The lists are in order of the unroll iterations.
+    &#34;&#34;&#34;
+    cs = strip_blackboxes(c, ignore_pins=ignore_pins)
+    blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
+
+    if reg_d_port not in blackbox.inputs():
+        raise ValueError(f&#34;Provided d port {reg_d_port} not in bb inputs&#34;)
+    cs.remove(
+        f&#34;{bb}_{p}&#34; for p in blackbox.inputs() - {reg_d_port} for bb in c.blackboxes
+    )
+
+    if reg_q_port not in blackbox.outputs():
+        raise ValueError(f&#34;Provided q port {reg_q_port} not in bb outputs&#34;)
+    cs.remove(
+        f&#34;{bb}_{p}&#34; for p in blackbox.outputs() - {reg_q_port} for bb in c.blackboxes
+    )
+
+    if remove_unloaded:
+        for i in cs.inputs():
+            if not cs.fanout(i):
+                cs.remove(i)
+
+    state_io = {f&#34;{bb}_{reg_d_port}&#34;: f&#34;{bb}_{reg_q_port}&#34; for bb in c.blackboxes}
+    uc, io_map = unroll(cs, n, state_io, prefix=prefix)
+
+    for state_output in (f&#34;{bb}_{reg_d_port}&#34; for bb in c.blackboxes):
+        uc.set_output(io_map[state_output], add_flop_outputs)
+
+    if initial_values:
+        if isinstance(initial_values, str):
+            for fi in [io_map[f&#34;{bb}_{reg_q_port}&#34;][0] for bb in c.blackboxes]:
+                uc.set_type(fi, initial_values)
+        else:
+            for k, v in initial_values.items():
+                uc.set_type(io_map[f&#34;{k}_{reg_q_port}&#34;][0], v)
+
+    return uc, io_map</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.strip_blackboxes"><code class="name flex">
+<span>def <span class="ident">strip_blackboxes</span></span>(<span>c, ignore_pins=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Converts blackboxes to io.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+<dt><strong><code>ingnore_pins</code></strong> :&ensp;<code>str</code> or <code>list</code> of <code>str</code></dt>
+<dd>Pins to not create io for, just disconnect and delete.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Circuit with removed blackboxes.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def strip_blackboxes(c, ignore_pins=None):
+    &#34;&#34;&#34;
+    Converts blackboxes to io.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    ingnore_pins: str or list of str
+            Pins to not create io for, just disconnect and delete.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed blackboxes.
+    &#34;&#34;&#34;
+    if not ignore_pins:
+        ignore_pins = []
+    elif isinstance(ignore_pins, str):
+        ignore_pins = [ignore_pins]
+    g = c.graph.copy()
+    bb_pins = []
+    for n in c.filter_type(&#34;bb_input&#34;):
+        if n.split(&#34;.&#34;)[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n][&#34;type&#34;] = &#34;buf&#34;
+            g.nodes[n][&#34;output&#34;] = True
+            bb_pins.append(n)
+    for n in c.filter_type(&#34;bb_output&#34;):
+        if n.split(&#34;.&#34;)[-1] in ignore_pins:
+            g.remove_node(n)
+        else:
+            g.nodes[n][&#34;type&#34;] = &#34;input&#34;
+            bb_pins.append(n)
+
+    # rename nodes
+    mapping = {n: n.replace(&#34;.&#34;, &#34;_&#34;) for n in bb_pins}
+    for k in mapping.values():
+        if k in g:
+            raise ValueError(f&#34;Overlapping blackbox name: {k}&#34;)
+    nx.relabel_nodes(g, mapping, copy=False)
+
+    return cg.Circuit(graph=g, name=c.name)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.strip_inputs"><code class="name flex">
+<span>def <span class="ident">strip_inputs</span></span>(<span>c)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Converts inputs to buffers for easy
+instantiation.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Circuit with removed io.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def strip_inputs(c):
+    &#34;&#34;&#34;
+    Converts inputs to buffers for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io.
+    &#34;&#34;&#34;
+    g = c.graph.copy()
+    for i in c.inputs():
+        g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
+
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.strip_io"><code class="name flex">
+<span>def <span class="ident">strip_io</span></span>(<span>c)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Removes circuit's outputs and converts inputs to buffers for easy
+instantiation.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Circuit with removed io.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def strip_io(c):
+    &#34;&#34;&#34;
+    Removes circuit&#39;s outputs and converts inputs to buffers for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io.
+    &#34;&#34;&#34;
+    g = c.graph.copy()
+    for i in c.inputs():
+        g.nodes[i][&#34;type&#34;] = &#34;buf&#34;
+    for o in c.outputs():
+        g.nodes[o][&#34;output&#34;] = False
+
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.strip_outputs"><code class="name flex">
+<span>def <span class="ident">strip_outputs</span></span>(<span>c)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Removes a circuit's outputs for easy
+instantiation.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Circuit with removed io.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def strip_outputs(c):
+    &#34;&#34;&#34;
+    Removes a circuit&#39;s outputs for easy
+    instantiation.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+
+    Returns
+    -------
+    Circuit
+            Circuit with removed io.
+    &#34;&#34;&#34;
+    g = c.graph.copy()
+    for o in c.outputs():
+        g.nodes[o][&#34;output&#34;] = False
+
+    return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.subcircuit"><code class="name flex">
+<span>def <span class="ident">subcircuit</span></span>(<span>c, nodes)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a subcircuit from a set of nodes of a given circuit.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>The circuit to create a subcircuit from.</dd>
+<dt><strong><code>nodes</code></strong> :&ensp;<code>list</code> of <code>str</code></dt>
+<dd>The nodes to include in the subcircuit.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>The subcircuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def subcircuit(c, nodes):
+    &#34;&#34;&#34;
+    Creates a subcircuit from a set of nodes of a given circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to create a subcircuit from.
+    nodes: list of str
+            The nodes to include in the subcircuit.
+
+    Returns
+    -------
+    Circuit
+            The subcircuit.
+    &#34;&#34;&#34;
+    sc = cg.Circuit()
+    for node in nodes:
+        if c.type(node) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
+            raise NotImplementedError(&#34;Cannot create a subcircuit with blackboxes&#34;)
+        sc.add(node, type=c.type(node), output=c.is_output(node))
+    for edge in c.edges():
+        if edge[0] in nodes and edge[1] in nodes:
+            sc.connect(edge[0], edge[1])
+    return sc</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.supergates"><code class="name flex">
+<span>def <span class="ident">supergates</span></span>(<span>c)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculate the supergates of a circuit. That is, find the
+maximal covering of minimal subcircuits with logically
+independent inputs. This is done on a per-output basis.</p>
+<p>For more information, see
+Seth, Sharad C., and Vishwani D. Agrawal. "A new model for computation
+of probabilistic testability in combinational circuits." Integration 7.1
+(1989): 49-75.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>The circuit to compute supergates for</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code> of <code>str to list</code> of <code>Circuit, dict</code> of <code>str to networkx.DiGraph</code></dt>
+<dd>The supergates per each output, as Circuit objects,
+and the connections between supergates per each output,
+as a networkx.Digraph object.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def supergates(c):
+    &#34;&#34;&#34;
+    Calculate the supergates of a circuit. That is, find the
+    maximal covering of minimal subcircuits with logically
+    independent inputs. This is done on a per-output basis.
+
+    For more information, see
+    Seth, Sharad C., and Vishwani D. Agrawal. &#34;A new model for computation
+    of probabilistic testability in combinational circuits.&#34; Integration 7.1
+    (1989): 49-75.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to compute supergates for
+
+    Returns
+    -------
+    dict of str to list of Circuit, dict of str to networkx.DiGraph
+            The supergates per each output, as Circuit objects,
+            and the connections between supergates per each output,
+            as a networkx.Digraph object.
+    &#34;&#34;&#34;
+    scs_per_output = dict()
+    g_per_output = dict()
+    for output in c.outputs():
+        co = subcircuit(c, c.transitive_fanin(output) | {output})
+        G = co.graph.copy()
+        rm_edges = []
+        for u, v in G.edges:
+            G.add_edge(v, u)
+            if v == output:
+                rm_edges.append((u, v))
+
+        for u, v in rm_edges:
+            G.remove_edge(u, v)
+
+        doms = nx.immediate_dominators(G, output)
+        dom_tree = defaultdict(set)
+        for k, v in doms.items():
+            dom_tree[v].add(k)
+
+        dom_tree[output].remove(output)
+
+        frontier = Queue()
+        frontier.put(output)
+        scs = []
+
+        super_G = nx.DiGraph()
+        super_G.add_node(output)
+
+        while not frontier.empty():
+            node = frontier.get()
+            sg = {node}
+            fanins = Queue()
+            for fi in dom_tree[node]:
+                fanins.put(fi)
+            while not fanins.empty():
+                fi = fanins.get()
+                sg.add(fi)
+                if len(dom_tree[fi]) &gt; 1:
+                    frontier.put(fi)
+                    super_G.add_node(fi)
+                    super_G.add_edge(fi, node)
+                elif len(dom_tree[fi]) == 1:
+                    fanins.put(dom_tree[fi].pop())
+            scs.append(subcircuit(co, sg))
+        scs_per_output[output] = scs
+        g_per_output[output] = super_G
+    return scs_per_output, g_per_output</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.syn"><code class="name flex">
+<span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', suppress_output=False, stdout_file=None, stderr_file=None, working_dir='.', fast_parsing=False, pre_syn_file=None, post_syn_file=None, verilog_exists=False, effort='high')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Synthesizes the circuit using yosys or genus.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Circuit to synthesize.</dd>
+<dt><strong><code>engine</code></strong> :&ensp;<code>str</code></dt>
+<dd>Synthesis tool to use ('genus', 'dc', or 'yosys').</dd>
+<dt><strong><code>suppress_output</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, synthesis stdout will not be printed.</dd>
+<dt><strong><code>stdout_file</code></strong> :&ensp;<code>file</code> or <code>str</code> or <code>None</code></dt>
+<dd>If defined, synthesis stdout will be directed to this file instead
+of being printed.</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>file</code> or <code>str</code> or <code>None</code></dt>
+<dd>If defined, synthesis stderr will be written to this file instead
+of being printed.</dd>
+<dt><strong><code>working_dir</code></strong> :&ensp;<code>str</code></dt>
+<dd>The path to run synthesis from. If using genus, this will effect
+where the genus run files are stored. Directory will be created
+if it does not exist.</dd>
+<dt><strong><code>fast_parsing</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, will use fast verilog parsing (which requires
+specifically formatted netlists, see the documentation for
+<code>verilog_to_circuit</code>).</dd>
+<dt><strong><code>pre_syn_file</code></strong> :&ensp;<code>file</code> or <code>str</code> or <code>None</code></dt>
+<dd>If specified, the circuit verilog will be written to this file
+before synthesis. If None, a temporary file will be used.</dd>
+<dt><strong><code>post_syn_file</code></strong> :&ensp;<code>file</code> or <code>str</code> or <code>None</code></dt>
+<dd>If specified, the synthesis output verilog will be written to this
+file. If None, a temporary file will be used.</dd>
+<dt><strong><code>verilog_exists</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, does not write <code>c</code> to a file, instead uses the verilog
+already present in <code>pre_syn_file</code>.</dd>
+<dt><strong><code>effort</code></strong> :&ensp;<code>str</code></dt>
+<dd>The effort to use for synthesis. Either 'high', 'medium', or 'low'.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Synthesized circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def syn(
+    c,
+    engine=&#34;yosys&#34;,
+    suppress_output=False,
+    stdout_file=None,
+    stderr_file=None,
+    working_dir=&#34;.&#34;,
+    fast_parsing=False,
+    pre_syn_file=None,
+    post_syn_file=None,
+    verilog_exists=False,
+    effort=&#34;high&#34;,
+):
+    &#34;&#34;&#34;
+    Synthesizes the circuit using yosys or genus.
+
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to synthesize.
+    engine : str
+            Synthesis tool to use (&#39;genus&#39;, &#39;dc&#39;, or &#39;yosys&#39;).
+    suppress_output: bool
+            If True, synthesis stdout will not be printed.
+    stdout_file: file or str or None
+            If defined, synthesis stdout will be directed to this file instead
+            of being printed.
+    output_file: file or str or None
+            If defined, synthesis stderr will be written to this file instead
+            of being printed.
+    working_dir: str
+            The path to run synthesis from. If using genus, this will effect
+            where the genus run files are stored. Directory will be created
+            if it does not exist.
+    fast_parsing: bool
+            If True, will use fast verilog parsing (which requires
+            specifically formatted netlists, see the documentation for
+            `verilog_to_circuit`).
+    pre_syn_file: file or str or None
+            If specified, the circuit verilog will be written to this file
+            before synthesis. If None, a temporary file will be used.
+    post_syn_file: file or str or None
+            If specified, the synthesis output verilog will be written to this
+            file. If None, a temporary file will be used.
+    verilog_exists: bool
+            If True, does not write `c` to a file, instead uses the verilog
+            already present in `pre_syn_file`.
+    effort: str
+            The effort to use for synthesis. Either &#39;high&#39;, &#39;medium&#39;, or &#39;low&#39;.
+
+    Returns
+    -------
+    Circuit
+            Synthesized circuit.
+    &#34;&#34;&#34;
+    if engine == &#34;yosys&#34; and shutil.which(&#34;yosys&#34;) is None:
+        raise OSError(&#34;&#39;yosys&#39; installation not found&#34;)
+
+    if engine == &#34;genus&#34; and shutil.which(&#34;genus&#34;) is None:
+        raise OSError(&#34;&#39;genus&#39; installation not found&#34;)
+
+    if engine == &#34;dc&#34;:
+        dc_engine = &#34;dc_shell-t&#34;
+        if shutil.which(&#34;dc_shell-t&#34;) is None:
+            dc_engine = &#34;dc_shell&#34;
+            if shutil.which(&#34;dc_shell&#34;) is None:
+                raise OSError(&#34;&#39;dc_shell-t&#39; or &#39;dc_shell&#39; installation not found&#34;)
+
+    working_dir = Path(working_dir)
+    working_dir.mkdir(exist_ok=True)
+    working_dir = str(working_dir)
+
+    # Make paths absolute in case synthesis is run from different working dir
+    if pre_syn_file:
+        pre_syn_file = Path(pre_syn_file).absolute()
+    if post_syn_file:
+        post_syn_file = Path(post_syn_file).absolute()
+
+    if verilog_exists and not pre_syn_file:
+        raise ValueError(&#34;Must specify pre_syn_file if using verilog_exists&#34;)
+
+    with open(pre_syn_file, &#34;r&#34;) if verilog_exists else open(
+        pre_syn_file, &#34;w&#34;
+    ) if pre_syn_file else NamedTemporaryFile(
+        prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
+    ) as tmp_in:
+        if not verilog_exists:
+            verilog = cg.io.circuit_to_verilog(c)
+            tmp_in.write(verilog)
+            tmp_in.flush()
+        with open(post_syn_file, &#34;w+&#34;) if post_syn_file else NamedTemporaryFile(
+            prefix=&#34;circuitgraph_synthesis_output&#34;, suffix=&#34;.v&#34;, mode=&#34;r&#34;
+        ) as tmp_out:
+            if engine == &#34;genus&#34;:
+                try:
+                    lib_path = os.environ[&#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34;]
+                except KeyError:
+                    raise ValueError(
+                        &#34;In order to run synthesis with Genus, &#34;
+                        &#34;please set the &#34;
+                        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH &#34;
+                        &#34;variable in your os environment to the &#34;
+                        &#34;path to the tech library to use&#34;
+                    )
+                cmd = [
+                    &#34;genus&#34;,
+                    &#34;-no_gui&#34;,
+                    &#34;-execute&#34;,
+                    &#34;set_db / .library &#34;
+                    f&#34;{lib_path};\n&#34;
+                    f&#34;read_hdl -sv {tmp_in.name};\n&#34;
+                    &#34;elaborate;\n&#34;
+                    f&#34;set_db syn_generic_effort {effort};\n&#34;
+                    &#34;syn_generic;\n&#34;
+                    &#34;syn_map;\n&#34;
+                    &#34;syn_opt;\n&#34;
+                    f&#39;redirect {tmp_out.name} &#34;write_hdl -generic&#34;;\n&#39;
+                    &#34;exit;&#34;,
+                ]
+            elif engine == &#34;dc&#34;:
+                try:
+                    lib_path = os.environ[&#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34;]
+                except KeyError:
+                    raise ValueError(
+                        &#34;In order to run synthesis with DC, &#34;
+                        &#34;please set the &#34;
+                        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH &#34;
+                        &#34;variable in your os environment to the &#34;
+                        &#34;path to the GTECH library&#34;
+                    )
+                libname = &#34;GTECH&#34;
+                usable_cells = [f&#34;{libname.lower()}/{libname}_NOT&#34;]
+                for gate in [&#34;OR&#34;, &#34;NOR&#34;, &#34;AND&#34;, &#34;NAND&#34;, &#34;XOR&#34;, &#34;XNOR&#34;]:
+                    usable_cells += [
+                        f&#34;{libname.lower()}/{libname}_{gate}{i}&#34; for i in range(2, 5)
+                    ]
+                usable_cells += [
+                    f&#34;{libname.lower()}/{libname}_FD{i}&#34; for i in range(1, 4)
+                ]
+                execute = (
+                    f&#34;set_app_var target_library {lib_path};\n&#34;
+                    f&#34;set_app_var link_library {lib_path};\n&#34;
+                    &#34;set_dont_use [remove_from_collection &#34;
+                    f&#34;[get_lib_cells {libname.lower()}/*] &#34;
+                    f&#34;\&#34;{&#39; &#39;.join(usable_cells)}\&#34;];\n&#34;
+                    f&#34;read_file {tmp_in.name}\n&#34;
+                    &#34;link;\n&#34;
+                    &#34;uniquify;\n&#34;
+                    &#34;check_design;\n&#34;
+                    &#34;simplify_constants;\n&#34;
+                    f&#34;compile;\n&#34;
+                    f&#34;write -format verilog -output {tmp_out.name};\n&#34;
+                    &#34;exit;&#34;
+                )
+                cmd = [dc_engine, &#34;-no_gui&#34;, &#34;-x&#34;, execute]
+            elif engine == &#34;yosys&#34;:
+                cmd = [
+                    &#34;yosys&#34;,
+                    &#34;-p&#34;,
+                    f&#34;read_verilog {tmp_in.name}; &#34;
+                    &#34;synth; &#34;
+                    f&#34;write_verilog -noattr {tmp_out.name}&#34;,
+                ]
+            else:
+                raise ValueError(&#34;synthesis engine must be yosys, dc, or genus&#34;)
+
+            if suppress_output and not stdout_file:
+                stdout = subprocess.DEVNULL
+            elif stdout_file:
+                stdout = open(stdout_file, &#34;w&#34;)
+            else:
+                stdout = None
+            if stderr_file:
+                stderr = open(stderr_file, &#34;w&#34;)
+            else:
+                stderr = None
+            subprocess.run(cmd, stdout=stdout, stderr=stderr, cwd=working_dir)
+            if stdout_file:
+                stdout.close()
+            if stderr_file:
+                stderr.close()
+
+            output_netlist = tmp_out.read()
+
+            # Rename dc library gates
+            if engine == &#34;dc&#34;:
+
+                def replace_gate(match):
+                    # Keep flops as they are
+                    if match.group(1).startswith(f&#34;{libname}_FD&#34;):
+                        return match
+                    ports = [
+                        i.strip().split(&#34;(&#34;)[-1].strip(&#34;)&#34;)
+                        for i in match.group(3).split(&#34;,&#34;)
+                    ]
+                    portlist = &#34;, &#34;.join(reversed(ports))
+                    return f&#34;{match.group(1).lower()} {match.group(2)}({portlist});&#34;
+
+                output_netlist = re.sub(
+                    rf&#34;{libname}_([A-Z]+)[1-4]?\s+&#34;
+                    r&#34;([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);&#34;,
+                    replace_gate,
+                    output_netlist,
+                )
+
+    return cg.io.verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.ternary"><code class="name flex">
+<span>def <span class="ident">ternary</span></span>(<span>c)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Encodes the circuit with ternary values. The ternary circuit adds a second net
+for each net in the original circuit. The second net encodes a don't care,
+or X, value. That net being high corresponds to a don't care value on original net.
+If the second net is low, the logical value on the original net is valid.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Circuit to encode.</dd>
+<dt><strong><code>suffix</code></strong> :&ensp;<code>str</code></dt>
+<dd>The suffix to give the added nets. Note that it is safest to use
+the returned dictionary to refer to the added nets because they
+are uniquified when they are added to the circuit.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit, dict</code> of <code>str:str</code></dt>
+<dd>Encoded circuit and dictionary mapping original net names to added ternary
+net names.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ternary(c):
+    &#34;&#34;&#34;
+    Encodes the circuit with ternary values. The ternary circuit adds a second net
+    for each net in the original circuit. The second net encodes a don&#39;t care,
+    or X, value. That net being high corresponds to a don&#39;t care value on original net.
+    If the second net is low, the logical value on the original net is valid.
+
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to encode.
+    suffix: str
+            The suffix to give the added nets. Note that it is safest to use
+            the returned dictionary to refer to the added nets because they
+            are uniquified when they are added to the circuit.
+
+    Returns
+    -------
+    Circuit, dict of str:str
+            Encoded circuit and dictionary mapping original net names to added ternary
+            net names.
+    &#34;&#34;&#34;
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+    t = c.copy()
+
+    # add dual nodes
+    mapping = {n: c.uid(f&#34;{n}_X&#34;) for n in c}
+    for n in c:
+        if c.type(n) in [&#34;and&#34;, &#34;nand&#34;]:
+            t.add(mapping[n], &#34;and&#34;, output=c.is_output(n), allow_redefinition=True)
+            t.add(
+                f&#34;{n}_x_in_fi&#34;,
+                &#34;or&#34;,
+                fanout=mapping[n],
+                fanin=[mapping[p] for p in c.fanin(n)],
+                uid=True,
+                add_connected_nodes=True,
+            )
+            zero_not_in_fi = t.add(
+                f&#34;{n}_0_not_in_fi&#34;, &#34;nor&#34;, fanout=mapping[n], uid=True
+            )
+            for p in c.fanin(n):
+                t.add(
+                    f&#34;{p}_is_0&#34;,
+                    &#34;nor&#34;,
+                    fanout=zero_not_in_fi,
+                    fanin=[p, mapping[p]],
+                    uid=True,
+                )
+        elif c.type(n) in [&#34;or&#34;, &#34;nor&#34;]:
+            t.add(mapping[n], &#34;and&#34;, output=c.is_output(n), allow_redefinition=True)
+            t.add(
+                f&#34;{n}_x_in_fi&#34;,
+                &#34;or&#34;,
+                fanout=mapping[n],
+                fanin=[mapping[p] for p in c.fanin(n)],
+                uid=True,
+                add_connected_nodes=True,
+            )
+            one_not_in_fi = t.add(
+                f&#34;{n}_1_not_in_fi&#34;, &#34;nor&#34;, fanout=mapping[n], uid=True
+            )
+            for p in c.fanin(n):
+                is_one = t.add(
+                    f&#34;{p}_is_1&#34;, &#34;and&#34;, fanout=one_not_in_fi, fanin=p, uid=True
+                )
+                t.add(f&#34;{p}_not_x&#34;, &#34;not&#34;, fanout=is_one, fanin=mapping[p], uid=True)
+        elif c.type(n) in [&#34;buf&#34;, &#34;not&#34;]:
+            p = c.fanin(n).pop()
+            t.add(
+                mapping[n],
+                &#34;buf&#34;,
+                fanin=mapping[p],
+                output=c.is_output(n),
+                add_connected_nodes=True,
+                allow_redefinition=True,
+            )
+        elif c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;]:
+            t.add(
+                mapping[n],
+                &#34;or&#34;,
+                fanin=(mapping[p] for p in c.fanin(n)),
+                output=c.is_output(n),
+                add_connected_nodes=True,
+                allow_redefinition=True,
+            )
+        elif c.type(n) in [&#34;0&#34;, &#34;1&#34;]:
+            t.add(mapping[n], &#34;0&#34;, output=c.is_output(n), allow_redefinition=True)
+        elif c.type(n) in [&#34;input&#34;]:
+            t.add(mapping[n], &#34;input&#34;, allow_redefinition=True)
+        else:
+            raise ValueError(f&#34;Node &#39;{n}&#39; has invalid type: &#39;{c.type(n)}&#39;&#34;)
+
+    return t, mapping</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.unroll"><code class="name flex">
+<span>def <span class="ident">unroll</span></span>(<span>c, n, state_io, prefix='cg_unroll')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Unrolls a circuit.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Circuit to unroll.</dd>
+<dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of unrolled copies of the circuit to create.</dd>
+<dt><strong><code>state_io</code></strong> :&ensp;<code>dict</code> of <code>str:str</code></dt>
+<dd>For each <code>(k, v)</code> pair in the dict, <code>k</code> of circuit iteration <code>n - 1</code> will be
+tied to <code>v</code> of circuit iteration <code>n</code>.</dd>
+<dt><strong><code>prefix</code></strong> :&ensp;<code>str</code></dt>
+<dd>The prefix to use for naming new io for each iteration.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit, dict</code> of <code>str:list</code> of <code>str</code></dt>
+<dd>Unrolled circuit and mapping of original circuit io to list of unrolled
+circuit io. The lists are in order of the unroll iterations.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unroll(c, n, state_io, prefix=&#34;cg_unroll&#34;):
+    &#34;&#34;&#34;
+    Unrolls a circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            Circuit to unroll.
+    n: int
+            The number of unrolled copies of the circuit to create.
+    state_io: dict of str:str
+            For each `(k, v)` pair in the dict, `k` of circuit iteration `n - 1` will be
+            tied to `v` of circuit iteration `n`.
+    prefix: str
+            The prefix to use for naming new io for each iteration.
+
+    Returns
+    -------
+    Circuit, dict of str:list of str
+            Unrolled circuit and mapping of original circuit io to list of unrolled
+            circuit io. The lists are in order of the unroll iterations.
+    &#34;&#34;&#34;
+    # check for blackboxes
+    if c.blackboxes:
+        raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
+
+    if n &lt; 1:
+        raise ValueError(f&#34;n must be &gt;= 1 ({n})&#34;)
+
+    for k, v in state_io.items():
+        if k not in c.io():
+            raise ValueError(f&#34;Node &#39;{k}&#39; in state_io dict but not in io of circuit&#34;)
+        if v not in c.io():
+            raise ValueError(f&#34;Node &#39;{v}&#39; in state_io dict but not in io of circuit&#34;)
+
+    uc = cg.Circuit()
+
+    io_map = {io: [] for io in c.io()}
+    for itr in range(n):
+        for io in c.io():
+            new_io = c.uid(f&#34;{io}_{prefix}_{itr}&#34;)
+            if io in state_io or io in state_io.values():
+                t = &#34;buf&#34;
+            elif io in c.inputs():
+                t = &#34;input&#34;
+            else:
+                t = &#34;buf&#34;
+
+            uc.add(new_io, t, output=c.is_output(io))
+            io_map[io].append(new_io)
+
+        uc.add_subcircuit(
+            c, f&#34;unrolled_{itr}&#34;, {i: f&#34;{i}_{prefix}_{itr}&#34; for i in c.io()}
+        )
+
+        if itr == 0:
+            for i in state_io.values():
+                uc.set_type(f&#34;{i}_{prefix}_{itr}&#34;, &#34;input&#34;)
+        else:
+            for k, v in state_io.items():
+                uc.connect(f&#34;{k}_{prefix}_{itr-1}&#34;, f&#34;{v}_{prefix}_{itr}&#34;)
+
+    return uc, io_map</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<header>
+<img src="circuitgraph.png" alt="" style="margin-bottom: 31px;">
+<a class="github-button" href="https://github.com/circuitgraph/circuitgraph"><b>GitHub</b></a>
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="circuitgraph" href="index.html">circuitgraph</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="circuitgraph.tx.acyclic_unroll" href="#circuitgraph.tx.acyclic_unroll">acyclic_unroll</a></code></li>
+<li><code><a title="circuitgraph.tx.limit_fanin" href="#circuitgraph.tx.limit_fanin">limit_fanin</a></code></li>
+<li><code><a title="circuitgraph.tx.miter" href="#circuitgraph.tx.miter">miter</a></code></li>
+<li><code><a title="circuitgraph.tx.relabel" href="#circuitgraph.tx.relabel">relabel</a></code></li>
+<li><code><a title="circuitgraph.tx.sensitivity_transform" href="#circuitgraph.tx.sensitivity_transform">sensitivity_transform</a></code></li>
+<li><code><a title="circuitgraph.tx.sensitization_transform" href="#circuitgraph.tx.sensitization_transform">sensitization_transform</a></code></li>
+<li><code><a title="circuitgraph.tx.sequential_unroll" href="#circuitgraph.tx.sequential_unroll">sequential_unroll</a></code></li>
+<li><code><a title="circuitgraph.tx.strip_blackboxes" href="#circuitgraph.tx.strip_blackboxes">strip_blackboxes</a></code></li>
+<li><code><a title="circuitgraph.tx.strip_inputs" href="#circuitgraph.tx.strip_inputs">strip_inputs</a></code></li>
+<li><code><a title="circuitgraph.tx.strip_io" href="#circuitgraph.tx.strip_io">strip_io</a></code></li>
+<li><code><a title="circuitgraph.tx.strip_outputs" href="#circuitgraph.tx.strip_outputs">strip_outputs</a></code></li>
+<li><code><a title="circuitgraph.tx.subcircuit" href="#circuitgraph.tx.subcircuit">subcircuit</a></code></li>
+<li><code><a title="circuitgraph.tx.supergates" href="#circuitgraph.tx.supergates">supergates</a></code></li>
+<li><code><a title="circuitgraph.tx.syn" href="#circuitgraph.tx.syn">syn</a></code></li>
+<li><code><a title="circuitgraph.tx.ternary" href="#circuitgraph.tx.ternary">ternary</a></code></li>
+<li><code><a title="circuitgraph.tx.unroll" href="#circuitgraph.tx.unroll">unroll</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

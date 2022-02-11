@@ -109,11 +109,15 @@ class VerilogCircuitGraphTransformer(Transformer):
         fanout = [str(i) for i in fanout]
         node_type = str(node_type)
 
-        for i in fanout + fanin:
-            if i not in self.c:
-                self.c.add(i, "buf")
-
-        return self.c.add(str(n), node_type, fanin=fanin, fanout=fanout, uid=uid,)
+        return self.c.add(
+            str(n),
+            node_type,
+            fanin=fanin,
+            fanout=fanout,
+            uid=uid,
+            add_connected_nodes=True,
+            allow_redefinition=True,
+        )
 
     def add_blackbox(self, blackbox, name, connections=dict()):
         formatted_connections = dict()

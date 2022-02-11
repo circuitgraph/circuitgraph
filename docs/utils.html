@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.utils API documentation</title>
 <meta name="description" content="Various circuit related utilities" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -31,12 +31,13 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 import subprocess
+import shutil
 
 from circuitgraph import supported_types
 from circuitgraph.io import circuit_to_verilog
 
 
-def visualize(c, output_file):
+def visualize(c, output_file, suppress_output=True):
     &#34;&#34;&#34;
     Visualize a circuit using Yosys.
 
@@ -46,22 +47,50 @@ def visualize(c, output_file):
             Circuit to visualize.
     output_file: str
             Where to write the image to.
+    suppress_output: bool
+            If True, yosys stdout will not be printed.
     &#34;&#34;&#34;
+    if shutil.which(&#34;yosys&#34;) == None:
+        raise OSError(&#34;Install &#39;yosys&#39; to use &#39;cg.visualize&#39;&#34;)
+
     verilog = circuit_to_verilog(c)
     output_file = Path(output_file)
     fmt = output_file.suffix[1:]
     prefix = output_file.with_suffix(&#34;&#34;)
+    if suppress_output:
+        stdout = subprocess.DEVNULL
+    else:
+        stdout = None
     with NamedTemporaryFile(
         prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;
     ) as tmp_in:
         tmp_in.write(bytes(verilog, &#34;ascii&#34;))
         tmp_in.flush()
+
+        # Write dummy modules for blackboxes to show port directions
+        for bb in set(c.blackboxes.values()):
+            bb_verilog = (
+                f&#34;\n\nmodule {bb.name} ({&#39;,&#39;.join(bb.inputs() | bb.outputs())});\n&#34;
+            )
+            for i in bb.inputs():
+                bb_verilog += f&#34;  input {i};\n&#34;
+            for o in bb.outputs():
+                bb_verilog += f&#34;  output {o};\n&#34;
+            bb_verilog += &#34;endmodule\n&#34;
+            tmp_in.write(bytes(bb_verilog, &#34;ascii&#34;))
+            tmp_in.flush()
+
         cmd = [
             &#34;yosys&#34;,
             &#34;-p&#34;,
-            f&#34;read_verilog {tmp_in.name}; &#34; f&#34;show -format {fmt} -prefix {prefix}&#34;,
+            f&#34;read_verilog {tmp_in.name}; &#34;
+            f&#34;show -format {fmt} -prefix {prefix} {c.name}&#34;,
         ]
-        subprocess.run(cmd)
+        subprocess.run(cmd, stdout=stdout)
+
+    # Remove intermediate dot files if necessary
+    if fmt != &#34;dot&#34;:
+        prefix.with_suffix(&#34;.dot&#34;).unlink()
 
 
 def clog2(num: int) -&gt; int:
@@ -158,36 +187,31 @@ def lint(c, exhaustive=False, unloaded=False, undriven=True):
     # node types
     for g in c.nodes():
         if &#34;type&#34; not in c.graph.nodes[g]:
-            handle(f&#34;no type for node {g}&#34;)
+            handle(f&#34;no type for node &#39;{g}&#39;&#34;)
         t = c.graph.nodes[g][&#34;type&#34;]
         if t not in supported_types:
-            handle(f&#34;node {g} has unsupported type {t}&#34;)
+            handle(f&#34;node &#39;{g}&#39; has unsupported type &#39;{t}&#39;&#34;)
         if &#34;.&#34; in g and g.split(&#34;.&#34;)[0] not in c.blackboxes:
-            handle(f&#34;node {g} has blackbox syntax with no instance&#34;)
+            handle(f&#34;node &#39;{g}&#39; has blackbox syntax with no instance&#34;)
 
     # incorrect connections
     for g in c.filter_type([&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_output&#34;]):
         if len(c.fanin(g)) &gt; 0:
-            handle(f&#34;{c.type(g)} {g} has fanin&#34;)
-    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;output&#34;, &#34;bb_input&#34;]):
+            handle(f&#34;{c.type(g)} &#39;{g}&#39; has fanin&#34;)
+        if c.type(g) == &#34;bb_output&#34;:
+            if len(c.fanout(g)) &gt; 1:
+                handle(f&#34;{c.type(g)} &#39;{g}&#39; has fanout greater than 1&#34;)
+            if c.fanout(g) and c.type(c.fanout(g).pop()) != &#34;buf&#34;:
+                handle(f&#34;{c.type(g)} &#39;{g}&#39; has non-buf fanout&#34;)
+
+    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;]):
         if len(c.fanin(g)) &gt; 1:
             handle(f&#34;{c.type(g)} {g} has fanin count &gt; 1&#34;)
 
     # dangling connections
     if undriven:
         for g in c.filter_type(
-            [
-                &#34;buf&#34;,
-                &#34;not&#34;,
-                &#34;output&#34;,
-                &#34;bb_input&#34;,
-                &#34;and&#34;,
-                &#34;nand&#34;,
-                &#34;or&#34;,
-                &#34;nor&#34;,
-                &#34;xor&#34;,
-                &#34;xnor&#34;,
-            ]
+            [&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;, &#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;,]
         ):
             if len(c.fanin(g)) &lt; 1:
                 handle(f&#34;{c.type(g)} {g} has no fanin&#34;)
@@ -397,36 +421,31 @@ ValueError: expected num &gt;= 1</p></div>
     # node types
     for g in c.nodes():
         if &#34;type&#34; not in c.graph.nodes[g]:
-            handle(f&#34;no type for node {g}&#34;)
+            handle(f&#34;no type for node &#39;{g}&#39;&#34;)
         t = c.graph.nodes[g][&#34;type&#34;]
         if t not in supported_types:
-            handle(f&#34;node {g} has unsupported type {t}&#34;)
+            handle(f&#34;node &#39;{g}&#39; has unsupported type &#39;{t}&#39;&#34;)
         if &#34;.&#34; in g and g.split(&#34;.&#34;)[0] not in c.blackboxes:
-            handle(f&#34;node {g} has blackbox syntax with no instance&#34;)
+            handle(f&#34;node &#39;{g}&#39; has blackbox syntax with no instance&#34;)
 
     # incorrect connections
     for g in c.filter_type([&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_output&#34;]):
         if len(c.fanin(g)) &gt; 0:
-            handle(f&#34;{c.type(g)} {g} has fanin&#34;)
-    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;output&#34;, &#34;bb_input&#34;]):
+            handle(f&#34;{c.type(g)} &#39;{g}&#39; has fanin&#34;)
+        if c.type(g) == &#34;bb_output&#34;:
+            if len(c.fanout(g)) &gt; 1:
+                handle(f&#34;{c.type(g)} &#39;{g}&#39; has fanout greater than 1&#34;)
+            if c.fanout(g) and c.type(c.fanout(g).pop()) != &#34;buf&#34;:
+                handle(f&#34;{c.type(g)} &#39;{g}&#39; has non-buf fanout&#34;)
+
+    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;]):
         if len(c.fanin(g)) &gt; 1:
             handle(f&#34;{c.type(g)} {g} has fanin count &gt; 1&#34;)
 
     # dangling connections
     if undriven:
         for g in c.filter_type(
-            [
-                &#34;buf&#34;,
-                &#34;not&#34;,
-                &#34;output&#34;,
-                &#34;bb_input&#34;,
-                &#34;and&#34;,
-                &#34;nand&#34;,
-                &#34;or&#34;,
-                &#34;nor&#34;,
-                &#34;xor&#34;,
-                &#34;xnor&#34;,
-            ]
+            [&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;, &#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;,]
         ):
             if len(c.fanin(g)) &lt; 1:
                 handle(f&#34;{c.type(g)} {g} has no fanin&#34;)
@@ -459,7 +478,7 @@ ValueError: expected num &gt;= 1</p></div>
 </details>
 </dd>
 <dt id="circuitgraph.utils.visualize"><code class="name flex">
-<span>def <span class="ident">visualize</span></span>(<span>c, output_file)</span>
+<span>def <span class="ident">visualize</span></span>(<span>c, output_file, suppress_output=True)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Visualize a circuit using Yosys.</p>
@@ -469,12 +488,14 @@ ValueError: expected num &gt;= 1</p></div>
 <dd>Circuit to visualize.</dd>
 <dt><strong><code>output_file</code></strong> :&ensp;<code>str</code></dt>
 <dd>Where to write the image to.</dd>
+<dt><strong><code>suppress_output</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, yosys stdout will not be printed.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def visualize(c, output_file):
+<pre><code class="python">def visualize(c, output_file, suppress_output=True):
     &#34;&#34;&#34;
     Visualize a circuit using Yosys.
 
@@ -484,22 +505,50 @@ ValueError: expected num &gt;= 1</p></div>
             Circuit to visualize.
     output_file: str
             Where to write the image to.
+    suppress_output: bool
+            If True, yosys stdout will not be printed.
     &#34;&#34;&#34;
+    if shutil.which(&#34;yosys&#34;) == None:
+        raise OSError(&#34;Install &#39;yosys&#39; to use &#39;cg.visualize&#39;&#34;)
+
     verilog = circuit_to_verilog(c)
     output_file = Path(output_file)
     fmt = output_file.suffix[1:]
     prefix = output_file.with_suffix(&#34;&#34;)
+    if suppress_output:
+        stdout = subprocess.DEVNULL
+    else:
+        stdout = None
     with NamedTemporaryFile(
         prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;
     ) as tmp_in:
         tmp_in.write(bytes(verilog, &#34;ascii&#34;))
         tmp_in.flush()
+
+        # Write dummy modules for blackboxes to show port directions
+        for bb in set(c.blackboxes.values()):
+            bb_verilog = (
+                f&#34;\n\nmodule {bb.name} ({&#39;,&#39;.join(bb.inputs() | bb.outputs())});\n&#34;
+            )
+            for i in bb.inputs():
+                bb_verilog += f&#34;  input {i};\n&#34;
+            for o in bb.outputs():
+                bb_verilog += f&#34;  output {o};\n&#34;
+            bb_verilog += &#34;endmodule\n&#34;
+            tmp_in.write(bytes(bb_verilog, &#34;ascii&#34;))
+            tmp_in.flush()
+
         cmd = [
             &#34;yosys&#34;,
             &#34;-p&#34;,
-            f&#34;read_verilog {tmp_in.name}; &#34; f&#34;show -format {fmt} -prefix {prefix}&#34;,
+            f&#34;read_verilog {tmp_in.name}; &#34;
+            f&#34;show -format {fmt} -prefix {prefix} {c.name}&#34;,
         ]
-        subprocess.run(cmd)</code></pre>
+        subprocess.run(cmd, stdout=stdout)
+
+    # Remove intermediate dot files if necessary
+    if fmt != &#34;dot&#34;:
+        prefix.with_suffix(&#34;.dot&#34;).unlink()</code></pre>
 </details>
 </dd>
 </dl>
@@ -535,7 +584,7 @@ ValueError: expected num &gt;= 1</p></div>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>

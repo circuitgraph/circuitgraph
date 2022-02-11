@@ -5,7 +5,6 @@ from itertools import product
 import networkx as nx
 
 import circuitgraph as cg
-from circuitgraph import clog2, int_to_bin
 
 
 class TestCircuit(unittest.TestCase):
@@ -44,7 +43,7 @@ class TestCircuit(unittest.TestCase):
         self.assertFalse(c.is_output("b"))
         self.assertTrue(c.is_output("c"))
 
-        c2 = cg.copy(c)
+        c2 = c.copy()
         self.assertTrue("a" in c2 and "b" in c2 and "c" in c2)
         self.assertFalse(c.is_output("a"))
         self.assertFalse(c.is_output("b"))
@@ -261,10 +260,10 @@ class TestCircuit(unittest.TestCase):
         m.add("o0", "or", fanin=["a0", "a1"], output=True)
 
         # Sub-blackbox name clash
-        sub_m = cg.copy(m)
+        sub_m = m.copy()
         mux = cg.BlackBox("mux", [], [])
         sub_m.add_blackbox(mux, "sub")
-        sub_c = cg.copy(c)
+        sub_c = c.copy()
         sub_c.add_blackbox(mux, "mux0_sub")
         self.assertRaises(ValueError, sub_c.add_subcircuit, sub_m, "mux0")
 
@@ -390,17 +389,17 @@ class TestCircuit(unittest.TestCase):
         self.assertRaises(ValueError, c.fill_blackbox, "mux1", m)
 
         # Sub-blackbox name clash
-        sub_m = cg.copy(m)
+        sub_m = m.copy()
         sub_m.add_blackbox(mux, "sub")
-        sub_c = cg.copy(c)
+        sub_c = c.copy()
         sub_c.add_blackbox(mux, "mux0_sub")
         self.assertRaises(ValueError, sub_c.fill_blackbox, "mux0", sub_m)
 
         # Non-matching IO
-        wrong_m_i = cg.copy(m)
+        wrong_m_i = m.copy()
         wrong_m_i.add("fake_input", "input")
         self.assertRaises(ValueError, c.fill_blackbox, "mux0", wrong_m_i)
-        wrong_m_o = cg.copy(m)
+        wrong_m_o = m.copy()
         wrong_m_o.add("fake_output", "buf", output=True)
         self.assertRaises(ValueError, c.fill_blackbox, "mux0", wrong_m_o)
 
@@ -503,16 +502,6 @@ class TestCircuit(unittest.TestCase):
         c.relabel({"a": "n"})
         self.assertSetEqual(c.nodes(), set(["b", "n"]))
 
-    # def test_kcuts(self):
-    #     c = cg.from_lib("c432")
-    #     for n in c:
-    #         for cut in c.kcuts(n, 2):
-    #             clc = cg.copy(c)
-    #             for g in cut:
-    #                 clc.disconnect(clc.fanin(g), g)
-    #                 clc.set_type(g, "input")
-    #             self.assertSetEqual(clc.startpoints(n), cut)
-
     def test_topo_sort(self):
         c = cg.Circuit()
         c.add("i0", "input")
@@ -531,7 +520,7 @@ class TestCircuit(unittest.TestCase):
         c.add("d", "xor", fanin=["a", "b"], output=True)
         c.add("f", "and", fanin=["c", "d"])
         c.add("g", "buf", fanin="f")
-        c2 = cg.copy(c)
+        c2 = c.copy()
         c.remove_unloaded()
         self.assertSetEqual(c.nodes(), set(["a", "b", "c", "d"]))
 

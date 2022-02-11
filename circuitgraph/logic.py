@@ -1,7 +1,6 @@
 """A collection of common logic elements as `Circuit` objects"""
-
 from itertools import product
-from random import random
+import random
 
 from circuitgraph import Circuit
 from circuitgraph.utils import clog2
@@ -136,7 +135,7 @@ def xor_hash(n, m):
     Create a XOR hash function H_{xor}(n,m,3) as in:
     Chakraborty, Supratik, Kuldeep S. Meel, and Moshe Y. Vardi.
     "A scalable approximate model counter." International Conference on
-    Principles and Practice of Constraint Programming. Springer, 
+    Principles and Practice of Constraint Programming. Springer,
     Berlin, Heidelberg, 2013.
 
     Each output of the hash is the xor/xnor of a random subset of the input.
@@ -153,7 +152,6 @@ def xor_hash(n, m):
     Circuit
             XOR hash function.
     """
-
     h = Circuit()
 
     for i in range(n):
@@ -163,15 +161,21 @@ def xor_hash(n, m):
         h.add(f"out_{o}", "buf", output=True)
 
         # select inputs
-        cons = [random() < 0.5 for i in range(n)]
+        cons = [bool(random.getrandbits(1)) for i in range(n)]
 
         if sum(cons) == 0:
             # constant output
-            h.add(f"c_{o}", "1" if random() < 0.5 else "0", fanout=f"out_{o}")
+            h.add(
+                f"c_{o}", "1" if bool(random.getrandbits(1)) else "0", fanout=f"out_{o}"
+            )
         else:
             # choose between xor/xnor
             h.add(f"xor_{o}", "xor", fanout=f"out_{o}")
-            h.add(f"c_{o}", "1" if random() < 0.5 else "0", fanout=f"xor_{o}")
+            h.add(
+                f"c_{o}",
+                "1" if bool(random.getrandbits(1)) < 0.5 else "0",
+                fanout=f"xor_{o}",
+            )
             for i, con in enumerate(cons):
                 if con:
                     h.connect(f"in_{i}", f"xor_{o}")
@@ -181,7 +185,7 @@ def xor_hash(n, m):
 
 def banyan(bw):
     """
-    Create a Banyan switching network
+    Create a Banyan switching network.
 
     Parameters
     ----------
@@ -193,7 +197,6 @@ def banyan(bw):
     Circuit
             Network circuit.
     """
-
     b = Circuit()
 
     # generate switch

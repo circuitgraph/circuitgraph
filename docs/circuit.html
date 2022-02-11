@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.circuit API documentation</title>
 <meta name="description" content="Class for circuit graphs …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -23,38 +23,39 @@
 </header>
 <section id="section-intro">
 <p>Class for circuit graphs</p>
-<p>The Circuit class can be constructed from a generic Verilog file or
-existing graph. Each node in the graph represents a logic gate and has
-an associated name and gate type. The supported types are:</p>
+<p>The Circuit class can be constructed from a generic gate-level Verilog file or
+existing graph. Each node in the graph represents a logic gate and has an associated
+name and gate type. The supported types are:</p>
 <ul>
 <li>Standard input-order-independent gates:
-['and','nand','or','nor','not','buf','xor','xnor']</li>
+['and', 'nand', 'or', 'nor', 'not', 'buf', 'xor', 'xnor']</li>
 <li>IO and Constant values:
-['output','input','1','0']</li>
+['input', '1', '0']</li>
 <li>Blackbox IO (must be added through <code>add_blackbox</code>)
-['bb_output','bb_input']</li>
+['bb_output', 'bb_input']</li>
 </ul>
+<p>Additionally, any node can be marked as an output node.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;Class for circuit graphs
 
-The Circuit class can be constructed from a generic Verilog file or
-existing graph. Each node in the graph represents a logic gate and has
-an associated name and gate type. The supported types are:
+The Circuit class can be constructed from a generic gate-level Verilog file or
+existing graph. Each node in the graph represents a logic gate and has an associated
+name and gate type. The supported types are:
 
 - Standard input-order-independent gates:
-    [&#39;and&#39;,&#39;nand&#39;,&#39;or&#39;,&#39;nor&#39;,&#39;not&#39;,&#39;buf&#39;,&#39;xor&#39;,&#39;xnor&#39;]
+    [&#39;and&#39;, &#39;nand&#39;, &#39;or&#39;, &#39;nor&#39;, &#39;not&#39;, &#39;buf&#39;, &#39;xor&#39;, &#39;xnor&#39;]
 - IO and Constant values:
-    [&#39;output&#39;,&#39;input&#39;,&#39;1&#39;,&#39;0&#39;]
+    [&#39;input&#39;, &#39;1&#39;, &#39;0&#39;]
 - Blackbox IO (must be added through `add_blackbox`)
-    [&#39;bb_output&#39;,&#39;bb_input&#39;]
+    [&#39;bb_output&#39;, &#39;bb_input&#39;]
 
+Additionally, any node can be marked as an output node.
 &#34;&#34;&#34;
 
 import networkx as nx
-from networkx.exception import NetworkXNoCycle
 from functools import reduce
 from itertools import product
 
@@ -71,7 +72,6 @@ addable_types = [
     &#34;0&#34;,
     &#34;1&#34;,
     &#34;x&#34;,
-    &#34;output&#34;,
     &#34;input&#34;,
 ]
 
@@ -89,8 +89,8 @@ class Circuit:
                 Name of circuit.
         graph : networkx.DiGraph
                 Graph data structure to be used in new instance.
-        blackboxes : dict of str
-                Record of blackboxes, mapping name to type
+        blackboxes : dict of str:BlackBox
+                Record of blackboxes, mapping instsance name to BlackBox type
 
         Examples
         --------
@@ -111,7 +111,6 @@ class Circuit:
         Another way to create the circuit is through a file.
 
         &gt;&gt;&gt; c = cg.from_file(&#39;path/circuit.v&#39;)
-
         &#34;&#34;&#34;
         if name:
             self.name = name
@@ -136,6 +135,19 @@ class Circuit:
 
     def __iter__(self):
         return self.graph.__iter__()
+
+    def copy(self):
+        &#34;&#34;&#34;
+        Returns a copy of the circuit.
+
+        Returns
+        -------
+        Circuit:
+                Copy of the circuit.
+        &#34;&#34;&#34;
+        return Circuit(
+            graph=self.graph.copy(), name=self.name, blackboxes=self.blackboxes.copy()
+        )
 
     def set_type(self, ns, t):
         &#34;&#34;&#34;
@@ -191,7 +203,6 @@ class Circuit:
 
         &gt;&gt;&gt; c.type(c.nodes())
         [&#39;xor&#39;, &#39;or&#39;, &#39;xor&#39;]
-
         &#34;&#34;&#34;
         if isinstance(ns, str):
             if ns in self.graph.nodes:
@@ -234,7 +245,6 @@ class Circuit:
 
         &gt;&gt;&gt; c.filter_type(&#39;xor&#39;)
         {&#39;g2&#39;, &#39;g0&#39;}
-
         &#34;&#34;&#34;
         if isinstance(types, str):
             types = [types]
@@ -257,7 +267,6 @@ class Circuit:
                 Instance name.
         connections : dict of str:str
                 Optional connections to make.
-
         &#34;&#34;&#34;
         # check if subcircuit bbs exist
         for bb_name in sc.blackboxes:
@@ -271,11 +280,21 @@ class Circuit:
                 raise ValueError(f&#34;name {n} overlaps with {name} subcircuit.&#34;)
             mapping[n] = f&#34;{name}_{n}&#34;
 
+        # check connections
+        sc_inputs = sc.inputs()
+        sc_outputs = sc.outputs()
+        if connections:
+            for sc_n, ns in connections.items():
+                if sc_n not in sc_inputs and sc_n not in sc_outputs:
+                    raise ValueError(f&#34;node {sc_n} not in {name} io&#34;)
+
         # add sub circuit
         g = nx.relabel_nodes(sc.graph, mapping)
         self.graph.update(g)
-        for n in sc.io():
+        for n in sc.inputs():
             self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
+        for n in sc.outputs():
+            self.set_output(f&#34;{name}_{n}&#34;, False)
 
         # add blackboxes
         for bb_name, bb in sc.blackboxes.items():
@@ -283,15 +302,11 @@ class Circuit:
 
         # make connections
         if connections:
-            sc_inputs = sc.inputs()
-            sc_outputs = sc.outputs()
             for sc_n, ns in connections.items():
                 if sc_n in sc_inputs:
                     self.connect(ns, f&#34;{name}_{sc_n}&#34;)
                 elif sc_n in sc_outputs:
                     self.connect(f&#34;{name}_{sc_n}&#34;, ns)
-                else:
-                    raise ValueError(f&#34;node {sc_n} not in {name} io&#34;)
 
     def add_blackbox(self, blackbox, name, connections=None):
         &#34;&#34;&#34;
@@ -307,7 +322,6 @@ class Circuit:
                 Instance name.
         connections : dict of str:str
                 Optional connections to make.
-
         &#34;&#34;&#34;
         # check if exists
         if name in self.blackboxes:
@@ -343,7 +357,6 @@ class Circuit:
                 Instance name.
         c : Circuit
                 Circuit.
-
         &#34;&#34;&#34;
         # check if bb exists
         if name not in self.blackboxes:
@@ -373,8 +386,10 @@ class Circuit:
         # extend circuit
         g = nx.relabel_nodes(c.graph, mapping)
         self.graph.update(g)
-        for n in self.blackboxes[name].io():
+        for n in self.blackboxes[name].inputs():
             self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
+        for n in self.blackboxes[name].outputs():
+            self.set_output(f&#34;{name}_{n}&#34;, False)
 
         # remove blackbox
         self.blackboxes.pop(name)
@@ -391,7 +406,6 @@ class Circuit:
         -------
         set of str
                 Nodes
-
         &#34;&#34;&#34;
         return set(self.graph.nodes)
 
@@ -403,11 +417,20 @@ class Circuit:
         -------
         networkx.EdgeView
                 Edges in circuit
-
         &#34;&#34;&#34;
         return set(self.graph.edges)
 
-    def add(self, n, type, fanin=None, fanout=None, uid=False):
+    def add(
+        self,
+        n,
+        type,
+        fanin=None,
+        fanout=None,
+        output=False,
+        add_connected_nodes=False,
+        allow_redefinition=False,
+        uid=False,
+    ):
         &#34;&#34;&#34;
         Adds a new node to the circuit, optionally connecting it
 
@@ -421,6 +444,16 @@ class Circuit:
                 Nodes to add to new node&#39;s fanin
         fanout : iterable of str
                 Nodes to add to new node&#39;s fanout
+        output: bool
+                If True, the node is added as an output
+        add_connected_nodes: bool
+                If True, nodes in the fanin/fanout will be added to the
+                circuit as buffers if not already present. Useful when
+                parsing circuits.
+        allow_redefinition: bool
+                If True, calling add with a node `n` that is already in the circuit
+                with `uid` set to False will just update the type, fanin, fanout, and
+                output properties of the node. If False, a ValueError will be raised.
         uid: bool
                 If True, the node is given a unique name if it already
                 exists in the circuit.
@@ -447,11 +480,12 @@ class Circuit:
         &#39;g&#39;
         &gt;&gt;&gt; c.fanin(&#39;g&#39;)
         {&#39;in_1&#39;, &#39;in_0&#39;, &#39;in_3&#39;, &#39;in_2&#39;}
-
         &#34;&#34;&#34;
         # clean arguments
         if uid:
             n = self.uid(n)
+        elif n in self and not allow_redefinition:
+            raise ValueError(f&#34;Node &#39;{n}&#39; already in circuit&#34;)
         if fanin is None:
             fanin = []
         elif isinstance(fanin, str):
@@ -461,22 +495,27 @@ class Circuit:
         elif isinstance(fanout, str):
             fanout = [fanout]
 
+        if type not in supported_types:
+            raise ValueError(f&#34;Cannot add unknown type &#39;{type}&#39;&#34;)
+
         # raise error for invalid inputs
         if len(fanin) &gt; 1 and type in [&#34;buf&#34;, &#34;not&#34;]:
             raise ValueError(f&#34;{type} cannot have more than one fanin&#34;)
         if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;, &#34;input&#34;]:
             raise ValueError(f&#34;{type} cannot have fanin&#34;)
-        if fanout and type in [&#34;output&#34;]:
-            raise ValueError(f&#34;{type} cannot have fanout&#34;)
         if n[0] in &#34;0123456789&#34;:
             raise ValueError(f&#34;cannot add node starting with int: {n}&#34;)
 
         # add node
-        self.graph.add_node(n, type=type)
+        self.graph.add_node(n, type=type, output=output)
 
         # connect
-        self.graph.add_edges_from((n, f) for f in fanout)
-        self.graph.add_edges_from((f, n) for f in fanin)
+        if add_connected_nodes:
+            for f in fanin + fanout:
+                if f not in self:
+                    self.add(f, &#34;buf&#34;)
+        self.connect(n, fanout)
+        self.connect(fanin, n)
 
         return n
 
@@ -501,7 +540,6 @@ class Circuit:
         ----------
         mapping : dict of str:str
                 mapping of old to new names
-
         &#34;&#34;&#34;
         nx.relabel_nodes(self.graph, mapping, copy=False)
 
@@ -515,9 +553,11 @@ class Circuit:
                 Head node(s)
         vs : str or iterable of str
                 Tail node(s)
-
         &#34;&#34;&#34;
         # clean
+        if not us or not vs:
+            return
+
         if isinstance(us, str):
             us = [us]
         if isinstance(vs, str):
@@ -526,23 +566,28 @@ class Circuit:
         # check existence
         for n in us:
             if n not in self.graph:
-                raise ValueError(f&#34;node {n} does not exist.&#34;)
+                raise ValueError(f&#34;node &#39;{n}&#39; does not exist.&#34;)
         for n in vs:
             if n not in self.graph:
-                raise ValueError(f&#34;node {n} does not exist.&#34;)
+                raise ValueError(f&#34;node &#39;{n}&#39; does not exist.&#34;)
 
         # check for illegal connections
         for v in vs:
             t = self.type(v)
-            if t in [&#34;input&#34;, &#34;bb_output&#34;]:
-                raise ValueError(f&#34;cannot connect to {t} {v}&#34;)
-            if t in [&#34;output&#34;, &#34;bb_input&#34;, &#34;buf&#34;, &#34;not&#34;]:
+            if t in [&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;x&#34;, &#34;bb_output&#34;]:
+                raise ValueError(f&#34;cannot connect to {t} &#39;{v}&#39;&#34;)
+            if t in [&#34;bb_input&#34;, &#34;buf&#34;, &#34;not&#34;]:
                 if len(self.fanin(v)) + len(us) &gt; 1:
-                    raise ValueError(f&#34;fanin of {t} {v} greater than 1.&#34;)
+                    raise ValueError(f&#34;fanin of {t} &#39;{v}&#39; cannot be greater than 1.&#34;)
         for u in us:
             t = self.type(u)
-            if t in [&#34;output&#34;, &#34;bb_input&#34;]:
-                raise ValueError(f&#34;cannot connect from {t} {v}.&#34;)
+            if t in [&#34;bb_input&#34;]:
+                raise ValueError(f&#34;cannot connect from {t} &#39;{u}&#39;.&#34;)
+            if t in [&#34;bb_output&#34;]:
+                if self.type(v) != &#34;buf&#34;:
+                    raise ValueError(f&#34;cannot connect from {t} &#39;{u}&#39; to non-buf &#39;{v}&#39;&#34;)
+                if len(self.fanout(u)) + len(vs) &gt; 1:
+                    raise ValueError(f&#34;fanout of {t} &#39;{u}&#39; cannot be greater than 1.&#34;)
 
         # connect
         self.graph.add_edges_from((u, v) for u in us for v in vs)
@@ -557,7 +602,6 @@ class Circuit:
                 Head node(s)
         vs : str or iterable of str
                 Tail node(s)
-
         &#34;&#34;&#34;
         if isinstance(us, str):
             us = [us]
@@ -587,7 +631,6 @@ class Circuit:
         {&#39;n_12&#39;}
         &gt;&gt;&gt; c.fanout([&#39;n_11&#39;,&#39;n_20&#39;])
         {&#39;n_12&#39;, &#39;G17&#39;}
-
         &#34;&#34;&#34;
         gates = set()
         if isinstance(ns, str):
@@ -609,9 +652,7 @@ class Circuit:
         -------
         set of str
                 Nodes in fanout.
-
         &#34;&#34;&#34;
-
         gates = set()
         if isinstance(ns, str):
             ns = [ns]
@@ -632,9 +673,7 @@ class Circuit:
         -------
         set of str
                 Nodes in transitive fanin.
-
         &#34;&#34;&#34;
-
         if isinstance(ns, str):
             ns = [ns]
         gates = set()
@@ -655,7 +694,6 @@ class Circuit:
         -------
         set of str
                 Nodes in transitive fanout.
-
         &#34;&#34;&#34;
         if isinstance(ns, str):
             ns = [ns]
@@ -681,7 +719,7 @@ class Circuit:
         if visited is None:
             # is acyclic
             if self.is_cyclic():
-                raise ValueError(f&#34;Cannot compute depth of cyclic circuit&#34;)
+                raise ValueError(&#34;Cannot compute depth of cyclic circuit&#34;)
 
             # find reachable group and init visited
             reachable = self.transitive_fanout(ns)
@@ -723,12 +761,11 @@ class Circuit:
         -------
         int
                 Depth.
-
         &#34;&#34;&#34;
         if visited is None:
             # is acyclic
             if self.is_cyclic():
-                raise ValueError(f&#34;Cannot compute depth of cyclic circuit&#34;)
+                raise ValueError(&#34;Cannot compute depth of cyclic circuit&#34;)
 
             # find reachable group and init visited
             reachable = self.transitive_fanin(ns)
@@ -765,9 +802,51 @@ class Circuit:
         -------
         set of str
                 Input nodes in circuit.
-
         &#34;&#34;&#34;
         return self.filter_type(&#34;input&#34;)
+
+    def is_output(self, node):
+        &#34;&#34;&#34;
+        Returns True if a node is an output.
+
+        Parameters
+        ----------
+        ns : str
+                Node.
+
+        Returns
+        -------
+        bool
+                Wheter or not the node is an output
+
+        Raises
+        ------
+        KeyError
+                If node is not in circuit.
+        &#34;&#34;&#34;
+        if node in self.graph.nodes:
+            try:
+                return self.graph.nodes[node][&#34;output&#34;]
+            except KeyError:
+                return False
+        else:
+            raise KeyError(f&#34;Node {node} does not exist.&#34;)
+
+    def set_output(self, ns, output=True):
+        &#34;&#34;&#34;
+        Set a node or nodes as an output or not an output.
+
+        Parameters
+        ----------
+        node: str
+                Node.
+        output: bool
+                Whether or not node is an output
+        &#34;&#34;&#34;
+        if isinstance(ns, str):
+            ns = [ns]
+        for n in ns:
+            self.graph.nodes[n][&#34;output&#34;] = output
 
     def outputs(self):
         &#34;&#34;&#34;
@@ -777,9 +856,8 @@ class Circuit:
         -------
         set of str
                 Output nodes in circuit.
-
         &#34;&#34;&#34;
-        return self.filter_type(&#34;output&#34;)
+        return set(n for n in self.graph.nodes if self.is_output(n))
 
     def io(self):
         &#34;&#34;&#34;
@@ -789,9 +867,8 @@ class Circuit:
         -------
         set of str
                 Output and input nodes in circuit.
-
         &#34;&#34;&#34;
-        return self.filter_type([&#34;input&#34;, &#34;output&#34;])
+        return self.inputs() | self.outputs()
 
     def startpoints(self, ns=None):
         &#34;&#34;&#34;
@@ -806,7 +883,6 @@ class Circuit:
         -------
         set of str
                 Startpoints of ns.
-
         &#34;&#34;&#34;
         if isinstance(ns, str):
             ns = [ns]
@@ -829,7 +905,6 @@ class Circuit:
         -------
         set of str
                 Endpoints of ns.
-
         &#34;&#34;&#34;
         if isinstance(ns, str):
             ns = [ns]
@@ -839,6 +914,40 @@ class Circuit:
         else:
             return self.outputs() | self.filter_type(&#34;bb_input&#34;)
 
+    def reconvergent_fanout_nodes(self):
+        &#34;&#34;&#34;
+        Get nodes that have fanout that reconverges somewhere later
+        in the circuit.
+
+        Returns
+        -------
+        generator of str
+                A generator of nodes that have reconvergent fanout
+        &#34;&#34;&#34;
+        for node in self.nodes():
+            fo = self.fanout(node)
+            if len(fo) &gt; 1 and reduce(
+                lambda a, b: a &amp; b, (self.transitive_fanout(n) for n in fo)
+            ):
+                yield node
+
+    def has_reconvergent_fanout(self):
+        &#34;&#34;&#34;
+        Check if a circuit has any reconvergent fanout present
+
+        Returns
+        -------
+        bool
+            Whether or not reconvergent fanout is present
+        &#34;&#34;&#34;
+        for node in self.nodes():
+            fo = self.fanout(node)
+            if len(fo) &gt; 1 and reduce(
+                lambda a, b: a &amp; b, (self.transitive_fanout(n) for n in fo)
+            ):
+                return True
+        return False
+
     def is_cyclic(self):
         &#34;&#34;&#34;
         Checks for combinational loops in circuit
@@ -847,7 +956,6 @@ class Circuit:
         -------
         bool
                 Existence of cycle
-
         &#34;&#34;&#34;
         return not nx.is_directed_acyclic_graph(self.graph)
 
@@ -866,7 +974,6 @@ class Circuit:
         -------
         str
                 Unique name
-
         &#34;&#34;&#34;
         if blocked is None:
             blocked = []
@@ -896,9 +1003,7 @@ class Circuit:
         -------
         iter of str
                 k-cuts.
-
         &#34;&#34;&#34;
-
         if computed is None:
             computed = {}
 
@@ -932,7 +1037,6 @@ class Circuit:
         -------
         iter of str
                 Ordered node names.
-
         &#34;&#34;&#34;
         return nx.topological_sort(self.graph)
 
@@ -949,12 +1053,13 @@ class Circuit:
         -------
         iter of str
                 Removed nodes.
-
         &#34;&#34;&#34;
         unloaded = [
             n
             for n in self.graph
-            if self.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.fanout(n)
+            if self.type(n) not in [&#34;bb_input&#34;]
+            and not self.is_output(n)
+            and not self.fanout(n)
         ]
         removed = []
         while unloaded:
@@ -962,7 +1067,7 @@ class Circuit:
             for fi in self.fanin(n):
                 if not inputs and self.type(fi) in [&#34;input&#34;, &#34;bb_output&#34;]:
                     continue
-                if len(self.fanout(fi)) == 1:
+                if not self.is_output(fi) and len(self.fanout(fi)) == 1:
                     unloaded.append(fi)
             self.remove(n)
             removed.append(n)
@@ -970,7 +1075,16 @@ class Circuit:
 
 
 class BlackBox:
-    &#34;&#34;&#34;Class for representing blackboxes&#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Class for representing blackboxes.
+
+    Blackboxes can be used to represent arbitrary sub-modules such as
+    sequential elements. `Circuit` objects hold references to all added
+    `BlackBox` objects. They connect with the rest of the circuit as nodes
+    with `bb_input` and `bb_output` types. These are the ports to the blackbox.
+    `bb_input` nodes are like `buf` types: they can be driven by a single driver.
+    Each `bb_output` node must be connected to a single `buf` node.
+    &#34;&#34;&#34;
 
     def __init__(self, name=None, inputs=None, outputs=None):
         &#34;&#34;&#34;
@@ -983,8 +1097,35 @@ class BlackBox:
         outputs : seq of str
                 Blackbox outputs.
 
-        &#34;&#34;&#34;
+        Examples
+        --------
+        Define a BlackBox for a flop
 
+        &gt;&gt;&gt; import circuitgraph as cg
+        &gt;&gt;&gt; dff = cg.BlackBox(&#34;dff&#34;, [&#34;D&#34;, &#34;CK&#34;], [&#34;Q&#34;])
+
+        This corresponds to a verilog module with the header:
+        `module dff(input D, input CK, output Q);`
+
+        Create an example circuit
+
+        &gt;&gt;&gt; c = cg.Circuit()
+        &gt;&gt;&gt; c.add(&#34;i0&#34;, &#34;input&#34;)
+        &gt;&gt;&gt; c.add(&#34;i1&#34;, &#34;input&#34;)
+        &gt;&gt;&gt; c.add(&#34;a&#34;, &#34;and&#34;, fanin=[&#34;i0&#34;, &#34;i1&#34;])
+        &gt;&gt;&gt; c.add(&#34;clock&#34;, &#34;input&#34;)
+        &gt;&gt;&gt; c.add(&#34;data_out&#34;, &#34;buf&#34;, output=True)
+
+        Add the BlackBox to a circuit
+
+        &gt;&gt;&gt; c.add_blackbox(dff, &#34;dff0&#34;, {&#34;D&#34;: &#34;a&#34;, &#34;CK&#34;: &#34;clock&#34;, &#34;Q&#34;: &#34;data_out&#34;})
+
+        This corresnponds to instantiating the verilog module as such:
+        `dff dff0(.D(a), .CK(clock), .Q(data_out));`
+
+        This will add the bb_input nodes `dff0.D` and `dff0.CK`, driven by `a` and
+        `clock`, and bb_output node `dff0.Q`, which drives `data_out`.
+        &#34;&#34;&#34;
         self.name = name
         self.input_set = set(inputs)
         self.output_set = set(outputs)
@@ -997,7 +1138,6 @@ class BlackBox:
         -------
         set of str
                 Input nodes in blackbox.
-
         &#34;&#34;&#34;
         return self.input_set
 
@@ -1009,7 +1149,6 @@ class BlackBox:
         -------
         set of str
                 Output nodes in blackbox.
-
         &#34;&#34;&#34;
         return self.output_set
 
@@ -1021,7 +1160,6 @@ class BlackBox:
         -------
         set of str
                 IO nodes in blackbox.
-
         &#34;&#34;&#34;
         return self.output_set | self.input_set</code></pre>
 </details>
@@ -1040,7 +1178,13 @@ class BlackBox:
 <span>(</span><span>name=None, inputs=None, outputs=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Class for representing blackboxes</p>
+<div class="desc"><p>Class for representing blackboxes.</p>
+<p>Blackboxes can be used to represent arbitrary sub-modules such as
+sequential elements. <code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code> objects hold references to all added
+<code><a title="circuitgraph.circuit.BlackBox" href="#circuitgraph.circuit.BlackBox">BlackBox</a></code> objects. They connect with the rest of the circuit as nodes
+with <code>bb_input</code> and <code>bb_output</code> types. These are the ports to the blackbox.
+<code>bb_input</code> nodes are like <code>buf</code> types: they can be driven by a single driver.
+Each <code>bb_output</code> node must be connected to a single <code>buf</code> node.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
@@ -1049,13 +1193,44 @@ class BlackBox:
 <dd>Blackbox inputs.</dd>
 <dt><strong><code>outputs</code></strong> :&ensp;<code>seq</code> of <code>str</code></dt>
 <dd>Blackbox outputs.</dd>
-</dl></div>
+</dl>
+<h2 id="examples">Examples</h2>
+<p>Define a BlackBox for a flop</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; dff = cg.BlackBox(&quot;dff&quot;, [&quot;D&quot;, &quot;CK&quot;], [&quot;Q&quot;])
+</code></pre>
+<p>This corresponds to a verilog module with the header:
+<code>module dff(input D, input CK, output Q);</code></p>
+<p>Create an example circuit</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; c.add(&quot;i0&quot;, &quot;input&quot;)
+&gt;&gt;&gt; c.add(&quot;i1&quot;, &quot;input&quot;)
+&gt;&gt;&gt; c.add(&quot;a&quot;, &quot;and&quot;, fanin=[&quot;i0&quot;, &quot;i1&quot;])
+&gt;&gt;&gt; c.add(&quot;clock&quot;, &quot;input&quot;)
+&gt;&gt;&gt; c.add(&quot;data_out&quot;, &quot;buf&quot;, output=True)
+</code></pre>
+<p>Add the BlackBox to a circuit</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.add_blackbox(dff, &quot;dff0&quot;, {&quot;D&quot;: &quot;a&quot;, &quot;CK&quot;: &quot;clock&quot;, &quot;Q&quot;: &quot;data_out&quot;})
+</code></pre>
+<p>This corresnponds to instantiating the verilog module as such:
+<code>dff dff0(.D(a), .CK(clock), .Q(data_out));</code></p>
+<p>This will add the bb_input nodes <code>dff0.D</code> and <code>dff0.CK</code>, driven by <code>a</code> and
+<code>clock</code>, and bb_output node <code>dff0.Q</code>, which drives <code>data_out</code>.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class BlackBox:
-    &#34;&#34;&#34;Class for representing blackboxes&#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Class for representing blackboxes.
+
+    Blackboxes can be used to represent arbitrary sub-modules such as
+    sequential elements. `Circuit` objects hold references to all added
+    `BlackBox` objects. They connect with the rest of the circuit as nodes
+    with `bb_input` and `bb_output` types. These are the ports to the blackbox.
+    `bb_input` nodes are like `buf` types: they can be driven by a single driver.
+    Each `bb_output` node must be connected to a single `buf` node.
+    &#34;&#34;&#34;
 
     def __init__(self, name=None, inputs=None, outputs=None):
         &#34;&#34;&#34;
@@ -1068,8 +1243,35 @@ class BlackBox:
         outputs : seq of str
                 Blackbox outputs.
 
-        &#34;&#34;&#34;
+        Examples
+        --------
+        Define a BlackBox for a flop
 
+        &gt;&gt;&gt; import circuitgraph as cg
+        &gt;&gt;&gt; dff = cg.BlackBox(&#34;dff&#34;, [&#34;D&#34;, &#34;CK&#34;], [&#34;Q&#34;])
+
+        This corresponds to a verilog module with the header:
+        `module dff(input D, input CK, output Q);`
+
+        Create an example circuit
+
+        &gt;&gt;&gt; c = cg.Circuit()
+        &gt;&gt;&gt; c.add(&#34;i0&#34;, &#34;input&#34;)
+        &gt;&gt;&gt; c.add(&#34;i1&#34;, &#34;input&#34;)
+        &gt;&gt;&gt; c.add(&#34;a&#34;, &#34;and&#34;, fanin=[&#34;i0&#34;, &#34;i1&#34;])
+        &gt;&gt;&gt; c.add(&#34;clock&#34;, &#34;input&#34;)
+        &gt;&gt;&gt; c.add(&#34;data_out&#34;, &#34;buf&#34;, output=True)
+
+        Add the BlackBox to a circuit
+
+        &gt;&gt;&gt; c.add_blackbox(dff, &#34;dff0&#34;, {&#34;D&#34;: &#34;a&#34;, &#34;CK&#34;: &#34;clock&#34;, &#34;Q&#34;: &#34;data_out&#34;})
+
+        This corresnponds to instantiating the verilog module as such:
+        `dff dff0(.D(a), .CK(clock), .Q(data_out));`
+
+        This will add the bb_input nodes `dff0.D` and `dff0.CK`, driven by `a` and
+        `clock`, and bb_output node `dff0.Q`, which drives `data_out`.
+        &#34;&#34;&#34;
         self.name = name
         self.input_set = set(inputs)
         self.output_set = set(outputs)
@@ -1082,7 +1284,6 @@ class BlackBox:
         -------
         set of str
                 Input nodes in blackbox.
-
         &#34;&#34;&#34;
         return self.input_set
 
@@ -1094,7 +1295,6 @@ class BlackBox:
         -------
         set of str
                 Output nodes in blackbox.
-
         &#34;&#34;&#34;
         return self.output_set
 
@@ -1106,7 +1306,6 @@ class BlackBox:
         -------
         set of str
                 IO nodes in blackbox.
-
         &#34;&#34;&#34;
         return self.output_set | self.input_set</code></pre>
 </details>
@@ -1134,7 +1333,6 @@ class BlackBox:
     -------
     set of str
             Input nodes in blackbox.
-
     &#34;&#34;&#34;
     return self.input_set</code></pre>
 </details>
@@ -1161,7 +1359,6 @@ class BlackBox:
     -------
     set of str
             IO nodes in blackbox.
-
     &#34;&#34;&#34;
     return self.output_set | self.input_set</code></pre>
 </details>
@@ -1188,7 +1385,6 @@ class BlackBox:
     -------
     set of str
             Output nodes in blackbox.
-
     &#34;&#34;&#34;
     return self.output_set</code></pre>
 </details>
@@ -1207,23 +1403,23 @@ class BlackBox:
 <dd>Name of circuit.</dd>
 <dt><strong><code>graph</code></strong> :&ensp;<code>networkx.DiGraph</code></dt>
 <dd>Graph data structure to be used in new instance.</dd>
-<dt><strong><code>blackboxes</code></strong> :&ensp;<code>dict</code> of <code>str</code></dt>
-<dd>Record of blackboxes, mapping name to type</dd>
+<dt><strong><code>blackboxes</code></strong> :&ensp;<code>dict</code> of <code>str:BlackBox</code></dt>
+<dd>Record of blackboxes, mapping instsance name to BlackBox type</dd>
 </dl>
 <h2 id="examples">Examples</h2>
 <p>Create an empty circuit.</p>
-<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
 &gt;&gt;&gt; c = cg.Circuit()
 </code></pre>
 <p>Add an AND gate named 'x'.</p>
-<pre><code class="python">&gt;&gt;&gt; c.add('x','and')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.add('x','and')
 </code></pre>
 <p>Add an additional nodes and connect them.</p>
-<pre><code class="python">&gt;&gt;&gt; c.add('y','or',fanout='x')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.add('y','or',fanout='x')
 &gt;&gt;&gt; c.add('z','xor',fanin=['x','y'])
 </code></pre>
 <p>Another way to create the circuit is through a file.</p>
-<pre><code class="python">&gt;&gt;&gt; c = cg.from_file('path/circuit.v')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.from_file('path/circuit.v')
 </code></pre></div>
 <details class="source">
 <summary>
@@ -1240,8 +1436,8 @@ class BlackBox:
                 Name of circuit.
         graph : networkx.DiGraph
                 Graph data structure to be used in new instance.
-        blackboxes : dict of str
-                Record of blackboxes, mapping name to type
+        blackboxes : dict of str:BlackBox
+                Record of blackboxes, mapping instsance name to BlackBox type
 
         Examples
         --------
@@ -1262,7 +1458,6 @@ class BlackBox:
         Another way to create the circuit is through a file.
 
         &gt;&gt;&gt; c = cg.from_file(&#39;path/circuit.v&#39;)
-
         &#34;&#34;&#34;
         if name:
             self.name = name
@@ -1287,6 +1482,19 @@ class BlackBox:
 
     def __iter__(self):
         return self.graph.__iter__()
+
+    def copy(self):
+        &#34;&#34;&#34;
+        Returns a copy of the circuit.
+
+        Returns
+        -------
+        Circuit:
+                Copy of the circuit.
+        &#34;&#34;&#34;
+        return Circuit(
+            graph=self.graph.copy(), name=self.name, blackboxes=self.blackboxes.copy()
+        )
 
     def set_type(self, ns, t):
         &#34;&#34;&#34;
@@ -1342,7 +1550,6 @@ class BlackBox:
 
         &gt;&gt;&gt; c.type(c.nodes())
         [&#39;xor&#39;, &#39;or&#39;, &#39;xor&#39;]
-
         &#34;&#34;&#34;
         if isinstance(ns, str):
             if ns in self.graph.nodes:
@@ -1385,7 +1592,6 @@ class BlackBox:
 
         &gt;&gt;&gt; c.filter_type(&#39;xor&#39;)
         {&#39;g2&#39;, &#39;g0&#39;}
-
         &#34;&#34;&#34;
         if isinstance(types, str):
             types = [types]
@@ -1408,7 +1614,6 @@ class BlackBox:
                 Instance name.
         connections : dict of str:str
                 Optional connections to make.
-
         &#34;&#34;&#34;
         # check if subcircuit bbs exist
         for bb_name in sc.blackboxes:
@@ -1422,11 +1627,21 @@ class BlackBox:
                 raise ValueError(f&#34;name {n} overlaps with {name} subcircuit.&#34;)
             mapping[n] = f&#34;{name}_{n}&#34;
 
+        # check connections
+        sc_inputs = sc.inputs()
+        sc_outputs = sc.outputs()
+        if connections:
+            for sc_n, ns in connections.items():
+                if sc_n not in sc_inputs and sc_n not in sc_outputs:
+                    raise ValueError(f&#34;node {sc_n} not in {name} io&#34;)
+
         # add sub circuit
         g = nx.relabel_nodes(sc.graph, mapping)
         self.graph.update(g)
-        for n in sc.io():
+        for n in sc.inputs():
             self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
+        for n in sc.outputs():
+            self.set_output(f&#34;{name}_{n}&#34;, False)
 
         # add blackboxes
         for bb_name, bb in sc.blackboxes.items():
@@ -1434,15 +1649,11 @@ class BlackBox:
 
         # make connections
         if connections:
-            sc_inputs = sc.inputs()
-            sc_outputs = sc.outputs()
             for sc_n, ns in connections.items():
                 if sc_n in sc_inputs:
                     self.connect(ns, f&#34;{name}_{sc_n}&#34;)
                 elif sc_n in sc_outputs:
                     self.connect(f&#34;{name}_{sc_n}&#34;, ns)
-                else:
-                    raise ValueError(f&#34;node {sc_n} not in {name} io&#34;)
 
     def add_blackbox(self, blackbox, name, connections=None):
         &#34;&#34;&#34;
@@ -1458,7 +1669,6 @@ class BlackBox:
                 Instance name.
         connections : dict of str:str
                 Optional connections to make.
-
         &#34;&#34;&#34;
         # check if exists
         if name in self.blackboxes:
@@ -1494,7 +1704,6 @@ class BlackBox:
                 Instance name.
         c : Circuit
                 Circuit.
-
         &#34;&#34;&#34;
         # check if bb exists
         if name not in self.blackboxes:
@@ -1524,8 +1733,10 @@ class BlackBox:
         # extend circuit
         g = nx.relabel_nodes(c.graph, mapping)
         self.graph.update(g)
-        for n in self.blackboxes[name].io():
+        for n in self.blackboxes[name].inputs():
             self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
+        for n in self.blackboxes[name].outputs():
+            self.set_output(f&#34;{name}_{n}&#34;, False)
 
         # remove blackbox
         self.blackboxes.pop(name)
@@ -1542,7 +1753,6 @@ class BlackBox:
         -------
         set of str
                 Nodes
-
         &#34;&#34;&#34;
         return set(self.graph.nodes)
 
@@ -1554,11 +1764,20 @@ class BlackBox:
         -------
         networkx.EdgeView
                 Edges in circuit
-
         &#34;&#34;&#34;
         return set(self.graph.edges)
 
-    def add(self, n, type, fanin=None, fanout=None, uid=False):
+    def add(
+        self,
+        n,
+        type,
+        fanin=None,
+        fanout=None,
+        output=False,
+        add_connected_nodes=False,
+        allow_redefinition=False,
+        uid=False,
+    ):
         &#34;&#34;&#34;
         Adds a new node to the circuit, optionally connecting it
 
@@ -1572,6 +1791,16 @@ class BlackBox:
                 Nodes to add to new node&#39;s fanin
         fanout : iterable of str
                 Nodes to add to new node&#39;s fanout
+        output: bool
+                If True, the node is added as an output
+        add_connected_nodes: bool
+                If True, nodes in the fanin/fanout will be added to the
+                circuit as buffers if not already present. Useful when
+                parsing circuits.
+        allow_redefinition: bool
+                If True, calling add with a node `n` that is already in the circuit
+                with `uid` set to False will just update the type, fanin, fanout, and
+                output properties of the node. If False, a ValueError will be raised.
         uid: bool
                 If True, the node is given a unique name if it already
                 exists in the circuit.
@@ -1598,11 +1827,12 @@ class BlackBox:
         &#39;g&#39;
         &gt;&gt;&gt; c.fanin(&#39;g&#39;)
         {&#39;in_1&#39;, &#39;in_0&#39;, &#39;in_3&#39;, &#39;in_2&#39;}
-
         &#34;&#34;&#34;
         # clean arguments
         if uid:
             n = self.uid(n)
+        elif n in self and not allow_redefinition:
+            raise ValueError(f&#34;Node &#39;{n}&#39; already in circuit&#34;)
         if fanin is None:
             fanin = []
         elif isinstance(fanin, str):
@@ -1612,22 +1842,27 @@ class BlackBox:
         elif isinstance(fanout, str):
             fanout = [fanout]
 
+        if type not in supported_types:
+            raise ValueError(f&#34;Cannot add unknown type &#39;{type}&#39;&#34;)
+
         # raise error for invalid inputs
         if len(fanin) &gt; 1 and type in [&#34;buf&#34;, &#34;not&#34;]:
             raise ValueError(f&#34;{type} cannot have more than one fanin&#34;)
         if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;, &#34;input&#34;]:
             raise ValueError(f&#34;{type} cannot have fanin&#34;)
-        if fanout and type in [&#34;output&#34;]:
-            raise ValueError(f&#34;{type} cannot have fanout&#34;)
         if n[0] in &#34;0123456789&#34;:
             raise ValueError(f&#34;cannot add node starting with int: {n}&#34;)
 
         # add node
-        self.graph.add_node(n, type=type)
+        self.graph.add_node(n, type=type, output=output)
 
         # connect
-        self.graph.add_edges_from((n, f) for f in fanout)
-        self.graph.add_edges_from((f, n) for f in fanin)
+        if add_connected_nodes:
+            for f in fanin + fanout:
+                if f not in self:
+                    self.add(f, &#34;buf&#34;)
+        self.connect(n, fanout)
+        self.connect(fanin, n)
 
         return n
 
@@ -1652,7 +1887,6 @@ class BlackBox:
         ----------
         mapping : dict of str:str
                 mapping of old to new names
-
         &#34;&#34;&#34;
         nx.relabel_nodes(self.graph, mapping, copy=False)
 
@@ -1666,9 +1900,11 @@ class BlackBox:
                 Head node(s)
         vs : str or iterable of str
                 Tail node(s)
-
         &#34;&#34;&#34;
         # clean
+        if not us or not vs:
+            return
+
         if isinstance(us, str):
             us = [us]
         if isinstance(vs, str):
@@ -1677,23 +1913,28 @@ class BlackBox:
         # check existence
         for n in us:
             if n not in self.graph:
-                raise ValueError(f&#34;node {n} does not exist.&#34;)
+                raise ValueError(f&#34;node &#39;{n}&#39; does not exist.&#34;)
         for n in vs:
             if n not in self.graph:
-                raise ValueError(f&#34;node {n} does not exist.&#34;)
+                raise ValueError(f&#34;node &#39;{n}&#39; does not exist.&#34;)
 
         # check for illegal connections
         for v in vs:
             t = self.type(v)
-            if t in [&#34;input&#34;, &#34;bb_output&#34;]:
-                raise ValueError(f&#34;cannot connect to {t} {v}&#34;)
-            if t in [&#34;output&#34;, &#34;bb_input&#34;, &#34;buf&#34;, &#34;not&#34;]:
+            if t in [&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;x&#34;, &#34;bb_output&#34;]:
+                raise ValueError(f&#34;cannot connect to {t} &#39;{v}&#39;&#34;)
+            if t in [&#34;bb_input&#34;, &#34;buf&#34;, &#34;not&#34;]:
                 if len(self.fanin(v)) + len(us) &gt; 1:
-                    raise ValueError(f&#34;fanin of {t} {v} greater than 1.&#34;)
+                    raise ValueError(f&#34;fanin of {t} &#39;{v}&#39; cannot be greater than 1.&#34;)
         for u in us:
             t = self.type(u)
-            if t in [&#34;output&#34;, &#34;bb_input&#34;]:
-                raise ValueError(f&#34;cannot connect from {t} {v}.&#34;)
+            if t in [&#34;bb_input&#34;]:
+                raise ValueError(f&#34;cannot connect from {t} &#39;{u}&#39;.&#34;)
+            if t in [&#34;bb_output&#34;]:
+                if self.type(v) != &#34;buf&#34;:
+                    raise ValueError(f&#34;cannot connect from {t} &#39;{u}&#39; to non-buf &#39;{v}&#39;&#34;)
+                if len(self.fanout(u)) + len(vs) &gt; 1:
+                    raise ValueError(f&#34;fanout of {t} &#39;{u}&#39; cannot be greater than 1.&#34;)
 
         # connect
         self.graph.add_edges_from((u, v) for u in us for v in vs)
@@ -1708,7 +1949,6 @@ class BlackBox:
                 Head node(s)
         vs : str or iterable of str
                 Tail node(s)
-
         &#34;&#34;&#34;
         if isinstance(us, str):
             us = [us]
@@ -1738,7 +1978,6 @@ class BlackBox:
         {&#39;n_12&#39;}
         &gt;&gt;&gt; c.fanout([&#39;n_11&#39;,&#39;n_20&#39;])
         {&#39;n_12&#39;, &#39;G17&#39;}
-
         &#34;&#34;&#34;
         gates = set()
         if isinstance(ns, str):
@@ -1760,9 +1999,7 @@ class BlackBox:
         -------
         set of str
                 Nodes in fanout.
-
         &#34;&#34;&#34;
-
         gates = set()
         if isinstance(ns, str):
             ns = [ns]
@@ -1783,9 +2020,7 @@ class BlackBox:
         -------
         set of str
                 Nodes in transitive fanin.
-
         &#34;&#34;&#34;
-
         if isinstance(ns, str):
             ns = [ns]
         gates = set()
@@ -1806,7 +2041,6 @@ class BlackBox:
         -------
         set of str
                 Nodes in transitive fanout.
-
         &#34;&#34;&#34;
         if isinstance(ns, str):
             ns = [ns]
@@ -1832,7 +2066,7 @@ class BlackBox:
         if visited is None:
             # is acyclic
             if self.is_cyclic():
-                raise ValueError(f&#34;Cannot compute depth of cyclic circuit&#34;)
+                raise ValueError(&#34;Cannot compute depth of cyclic circuit&#34;)
 
             # find reachable group and init visited
             reachable = self.transitive_fanout(ns)
@@ -1874,12 +2108,11 @@ class BlackBox:
         -------
         int
                 Depth.
-
         &#34;&#34;&#34;
         if visited is None:
             # is acyclic
             if self.is_cyclic():
-                raise ValueError(f&#34;Cannot compute depth of cyclic circuit&#34;)
+                raise ValueError(&#34;Cannot compute depth of cyclic circuit&#34;)
 
             # find reachable group and init visited
             reachable = self.transitive_fanin(ns)
@@ -1916,9 +2149,51 @@ class BlackBox:
         -------
         set of str
                 Input nodes in circuit.
-
         &#34;&#34;&#34;
         return self.filter_type(&#34;input&#34;)
+
+    def is_output(self, node):
+        &#34;&#34;&#34;
+        Returns True if a node is an output.
+
+        Parameters
+        ----------
+        ns : str
+                Node.
+
+        Returns
+        -------
+        bool
+                Wheter or not the node is an output
+
+        Raises
+        ------
+        KeyError
+                If node is not in circuit.
+        &#34;&#34;&#34;
+        if node in self.graph.nodes:
+            try:
+                return self.graph.nodes[node][&#34;output&#34;]
+            except KeyError:
+                return False
+        else:
+            raise KeyError(f&#34;Node {node} does not exist.&#34;)
+
+    def set_output(self, ns, output=True):
+        &#34;&#34;&#34;
+        Set a node or nodes as an output or not an output.
+
+        Parameters
+        ----------
+        node: str
+                Node.
+        output: bool
+                Whether or not node is an output
+        &#34;&#34;&#34;
+        if isinstance(ns, str):
+            ns = [ns]
+        for n in ns:
+            self.graph.nodes[n][&#34;output&#34;] = output
 
     def outputs(self):
         &#34;&#34;&#34;
@@ -1928,9 +2203,8 @@ class BlackBox:
         -------
         set of str
                 Output nodes in circuit.
-
         &#34;&#34;&#34;
-        return self.filter_type(&#34;output&#34;)
+        return set(n for n in self.graph.nodes if self.is_output(n))
 
     def io(self):
         &#34;&#34;&#34;
@@ -1940,9 +2214,8 @@ class BlackBox:
         -------
         set of str
                 Output and input nodes in circuit.
-
         &#34;&#34;&#34;
-        return self.filter_type([&#34;input&#34;, &#34;output&#34;])
+        return self.inputs() | self.outputs()
 
     def startpoints(self, ns=None):
         &#34;&#34;&#34;
@@ -1957,7 +2230,6 @@ class BlackBox:
         -------
         set of str
                 Startpoints of ns.
-
         &#34;&#34;&#34;
         if isinstance(ns, str):
             ns = [ns]
@@ -1980,7 +2252,6 @@ class BlackBox:
         -------
         set of str
                 Endpoints of ns.
-
         &#34;&#34;&#34;
         if isinstance(ns, str):
             ns = [ns]
@@ -1990,6 +2261,40 @@ class BlackBox:
         else:
             return self.outputs() | self.filter_type(&#34;bb_input&#34;)
 
+    def reconvergent_fanout_nodes(self):
+        &#34;&#34;&#34;
+        Get nodes that have fanout that reconverges somewhere later
+        in the circuit.
+
+        Returns
+        -------
+        generator of str
+                A generator of nodes that have reconvergent fanout
+        &#34;&#34;&#34;
+        for node in self.nodes():
+            fo = self.fanout(node)
+            if len(fo) &gt; 1 and reduce(
+                lambda a, b: a &amp; b, (self.transitive_fanout(n) for n in fo)
+            ):
+                yield node
+
+    def has_reconvergent_fanout(self):
+        &#34;&#34;&#34;
+        Check if a circuit has any reconvergent fanout present
+
+        Returns
+        -------
+        bool
+            Whether or not reconvergent fanout is present
+        &#34;&#34;&#34;
+        for node in self.nodes():
+            fo = self.fanout(node)
+            if len(fo) &gt; 1 and reduce(
+                lambda a, b: a &amp; b, (self.transitive_fanout(n) for n in fo)
+            ):
+                return True
+        return False
+
     def is_cyclic(self):
         &#34;&#34;&#34;
         Checks for combinational loops in circuit
@@ -1998,7 +2303,6 @@ class BlackBox:
         -------
         bool
                 Existence of cycle
-
         &#34;&#34;&#34;
         return not nx.is_directed_acyclic_graph(self.graph)
 
@@ -2017,7 +2321,6 @@ class BlackBox:
         -------
         str
                 Unique name
-
         &#34;&#34;&#34;
         if blocked is None:
             blocked = []
@@ -2047,9 +2350,7 @@ class BlackBox:
         -------
         iter of str
                 k-cuts.
-
         &#34;&#34;&#34;
-
         if computed is None:
             computed = {}
 
@@ -2083,7 +2384,6 @@ class BlackBox:
         -------
         iter of str
                 Ordered node names.
-
         &#34;&#34;&#34;
         return nx.topological_sort(self.graph)
 
@@ -2100,12 +2400,13 @@ class BlackBox:
         -------
         iter of str
                 Removed nodes.
-
         &#34;&#34;&#34;
         unloaded = [
             n
             for n in self.graph
-            if self.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.fanout(n)
+            if self.type(n) not in [&#34;bb_input&#34;]
+            and not self.is_output(n)
+            and not self.fanout(n)
         ]
         removed = []
         while unloaded:
@@ -2113,7 +2414,7 @@ class BlackBox:
             for fi in self.fanin(n):
                 if not inputs and self.type(fi) in [&#34;input&#34;, &#34;bb_output&#34;]:
                     continue
-                if len(self.fanout(fi)) == 1:
+                if not self.is_output(fi) and len(self.fanout(fi)) == 1:
                     unloaded.append(fi)
             self.remove(n)
             removed.append(n)
@@ -2122,7 +2423,7 @@ class BlackBox:
 <h3>Methods</h3>
 <dl>
 <dt id="circuitgraph.circuit.Circuit.add"><code class="name flex">
-<span>def <span class="ident">add</span></span>(<span>self, n, type, fanin=None, fanout=None, uid=False)</span>
+<span>def <span class="ident">add</span></span>(<span>self, n, type, fanin=None, fanout=None, output=False, add_connected_nodes=False, allow_redefinition=False, uid=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Adds a new node to the circuit, optionally connecting it</p>
@@ -2136,6 +2437,16 @@ class BlackBox:
 <dd>Nodes to add to new node's fanin</dd>
 <dt><strong><code>fanout</code></strong> :&ensp;<code>iterable</code> of <code>str</code></dt>
 <dd>Nodes to add to new node's fanout</dd>
+<dt><strong><code>output</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, the node is added as an output</dd>
+<dt><strong><code>add_connected_nodes</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, nodes in the fanin/fanout will be added to the
+circuit as buffers if not already present. Useful when
+parsing circuits.</dd>
+<dt><strong><code>allow_redefinition</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, calling add with a node <code>n</code> that is already in the circuit
+with <code>uid</code> set to False will just update the type, fanin, fanout, and
+output properties of the node. If False, a ValueError will be raised.</dd>
 <dt><strong><code>uid</code></strong> :&ensp;<code>bool</code></dt>
 <dd>If True, the node is given a unique name if it already
 exists in the circuit.</dd>
@@ -2147,7 +2458,7 @@ exists in the circuit.</dd>
 </dl>
 <h2 id="example">Example</h2>
 <p>Add a single node</p>
-<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
 &gt;&gt;&gt; c = cg.Circuit()
 &gt;&gt;&gt; c.add('a','or')
 'a'
@@ -2155,7 +2466,7 @@ exists in the circuit.</dd>
 <p>In the above example the function returns the name of the new node.
 This allows us to quickly generate an AND tree with the following
 syntax.</p>
-<pre><code class="python">&gt;&gt;&gt; c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
 'g'
 &gt;&gt;&gt; c.fanin('g')
 {'in_1', 'in_0', 'in_3', 'in_2'}
@@ -2164,7 +2475,17 @@ syntax.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def add(self, n, type, fanin=None, fanout=None, uid=False):
+<pre><code class="python">def add(
+    self,
+    n,
+    type,
+    fanin=None,
+    fanout=None,
+    output=False,
+    add_connected_nodes=False,
+    allow_redefinition=False,
+    uid=False,
+):
     &#34;&#34;&#34;
     Adds a new node to the circuit, optionally connecting it
 
@@ -2178,6 +2499,16 @@ syntax.</p>
             Nodes to add to new node&#39;s fanin
     fanout : iterable of str
             Nodes to add to new node&#39;s fanout
+    output: bool
+            If True, the node is added as an output
+    add_connected_nodes: bool
+            If True, nodes in the fanin/fanout will be added to the
+            circuit as buffers if not already present. Useful when
+            parsing circuits.
+    allow_redefinition: bool
+            If True, calling add with a node `n` that is already in the circuit
+            with `uid` set to False will just update the type, fanin, fanout, and
+            output properties of the node. If False, a ValueError will be raised.
     uid: bool
             If True, the node is given a unique name if it already
             exists in the circuit.
@@ -2204,11 +2535,12 @@ syntax.</p>
     &#39;g&#39;
     &gt;&gt;&gt; c.fanin(&#39;g&#39;)
     {&#39;in_1&#39;, &#39;in_0&#39;, &#39;in_3&#39;, &#39;in_2&#39;}
-
     &#34;&#34;&#34;
     # clean arguments
     if uid:
         n = self.uid(n)
+    elif n in self and not allow_redefinition:
+        raise ValueError(f&#34;Node &#39;{n}&#39; already in circuit&#34;)
     if fanin is None:
         fanin = []
     elif isinstance(fanin, str):
@@ -2218,22 +2550,27 @@ syntax.</p>
     elif isinstance(fanout, str):
         fanout = [fanout]
 
+    if type not in supported_types:
+        raise ValueError(f&#34;Cannot add unknown type &#39;{type}&#39;&#34;)
+
     # raise error for invalid inputs
     if len(fanin) &gt; 1 and type in [&#34;buf&#34;, &#34;not&#34;]:
         raise ValueError(f&#34;{type} cannot have more than one fanin&#34;)
     if fanin and type in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;, &#34;input&#34;]:
         raise ValueError(f&#34;{type} cannot have fanin&#34;)
-    if fanout and type in [&#34;output&#34;]:
-        raise ValueError(f&#34;{type} cannot have fanout&#34;)
     if n[0] in &#34;0123456789&#34;:
         raise ValueError(f&#34;cannot add node starting with int: {n}&#34;)
 
     # add node
-    self.graph.add_node(n, type=type)
+    self.graph.add_node(n, type=type, output=output)
 
     # connect
-    self.graph.add_edges_from((n, f) for f in fanout)
-    self.graph.add_edges_from((f, n) for f in fanin)
+    if add_connected_nodes:
+        for f in fanin + fanout:
+            if f not in self:
+                self.add(f, &#34;buf&#34;)
+    self.connect(n, fanout)
+    self.connect(fanin, n)
 
     return n</code></pre>
 </details>
@@ -2272,7 +2609,6 @@ syntax.</p>
             Instance name.
     connections : dict of str:str
             Optional connections to make.
-
     &#34;&#34;&#34;
     # check if exists
     if name in self.blackboxes:
@@ -2329,7 +2665,6 @@ syntax.</p>
             Instance name.
     connections : dict of str:str
             Optional connections to make.
-
     &#34;&#34;&#34;
     # check if subcircuit bbs exist
     for bb_name in sc.blackboxes:
@@ -2343,11 +2678,21 @@ syntax.</p>
             raise ValueError(f&#34;name {n} overlaps with {name} subcircuit.&#34;)
         mapping[n] = f&#34;{name}_{n}&#34;
 
+    # check connections
+    sc_inputs = sc.inputs()
+    sc_outputs = sc.outputs()
+    if connections:
+        for sc_n, ns in connections.items():
+            if sc_n not in sc_inputs and sc_n not in sc_outputs:
+                raise ValueError(f&#34;node {sc_n} not in {name} io&#34;)
+
     # add sub circuit
     g = nx.relabel_nodes(sc.graph, mapping)
     self.graph.update(g)
-    for n in sc.io():
+    for n in sc.inputs():
         self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
+    for n in sc.outputs():
+        self.set_output(f&#34;{name}_{n}&#34;, False)
 
     # add blackboxes
     for bb_name, bb in sc.blackboxes.items():
@@ -2355,15 +2700,11 @@ syntax.</p>
 
     # make connections
     if connections:
-        sc_inputs = sc.inputs()
-        sc_outputs = sc.outputs()
         for sc_n, ns in connections.items():
             if sc_n in sc_inputs:
                 self.connect(ns, f&#34;{name}_{sc_n}&#34;)
             elif sc_n in sc_outputs:
-                self.connect(f&#34;{name}_{sc_n}&#34;, ns)
-            else:
-                raise ValueError(f&#34;node {sc_n} not in {name} io&#34;)</code></pre>
+                self.connect(f&#34;{name}_{sc_n}&#34;, ns)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.connect"><code class="name flex">
@@ -2392,9 +2733,11 @@ syntax.</p>
             Head node(s)
     vs : str or iterable of str
             Tail node(s)
-
     &#34;&#34;&#34;
     # clean
+    if not us or not vs:
+        return
+
     if isinstance(us, str):
         us = [us]
     if isinstance(vs, str):
@@ -2403,26 +2746,57 @@ syntax.</p>
     # check existence
     for n in us:
         if n not in self.graph:
-            raise ValueError(f&#34;node {n} does not exist.&#34;)
+            raise ValueError(f&#34;node &#39;{n}&#39; does not exist.&#34;)
     for n in vs:
         if n not in self.graph:
-            raise ValueError(f&#34;node {n} does not exist.&#34;)
+            raise ValueError(f&#34;node &#39;{n}&#39; does not exist.&#34;)
 
     # check for illegal connections
     for v in vs:
         t = self.type(v)
-        if t in [&#34;input&#34;, &#34;bb_output&#34;]:
-            raise ValueError(f&#34;cannot connect to {t} {v}&#34;)
-        if t in [&#34;output&#34;, &#34;bb_input&#34;, &#34;buf&#34;, &#34;not&#34;]:
+        if t in [&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;x&#34;, &#34;bb_output&#34;]:
+            raise ValueError(f&#34;cannot connect to {t} &#39;{v}&#39;&#34;)
+        if t in [&#34;bb_input&#34;, &#34;buf&#34;, &#34;not&#34;]:
             if len(self.fanin(v)) + len(us) &gt; 1:
-                raise ValueError(f&#34;fanin of {t} {v} greater than 1.&#34;)
+                raise ValueError(f&#34;fanin of {t} &#39;{v}&#39; cannot be greater than 1.&#34;)
     for u in us:
         t = self.type(u)
-        if t in [&#34;output&#34;, &#34;bb_input&#34;]:
-            raise ValueError(f&#34;cannot connect from {t} {v}.&#34;)
+        if t in [&#34;bb_input&#34;]:
+            raise ValueError(f&#34;cannot connect from {t} &#39;{u}&#39;.&#34;)
+        if t in [&#34;bb_output&#34;]:
+            if self.type(v) != &#34;buf&#34;:
+                raise ValueError(f&#34;cannot connect from {t} &#39;{u}&#39; to non-buf &#39;{v}&#39;&#34;)
+            if len(self.fanout(u)) + len(vs) &gt; 1:
+                raise ValueError(f&#34;fanout of {t} &#39;{u}&#39; cannot be greater than 1.&#34;)
 
     # connect
     self.graph.add_edges_from((u, v) for u in us for v in vs)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.copy"><code class="name flex">
+<span>def <span class="ident">copy</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns a copy of the circuit.</p>
+<h2 id="returns">Returns</h2>
+<h2 id="circuit">Circuit</h2>
+<p>Copy of the circuit.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def copy(self):
+    &#34;&#34;&#34;
+    Returns a copy of the circuit.
+
+    Returns
+    -------
+    Circuit:
+            Copy of the circuit.
+    &#34;&#34;&#34;
+    return Circuit(
+        graph=self.graph.copy(), name=self.name, blackboxes=self.blackboxes.copy()
+    )</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.disconnect"><code class="name flex">
@@ -2451,7 +2825,6 @@ syntax.</p>
             Head node(s)
     vs : str or iterable of str
             Tail node(s)
-
     &#34;&#34;&#34;
     if isinstance(us, str):
         us = [us]
@@ -2482,7 +2855,6 @@ syntax.</p>
     -------
     networkx.EdgeView
             Edges in circuit
-
     &#34;&#34;&#34;
     return set(self.graph.edges)</code></pre>
 </details>
@@ -2519,7 +2891,6 @@ syntax.</p>
     -------
     set of str
             Endpoints of ns.
-
     &#34;&#34;&#34;
     if isinstance(ns, str):
         ns = [ns]
@@ -2546,7 +2917,7 @@ syntax.</p>
 <dd>Nodes in fanin.</dd>
 </dl>
 <h2 id="example">Example</h2>
-<pre><code class="python">&gt;&gt;&gt; c.fanout('n_20')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.fanout('n_20')
 {'G17'}
 &gt;&gt;&gt; c.fanout('n_11')
 {'n_12'}
@@ -2579,7 +2950,6 @@ syntax.</p>
     {&#39;n_12&#39;}
     &gt;&gt;&gt; c.fanout([&#39;n_11&#39;,&#39;n_20&#39;])
     {&#39;n_12&#39;, &#39;G17&#39;}
-
     &#34;&#34;&#34;
     gates = set()
     if isinstance(ns, str):
@@ -2621,12 +2991,11 @@ syntax.</p>
     -------
     int
             Depth.
-
     &#34;&#34;&#34;
     if visited is None:
         # is acyclic
         if self.is_cyclic():
-            raise ValueError(f&#34;Cannot compute depth of cyclic circuit&#34;)
+            raise ValueError(&#34;Cannot compute depth of cyclic circuit&#34;)
 
         # find reachable group and init visited
         reachable = self.transitive_fanin(ns)
@@ -2688,9 +3057,7 @@ syntax.</p>
     -------
     set of str
             Nodes in fanout.
-
     &#34;&#34;&#34;
-
     gates = set()
     if isinstance(ns, str):
         ns = [ns]
@@ -2735,7 +3102,7 @@ syntax.</p>
     if visited is None:
         # is acyclic
         if self.is_cyclic():
-            raise ValueError(f&#34;Cannot compute depth of cyclic circuit&#34;)
+            raise ValueError(&#34;Cannot compute depth of cyclic circuit&#34;)
 
         # find reachable group and init visited
         reachable = self.transitive_fanout(ns)
@@ -2791,7 +3158,6 @@ syntax.</p>
             Instance name.
     c : Circuit
             Circuit.
-
     &#34;&#34;&#34;
     # check if bb exists
     if name not in self.blackboxes:
@@ -2821,8 +3187,10 @@ syntax.</p>
     # extend circuit
     g = nx.relabel_nodes(c.graph, mapping)
     self.graph.update(g)
-    for n in self.blackboxes[name].io():
+    for n in self.blackboxes[name].inputs():
         self.set_type(f&#34;{name}_{n}&#34;, &#34;buf&#34;)
+    for n in self.blackboxes[name].outputs():
+        self.set_output(f&#34;{name}_{n}&#34;, False)
 
     # remove blackbox
     self.blackboxes.pop(name)
@@ -2849,15 +3217,15 @@ syntax.</p>
 </dl>
 <h2 id="examples">Examples</h2>
 <p>Create a circuit with several gate types.</p>
-<pre><code class="python">&gt;&gt;&gt; c = cg.Circuit()
+<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.Circuit()
 &gt;&gt;&gt; for i,g in enumerate(['xor','or','xor']): c.add(f'g{i}',g)
 </code></pre>
 <p>Calling <code>nodes</code> with no argument returns all nodes in the circuit</p>
-<pre><code class="python">&gt;&gt;&gt; c.nodes()
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.nodes()
 {'g0', 'g1', 'g2'}
 </code></pre>
 <p>Passing a node type, we can selectively return nodes.</p>
-<pre><code class="python">&gt;&gt;&gt; c.filter_type('xor')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.filter_type('xor')
 {'g2', 'g0'}
 </code></pre></div>
 <details class="source">
@@ -2894,7 +3262,6 @@ syntax.</p>
 
     &gt;&gt;&gt; c.filter_type(&#39;xor&#39;)
     {&#39;g2&#39;, &#39;g0&#39;}
-
     &#34;&#34;&#34;
     if isinstance(types, str):
         types = [types]
@@ -2904,6 +3271,38 @@ syntax.</p>
             raise ValueError(f&#34;type {t} not supported.&#34;)
 
     return set(n for n in self.graph.nodes if self.graph.nodes[n][&#34;type&#34;] in types)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.has_reconvergent_fanout"><code class="name flex">
+<span>def <span class="ident">has_reconvergent_fanout</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Check if a circuit has any reconvergent fanout present</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>Whether or not reconvergent fanout is present</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def has_reconvergent_fanout(self):
+    &#34;&#34;&#34;
+    Check if a circuit has any reconvergent fanout present
+
+    Returns
+    -------
+    bool
+        Whether or not reconvergent fanout is present
+    &#34;&#34;&#34;
+    for node in self.nodes():
+        fo = self.fanout(node)
+        if len(fo) &gt; 1 and reduce(
+            lambda a, b: a &amp; b, (self.transitive_fanout(n) for n in fo)
+        ):
+            return True
+    return False</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.inputs"><code class="name flex">
@@ -2928,7 +3327,6 @@ syntax.</p>
     -------
     set of str
             Input nodes in circuit.
-
     &#34;&#34;&#34;
     return self.filter_type(&#34;input&#34;)</code></pre>
 </details>
@@ -2955,9 +3353,8 @@ syntax.</p>
     -------
     set of str
             Output and input nodes in circuit.
-
     &#34;&#34;&#34;
-    return self.filter_type([&#34;input&#34;, &#34;output&#34;])</code></pre>
+    return self.inputs() | self.outputs()</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.is_cyclic"><code class="name flex">
@@ -2982,9 +3379,60 @@ syntax.</p>
     -------
     bool
             Existence of cycle
-
     &#34;&#34;&#34;
     return not nx.is_directed_acyclic_graph(self.graph)</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.is_output"><code class="name flex">
+<span>def <span class="ident">is_output</span></span>(<span>self, node)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns True if a node is an output.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ns</code></strong> :&ensp;<code>str</code></dt>
+<dd>Node.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>Wheter or not the node is an output</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>KeyError</code></dt>
+<dd>If node is not in circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def is_output(self, node):
+    &#34;&#34;&#34;
+    Returns True if a node is an output.
+
+    Parameters
+    ----------
+    ns : str
+            Node.
+
+    Returns
+    -------
+    bool
+            Wheter or not the node is an output
+
+    Raises
+    ------
+    KeyError
+            If node is not in circuit.
+    &#34;&#34;&#34;
+    if node in self.graph.nodes:
+        try:
+            return self.graph.nodes[node][&#34;output&#34;]
+        except KeyError:
+            return False
+    else:
+        raise KeyError(f&#34;Node {node} does not exist.&#34;)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.kcuts"><code class="name flex">
@@ -3023,9 +3471,7 @@ syntax.</p>
     -------
     iter of str
             k-cuts.
-
     &#34;&#34;&#34;
-
     if computed is None:
         computed = {}
 
@@ -3074,7 +3520,6 @@ syntax.</p>
     -------
     set of str
             Nodes
-
     &#34;&#34;&#34;
     return set(self.graph.nodes)</code></pre>
 </details>
@@ -3101,9 +3546,41 @@ syntax.</p>
     -------
     set of str
             Output nodes in circuit.
-
     &#34;&#34;&#34;
-    return self.filter_type(&#34;output&#34;)</code></pre>
+    return set(n for n in self.graph.nodes if self.is_output(n))</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.reconvergent_fanout_nodes"><code class="name flex">
+<span>def <span class="ident">reconvergent_fanout_nodes</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get nodes that have fanout that reconverges somewhere later
+in the circuit.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>generator</code> of <code>str</code></dt>
+<dd>A generator of nodes that have reconvergent fanout</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def reconvergent_fanout_nodes(self):
+    &#34;&#34;&#34;
+    Get nodes that have fanout that reconverges somewhere later
+    in the circuit.
+
+    Returns
+    -------
+    generator of str
+            A generator of nodes that have reconvergent fanout
+    &#34;&#34;&#34;
+    for node in self.nodes():
+        fo = self.fanout(node)
+        if len(fo) &gt; 1 and reduce(
+            lambda a, b: a &amp; b, (self.transitive_fanout(n) for n in fo)
+        ):
+            yield node</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.relabel"><code class="name flex">
@@ -3128,7 +3605,6 @@ syntax.</p>
     ----------
     mapping : dict of str:str
             mapping of old to new names
-
     &#34;&#34;&#34;
     nx.relabel_nodes(self.graph, mapping, copy=False)</code></pre>
 </details>
@@ -3193,12 +3669,13 @@ syntax.</p>
     -------
     iter of str
             Removed nodes.
-
     &#34;&#34;&#34;
     unloaded = [
         n
         for n in self.graph
-        if self.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.fanout(n)
+        if self.type(n) not in [&#34;bb_input&#34;]
+        and not self.is_output(n)
+        and not self.fanout(n)
     ]
     removed = []
     while unloaded:
@@ -3206,11 +3683,44 @@ syntax.</p>
         for fi in self.fanin(n):
             if not inputs and self.type(fi) in [&#34;input&#34;, &#34;bb_output&#34;]:
                 continue
-            if len(self.fanout(fi)) == 1:
+            if not self.is_output(fi) and len(self.fanout(fi)) == 1:
                 unloaded.append(fi)
         self.remove(n)
         removed.append(n)
     return removed</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.circuit.Circuit.set_output"><code class="name flex">
+<span>def <span class="ident">set_output</span></span>(<span>self, ns, output=True)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Set a node or nodes as an output or not an output.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>node</code></strong> :&ensp;<code>str</code></dt>
+<dd>Node.</dd>
+<dt><strong><code>output</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether or not node is an output</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_output(self, ns, output=True):
+    &#34;&#34;&#34;
+    Set a node or nodes as an output or not an output.
+
+    Parameters
+    ----------
+    node: str
+            Node.
+    output: bool
+            Whether or not node is an output
+    &#34;&#34;&#34;
+    if isinstance(ns, str):
+        ns = [ns]
+    for n in ns:
+        self.graph.nodes[n][&#34;output&#34;] = output</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.circuit.Circuit.set_type"><code class="name flex">
@@ -3281,7 +3791,6 @@ syntax.</p>
     -------
     set of str
             Startpoints of ns.
-
     &#34;&#34;&#34;
     if isinstance(ns, str):
         ns = [ns]
@@ -3314,7 +3823,6 @@ syntax.</p>
     -------
     iter of str
             Ordered node names.
-
     &#34;&#34;&#34;
     return nx.topological_sort(self.graph)</code></pre>
 </details>
@@ -3351,9 +3859,7 @@ syntax.</p>
     -------
     set of str
             Nodes in transitive fanin.
-
     &#34;&#34;&#34;
-
     if isinstance(ns, str):
         ns = [ns]
     gates = set()
@@ -3394,7 +3900,6 @@ syntax.</p>
     -------
     set of str
             Nodes in transitive fanout.
-
     &#34;&#34;&#34;
     if isinstance(ns, str):
         ns = [ns]
@@ -3426,15 +3931,15 @@ syntax.</p>
 </dl>
 <h2 id="examples">Examples</h2>
 <p>Create a with several gate types.</p>
-<pre><code class="python">&gt;&gt;&gt; c = cg.Circuit()
+<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.Circuit()
 &gt;&gt;&gt; for i,g in enumerate(['xor','or','xor']): c.add(f'g{i}', g)
 </code></pre>
 <p>Calling <code>type</code> for a single gate returns a single type</p>
-<pre><code class="python">&gt;&gt;&gt; c.type('g0')
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.type('g0')
 {'xor'}
 </code></pre>
 <p>Calling <code>type</code> on an iterable returns a set of types</p>
-<pre><code class="python">&gt;&gt;&gt; c.type(c.nodes())
+<pre><code class="language-python-repl">&gt;&gt;&gt; c.type(c.nodes())
 ['xor', 'or', 'xor']
 </code></pre></div>
 <details class="source">
@@ -3476,7 +3981,6 @@ syntax.</p>
 
     &gt;&gt;&gt; c.type(c.nodes())
     [&#39;xor&#39;, &#39;or&#39;, &#39;xor&#39;]
-
     &#34;&#34;&#34;
     if isinstance(ns, str):
         if ns in self.graph.nodes:
@@ -3526,7 +4030,6 @@ syntax.</p>
     -------
     str
             Unique name
-
     &#34;&#34;&#34;
     if blocked is None:
         blocked = []
@@ -3574,11 +4077,12 @@ syntax.</p>
 </li>
 <li>
 <h4><code><a title="circuitgraph.circuit.Circuit" href="#circuitgraph.circuit.Circuit">Circuit</a></code></h4>
-<ul class="two-column">
+<ul class="">
 <li><code><a title="circuitgraph.circuit.Circuit.add" href="#circuitgraph.circuit.Circuit.add">add</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.add_blackbox" href="#circuitgraph.circuit.Circuit.add_blackbox">add_blackbox</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.add_subcircuit" href="#circuitgraph.circuit.Circuit.add_subcircuit">add_subcircuit</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.connect" href="#circuitgraph.circuit.Circuit.connect">connect</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.copy" href="#circuitgraph.circuit.Circuit.copy">copy</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.disconnect" href="#circuitgraph.circuit.Circuit.disconnect">disconnect</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.edges" href="#circuitgraph.circuit.Circuit.edges">edges</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.endpoints" href="#circuitgraph.circuit.Circuit.endpoints">endpoints</a></code></li>
@@ -3588,15 +4092,19 @@ syntax.</p>
 <li><code><a title="circuitgraph.circuit.Circuit.fanout_depth" href="#circuitgraph.circuit.Circuit.fanout_depth">fanout_depth</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.fill_blackbox" href="#circuitgraph.circuit.Circuit.fill_blackbox">fill_blackbox</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.filter_type" href="#circuitgraph.circuit.Circuit.filter_type">filter_type</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.has_reconvergent_fanout" href="#circuitgraph.circuit.Circuit.has_reconvergent_fanout">has_reconvergent_fanout</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.inputs" href="#circuitgraph.circuit.Circuit.inputs">inputs</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.io" href="#circuitgraph.circuit.Circuit.io">io</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.is_cyclic" href="#circuitgraph.circuit.Circuit.is_cyclic">is_cyclic</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.is_output" href="#circuitgraph.circuit.Circuit.is_output">is_output</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.kcuts" href="#circuitgraph.circuit.Circuit.kcuts">kcuts</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.nodes" href="#circuitgraph.circuit.Circuit.nodes">nodes</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.outputs" href="#circuitgraph.circuit.Circuit.outputs">outputs</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.reconvergent_fanout_nodes" href="#circuitgraph.circuit.Circuit.reconvergent_fanout_nodes">reconvergent_fanout_nodes</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.relabel" href="#circuitgraph.circuit.Circuit.relabel">relabel</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.remove" href="#circuitgraph.circuit.Circuit.remove">remove</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.remove_unloaded" href="#circuitgraph.circuit.Circuit.remove_unloaded">remove_unloaded</a></code></li>
+<li><code><a title="circuitgraph.circuit.Circuit.set_output" href="#circuitgraph.circuit.Circuit.set_output">set_output</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.set_type" href="#circuitgraph.circuit.Circuit.set_type">set_type</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.startpoints" href="#circuitgraph.circuit.Circuit.startpoints">startpoints</a></code></li>
 <li><code><a title="circuitgraph.circuit.Circuit.topo_sort" href="#circuitgraph.circuit.Circuit.topo_sort">topo_sort</a></code></li>
@@ -3612,7 +4120,7 @@ syntax.</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.parsing.verilog API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -137,11 +137,15 @@ class VerilogCircuitGraphTransformer(Transformer):
         fanout = [str(i) for i in fanout]
         node_type = str(node_type)
 
-        for i in fanout + fanin:
-            if i not in self.c:
-                self.c.add(i, &#34;buf&#34;)
-
-        return self.c.add(str(n), node_type, fanin=fanin, fanout=fanout, uid=uid,)
+        return self.c.add(
+            str(n),
+            node_type,
+            fanin=fanin,
+            fanout=fanout,
+            uid=uid,
+            add_connected_nodes=True,
+            allow_redefinition=True,
+        )
 
     def add_blackbox(self, blackbox, name, connections=dict()):
         formatted_connections = dict()
@@ -163,7 +167,11 @@ class VerilogCircuitGraphTransformer(Transformer):
                 self.warn(f&#34;{wire} declared as wire but isn&#39;t connected.&#34;)
 
         for n in self.c.nodes():
-            if self.c.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.c.fanout(n):
+            if (
+                self.c.type(n) != &#34;bb_input&#34;
+                and not self.c.is_output(n)
+                and not self.c.fanout(n)
+            ):
                 self.warn(f&#34;{n} doesn&#39;t drive any nets.&#34;)
             elif self.c.type(n) not in [
                 &#34;input&#34;,
@@ -201,14 +209,7 @@ class VerilogCircuitGraphTransformer(Transformer):
 
         # Relabel outputs using drivers
         for o in self.outputs:
-            o = str(o)
-            if self.c.fanin(o):
-                o_driver = f&#34;{o}_driver&#34;
-                while o_driver in self.c.nodes():
-                    o_driver += &#34;_0&#34;
-                self.c.relabel({o: o_driver})
-                self.add_node(o, &#34;output&#34;)
-                self.c.connect(o_driver, o)
+            self.c.set_output(str(o))
 
         # Remove tie0, tie1 if not used
         if not self.c.fanout(self.tie0):
@@ -238,8 +239,6 @@ class VerilogCircuitGraphTransformer(Transformer):
     def output_declaration(self, list_of_variables):
         [list_of_variables] = list_of_variables
         self.outputs.update(list_of_variables)
-        for variable in list_of_variables:
-            self.add_node(variable, &#34;output&#34;)
 
     def net_declaration(self, list_of_variables):
         [list_of_variables] = list_of_variables
@@ -265,23 +264,6 @@ class VerilogCircuitGraphTransformer(Transformer):
                         self.text,
                     )
                 self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
-        # Check if this is a GTECH gate
-        elif name_of_module.startswith(&#34;GTECH_&#34;) and name_of_module.split(&#34;_&#34;)[
-            -1
-        ].rstrip(digits).lower() in addable_types + [&#34;zero&#34;, &#34;one&#34;]:
-            gate = name_of_module.split(&#34;_&#34;)[-1].rstrip(digits).lower()
-            if gate == &#34;zero&#34;:
-                gate = &#34;0&#34;
-            if gate == &#34;one&#34;:
-                gate = &#34;1&#34;
-            for name, connections in module_instances:
-                if not isinstance(connections, dict):
-                    raise VerilogParsingError(
-                        &#34;GTECH gates must use named port connections&#34;, name, self.text,
-                    )
-                output = connections[&#34;Z&#34;]
-                inputs = set(connections.values()) - {output}
-                self.add_node(output, gate, fanin=inputs)
         # Otherwise, try to parse as blackbox
         else:
             try:
@@ -588,11 +570,15 @@ exceptions.</dd>
         fanout = [str(i) for i in fanout]
         node_type = str(node_type)
 
-        for i in fanout + fanin:
-            if i not in self.c:
-                self.c.add(i, &#34;buf&#34;)
-
-        return self.c.add(str(n), node_type, fanin=fanin, fanout=fanout, uid=uid,)
+        return self.c.add(
+            str(n),
+            node_type,
+            fanin=fanin,
+            fanout=fanout,
+            uid=uid,
+            add_connected_nodes=True,
+            allow_redefinition=True,
+        )
 
     def add_blackbox(self, blackbox, name, connections=dict()):
         formatted_connections = dict()
@@ -614,7 +600,11 @@ exceptions.</dd>
                 self.warn(f&#34;{wire} declared as wire but isn&#39;t connected.&#34;)
 
         for n in self.c.nodes():
-            if self.c.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.c.fanout(n):
+            if (
+                self.c.type(n) != &#34;bb_input&#34;
+                and not self.c.is_output(n)
+                and not self.c.fanout(n)
+            ):
                 self.warn(f&#34;{n} doesn&#39;t drive any nets.&#34;)
             elif self.c.type(n) not in [
                 &#34;input&#34;,
@@ -652,14 +642,7 @@ exceptions.</dd>
 
         # Relabel outputs using drivers
         for o in self.outputs:
-            o = str(o)
-            if self.c.fanin(o):
-                o_driver = f&#34;{o}_driver&#34;
-                while o_driver in self.c.nodes():
-                    o_driver += &#34;_0&#34;
-                self.c.relabel({o: o_driver})
-                self.add_node(o, &#34;output&#34;)
-                self.c.connect(o_driver, o)
+            self.c.set_output(str(o))
 
         # Remove tie0, tie1 if not used
         if not self.c.fanout(self.tie0):
@@ -689,8 +672,6 @@ exceptions.</dd>
     def output_declaration(self, list_of_variables):
         [list_of_variables] = list_of_variables
         self.outputs.update(list_of_variables)
-        for variable in list_of_variables:
-            self.add_node(variable, &#34;output&#34;)
 
     def net_declaration(self, list_of_variables):
         [list_of_variables] = list_of_variables
@@ -716,23 +697,6 @@ exceptions.</dd>
                         self.text,
                     )
                 self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
-        # Check if this is a GTECH gate
-        elif name_of_module.startswith(&#34;GTECH_&#34;) and name_of_module.split(&#34;_&#34;)[
-            -1
-        ].rstrip(digits).lower() in addable_types + [&#34;zero&#34;, &#34;one&#34;]:
-            gate = name_of_module.split(&#34;_&#34;)[-1].rstrip(digits).lower()
-            if gate == &#34;zero&#34;:
-                gate = &#34;0&#34;
-            if gate == &#34;one&#34;:
-                gate = &#34;1&#34;
-            for name, connections in module_instances:
-                if not isinstance(connections, dict):
-                    raise VerilogParsingError(
-                        &#34;GTECH gates must use named port connections&#34;, name, self.text,
-                    )
-                output = connections[&#34;Z&#34;]
-                inputs = set(connections.values()) - {output}
-                self.add_node(output, gate, fanin=inputs)
         # Otherwise, try to parse as blackbox
         else:
             try:
@@ -830,6 +794,8 @@ exceptions.</dd>
 <ul class="hlist">
 <li>lark.visitors.Transformer</li>
 <li>lark.visitors._Decoratable</li>
+<li>abc.ABC</li>
+<li>typing.Generic</li>
 </ul>
 <h3>Methods</h3>
 <dl>
@@ -871,11 +837,15 @@ exceptions.</dd>
     fanout = [str(i) for i in fanout]
     node_type = str(node_type)
 
-    for i in fanout + fanin:
-        if i not in self.c:
-            self.c.add(i, &#34;buf&#34;)
-
-    return self.c.add(str(n), node_type, fanin=fanin, fanout=fanout, uid=uid,)</code></pre>
+    return self.c.add(
+        str(n),
+        node_type,
+        fanin=fanin,
+        fanout=fanout,
+        uid=uid,
+        add_connected_nodes=True,
+        allow_redefinition=True,
+    )</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.and_gate"><code class="name flex">
@@ -922,7 +892,11 @@ exceptions.</dd>
             self.warn(f&#34;{wire} declared as wire but isn&#39;t connected.&#34;)
 
     for n in self.c.nodes():
-        if self.c.type(n) not in [&#34;output&#34;, &#34;bb_input&#34;] and not self.c.fanout(n):
+        if (
+            self.c.type(n) != &#34;bb_input&#34;
+            and not self.c.is_output(n)
+            and not self.c.fanout(n)
+        ):
             self.warn(f&#34;{n} doesn&#39;t drive any nets.&#34;)
         elif self.c.type(n) not in [
             &#34;input&#34;,
@@ -1080,14 +1054,7 @@ exceptions.</dd>
 
     # Relabel outputs using drivers
     for o in self.outputs:
-        o = str(o)
-        if self.c.fanin(o):
-            o_driver = f&#34;{o}_driver&#34;
-            while o_driver in self.c.nodes():
-                o_driver += &#34;_0&#34;
-            self.c.relabel({o: o_driver})
-            self.add_node(o, &#34;output&#34;)
-            self.c.connect(o_driver, o)
+        self.c.set_output(str(o))
 
     # Remove tie0, tie1 if not used
     if not self.c.fanout(self.tie0):
@@ -1143,23 +1110,6 @@ exceptions.</dd>
                     self.text,
                 )
             self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
-    # Check if this is a GTECH gate
-    elif name_of_module.startswith(&#34;GTECH_&#34;) and name_of_module.split(&#34;_&#34;)[
-        -1
-    ].rstrip(digits).lower() in addable_types + [&#34;zero&#34;, &#34;one&#34;]:
-        gate = name_of_module.split(&#34;_&#34;)[-1].rstrip(digits).lower()
-        if gate == &#34;zero&#34;:
-            gate = &#34;0&#34;
-        if gate == &#34;one&#34;:
-            gate = &#34;1&#34;
-        for name, connections in module_instances:
-            if not isinstance(connections, dict):
-                raise VerilogParsingError(
-                    &#34;GTECH gates must use named port connections&#34;, name, self.text,
-                )
-            output = connections[&#34;Z&#34;]
-            inputs = set(connections.values()) - {output}
-            self.add_node(output, gate, fanin=inputs)
     # Otherwise, try to parse as blackbox
     else:
         try:
@@ -1263,9 +1213,7 @@ exceptions.</dd>
 </summary>
 <pre><code class="python">def output_declaration(self, list_of_variables):
     [list_of_variables] = list_of_variables
-    self.outputs.update(list_of_variables)
-    for variable in list_of_variables:
-        self.add_node(variable, &#34;output&#34;)</code></pre>
+    self.outputs.update(list_of_variables)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.parsing.verilog.VerilogCircuitGraphTransformer.start"><code class="name flex">
@@ -1383,7 +1331,7 @@ exceptions.</dd>
 </dd>
 <dt id="circuitgraph.parsing.verilog.VerilogParsingWarning"><code class="flex name class">
 <span>class <span class="ident">VerilogParsingWarning</span></span>
-<span>(</span><span>...)</span>
+<span>(</span><span>*args, **kwargs)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Potentially raised if there is a warning parsing verilog.</p></div>
@@ -1474,7 +1422,7 @@ exceptions.</dd>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>

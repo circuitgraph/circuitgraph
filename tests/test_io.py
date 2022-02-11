@@ -3,13 +3,11 @@ import os
 import tempfile
 
 import circuitgraph as cg
-from circuitgraph.transform import miter
-from circuitgraph.sat import sat
 
 
 class TestIO(unittest.TestCase):
     def setUp(self):
-        self.test_path = f"{os.path.dirname(__file__)}/../netlists/tests/"
+        self.test_path = f"{os.path.dirname(__file__)}/../circuitgraph/netlists/tests/"
         self.bbs = [cg.BlackBox("ff", ["CK", "D"], ["Q"])]
 
     def test_bench(self):
@@ -26,12 +24,12 @@ class TestIO(unittest.TestCase):
 
     def test_bench_output(self):
         g = cg.from_lib(f"b17_C")
-        g2 = cg.bench_to_circuit(cg.circuit_to_bench(g), g.name)
+        g2 = cg.io.bench_to_circuit(cg.io.circuit_to_bench(g), g.name)
 
-        m = miter(g, g2)
-        live = sat(m)
+        m = cg.tx.miter(g, g2)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
     def test_verilog(self):
@@ -113,42 +111,10 @@ class TestIO(unittest.TestCase):
         self.assertSetEqual(g.outputs(), gf.outputs())
         self.assertSetEqual(g.nodes(), gf.nodes())
         self.assertSetEqual(g.edges(), gf.edges())
-        m = miter(g, gf)
-        live = sat(m)
+        m = cg.tx.miter(g, gf)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
-        self.assertFalse(different_output)
-
-    @unittest.skipUnless(
-        "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
-    )
-    def test_gtech_verilog(self):
-        g = cg.from_file(f"{self.test_path}/../c432.v")
-        with tempfile.TemporaryDirectory(prefix="circuitgraph_test_dir") as tmpdirname:
-            g_syn = cg.syn(g, engine="dc", suppress_output=True, working_dir=tmpdirname)
-        m = miter(g, g_syn)
-        live = sat(m)
-        self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
-        self.assertFalse(different_output)
-
-    @unittest.skipUnless(
-        "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
-    )
-    def test_gtech_fast_verilog(self):
-        g = cg.from_file(f"{self.test_path}/../c432.v")
-        with tempfile.TemporaryDirectory(prefix="circuitgraph_test_dir") as tmpdirname:
-            g_syn = cg.syn(
-                g,
-                engine="dc",
-                suppress_output=True,
-                fast_parsing=True,
-                working_dir=tmpdirname,
-            )
-        m = miter(g, g_syn)
-        live = sat(m)
-        self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
     def test_incorrect_file_type(self):
@@ -164,12 +130,12 @@ class TestIO(unittest.TestCase):
         )
         self.assertDictEqual(c.blackboxes, {"ff0": self.bbs[0]})
 
-        v = cg.circuit_to_verilog(c)
-        c2 = cg.verilog_to_circuit(v, c.name, blackboxes=self.bbs)
-        m = miter(cg.strip_blackboxes(c), cg.strip_blackboxes(c2))
-        live = sat(m)
+        v = cg.io.circuit_to_verilog(c)
+        c2 = cg.io.verilog_to_circuit(v, c.name, blackboxes=self.bbs)
+        m = cg.tx.miter(cg.tx.strip_blackboxes(c), cg.tx.strip_blackboxes(c2))
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
         c = cg.from_file(f"{self.test_path}/test_blackbox_io_1.v", blackboxes=self.bbs)
@@ -180,12 +146,12 @@ class TestIO(unittest.TestCase):
         )
         self.assertDictEqual(c.blackboxes, {"ff0": self.bbs[0]})
 
-        v = cg.circuit_to_verilog(c)
-        c2 = cg.verilog_to_circuit(v, c.name, blackboxes=self.bbs)
-        m = miter(cg.strip_blackboxes(c), cg.strip_blackboxes(c2))
-        live = sat(m)
+        v = cg.io.circuit_to_verilog(c)
+        c2 = cg.io.verilog_to_circuit(v, c.name, blackboxes=self.bbs)
+        m = cg.tx.miter(cg.tx.strip_blackboxes(c), cg.tx.strip_blackboxes(c2))
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
     def test_blackbox_io_fast(self):
@@ -200,12 +166,12 @@ class TestIO(unittest.TestCase):
         )
         self.assertDictEqual(c.blackboxes, {"ff0": self.bbs[0]})
 
-        v = cg.circuit_to_verilog(c)
-        c2 = cg.verilog_to_circuit(v, c.name, blackboxes=self.bbs, fast=True)
-        m = miter(cg.strip_blackboxes(c), cg.strip_blackboxes(c2))
-        live = sat(m)
+        v = cg.io.circuit_to_verilog(c)
+        c2 = cg.io.verilog_to_circuit(v, c.name, blackboxes=self.bbs, fast=True)
+        m = cg.tx.miter(cg.tx.strip_blackboxes(c), cg.tx.strip_blackboxes(c2))
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
         c = cg.from_file(
@@ -218,12 +184,12 @@ class TestIO(unittest.TestCase):
         )
         self.assertDictEqual(c.blackboxes, {"ff0": self.bbs[0]})
 
-        v = cg.circuit_to_verilog(c)
-        c2 = cg.verilog_to_circuit(v, c.name, blackboxes=self.bbs, fast=True)
-        m = miter(cg.strip_blackboxes(c), cg.strip_blackboxes(c2))
-        live = sat(m)
+        v = cg.io.circuit_to_verilog(c)
+        c2 = cg.io.verilog_to_circuit(v, c.name, blackboxes=self.bbs, fast=True)
+        m = cg.tx.miter(cg.tx.strip_blackboxes(c), cg.tx.strip_blackboxes(c2))
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
     def test_verilog_output(self):
@@ -235,11 +201,11 @@ class TestIO(unittest.TestCase):
             ),
             cg.from_file(f"{self.test_path}/test_correct_io.v", name="test_correct_io"),
         ]:
-            g2 = cg.verilog_to_circuit(
-                cg.circuit_to_verilog(g), g.name, blackboxes=self.bbs
+            g2 = cg.io.verilog_to_circuit(
+                cg.io.circuit_to_verilog(g), g.name, blackboxes=self.bbs
             )
-            m = miter(cg.strip_blackboxes(g), cg.strip_blackboxes(g2))
-            live = sat(m)
+            m = cg.tx.miter(cg.tx.strip_blackboxes(g), cg.tx.strip_blackboxes(g2))
+            live = cg.sat.solve(m)
             self.assertTrue(live)
-            different_output = sat(m, assumptions={"sat": True})
+            different_output = cg.sat.solve(m, assumptions={"sat": True})
             self.assertFalse(different_output)

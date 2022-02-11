@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.8.4" />
+<meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.sat API documentation</title>
 <meta name="description" content="Functions for executing SAT, #SAT, and approx-#SAT on circuits" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -28,18 +28,11 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;Functions for executing SAT, #SAT, and approx-#SAT on circuits&#34;&#34;&#34;
-
 import tempfile
 import re
 import code
-from subprocess import PIPE, run
-
-from pysat.formula import CNF, IDPool
-from pysat.solvers import Cadical, Glucose4, Lingeling
-
-
-def interrupt(s):
-    s.interrupt()
+import subprocess
+import shutil
 
 
 def add_assumptions(formula, variables, assumptions):
@@ -57,27 +50,32 @@ def remap(clauses, offset):
 
 def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
     &#34;&#34;&#34;
-    Constructs a SAT solver instance with the given circuit and assumptions
+    Constructs a SAT solver instance with the given circuit and assumptions.
 
     Parameters
     ----------
     c : Circuit
-            circuit to encode
+            circuit to encode.
     assumptions : dict of str:int
-            Assumptions to add to solver
+            Assumptions to add to solver.
 
     Returns
     -------
     solver : pysat.Cadical
-            SAT solver instance
+            SAT solver instance.
     variables : pysat.IDPool
-            solver variable mapping
+            solver variable mapping.
     &#34;&#34;&#34;
+    try:
+        from pysat.solvers import Cadical, Glucose4, Lingeling
+    except ImportError:
+        raise ImportError(&#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;)
+
     formula, variables = cnf(c)
     if assumptions:
         for n in assumptions.keys():
             if n not in c:
-                raise ValueError(f&#34;incorrect assumption key: {n}&#34;)
+                raise ValueError(f&#34;Node &#39;{n}&#39; in assumptions is not in circuit&#34;)
         add_assumptions(formula, variables, assumptions)
 
     if engine == &#34;cadical&#34;:
@@ -93,20 +91,24 @@ def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
 
 def cnf(c):
     &#34;&#34;&#34;
-    Converts circuit to CNF using the Tseitin transformation
+    Converts circuit to CNF using the Tseitin transformation.
 
     Parameters
     ----------
     c : Circuit
-            circuit to transform
+            circuit to transform.
 
     Returns
     -------
     variables : pysat.IDPool
-            formula variable mapping
+            formula variable mapping.
     formula : pysat.CNF
-            CNF formula
+            CNF formula.
     &#34;&#34;&#34;
+    try:
+        from pysat.formula import CNF, IDPool
+    except ImportError:
+        raise ImportError(&#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;)
     variables = IDPool()
     formula = CNF()
 
@@ -133,7 +135,7 @@ def cnf(c):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), variables.id(f)])
                 formula.append([-variables.id(n), -variables.id(f)])
-        elif c.type(n) in [&#34;buf&#34;, &#34;output&#34;, &#34;bb_input&#34;]:
+        elif c.type(n) in [&#34;buf&#34;, &#34;bb_input&#34;]:
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), -variables.id(f)])
@@ -179,15 +181,14 @@ def cnf(c):
         elif c.type(n) in [&#34;bb_output&#34;, &#34;input&#34;]:
             formula.append([variables.id(n), -variables.id(n)])
         else:
-            print(f&#34;unknown gate type: {c.type(n)}&#34;)
-            code.interact(local=dict(globals(), **locals()))
+            raise ValueError(f&#34;Unknown gate type &#39;{c.type(n)}&#39;&#34;)
 
     return formula, variables
 
 
-def sat(c, assumptions=None):
+def solve(c, assumptions=None):
     &#34;&#34;&#34;
-    Trys to find satisfying assignment, with optional assumptions
+    Trys to find satisfying assignment, with optional assumptions.
 
     Parameters
     ----------
@@ -204,8 +205,8 @@ def sat(c, assumptions=None):
     Example
     -------
     &gt;&gt;&gt; import circuitgraph as cg
-    &gt;&gt;&gt; c = cg.from_file(&#39;rtl/s27.v&#39;)
-    &gt;&gt;&gt; cg.sat(c)
+    &gt;&gt;&gt; c = cg.from_lib(&#39;s27&#39;)
+    &gt;&gt;&gt; cg.sat.solve(c)
     {&#39;G17&#39;: True, &#39;n_20&#39;: False, &#39;n_12&#39;: True, &#39;n_11&#39;: False,
      &#39;G0&#39;: True, &#39;n_9&#39;: True, &#39;n_10&#39;: True, &#39;n_7&#39;: False, &#39;n_8&#39;: False,
      &#39;n_1&#39;: False, &#39;G7&#39;: True, &#39;n_4&#39;: True, &#39;n_5&#39;: True, &#39;n_6&#39;: True,
@@ -214,9 +215,8 @@ def sat(c, assumptions=None):
      &#39;r[G5]&#39;: True, &#39;clk[G5]&#39;: True, &#39;clk&#39;: True, &#39;d[G6]&#39;: False,
      &#39;r[G6]&#39;: True, &#39;clk[G6]&#39;: True, &#39;d[G7]&#39;: True, &#39;r[G7]&#39;: True,
      &#39;clk[G7]&#39;: True, &#39;output[G17]&#39;: True}
-    &gt;&gt;&gt; cg.sat(c,assumptions={&#39;G17&#39;:True,&#39;n_20&#39;:True,&#39;G6&#39;:False})
+    &gt;&gt;&gt; cg.sat.solve(c, assumptions={&#39;G17&#39;: True, &#39;n_20&#39;: True, &#39;G6&#39;: False})
     False
-
     &#34;&#34;&#34;
     solver, variables = construct_solver(c, assumptions)
     if solver.solve():
@@ -226,9 +226,11 @@ def sat(c, assumptions=None):
         return False
 
 
-def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
+def approx_model_count(
+    c, assumptions=None, startpoints=None, e=0.9, d=0.1, log_file=None
+):
     &#34;&#34;&#34;
-    Approximates the number of solutions to circuit
+    Approximates the number of solutions to circuit.
 
     Parameters
     ----------
@@ -237,18 +239,21 @@ def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
     assumptions : dict of str:int
             Nodes to assume True or False.
     startpoints : iter of str
-            Startpoints to use for approxmc
+            Startpoints to use for approxmc.
     e : float (&gt;0)
-            epsilon of approxmc
+            epsilon of approxmc,
     d : float (0-1)
-            delta of approxmc
+            delta of approxmc.
+    log_file: str
+            If specified, approxmc output will be written to this file.
 
     Returns
     -------
     int
             Estimate.
     &#34;&#34;&#34;
-
+    if shutil.which(&#34;approxmc&#34;) == None:
+        raise OSError(&#34;Install &#39;approxmc&#39; to use &#39;approx_model_count&#39;&#34;)
     if startpoints is None:
         startpoints = c.startpoints()
 
@@ -256,14 +261,14 @@ def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
     if assumptions:
         for n in assumptions.keys():
             if n not in c:
-                raise ValueError(f&#34;incorrect assumption key: {n}&#34;)
+                raise ValueError(f&#34;Assumption key &#39;{n}&#39; not node in circuit&#34;)
         add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
     enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in startpoints])
 
     # write dimacs to tmp
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(prefix=f&#34;circuitgraph_approxmc_{c.name}_&#34;) as tmp:
         clause_str = &#34;\n&#34;.join(
             &#34; &#34;.join(str(v) for v in c) + &#34; 0&#34; for c in formula.clauses
         )
@@ -276,22 +281,29 @@ def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
 
         # run approxmc
         cmd = f&#34;approxmc --epsilon={e} --delta={d} {tmp.name}&#34;.split()
-        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        if log_file:
+            with open(log_file, &#34;w+&#34;) as f:
+                subprocess.run(
+                    cmd, stdout=f, stderr=f, check=True, universal_newlines=True
+                )
+                f.seek(0)
+                result = f.read()
+        else:
+            result = subprocess.run(
+                cmd, capture_output=True, check=True, universal_newlines=True
+            )
+            result = result.stdout
 
     # parse results
-    # approxmc version &lt; 4
-    m = re.search(r&#34;Number of solutions is: (\d+) x 2\^(\d+)&#34;, result.stdout)
-    # approxmc version 4
+    m = re.search(r&#34;s mc (\d+)&#34;, result)
     if not m:
-        m = re.search(r&#34;Number of solutions is: (\d+)\*2\*\*(\d+)&#34;, result.stdout)
-    if not m:
-        return None
-    return int(m.group(1)) * (2 ** int(m.group(2)))
+        raise ValueError(f&#34;approxmc produced unexpected result:\n\n{result}&#34;)
+    return int(m.group(1))
 
 
 def model_count(c, assumptions=None):
     &#34;&#34;&#34;
-    Determines the number of solutions to circuit
+    Determines the number of solutions to circuit.
 
     Parameters
     ----------
@@ -305,7 +317,6 @@ def model_count(c, assumptions=None):
     int
             Count.
     &#34;&#34;&#34;
-
     startpoints = c.startpoints()
     solver, variables = construct_solver(c, assumptions)
     count = 0
@@ -342,10 +353,10 @@ def model_count(c, assumptions=None):
 </details>
 </dd>
 <dt id="circuitgraph.sat.approx_model_count"><code class="name flex">
-<span>def <span class="ident">approx_model_count</span></span>(<span>c, assumptions=None, startpoints=None, e=0.9, d=0.1)</span>
+<span>def <span class="ident">approx_model_count</span></span>(<span>c, assumptions=None, startpoints=None, e=0.9, d=0.1, log_file=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Approximates the number of solutions to circuit</p>
+<div class="desc"><p>Approximates the number of solutions to circuit.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -353,11 +364,13 @@ def model_count(c, assumptions=None):
 <dt><strong><code>assumptions</code></strong> :&ensp;<code>dict</code> of <code>str:int</code></dt>
 <dd>Nodes to assume True or False.</dd>
 <dt><strong><code>startpoints</code></strong> :&ensp;<code>iter</code> of <code>str</code></dt>
-<dd>Startpoints to use for approxmc</dd>
+<dd>Startpoints to use for approxmc.</dd>
 <dt><strong><code>e</code></strong> :&ensp;<code>float (&gt;0)</code></dt>
-<dd>epsilon of approxmc</dd>
+<dd>epsilon of approxmc,</dd>
 <dt><strong><code>d</code></strong> :&ensp;<code>float (0-1)</code></dt>
-<dd>delta of approxmc</dd>
+<dd>delta of approxmc.</dd>
+<dt><strong><code>log_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>If specified, approxmc output will be written to this file.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -368,9 +381,11 @@ def model_count(c, assumptions=None):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def approx_model_count(c, assumptions=None, startpoints=None, e=0.9, d=0.1):
+<pre><code class="python">def approx_model_count(
+    c, assumptions=None, startpoints=None, e=0.9, d=0.1, log_file=None
+):
     &#34;&#34;&#34;
-    Approximates the number of solutions to circuit
+    Approximates the number of solutions to circuit.
 
     Parameters
     ----------
@@ -379,18 +394,21 @@ def model_count(c, assumptions=None):
     assumptions : dict of str:int
             Nodes to assume True or False.
     startpoints : iter of str
-            Startpoints to use for approxmc
+            Startpoints to use for approxmc.
     e : float (&gt;0)
-            epsilon of approxmc
+            epsilon of approxmc,
     d : float (0-1)
-            delta of approxmc
+            delta of approxmc.
+    log_file: str
+            If specified, approxmc output will be written to this file.
 
     Returns
     -------
     int
             Estimate.
     &#34;&#34;&#34;
-
+    if shutil.which(&#34;approxmc&#34;) == None:
+        raise OSError(&#34;Install &#39;approxmc&#39; to use &#39;approx_model_count&#39;&#34;)
     if startpoints is None:
         startpoints = c.startpoints()
 
@@ -398,14 +416,14 @@ def model_count(c, assumptions=None):
     if assumptions:
         for n in assumptions.keys():
             if n not in c:
-                raise ValueError(f&#34;incorrect assumption key: {n}&#34;)
+                raise ValueError(f&#34;Assumption key &#39;{n}&#39; not node in circuit&#34;)
         add_assumptions(formula, variables, assumptions)
 
     # specify sampling set
     enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in startpoints])
 
     # write dimacs to tmp
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(prefix=f&#34;circuitgraph_approxmc_{c.name}_&#34;) as tmp:
         clause_str = &#34;\n&#34;.join(
             &#34; &#34;.join(str(v) for v in c) + &#34; 0&#34; for c in formula.clauses
         )
@@ -418,35 +436,42 @@ def model_count(c, assumptions=None):
 
         # run approxmc
         cmd = f&#34;approxmc --epsilon={e} --delta={d} {tmp.name}&#34;.split()
-        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        if log_file:
+            with open(log_file, &#34;w+&#34;) as f:
+                subprocess.run(
+                    cmd, stdout=f, stderr=f, check=True, universal_newlines=True
+                )
+                f.seek(0)
+                result = f.read()
+        else:
+            result = subprocess.run(
+                cmd, capture_output=True, check=True, universal_newlines=True
+            )
+            result = result.stdout
 
     # parse results
-    # approxmc version &lt; 4
-    m = re.search(r&#34;Number of solutions is: (\d+) x 2\^(\d+)&#34;, result.stdout)
-    # approxmc version 4
+    m = re.search(r&#34;s mc (\d+)&#34;, result)
     if not m:
-        m = re.search(r&#34;Number of solutions is: (\d+)\*2\*\*(\d+)&#34;, result.stdout)
-    if not m:
-        return None
-    return int(m.group(1)) * (2 ** int(m.group(2)))</code></pre>
+        raise ValueError(f&#34;approxmc produced unexpected result:\n\n{result}&#34;)
+    return int(m.group(1))</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.sat.cnf"><code class="name flex">
 <span>def <span class="ident">cnf</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Converts circuit to CNF using the Tseitin transformation</p>
+<div class="desc"><p>Converts circuit to CNF using the Tseitin transformation.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>circuit to transform</dd>
+<dd>circuit to transform.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><strong><code>variables</code></strong> :&ensp;<code>pysat.IDPool</code></dt>
-<dd>formula variable mapping</dd>
+<dd>formula variable mapping.</dd>
 <dt><strong><code>formula</code></strong> :&ensp;<code>pysat.CNF</code></dt>
-<dd>CNF formula</dd>
+<dd>CNF formula.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -454,20 +479,24 @@ def model_count(c, assumptions=None):
 </summary>
 <pre><code class="python">def cnf(c):
     &#34;&#34;&#34;
-    Converts circuit to CNF using the Tseitin transformation
+    Converts circuit to CNF using the Tseitin transformation.
 
     Parameters
     ----------
     c : Circuit
-            circuit to transform
+            circuit to transform.
 
     Returns
     -------
     variables : pysat.IDPool
-            formula variable mapping
+            formula variable mapping.
     formula : pysat.CNF
-            CNF formula
+            CNF formula.
     &#34;&#34;&#34;
+    try:
+        from pysat.formula import CNF, IDPool
+    except ImportError:
+        raise ImportError(&#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;)
     variables = IDPool()
     formula = CNF()
 
@@ -494,7 +523,7 @@ def model_count(c, assumptions=None):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), variables.id(f)])
                 formula.append([-variables.id(n), -variables.id(f)])
-        elif c.type(n) in [&#34;buf&#34;, &#34;output&#34;, &#34;bb_input&#34;]:
+        elif c.type(n) in [&#34;buf&#34;, &#34;bb_input&#34;]:
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), -variables.id(f)])
@@ -540,8 +569,7 @@ def model_count(c, assumptions=None):
         elif c.type(n) in [&#34;bb_output&#34;, &#34;input&#34;]:
             formula.append([variables.id(n), -variables.id(n)])
         else:
-            print(f&#34;unknown gate type: {c.type(n)}&#34;)
-            code.interact(local=dict(globals(), **locals()))
+            raise ValueError(f&#34;Unknown gate type &#39;{c.type(n)}&#39;&#34;)
 
     return formula, variables</code></pre>
 </details>
@@ -550,20 +578,20 @@ def model_count(c, assumptions=None):
 <span>def <span class="ident">construct_solver</span></span>(<span>c, assumptions=None, engine='cadical')</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Constructs a SAT solver instance with the given circuit and assumptions</p>
+<div class="desc"><p>Constructs a SAT solver instance with the given circuit and assumptions.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>circuit to encode</dd>
+<dd>circuit to encode.</dd>
 <dt><strong><code>assumptions</code></strong> :&ensp;<code>dict</code> of <code>str:int</code></dt>
-<dd>Assumptions to add to solver</dd>
+<dd>Assumptions to add to solver.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><strong><code>solver</code></strong> :&ensp;<code>pysat.Cadical</code></dt>
-<dd>SAT solver instance</dd>
+<dd>SAT solver instance.</dd>
 <dt><strong><code>variables</code></strong> :&ensp;<code>pysat.IDPool</code></dt>
-<dd>solver variable mapping</dd>
+<dd>solver variable mapping.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -571,27 +599,32 @@ def model_count(c, assumptions=None):
 </summary>
 <pre><code class="python">def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
     &#34;&#34;&#34;
-    Constructs a SAT solver instance with the given circuit and assumptions
+    Constructs a SAT solver instance with the given circuit and assumptions.
 
     Parameters
     ----------
     c : Circuit
-            circuit to encode
+            circuit to encode.
     assumptions : dict of str:int
-            Assumptions to add to solver
+            Assumptions to add to solver.
 
     Returns
     -------
     solver : pysat.Cadical
-            SAT solver instance
+            SAT solver instance.
     variables : pysat.IDPool
-            solver variable mapping
+            solver variable mapping.
     &#34;&#34;&#34;
+    try:
+        from pysat.solvers import Cadical, Glucose4, Lingeling
+    except ImportError:
+        raise ImportError(&#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;)
+
     formula, variables = cnf(c)
     if assumptions:
         for n in assumptions.keys():
             if n not in c:
-                raise ValueError(f&#34;incorrect assumption key: {n}&#34;)
+                raise ValueError(f&#34;Node &#39;{n}&#39; in assumptions is not in circuit&#34;)
         add_assumptions(formula, variables, assumptions)
 
     if engine == &#34;cadical&#34;:
@@ -605,24 +638,11 @@ def model_count(c, assumptions=None):
     return solver, variables</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.sat.interrupt"><code class="name flex">
-<span>def <span class="ident">interrupt</span></span>(<span>s)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def interrupt(s):
-    s.interrupt()</code></pre>
-</details>
-</dd>
 <dt id="circuitgraph.sat.model_count"><code class="name flex">
 <span>def <span class="ident">model_count</span></span>(<span>c, assumptions=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Determines the number of solutions to circuit</p>
+<div class="desc"><p>Determines the number of solutions to circuit.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -641,7 +661,7 @@ def model_count(c, assumptions=None):
 </summary>
 <pre><code class="python">def model_count(c, assumptions=None):
     &#34;&#34;&#34;
-    Determines the number of solutions to circuit
+    Determines the number of solutions to circuit.
 
     Parameters
     ----------
@@ -655,7 +675,6 @@ def model_count(c, assumptions=None):
     int
             Count.
     &#34;&#34;&#34;
-
     startpoints = c.startpoints()
     solver, variables = construct_solver(c, assumptions)
     count = 0
@@ -681,11 +700,11 @@ def model_count(c, assumptions=None):
     return new_clauses</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.sat.sat"><code class="name flex">
-<span>def <span class="ident">sat</span></span>(<span>c, assumptions=None)</span>
+<dt id="circuitgraph.sat.solve"><code class="name flex">
+<span>def <span class="ident">solve</span></span>(<span>c, assumptions=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Trys to find satisfying assignment, with optional assumptions</p>
+<div class="desc"><p>Trys to find satisfying assignment, with optional assumptions.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -699,9 +718,9 @@ def model_count(c, assumptions=None):
 <dd>Result.</dd>
 </dl>
 <h2 id="example">Example</h2>
-<pre><code class="python">&gt;&gt;&gt; import circuitgraph as cg
-&gt;&gt;&gt; c = cg.from_file('rtl/s27.v')
-&gt;&gt;&gt; cg.sat(c)
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = cg.from_lib('s27')
+&gt;&gt;&gt; cg.sat.solve(c)
 {'G17': True, 'n_20': False, 'n_12': True, 'n_11': False,
  'G0': True, 'n_9': True, 'n_10': True, 'n_7': False, 'n_8': False,
  'n_1': False, 'G7': True, 'n_4': True, 'n_5': True, 'n_6': True,
@@ -710,16 +729,16 @@ def model_count(c, assumptions=None):
  'r[G5]': True, 'clk[G5]': True, 'clk': True, 'd[G6]': False,
  'r[G6]': True, 'clk[G6]': True, 'd[G7]': True, 'r[G7]': True,
  'clk[G7]': True, 'output[G17]': True}
-&gt;&gt;&gt; cg.sat(c,assumptions={'G17':True,'n_20':True,'G6':False})
+&gt;&gt;&gt; cg.sat.solve(c, assumptions={'G17': True, 'n_20': True, 'G6': False})
 False
 </code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sat(c, assumptions=None):
+<pre><code class="python">def solve(c, assumptions=None):
     &#34;&#34;&#34;
-    Trys to find satisfying assignment, with optional assumptions
+    Trys to find satisfying assignment, with optional assumptions.
 
     Parameters
     ----------
@@ -736,8 +755,8 @@ False
     Example
     -------
     &gt;&gt;&gt; import circuitgraph as cg
-    &gt;&gt;&gt; c = cg.from_file(&#39;rtl/s27.v&#39;)
-    &gt;&gt;&gt; cg.sat(c)
+    &gt;&gt;&gt; c = cg.from_lib(&#39;s27&#39;)
+    &gt;&gt;&gt; cg.sat.solve(c)
     {&#39;G17&#39;: True, &#39;n_20&#39;: False, &#39;n_12&#39;: True, &#39;n_11&#39;: False,
      &#39;G0&#39;: True, &#39;n_9&#39;: True, &#39;n_10&#39;: True, &#39;n_7&#39;: False, &#39;n_8&#39;: False,
      &#39;n_1&#39;: False, &#39;G7&#39;: True, &#39;n_4&#39;: True, &#39;n_5&#39;: True, &#39;n_6&#39;: True,
@@ -746,9 +765,8 @@ False
      &#39;r[G5]&#39;: True, &#39;clk[G5]&#39;: True, &#39;clk&#39;: True, &#39;d[G6]&#39;: False,
      &#39;r[G6]&#39;: True, &#39;clk[G6]&#39;: True, &#39;d[G7]&#39;: True, &#39;r[G7]&#39;: True,
      &#39;clk[G7]&#39;: True, &#39;output[G17]&#39;: True}
-    &gt;&gt;&gt; cg.sat(c,assumptions={&#39;G17&#39;:True,&#39;n_20&#39;:True,&#39;G6&#39;:False})
+    &gt;&gt;&gt; cg.sat.solve(c, assumptions={&#39;G17&#39;: True, &#39;n_20&#39;: True, &#39;G6&#39;: False})
     False
-
     &#34;&#34;&#34;
     solver, variables = construct_solver(c, assumptions)
     if solver.solve():
@@ -784,17 +802,16 @@ False
 <li><code><a title="circuitgraph.sat.approx_model_count" href="#circuitgraph.sat.approx_model_count">approx_model_count</a></code></li>
 <li><code><a title="circuitgraph.sat.cnf" href="#circuitgraph.sat.cnf">cnf</a></code></li>
 <li><code><a title="circuitgraph.sat.construct_solver" href="#circuitgraph.sat.construct_solver">construct_solver</a></code></li>
-<li><code><a title="circuitgraph.sat.interrupt" href="#circuitgraph.sat.interrupt">interrupt</a></code></li>
 <li><code><a title="circuitgraph.sat.model_count" href="#circuitgraph.sat.model_count">model_count</a></code></li>
 <li><code><a title="circuitgraph.sat.remap" href="#circuitgraph.sat.remap">remap</a></code></li>
-<li><code><a title="circuitgraph.sat.sat" href="#circuitgraph.sat.sat">sat</a></code></li>
+<li><code><a title="circuitgraph.sat.solve" href="#circuitgraph.sat.solve">solve</a></code></li>
 </ul>
 </li>
 </ul>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.4</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>

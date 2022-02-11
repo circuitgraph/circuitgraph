@@ -1,5 +1,4 @@
 """Functions for reading/writing CircuitGraphs"""
-
 import re
 from pathlib import Path
 
@@ -144,13 +143,19 @@ def bench_to_circuit(netlist, name):
         )
         if gate == "BUFF" or gate == "buff":
             gate = "buf"
-        c.add(net, gate.lower(), fanin=inputs, add_connected_nodes=True)
+        c.add(
+            net,
+            gate.lower(),
+            fanin=inputs,
+            add_connected_nodes=True,
+            allow_redefinition=True,
+        )
 
     regex = r"([a-zA-Z][a-zA-Z\d_]*)\s*=\s*(DFF|dff)\(([^\)]+)\)"
     for net, gate, input_str in re.findall(regex, netlist):
         # parse all nets
         inputs = input_str.replace(" ", "").replace("\n", "").replace("\t", "")
-        c.add(net, "buf")
+        c.add(net, "buf", allow_redefinition=True)
         c.add_blackbox(dff, f"{net}_dff", connections={"D": inputs, "Q": net})
 
     # get outputs

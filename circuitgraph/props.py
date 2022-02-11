@@ -1,10 +1,9 @@
-"""Functions for analysis of Boolean properties"""
-
-from circuitgraph.transform import (
+"""Functions for analysis of Boolean and circuit properties"""
+from circuitgraph.tx import (
     sensitivity_transform,
     sensitization_transform,
 )
-from circuitgraph.sat import sat, approx_model_count, model_count
+from circuitgraph.sat import solve, approx_model_count, model_count
 from circuitgraph.utils import clog2, int_to_bin
 
 
@@ -20,11 +19,11 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1):
     n : str
             Node to compute average sensitivity for.
     approx : bool
-            Use approximate solver
+            Compute approximate model count using approxmc.
     e : float (>0)
-            epsilon of approxmc
+            epsilon of approxmc.
     d : float (0-1)
-            delta of approxmc
+            delta of approxmc.
 
     Returns
     -------
@@ -36,7 +35,6 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1):
     avg_sen = 0
     for s in sp:
         # create influence circuit
-        # i = influence_transform(c, n, s)
         i = sensitization_transform(c, s, n)
 
         # compute influence
@@ -74,7 +72,7 @@ def sensitivity(c, n):
     sen = len(sp)
     s = sensitivity_transform(c, n)
     vs = int_to_bin(sen, clog2(len(sp)), True)
-    while not sat(s, {f"sen_out_{i}": v for i, v in enumerate(vs)}):
+    while not solve(s, {f"sen_out_{i}": v for i, v in enumerate(vs)}):
         sen -= 1
         vs = int_to_bin(sen, clog2(len(sp)), True)
 
@@ -104,7 +102,7 @@ def sensitize(c, n, assumptions={}):
     s = sensitization_transform(c, n)
 
     # find a sensitizing input
-    result = sat(s, {"sat": True, **assumptions})
+    result = solve(s, {"sat": True, **assumptions})
     if not result:
         return None
     return {g: result[g] for g in s.startpoints()}
@@ -113,7 +111,7 @@ def sensitize(c, n, assumptions={}):
 def signal_probability(c, n, approx=True, e=0.9, d=0.1):
     """
     Determines the probability of the output being true over all startpoint
-    combinations
+    combinations.
 
     Parameters
     ----------

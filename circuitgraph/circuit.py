@@ -1,15 +1,17 @@
 """Class for circuit graphs
 
-The Circuit class can be constructed from a generic Verilog file or
-existing graph. Each node in the graph represents a logic gate and has
-an associated name and gate type. The supported types are:
+The Circuit class can be constructed from a generic gate-level Verilog file or
+existing graph. Each node in the graph represents a logic gate and has an associated
+name and gate type. The supported types are:
 
 - Standard input-order-independent gates:
-    ['and','nand','or','nor','not','buf','xor','xnor']
+    ['and', 'nand', 'or', 'nor', 'not', 'buf', 'xor', 'xnor']
 - IO and Constant values:
-    ['input','1','0']
+    ['input', '1', '0']
 - Blackbox IO (must be added through `add_blackbox`)
-    ['bb_output','bb_input']
+    ['bb_output', 'bb_input']
+
+Additionally, any node can be marked as an output node.
 """
 
 import networkx as nx
@@ -46,8 +48,8 @@ class Circuit:
                 Name of circuit.
         graph : networkx.DiGraph
                 Graph data structure to be used in new instance.
-        blackboxes : dict of str
-                Record of blackboxes, mapping name to type
+        blackboxes : dict of str:BlackBox
+                Record of blackboxes, mapping instsance name to BlackBox type
 
         Examples
         --------
@@ -94,6 +96,14 @@ class Circuit:
         return self.graph.__iter__()
 
     def copy(self):
+        """
+        Returns a copy of the circuit.
+
+        Returns
+        -------
+        Circuit:
+                Copy of the circuit.
+        """
         return Circuit(
             graph=self.graph.copy(), name=self.name, blackboxes=self.blackboxes.copy()
         )
@@ -377,6 +387,7 @@ class Circuit:
         fanout=None,
         output=False,
         add_connected_nodes=False,
+        allow_redefinition=False,
         uid=False,
     ):
         """
@@ -398,6 +409,10 @@ class Circuit:
                 If True, nodes in the fanin/fanout will be added to the
                 circuit as buffers if not already present. Useful when
                 parsing circuits.
+        allow_redefinition: bool
+                If True, calling add with a node `n` that is already in the circuit
+                with `uid` set to False will just update the type, fanin, fanout, and
+                output properties of the node. If False, a ValueError will be raised.
         uid: bool
                 If True, the node is given a unique name if it already
                 exists in the circuit.
@@ -428,6 +443,8 @@ class Circuit:
         # clean arguments
         if uid:
             n = self.uid(n)
+        elif n in self and not allow_redefinition:
+            raise ValueError(f"Node '{n}' already in circuit")
         if fanin is None:
             fanin = []
         elif isinstance(fanin, str):

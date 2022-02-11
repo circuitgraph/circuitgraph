@@ -10,7 +10,7 @@ test :
 	python3 -m unittest
 
 test_% :
-	python3 -m unittest circuitgraph/tests/test_$*.py
+	python3 -m unittest tests/test_$*.py
 
 coverage :
 	coverage run -m unittest

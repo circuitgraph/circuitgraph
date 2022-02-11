@@ -3,44 +3,40 @@ import random
 import tempfile
 import os
 import shutil
-
-import circuitgraph as cg
-from circuitgraph.transform import *
-from circuitgraph.sat import sat
 from random import choice, randint
 
+import circuitgraph as cg
 
-class TestTransform(unittest.TestCase):
+
+class TestTx(unittest.TestCase):
     def setUp(self):
-        self.s27 = cg.strip_blackboxes(cg.from_lib("s27"))
-
-        # incorrect copy of s27
-        self.s27m = cg.copy(self.s27)
+        self.s27 = cg.tx.strip_blackboxes(cg.from_lib("s27"))
+        self.s27m = self.s27.copy()
         self.s27m.graph.nodes["n_11"]["type"] = "and"
         self.c432 = cg.from_lib("c432")
 
     def test_strip_io(self):
         # check self equivalence
-        c = cg.strip_io(self.s27)
+        c = cg.tx.strip_io(self.s27)
         self.assertTrue("input" not in c.type(c.nodes()))
         self.assertFalse([i for i in c if c.is_output(i)])
 
     def test_strip_inputs(self):
         # check self equivalence
-        c = cg.strip_inputs(self.s27)
+        c = cg.tx.strip_inputs(self.s27)
         self.assertTrue("input" not in c.type(c.nodes()))
         self.assertTrue([i for i in c if c.is_output(i)])
 
     def test_strip_outputs(self):
         # check self equivalence
-        c = cg.strip_outputs(self.s27)
+        c = cg.tx.strip_outputs(self.s27)
         self.assertFalse("input" not in c.type(c.nodes()))
         self.assertTrue("output" not in c.type(c.nodes()))
 
     def test_sequential_unroll(self):
         c = cg.from_lib("s27")
         num_unroll = 4
-        cu, io_map = sequential_unroll(c, num_unroll, "D", "Q", ["clk"])
+        cu, io_map = cg.tx.sequential_unroll(c, num_unroll, "D", "Q", ["clk"])
         self.assertEqual(
             len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll + len(c.blackboxes)
         )
@@ -50,7 +46,7 @@ class TestTransform(unittest.TestCase):
         c = cg.from_lib("s27")
         num_unroll = 4
         initial_values = {f: str(random.getrandbits(1)) for f in c.blackboxes}
-        cu, io_map = sequential_unroll(
+        cu, io_map = cg.tx.sequential_unroll(
             c, num_unroll, "D", "Q", ["CK"], initial_values=initial_values,
         )
         self.assertEqual(len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll)
@@ -61,7 +57,7 @@ class TestTransform(unittest.TestCase):
     def test_sequential_unroll_add_flop_outputs(self):
         c = cg.from_lib("s27")
         num_unroll = 4
-        cu, io_map = sequential_unroll(
+        cu, io_map = cg.tx.sequential_unroll(
             c, num_unroll, "D", "Q", ["CK"], add_flop_outputs=True,
         )
         self.assertEqual(
@@ -118,42 +114,44 @@ class TestTransform(unittest.TestCase):
             if idx > 0:
                 uc.connect(f"ff0_D_{prefix}_{idx-1}", f"ff0_Q_{prefix}_{idx}")
 
-        unroll_uc, io_map = unroll(c, num_copies, {"ff0_D": "ff0_Q"}, prefix=prefix)
+        unroll_uc, io_map = cg.tx.unroll(
+            c, num_copies, {"ff0_D": "ff0_Q"}, prefix=prefix
+        )
         self.assertSetEqual(uc.inputs(), unroll_uc.inputs())
         self.assertSetEqual(uc.outputs(), unroll_uc.outputs())
-        m = miter(uc, unroll_uc)
-        live = sat(m)
+        m = cg.tx.miter(uc, unroll_uc)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
     def test_miter(self):
         # check self equivalence
-        m = miter(self.s27)
-        live = sat(m)
+        m = cg.tx.miter(self.s27)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
         # check equivalence with incorrect copy
-        m = miter(self.s27, self.s27m)
-        live = sat(m)
+        m = cg.tx.miter(self.s27, self.s27m)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertTrue(different_output)
 
         # check equivalence with free inputs
         startpoints = self.s27.startpoints() - set(["clk"])
         startpoints.pop()
-        m = miter(self.s27, startpoints=startpoints)
-        live = sat(m)
+        m = cg.tx.miter(self.s27, startpoints=startpoints)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertTrue(different_output)
 
     def test_subcircuit(self):
         c17 = cg.from_lib("c17")
-        sc = subcircuit(c17, c17.transitive_fanin("N22") | {"N22"})
+        sc = cg.tx.subcircuit(c17, c17.transitive_fanin("N22") | {"N22"})
         self.assertSetEqual(
             sc.nodes(), {"N22", "N10", "N16", "N1", "N3", "N2", "N11", "N6"},
         )
@@ -175,17 +173,17 @@ class TestTransform(unittest.TestCase):
 
     @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
     def test_syn_yosys(self):
-        s = syn(self.s27, "yosys", suppress_output=True)
-        m = miter(self.s27, s)
-        live = sat(m)
+        s = cg.tx.syn(self.s27, "yosys", suppress_output=True)
+        m = cg.tx.miter(self.s27, s)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
     @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
     def test_syn_yosys_io(self):
         tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_yosys_io")
-        s = syn(
+        s = cg.tx.syn(
             self.s27,
             "yosys",
             suppress_output=True,
@@ -195,10 +193,10 @@ class TestTransform(unittest.TestCase):
         )
         c0 = cg.from_file(f"{tmpdir}/pre_syn.v")
         c1 = cg.from_file(f"{tmpdir}/post_syn.v")
-        m = miter(c0, c1)
-        live = sat(m)
+        m = cg.tx.miter(c0, c1)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
         shutil.rmtree(tmpdir)
 
@@ -214,7 +212,7 @@ class TestTransform(unittest.TestCase):
             tmp_in.write("endmodule\n")
             tmp_in.flush()
 
-            c = syn(
+            c = cg.tx.syn(
                 cg.Circuit(name="test"),
                 "yosys",
                 suppress_output=True,
@@ -225,10 +223,10 @@ class TestTransform(unittest.TestCase):
             c2.add("a", "input")
             c2.add("b", "input")
             c2.add("c", "nand", fanin=["a", "b"], fanout=["c"], output=True)
-            m = miter(c, c2)
-            live = sat(m)
+            m = cg.tx.miter(c, c2)
+            live = cg.sat.solve(m)
             self.assertTrue(live)
-            different_output = sat(m, assumptions={"sat": True})
+            different_output = cg.sat.solve(m, assumptions={"sat": True})
             self.assertFalse(different_output)
 
     @unittest.skipUnless(
@@ -236,11 +234,11 @@ class TestTransform(unittest.TestCase):
     )
     def test_syn_genus(self):
         tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_genus")
-        s = syn(self.s27, "genus", suppress_output=True, working_dir=tmpdir)
-        m = miter(self.s27, s)
-        live = sat(m)
+        s = cg.tx.syn(self.s27, "genus", suppress_output=True, working_dir=tmpdir)
+        m = cg.tx.miter(self.s27, s)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
         shutil.rmtree(tmpdir)
 
@@ -249,7 +247,7 @@ class TestTransform(unittest.TestCase):
     )
     def test_syn_genus_io(self):
         tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_genus_io")
-        s = syn(
+        s = cg.tx.syn(
             self.s27,
             "genus",
             suppress_output=True,
@@ -259,10 +257,10 @@ class TestTransform(unittest.TestCase):
         )
         c0 = cg.from_file(f"{tmpdir}/pre_syn.v")
         c1 = cg.from_file(f"{tmpdir}/post_syn.v")
-        m = miter(c0, c1)
-        live = sat(m)
+        m = cg.tx.miter(c0, c1)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
         shutil.rmtree(tmpdir)
 
@@ -271,11 +269,11 @@ class TestTransform(unittest.TestCase):
     )
     def test_syn_dc(self):
         tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_dc")
-        s = syn(self.s27, "dc", suppress_output=True, working_dir=tmpdir)
-        m = miter(self.s27, s)
-        live = sat(m)
+        s = cg.tx.syn(self.s27, "dc", suppress_output=True, working_dir=tmpdir)
+        m = cg.tx.miter(self.s27, s)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(m, assumptions={"sat": True})
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
         shutil.rmtree(tmpdir)
 
@@ -286,7 +284,7 @@ class TestTransform(unittest.TestCase):
         c.add("i1", "input")
         c.add("g0", "and", fanin=["i0", "i1"], output=True)
 
-        ct, mapping = ternary(c)
+        ct, mapping = cg.tx.ternary(c)
 
         assumptions = {
             "i0": True,
@@ -294,28 +292,28 @@ class TestTransform(unittest.TestCase):
             "i1": True,
             mapping["i1"]: False,
         }
-        result = sat(ct, assumptions)
+        result = cg.sat.solve(ct, assumptions)
         self.assertTrue(result["g0"])
         self.assertFalse(result[mapping["g0"]])
 
         assumptions[mapping["i1"]] = True
-        result = sat(ct, assumptions)
+        result = cg.sat.solve(ct, assumptions)
         self.assertTrue(result[mapping["g0"]])
 
         assumptions["i0"] = False
-        result = sat(ct, assumptions)
+        result = cg.sat.solve(ct, assumptions)
         self.assertFalse(result["g0"])
         self.assertFalse(result[mapping["g0"]])
 
         # Test original circuit equivalence
         c = cg.from_lib("c880")
-        ct, mapping = ternary(c)
+        ct, mapping = cg.tx.ternary(c)
         for i in c.inputs():
             ct.set_type(mapping[i], "0")
-        m = miter(c, ct)
-        live = sat(m)
+        m = cg.tx.miter(c, ct)
+        live = cg.sat.solve(m)
         self.assertTrue(live)
-        different_output = sat(
+        different_output = cg.sat.solve(
             m,
             assumptions={
                 **{"sat": True},
@@ -326,15 +324,17 @@ class TestTransform(unittest.TestCase):
 
         # Sensitize inputs, set to X, make sure output is X
         for output in c.outputs():
-            subc = cg.subcircuit(c, {output} | c.transitive_fanin(output))
+            subc = cg.tx.subcircuit(c, {output} | c.transitive_fanin(output))
             # Make sure we're sensitizing to this output
             for n in subc:
                 if n != output:
                     subc.set_output(n, False)
-            subc_t, mapping = ternary(subc)
+            subc_t, mapping = cg.tx.ternary(subc)
             for inp in subc.inputs():
-                pattern = cg.sensitize(subc, inp)
-                result = sat(subc_t, {**pattern, **{mapping[inp]: True, inp: True}})
+                pattern = cg.props.sensitize(subc, inp)
+                result = cg.sat.solve(
+                    subc_t, {**pattern, **{mapping[inp]: True, inp: True}}
+                )
                 self.assertTrue(result[mapping[output]])
 
     def test_sensitivity_transform(self):
@@ -347,20 +347,20 @@ class TestTransform(unittest.TestCase):
         input_val = {i: randint(0, 1) for i in nstartpoints}
 
         # build sensitivity circuit
-        s = sensitivity_transform(self.s27, n)
+        s = cg.tx.sensitivity_transform(self.s27, n)
 
         # find sensitivity at an input
-        model = sat(s, input_val)
+        model = cg.sat.solve(s, input_val)
         sen_s = sum(model[o] for o in s.outputs() if "dif_out" in o)
 
         # try inputs Hamming distance 1 away
-        output_val = sat(self.s27, input_val)[n]
+        output_val = cg.sat.solve(self.s27, input_val)[n]
         sen_sim = 0
         for i in nstartpoints:
             neighbor_input_val = {
                 g: v if g != i else not v for g, v in input_val.items()
             }
-            neighbor_output_val = sat(self.s27, neighbor_input_val)[n]
+            neighbor_output_val = cg.sat.solve(self.s27, neighbor_input_val)[n]
             if neighbor_output_val != output_val:
                 sen_sim += 1
 
@@ -368,19 +368,19 @@ class TestTransform(unittest.TestCase):
         self.assertEqual(sen_s, sen_sim)
 
         # find input with sensitivity
-        vs = cg.int_to_bin(sen_s, cg.clog2(len(nstartpoints) + 1), True)
-        model = sat(s, {f"sen_out_{i}": v for i, v in enumerate(vs)})
+        vs = cg.utils.int_to_bin(sen_s, cg.utils.clog2(len(nstartpoints) + 1), True)
+        model = cg.sat.solve(s, {f"sen_out_{i}": v for i, v in enumerate(vs)})
 
         input_val = {i: model[i] for i in nstartpoints}
 
         # try inputs Hamming distance 1 away
-        output_val = sat(self.s27, input_val)[n]
+        output_val = cg.sat.solve(self.s27, input_val)[n]
         sen_sim = 0
         for i in nstartpoints:
             neighbor_input_val = {
                 g: v if g != i else not v for g, v in input_val.items()
             }
-            neighbor_output_val = sat(self.s27, neighbor_input_val)[n]
+            neighbor_output_val = cg.sat.solve(self.s27, neighbor_input_val)[n]
             if neighbor_output_val != output_val:
                 sen_sim += 1
 
@@ -390,11 +390,11 @@ class TestTransform(unittest.TestCase):
     def test_limit_fanin(self):
         k = 2
         c = self.c432
-        ck = limit_fanin(c, k)
+        ck = cg.tx.limit_fanin(c, k)
 
         # check conversion
-        m = cg.miter(c, ck)
-        self.assertFalse(cg.sat(m, assumptions={"sat": True}))
+        m = cg.tx.miter(c, ck)
+        self.assertFalse(cg.sat.solve(m, assumptions={"sat": True}))
 
         for n in ck:
             self.assertTrue(len(ck.fanin(n)) <= k)
@@ -410,7 +410,7 @@ class TestTransform(unittest.TestCase):
 
         self.assertTrue(c.is_cyclic())
 
-        acyc = cg.acyclic_unroll(c)
+        acyc = cg.tx.acyclic_unroll(c)
         self.assertFalse(acyc.is_cyclic())
 
         self.assertSetEqual(c.outputs(), acyc.outputs())
@@ -429,7 +429,6 @@ class TestTransform(unittest.TestCase):
         c.add("g11", "nand", fanin=["g7", "g8"])
         c.add("g12", "nand", fanin=["g9", "g10"])
         c.add("g13", "nand", fanin=["g11", "g12"])
-        c.add("g13", "nand", fanin=["g11", "g12"])
         c.add("i14", "input")
         c.add("g15", "nand", fanin=["g13", "i14"])
         c.add("g16", "nand", fanin=["g12", "g13"])
@@ -437,7 +436,7 @@ class TestTransform(unittest.TestCase):
         c.add("g18", "nand", fanin=["g15", "i17"])
         c.add("g19", "nand", fanin=["g16", "g18"], output=True)
 
-        scs_per_output, g_per_output = supergates(c)
+        scs_per_output, g_per_output = cg.tx.supergates(c)
         for o, g in g_per_output.items():
             for node in g:
                 self.assertTrue(len(list(g.successors(node))) <= 1)

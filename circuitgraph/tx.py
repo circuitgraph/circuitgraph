@@ -11,24 +11,6 @@ import shutil
 import networkx as nx
 
 import circuitgraph as cg
-from circuitgraph.logic import popcount
-
-
-def copy(c):
-    """
-    Returns copy of a circuit.
-
-    Parameters
-    ----------
-    c : Circuit
-            Input circuit.
-
-    Returns
-    -------
-    Circuit
-            Circuit copy.
-    """
-    return cg.Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def strip_io(c):
@@ -279,7 +261,7 @@ def syn(
         prefix="circuitgraph_synthesis_input", suffix=".v", mode="w"
     ) as tmp_in:
         if not verilog_exists:
-            verilog = cg.circuit_to_verilog(c)
+            verilog = cg.io.circuit_to_verilog(c)
             tmp_in.write(verilog)
             tmp_in.flush()
         with open(post_syn_file, "w+") if post_syn_file else NamedTemporaryFile(
@@ -397,7 +379,7 @@ def syn(
                     output_netlist,
                 )
 
-    return cg.verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
+    return cg.io.verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
 
 
 def ternary(c):
@@ -430,7 +412,7 @@ def ternary(c):
     mapping = {n: c.uid(f"{n}_X") for n in c}
     for n in c:
         if c.type(n) in ["and", "nand"]:
-            t.add(mapping[n], "and", output=c.is_output(n))
+            t.add(mapping[n], "and", output=c.is_output(n), allow_redefinition=True)
             t.add(
                 f"{n}_x_in_fi",
                 "or",
@@ -451,7 +433,7 @@ def ternary(c):
                     uid=True,
                 )
         elif c.type(n) in ["or", "nor"]:
-            t.add(mapping[n], "and", output=c.is_output(n))
+            t.add(mapping[n], "and", output=c.is_output(n), allow_redefinition=True)
             t.add(
                 f"{n}_x_in_fi",
                 "or",
@@ -476,6 +458,7 @@ def ternary(c):
                 fanin=mapping[p],
                 output=c.is_output(n),
                 add_connected_nodes=True,
+                allow_redefinition=True,
             )
         elif c.type(n) in ["xor", "xnor"]:
             t.add(
@@ -484,11 +467,12 @@ def ternary(c):
                 fanin=(mapping[p] for p in c.fanin(n)),
                 output=c.is_output(n),
                 add_connected_nodes=True,
+                allow_redefinition=True,
             )
         elif c.type(n) in ["0", "1"]:
-            t.add(mapping[n], "0", output=c.is_output(n))
+            t.add(mapping[n], "0", output=c.is_output(n), allow_redefinition=True)
         elif c.type(n) in ["input"]:
-            t.add(mapping[n], "input")
+            t.add(mapping[n], "input", allow_redefinition=True)
         else:
             raise ValueError(f"Node '{n}' has invalid type: '{c.type(n)}'")
 
@@ -727,7 +711,7 @@ def sensitization_transform(c, n, endpoints=None):
         fi = c.transitive_fanin(endpoints)
         if n not in fi:
             raise ValueError(f"'{n}' is not in fanin of given endpoints")
-        subc = cg.subcircuit(c, endpoints | fi)
+        subc = subcircuit(c, endpoints | fi)
         for node in subc:
             subc.set_output(node, node in endpoints)
     else:
@@ -786,7 +770,7 @@ def sensitivity_transform(c, n):
         sen.add(s, "input", fanout=f"orig_{s}")
 
     # add popcount
-    sen.add_subcircuit(popcount(len(startpoints)), "pc")
+    sen.add_subcircuit(cg.logic.popcount(len(startpoints)), "pc")
 
     # add inverted input copies
     for i, s0 in enumerate(startpoints):
@@ -811,7 +795,7 @@ def sensitivity_transform(c, n):
         )
 
     # instantiate population count
-    for o in range(cg.clog2(len(startpoints) + 1)):
+    for o in range(cg.utils.clog2(len(startpoints) + 1)):
         sen.add(f"sen_out_{o}", "buf", fanin=f"pc_out_{o}", output=True)
 
     return sen
@@ -845,7 +829,7 @@ def limit_fanin(c, k):
         "xnor": "xnor",
     }
 
-    ck = copy(c)
+    ck = c.copy()
     for n in ck.nodes():
         i = 0
         while len(ck.fanin(n)) > k:
@@ -936,7 +920,7 @@ def acyclic_unroll(c):
         acyc.add(n, "input")
 
     # create copy with broken feedback
-    c_cut = cg.copy(c)
+    c_cut = c.copy()
     for f in feedback:
         fanout = c.fanout(f)
         c_cut.disconnect(f, fanout)
@@ -993,7 +977,7 @@ def supergates(c):
     scs_per_output = dict()
     g_per_output = dict()
     for output in c.outputs():
-        co = cg.subcircuit(c, c.transitive_fanin(output) | {output})
+        co = subcircuit(c, c.transitive_fanin(output) | {output})
         G = co.graph.copy()
         rm_edges = []
         for u, v in G.edges:
@@ -1033,7 +1017,7 @@ def supergates(c):
                     super_G.add_edge(fi, node)
                 elif len(dom_tree[fi]) == 1:
                     fanins.put(dom_tree[fi].pop())
-            scs.append(cg.subcircuit(co, sg))
+            scs.append(subcircuit(co, sg))
         scs_per_output[output] = scs
         g_per_output[output] = super_G
     return scs_per_output, g_per_output
