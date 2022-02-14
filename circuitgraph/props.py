@@ -140,7 +140,7 @@ def signal_probability(c, n, approx=True, e=0.9, d=0.1, log_file=None):
 
     # get count with node true and other inputs fixed
     if approx:
-        count = approx_model_count(subc, {n: True}, e=e, d=d)
+        count = approx_model_count(subc, {n: True}, e=e, d=d, log_file=log_file)
     else:
         count = model_count(subc, {n: True})
 
