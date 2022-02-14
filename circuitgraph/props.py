@@ -1,8 +1,5 @@
 """Functions for analysis of Boolean and circuit properties"""
-from circuitgraph.tx import (
-    sensitivity_transform,
-    sensitization_transform,
-)
+from circuitgraph.tx import sensitivity_transform, sensitization_transform, subcircuit
 from circuitgraph.sat import solve, approx_model_count, model_count
 from circuitgraph.utils import clog2, int_to_bin
 
@@ -108,23 +105,27 @@ def sensitize(c, n, assumptions={}):
     return {g: result[g] for g in s.startpoints()}
 
 
-def signal_probability(c, n, approx=True, e=0.9, d=0.1):
+def signal_probability(c, n, approx=True, e=0.9, d=0.1, log_file=None):
     """
-    Determines the probability of the output being true over all startpoint
-    combinations.
+    Determines the (approximate) probability of a node being true over all
+    startpoint combinations.
 
     Parameters
     ----------
     c : Circuit
             Input circuit.
     n : str
-            Nodes to determine probability for.
+            Node to determine probability for.
     approx : bool
-            Use approximate solver
+            Use approximate model counting through approxmc.
+            This is the default behavior, and turned it off
+            can make computation time prohibitively expensive.
     e : float (>0)
-            epsilon of approxmc
+            epsilon of approxmc.
     d : float (0-1)
-            delta of approxmc
+            delta of approxmc.
+    log_file: str
+            Log file for approxmc.
 
     Returns
     -------
@@ -134,11 +135,13 @@ def signal_probability(c, n, approx=True, e=0.9, d=0.1):
     # get startpoints not in node fanin
     non_fanin_startpoints = c.startpoints() - c.startpoints(n)
 
-    # get count with node true and other inputs fixed
-    assumptions = {g: True for g in non_fanin_startpoints | set([n])}
-    if approx:
-        count = approx_model_count(c, assumptions, e=e, d=d)
-    else:
-        count = model_count(c, assumptions)
+    # get subcircuit ending at node
+    subc = subcircuit(c, {n} | c.transitive_fanin(n))
 
-    return count / (2 ** len(c.startpoints(n)))
+    # get count with node true and other inputs fixed
+    if approx:
+        count = approx_model_count(subc, {n: True}, e=e, d=d)
+    else:
+        count = model_count(subc, {n: True})
+
+    return count / (2 ** len(subc.startpoints()))

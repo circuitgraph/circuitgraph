@@ -212,7 +212,7 @@ def approx_model_count(
     startpoints : iter of str
             Startpoints to use for approxmc.
     e : float (>0)
-            epsilon of approxmc,
+            epsilon of approxmc.
     d : float (0-1)
             delta of approxmc.
     log_file: str
@@ -239,7 +239,9 @@ def approx_model_count(
     enc_inps = " ".join([str(variables.id(n)) for n in startpoints])
 
     # write dimacs to tmp
-    with tempfile.NamedTemporaryFile(prefix=f"circuitgraph_approxmc_{c.name}_") as tmp:
+    with tempfile.NamedTemporaryFile(
+        prefix=f"circuitgraph_approxmc_{c.name}_clauses"
+    ) as tmp:
         clause_str = "\n".join(
             " ".join(str(v) for v in c) + " 0" for c in formula.clauses
         )
@@ -252,18 +254,12 @@ def approx_model_count(
 
         # run approxmc
         cmd = f"approxmc --epsilon={e} --delta={d} {tmp.name}".split()
-        if log_file:
-            with open(log_file, "w+") as f:
-                subprocess.run(
-                    cmd, stdout=f, stderr=f, check=True, universal_newlines=True
-                )
-                f.seek(0)
-                result = f.read()
-        else:
-            result = subprocess.run(
-                cmd, capture_output=True, check=True, universal_newlines=True
-            )
-            result = result.stdout
+        with open(log_file, "w+") if log_file else tempfile.NamedTemporaryFile(
+            prefix=f"circuitgraph_approxmc_{c.name}_log", mode="w+"
+        ) as f:
+            subprocess.run(cmd, stdout=f, stderr=f, check=True, universal_newlines=True)
+            f.seek(0)
+            result = f.read()
 
     # parse results
     m = re.search(r"s mc (\d+)", result)
