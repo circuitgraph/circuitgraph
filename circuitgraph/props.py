@@ -132,9 +132,6 @@ def signal_probability(c, n, approx=True, e=0.9, d=0.1, log_file=None):
     float
             Probability.
     """
-    # get startpoints not in node fanin
-    non_fanin_startpoints = c.startpoints() - c.startpoints(n)
-
     # get subcircuit ending at node
     subc = subcircuit(c, {n} | c.transitive_fanin(n))
 
