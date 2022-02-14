@@ -4,7 +4,7 @@ from circuitgraph.sat import solve, approx_model_count, model_count
 from circuitgraph.utils import clog2, int_to_bin
 
 
-def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1):
+def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_file=None):
     """
     Calculates the average sensitivity (equal to total influence)
     of node n with respect to its startpoints.
@@ -21,6 +21,8 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1):
             epsilon of approxmc.
     d : float (0-1)
             delta of approxmc.
+    log_file: str
+            Log file for approxmc.
 
     Returns
     -------
@@ -36,7 +38,7 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1):
 
         # compute influence
         if approx:
-            mc = approx_model_count(i, {"sat": True}, e=e, d=d)
+            mc = approx_model_count(i, {"sat": True}, e=e, d=d, log_file=log_file)
         else:
             mc = model_count(i, {"sat": True})
         infl = mc / (2 ** len(sp))
