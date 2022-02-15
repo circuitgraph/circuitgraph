@@ -3,6 +3,7 @@ import random
 import tempfile
 import os
 import shutil
+from functools import reduce
 from random import choice, randint
 
 import circuitgraph as cg
@@ -36,7 +37,7 @@ class TestTx(unittest.TestCase):
     def test_sequential_unroll(self):
         c = cg.from_lib("s27")
         num_unroll = 4
-        cu, io_map = cg.tx.sequential_unroll(c, num_unroll, "D", "Q", ["clk"])
+        cu, _ = cg.tx.sequential_unroll(c, num_unroll, "D", "Q", ["clk"])
         self.assertEqual(
             len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll + len(c.blackboxes)
         )
@@ -57,7 +58,7 @@ class TestTx(unittest.TestCase):
     def test_sequential_unroll_add_flop_outputs(self):
         c = cg.from_lib("s27")
         num_unroll = 4
-        cu, io_map = cg.tx.sequential_unroll(
+        cu, _ = cg.tx.sequential_unroll(
             c, num_unroll, "D", "Q", ["CK"], add_flop_outputs=True,
         )
         self.assertEqual(
@@ -114,9 +115,7 @@ class TestTx(unittest.TestCase):
             if idx > 0:
                 uc.connect(f"ff0_D_{prefix}_{idx-1}", f"ff0_Q_{prefix}_{idx}")
 
-        unroll_uc, io_map = cg.tx.unroll(
-            c, num_copies, {"ff0_D": "ff0_Q"}, prefix=prefix
-        )
+        unroll_uc, _ = cg.tx.unroll(c, num_copies, {"ff0_D": "ff0_Q"}, prefix=prefix)
         self.assertSetEqual(uc.inputs(), unroll_uc.inputs())
         self.assertSetEqual(uc.outputs(), unroll_uc.outputs())
         m = cg.tx.miter(uc, unroll_uc)
@@ -171,7 +170,7 @@ class TestTx(unittest.TestCase):
         for node in sc:
             self.assertEqual(c17.type(node), sc.type(node))
 
-    @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
+    @unittest.skipIf(shutil.which("yosys") is None, "Yosys is not installed")
     def test_syn_yosys(self):
         s = cg.tx.syn(self.s27, "yosys", suppress_output=True)
         m = cg.tx.miter(self.s27, s)
@@ -180,10 +179,10 @@ class TestTx(unittest.TestCase):
         different_output = cg.sat.solve(m, assumptions={"sat": True})
         self.assertFalse(different_output)
 
-    @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
+    @unittest.skipIf(shutil.which("yosys") is None, "Yosys is not installed")
     def test_syn_yosys_io(self):
-        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_yosys_io")
-        s = cg.tx.syn(
+        tmpdir = tempfile.mkdtemp(prefix="circuitgraph_test_syn_yosys_io")
+        _ = cg.tx.syn(
             self.s27,
             "yosys",
             suppress_output=True,
@@ -200,7 +199,7 @@ class TestTx(unittest.TestCase):
         self.assertFalse(different_output)
         shutil.rmtree(tmpdir)
 
-    @unittest.skipIf(shutil.which("yosys") == None, "Yosys is not installed")
+    @unittest.skipIf(shutil.which("yosys") is None, "Yosys is not installed")
     def test_syn_yosys_exists(self):
         with tempfile.NamedTemporaryFile(
             prefix="circuitgraph_synthesis_test", suffix=".v", mode="w"
@@ -233,7 +232,7 @@ class TestTx(unittest.TestCase):
         "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ, "Genus synthesis not setup"
     )
     def test_syn_genus(self):
-        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_genus")
+        tmpdir = tempfile.mkdtemp(prefix="circuitgraph_test_syn_genus")
         s = cg.tx.syn(self.s27, "genus", suppress_output=True, working_dir=tmpdir)
         m = cg.tx.miter(self.s27, s)
         live = cg.sat.solve(m)
@@ -246,8 +245,8 @@ class TestTx(unittest.TestCase):
         "CIRCUITGRAPH_GENUS_LIBRARY_PATH" in os.environ, "Genus synthesis not setup"
     )
     def test_syn_genus_io(self):
-        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_genus_io")
-        s = cg.tx.syn(
+        tmpdir = tempfile.mkdtemp(prefix="circuitgraph_test_syn_genus_io")
+        _ = cg.tx.syn(
             self.s27,
             "genus",
             suppress_output=True,
@@ -268,7 +267,7 @@ class TestTx(unittest.TestCase):
         "CIRCUITGRAPH_DC_LIBRARY_PATH" in os.environ, "DC synthesis not setup"
     )
     def test_syn_dc(self):
-        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_syn_dc")
+        tmpdir = tempfile.mkdtemp(prefix="circuitgraph_test_syn_dc")
         s = cg.tx.syn(self.s27, "dc", suppress_output=True, working_dir=tmpdir)
         m = cg.tx.miter(self.s27, s)
         live = cg.sat.solve(m)
@@ -417,7 +416,7 @@ class TestTx(unittest.TestCase):
         self.assertEqual(len(acyc.inputs()), 2)
         self.assertTrue("a" in acyc.inputs())
 
-    def test_supergates(self):
+    def test_supergates_example(self):
         c = cg.Circuit()
         for i in range(1, 7):
             c.add(f"i{i}", "input")
@@ -436,7 +435,96 @@ class TestTx(unittest.TestCase):
         c.add("g18", "nand", fanin=["g15", "i17"])
         c.add("g19", "nand", fanin=["g16", "g18"], output=True)
 
-        scs_per_output, g_per_output = cg.tx.supergates(c)
-        for o, g in g_per_output.items():
-            for node in g:
-                self.assertTrue(len(list(g.successors(node))) <= 1)
+        sg7 = cg.Circuit("sg7")
+        sg7.add("i1", "input")
+        sg7.add("i2", "input")
+        sg7.add("g7", "nand", fanin=["i1", "i2"], output=True)
+
+        sg8 = cg.Circuit("sg8")
+        sg8.add("i3", "input")
+        sg8.add("i4", "input")
+        sg8.add("g8", "nand", fanin=["i3", "i4"], output=True)
+
+        sg11 = cg.Circuit("sg11")
+        sg11.add("g7", "input")
+        sg11.add("g8", "input")
+        sg11.add("g11", "nand", fanin=["g7", "g8"], output=True)
+
+        sg12 = cg.Circuit("sg12")
+        sg12.add("i5", "input")
+        sg12.add("i6", "input")
+        sg12.add("g9", "nand", fanin=["i5", "i6"])
+        sg12.add("g10", "not", fanin="i6")
+        sg12.add("g12", "nand", fanin=["g9", "g10"], output=True)
+
+        sg19 = cg.Circuit("sg19")
+        sg19.add("g11", "input")
+        sg19.add("g12", "input")
+        sg19.add("g13", "nand", fanin=["g11", "g12"])
+        sg19.add("i14", "input")
+        sg19.add("g15", "nand", fanin=["g13", "i14"])
+        sg19.add("g16", "nand", fanin=["g12", "g13"])
+        sg19.add("i17", "input")
+        sg19.add("g18", "nand", fanin=["g15", "i17"])
+        sg19.add("g19", "nand", fanin=["g16", "g18"], output=True)
+
+        supergates = cg.tx.supergates(c)
+        found_supergates = set()
+        all_supergates = {sg7, sg8, sg11, sg12, sg19}
+
+        def potential_supergates():
+            remaining_supergates = all_supergates - found_supergates
+            if {sg7, sg8} & remaining_supergates:
+                remaining_supergates -= {sg11}
+            if {sg7, sg8, sg12} & remaining_supergates:
+                remaining_supergates -= {sg19}
+            return remaining_supergates
+
+        def match_circuits(c0, c1):
+            if c0.inputs() != c1.inputs():
+                return False
+            if c0.outputs() != c1.outputs():
+                return False
+            if c0.nodes() != c1.nodes():
+                return False
+            if c0.edges() != c1.edges():
+                return False
+            return True
+
+        for supergate in supergates:
+            found = False
+            for sg in potential_supergates():
+                if match_circuits(supergate, sg):
+                    found_supergates.add(sg)
+                    found = True
+                    break
+            self.assertTrue(
+                found,
+                f"Supergate {supergate.outputs().pop()}\n"
+                "cannot find match in potential supergates: "
+                f"{[i.name for i in potential_supergates()]}",
+            )
+
+    def test_supergates(self):
+        c = cg.from_lib("c880")
+        c = cg.tx.limit_fanin(c, 2)
+        supergates = cg.tx.supergates(c)
+        self.assertSetEqual(
+            reduce(lambda a, b: a | b, [s.nodes() for s in supergates]), c.nodes()
+        )
+        for supergate in supergates:
+            output = supergate.outputs().pop()
+            # Check if all predecessor nodes are in supergate
+            self.assertTrue(
+                c.fanin(output).issubset(supergate.nodes()),
+                f"output: {output}\nfanin: {c.fanin(output)}\n"
+                f"nodes: {supergate.nodes()}",
+            )
+            # Check all node's predecessors are in supergate if one is
+            for node in supergate.nodes():
+                if any(n in supergate for n in c.fanin(node)):
+                    self.assertTrue(c.fanin(node).issubset(supergate.nodes()))
+            # Check all inputs are disjoint
+            for n0 in supergate.inputs():
+                for n1 in supergate.inputs() - {n0}:
+                    self.assertFalse(c.transitive_fanin(n0) & c.transitive_fanin(n1))

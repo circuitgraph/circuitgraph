@@ -4,6 +4,7 @@ from tempfile import NamedTemporaryFile
 import os
 import re
 from pathlib import Path
+from functools import reduce
 from collections import defaultdict
 from queue import Queue
 import shutil
@@ -147,7 +148,7 @@ def relabel(c, mapping):
     return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
-def subcircuit(c, nodes):
+def subcircuit(c, nodes, modify_io=False):
     """
     Creates a subcircuit from a set of nodes of a given circuit.
 
@@ -157,6 +158,9 @@ def subcircuit(c, nodes):
             The circuit to create a subcircuit from.
     nodes: list of str
             The nodes to include in the subcircuit.
+    modify_io: bool
+            If True, gates without drivers will be turned into inputs and gates without
+            fanout will be marked as outputs.
 
     Returns
     -------
@@ -171,6 +175,12 @@ def subcircuit(c, nodes):
     for edge in c.edges():
         if edge[0] in nodes and edge[1] in nodes:
             sc.connect(edge[0], edge[1])
+    if modify_io:
+        for node in sc:
+            if sc.type(node) not in ["0", "1", "x"] and not sc.fanin(node):
+                sc.set_type(node, "input")
+            if not sc.fanout(node):
+                sc.set_output(node)
     return sc
 
 
@@ -270,14 +280,12 @@ def syn(
             if engine == "genus":
                 try:
                     lib_path = os.environ["CIRCUITGRAPH_GENUS_LIBRARY_PATH"]
-                except KeyError:
+                except KeyError as e:
                     raise ValueError(
-                        "In order to run synthesis with Genus, "
-                        "please set the "
-                        "CIRCUITGRAPH_GENUS_LIBRARY_PATH "
-                        "variable in your os environment to the "
-                        "path to the tech library to use"
-                    )
+                        "In order to run synthesis with Genus, please set the "
+                        "CIRCUITGRAPH_GENUS_LIBRARY_PATH variable in your os "
+                        "environment to the path to the tech library to use"
+                    ) from e
                 cmd = [
                     "genus",
                     "-no_gui",
@@ -296,14 +304,12 @@ def syn(
             elif engine == "dc":
                 try:
                     lib_path = os.environ["CIRCUITGRAPH_DC_LIBRARY_PATH"]
-                except KeyError:
+                except KeyError as e:
                     raise ValueError(
-                        "In order to run synthesis with DC, "
-                        "please set the "
-                        "CIRCUITGRAPH_DC_LIBRARY_PATH "
-                        "variable in your os environment to the "
-                        "path to the GTECH library"
-                    )
+                        "In order to run synthesis with DC, please set the "
+                        "CIRCUITGRAPH_DC_LIBRARY_PATH variable in your os environment "
+                        "to the path to the GTECH library"
+                    ) from e
                 libname = "GTECH"
                 usable_cells = [f"{libname.lower()}/{libname}_NOT"]
                 for gate in ["OR", "NOR", "AND", "NAND", "XOR", "XNOR"]:
@@ -350,7 +356,9 @@ def syn(
                 stderr = open(stderr_file, "w")
             else:
                 stderr = None
-            subprocess.run(cmd, stdout=stdout, stderr=stderr, cwd=working_dir)
+            subprocess.run(
+                cmd, stdout=stdout, stderr=stderr, cwd=working_dir, check=True
+            )
             if stdout_file:
                 stdout.close()
             if stderr_file:
@@ -868,42 +876,45 @@ def acyclic_unroll(c):
     if c.blackboxes:
         raise ValueError("Cannot perform acyclic unroll with blackboxes")
 
-    def approx_min_fas(DG):
-        DGC = DG.copy()
+    def approx_min_fas(g):
+        g_copy = g.copy()
         s1, s2 = [], []
-        while DGC.nodes:
+        while g_copy.nodes:
             # find sinks
-            sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+            sinks = [n for n in g_copy.nodes if g_copy.out_degree(n) == 0]
             while sinks:
                 s2 += sinks
-                DGC.remove_nodes_from(sinks)
-                sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+                g_copy.remove_nodes_from(sinks)
+                sinks = [n for n in g_copy.nodes if g_copy.out_degree(n) == 0]
 
             # find sources
-            sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+            sources = [n for n in g_copy.nodes if g_copy.in_degree(n) == 0]
             while sources:
                 s1 += sources
-                DGC.remove_nodes_from(sources)
-                sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+                g_copy.remove_nodes_from(sources)
+                sources = [n for n in g_copy.nodes if g_copy.in_degree(n) == 0]
 
             # choose max in/out degree difference
-            if DGC.nodes:
-                n = max(DGC.nodes, key=lambda x: DGC.out_degree(x) - DGC.in_degree(x))
+            if g_copy.nodes:
+                n = max(
+                    g_copy.nodes,
+                    key=lambda x: g_copy.out_degree(x) - g_copy.in_degree(x),
+                )
                 s1.append(n)
-                DGC.remove_node(n)
+                g_copy.remove_node(n)
 
         ordering = s1 + list(reversed(s2))
         feedback_edges = [
-            e for e in DG.edges if ordering.index(e[0]) > ordering.index(e[1])
+            e for e in g.edges if ordering.index(e[0]) > ordering.index(e[1])
         ]
         feedback_edges = [
-            (u, v) for u, v in feedback_edges if u in nx.descendants(DG, v)
+            (u, v) for u, v in feedback_edges if u in nx.descendants(g, v)
         ]
 
-        DGC = DG.copy()
-        DGC.remove_edges_from(feedback_edges)
+        g_copy = g.copy()
+        g_copy.remove_edges_from(feedback_edges)
         try:
-            if nx.find_cycle(DGC):
+            if nx.find_cycle(g_copy):
                 raise ValueError("approx_min_fas has failed")
         except nx.NetworkXNoCycle:
             pass
@@ -911,7 +922,7 @@ def acyclic_unroll(c):
         return feedback_edges
 
     # find feedback nodes
-    feedback = set([e[0] for e in approx_min_fas(c.graph)])
+    feedback = {e[0] for e in approx_min_fas(c.graph)}
 
     # get startpoints
     sp = c.startpoints()
@@ -955,9 +966,8 @@ def acyclic_unroll(c):
 
 def supergates(c):
     """
-    Calculate the supergates of a circuit. That is, find the
-    maximal covering of minimal subcircuits with logically
-    independent inputs. This is done on a per-output basis.
+    Calculate the minimal covering of all circuit nodes with maximal supergates
+    of a circuit.
 
     For more information, see
     Seth, Sharad C., and Vishwani D. Agrawal. "A new model for computation
@@ -971,55 +981,82 @@ def supergates(c):
 
     Returns
     -------
-    dict of str to list of Circuit, dict of str to networkx.DiGraph
-            The supergates per each output, as Circuit objects,
-            and the connections between supergates per each output,
-            as a networkx.Digraph object.
+    list of Circuit
+            The supergate circuits, topologically sorted.
     """
-    scs_per_output = dict()
-    g_per_output = dict()
+    # The current algorithm seems to fail for some circuits (like c880) with gates with
+    # fanin greater than 2. At the moment not sure if this is a bug in the
+    # implementation or expected behavior
+    c = limit_fanin(c, 2)
+    supergate_circuits = set()
     for output in c.outputs():
-        co = subcircuit(c, c.transitive_fanin(output) | {output})
-        G = co.graph.copy()
+        c_output = subcircuit(c, c.transitive_fanin(output) | {output})
+        c_output.set_output(c_output.outputs(), False)
+        c_output.set_output(output, True)
+
+        g = c_output.graph.copy()
+
+        # Add backwards edge for every forward edge not connected to an output
         rm_edges = []
-        for u, v in G.edges:
-            G.add_edge(v, u)
+        for u, v in g.edges:
+            g.add_edge(v, u)
             if v == output:
                 rm_edges.append((u, v))
-
         for u, v in rm_edges:
-            G.remove_edge(u, v)
+            g.remove_edge(u, v)
 
-        doms = nx.immediate_dominators(G, output)
+        # Get dominator tree
+        doms = nx.immediate_dominators(g, output)
         dom_tree = defaultdict(set)
         for k, v in doms.items():
             dom_tree[v].add(k)
 
+        # Build supergates starting at the output
         dom_tree[output].remove(output)
-
         frontier = Queue()
         frontier.put(output)
-        scs = []
-
-        super_G = nx.DiGraph()
-        super_G.add_node(output)
-
         while not frontier.empty():
+            # Build the supergate for this node
             node = frontier.get()
-            sg = {node}
+            supergate = {node}
+            # Include children and single successors
             fanins = Queue()
             for fi in dom_tree[node]:
                 fanins.put(fi)
             while not fanins.empty():
                 fi = fanins.get()
-                sg.add(fi)
+                supergate.add(fi)
                 if len(dom_tree[fi]) > 1:
                     frontier.put(fi)
-                    super_G.add_node(fi)
-                    super_G.add_edge(fi, node)
                 elif len(dom_tree[fi]) == 1:
                     fanins.put(dom_tree[fi].pop())
-            scs.append(subcircuit(co, sg))
-        scs_per_output[output] = scs
-        g_per_output[output] = super_G
-    return scs_per_output, g_per_output
+            supergate_circuit = subcircuit(c_output, supergate, modify_io=True)
+            supergate_circuit.set_output(node, True)
+            supergate_circuits.add(supergate_circuit)
+
+    # Find minimal covering of supergates indexed by the output
+    minimal_supergate_circuits = {}
+    for supergate in supergate_circuits:
+        remaining_cover = reduce(
+            lambda a, b: a | b,
+            (s.nodes() - s.inputs() for s in supergate_circuits - {supergate}),
+            set(),
+        )
+        if supergate.nodes() - remaining_cover:
+            minimal_supergate_circuits[supergate.outputs().pop()] = supergate
+
+    # Find topological ordering of supergates
+    g = nx.DiGraph()
+    for output, supergate in minimal_supergate_circuits.items():
+        g.add_node(output)
+        for i in supergate.inputs() - c.inputs():
+            for other_output in set(minimal_supergate_circuits) - {output}:
+                other_supergate = minimal_supergate_circuits[other_output]
+                if i in other_supergate.nodes() - other_supergate.inputs():
+                    g.add_edge(other_output, output)
+
+    sorted_supergate_circuits = []
+    for node in nx.topological_sort(g):
+        sorted_supergate_circuits.append(minimal_supergate_circuits[node])
+
+    return sorted_supergate_circuits
