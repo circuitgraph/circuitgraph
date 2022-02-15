@@ -523,7 +523,7 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
         m.add(n, "input", fanout=[f"c0_{n}", f"c1_{n}"])
 
     # compare outputs
-    m.add("sat", "or", output=True)
+    m.add("sat", "or" if len(endpoints) > 1 else "buf", output=True)
     for n in endpoints:
         m.add(f"dif_{n}", "xor", fanin=[f"c0_{n}", f"c1_{n}"], fanout="sat")
 
@@ -701,7 +701,7 @@ def sensitization_transform(c, n, endpoints=None):
     """
     # check for blackboxes
     if c.blackboxes:
-        raise ValueError(f"Circuit contains a blackbox")
+        raise ValueError("Circuit contains a blackbox")
 
     if endpoints:
         if isinstance(endpoints, str):
@@ -714,12 +714,14 @@ def sensitization_transform(c, n, endpoints=None):
         subc = subcircuit(c, endpoints | fi)
         for node in subc:
             subc.set_output(node, node in endpoints)
+        miter_name = f"{c.name}_sensitize_{n}_to_{'_'.join(endpoints)}"
     else:
         subc = c
+        miter_name = f"{c.name}_sensitize_{n}"
 
     # create miter
     m = miter(subc)
-    m.name = f"{c.name}_sensitized_{n}"
+    m.name = miter_name
 
     # flip node in c1
     m.disconnect(m.fanin(f"c1_{n}"), f"c1_{n}")
@@ -818,7 +820,7 @@ def limit_fanin(c, k):
             Output circuit.
     """
     if k < 2:
-        raise ValueError(f"maximum fanin, k, must be > 2")
+        raise ValueError("maximum fanin, k, must be > 2")
 
     gatemap = {
         "and": "and",

@@ -392,7 +392,7 @@ def circuit_to_bench(c):
     bench = f"# {c.name}\n"
     bench += "".join(f"INPUT({inp})\n" for inp in c.inputs())
     bench += "\n"
-    bench += "".join(f"OUTPUT({out};)\n" for out in c.outputs())
+    bench += "".join(f"OUTPUT({out})\n" for out in c.outputs())
     bench += "\n"
     bench += "\n".join(insts)
 

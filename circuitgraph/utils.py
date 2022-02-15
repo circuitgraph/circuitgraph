@@ -21,7 +21,7 @@ def visualize(c, output_file, suppress_output=True):
     suppress_output: bool
             If True, yosys stdout will not be printed.
     """
-    if shutil.which("yosys") == None:
+    if shutil.which("yosys") is None:
         raise OSError("Install 'yosys' to use 'cg.visualize'")
 
     verilog = circuit_to_verilog(c)
@@ -138,25 +138,36 @@ def bin_to_int(b, lend=False):
     return int(s, 2)
 
 
-def lint(c, exhaustive=False, unloaded=False, undriven=True):
+def lint(c, fail_fast=True, unloaded=False, undriven=True, single_input_gates=False):
     """
-    Checks circuit for missing connections.
+    Raises ValueError if circuit has invalid connections or types.
 
     Parameters
     ----------
     c: Circuit
             The Circuit to lint.
+    fail_fast: bool
+            Exit after the first error.
+    unloaded: bool
+            Fail on unloaded node.
+    undriven: bool
+            Fail on undriven node.
+    single_input_gates: bool
+            Fail on multi-input gates with only a single input.
     """
     errors = []
 
     def handle(s):
-        if exhaustive:
-            errors.append(s)
-        else:
+        if fail_fast:
             raise ValueError(s)
+        else:
+            errors.append(s)
 
-    # node types
+    zero_input_types = ["input", "0", "1", "bb_ouptut"]
+    single_input_types = ["buf", "not", "bb_input"]
+    multi_input_types = ["and", "nand", "or", "nor", "xor", "xnor"]
     for g in c.nodes():
+        # check types
         if "type" not in c.graph.nodes[g]:
             handle(f"no type for node '{g}'")
         t = c.graph.nodes[g]["type"]
@@ -165,50 +176,64 @@ def lint(c, exhaustive=False, unloaded=False, undriven=True):
         if "." in g and g.split(".")[0] not in c.blackboxes:
             handle(f"node '{g}' has blackbox syntax with no instance")
 
-    # incorrect connections
-    for g in c.filter_type(["input", "0", "1", "bb_output"]):
-        if len(c.fanin(g)) > 0:
-            handle(f"{c.type(g)} '{g}' has fanin")
+        # input/constant drivers
+        if c.type(g) in zero_input_types and len(c.fanin(g)) > 0:
+            handle(f"'{c.type(g)}' node '{g}' has fanin")
+
+        # black-box output fanout
         if c.type(g) == "bb_output":
             if len(c.fanout(g)) > 1:
-                handle(f"{c.type(g)} '{g}' has fanout greater than 1")
+                handle(f"'{c.type(g)}' node '{g}' has fanout greater than 1")
             if c.fanout(g) and c.type(c.fanout(g).pop()) != "buf":
-                handle(f"{c.type(g)} '{g}' has non-buf fanout")
+                handle(f"'{c.type(g)}' node '{g}' has non-buf fanout")
 
-    for g in c.filter_type(["buf", "not", "bb_input"]):
-        if len(c.fanin(g)) > 1:
-            handle(f"{c.type(g)} {g} has fanin count > 1")
+        # multiple drivers
+        if c.type(g) in single_input_types and len(c.fanin(g)) > 1:
+            handle(f"'{c.type(g)}' node '{g}' has fanin count > 1")
 
-    # dangling connections
-    if undriven:
-        for g in c.filter_type(
-            ["buf", "not", "bb_input", "and", "nand", "or", "nor", "xor", "xnor",]
+        # no drivers
+        if (
+            undriven
+            and c.type(g) in single_input_types + multi_input_types
+            and len(c.fanin(g)) < 1
         ):
-            if len(c.fanin(g)) < 1:
-                handle(f"{c.type(g)} {g} has no fanin")
+            handle(f"'{c.type(g)}' node '{g}' has no fanin")
 
-    if unloaded:
-        for g in c.nodes() - c.outputs():
-            if not c.fanout(g):
-                handle(f"{c.type(g)} {g} has no fanout")
+        # single drivers
+        if (
+            single_input_gates
+            and c.type(g) in multi_input_types
+            and len(c.fanin(g)) < 2
+        ):
+            handle(f"'{c.type(g)}' node '{g}' has fanin less than 2")
+
+        # unloaded
+        if unloaded and not c.is_output(g) and not c.fanout(g):
+            handle(f"'{c.type(g)}' node '{g}' has no fanout")
 
     # blackboxes
     for name, bb in c.blackboxes.items():
         for g in bb.inputs():
             if f"{name}.{g}" not in c.graph.nodes:
-                handle(f"missing blackbox pin {name}.{g}")
+                handle(f"missing blackbox pin '{name}.{g}'")
             else:
                 t = c.graph.nodes[f"{name}.{g}"]["type"]
                 if t != "bb_input":
-                    handle(f"blackbox pin {name}.{g} has incorrect type {t}")
+                    handle(f"blackbox pin '{name}.{g}' has incorrect type '{t}'")
 
         for g in bb.outputs():
             if f"{name}.{g}" not in c.graph.nodes:
-                handle(f"missing blackbox pin {name}.{g}")
+                handle(f"missing blackbox pin '{name}.{g}'")
             else:
                 t = c.graph.nodes[f"{name}.{g}"]["type"]
                 if t != "bb_output":
-                    handle(f"blackbox pin {name}.{g} has incorrect type {t}")
+                    handle(f"blackbox pin '{name}.{g}' has incorrect type '{t}'")
 
     if errors:
-        raise ValueError("\n".join(errors))
+        msg = "f{len(errors}} total errors.\n"
+        if len(errors) > 10:
+            msg += "\n".join(errors[:10])
+            msg += f"\nplus {len(errors) - 10} other errors..."
+        else:
+            msg += "\n".join(errors)
+        raise ValueError(msg)

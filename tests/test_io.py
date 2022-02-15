@@ -1,6 +1,5 @@
 import unittest
 import os
-import tempfile
 
 import circuitgraph as cg
 
@@ -11,7 +10,7 @@ class TestIO(unittest.TestCase):
         self.bbs = [cg.BlackBox("ff", ["CK", "D"], ["Q"])]
 
     def test_bench(self):
-        g = cg.from_lib(f"b17_C")
+        g = cg.from_lib("b17_C")
         self.assertEqual(len(g), 2942)
         self.assertSetEqual(g.fanin("n2905"), {"n2516", "n2904"})
         self.assertSetEqual(g.fanin("out789"), {"n2942"})
@@ -23,8 +22,10 @@ class TestIO(unittest.TestCase):
         self.assertEqual(g.type("in382"), "input")
 
     def test_bench_output(self):
-        g = cg.from_lib(f"b17_C")
+        g = cg.from_lib("b17_C")
         g2 = cg.io.bench_to_circuit(cg.io.circuit_to_bench(g), g.name)
+        self.assertSetEqual(g.inputs(), g2.inputs())
+        self.assertSetEqual(g.outputs(), g2.outputs())
 
         m = cg.tx.miter(g, g2)
         live = cg.sat.solve(m)

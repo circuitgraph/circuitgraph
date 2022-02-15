@@ -7,7 +7,7 @@ import circuitgraph as cg
 
 class TestUtils(unittest.TestCase):
     def test_visualize(self):
-        tmpdir = tempfile.mkdtemp(prefix=f"circuitgraph_test_visualize")
+        tmpdir = tempfile.mkdtemp(prefix="circuitgraph_test_visualize")
         c = cg.from_lib("c17")
         cg.visualize(c, f"{tmpdir}/c17.png")
         if not Path(f"{tmpdir}/c17.png").resolve().is_file():

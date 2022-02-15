@@ -1,7 +1,6 @@
 """Functions for executing SAT, #SAT, and approx-#SAT on circuits"""
 import tempfile
 import re
-import code
 import subprocess
 import shutil
 
@@ -85,33 +84,39 @@ def cnf(c):
 
     for n in c.nodes():
         variables.id(n)
-        if c.type(n) == "and":
+        n_type = c.type(n)
+        if n_type in ["and", "or", "xor"] and len(c.fanin(n)) == 1:
+            n_type = "buf"
+        elif n_type in ["nand", "nor", "xnor"] and len(c.fanin(n)) == 1:
+            n_type = "not"
+
+        if n_type == "and":
             for f in c.fanin(n):
                 formula.append([-variables.id(n), variables.id(f)])
             formula.append([variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == "nand":
+        elif n_type == "nand":
             for f in c.fanin(n):
                 formula.append([variables.id(n), variables.id(f)])
             formula.append([-variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == "or":
+        elif n_type == "or":
             for f in c.fanin(n):
                 formula.append([variables.id(n), -variables.id(f)])
             formula.append([-variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == "nor":
+        elif n_type == "nor":
             for f in c.fanin(n):
                 formula.append([-variables.id(n), -variables.id(f)])
             formula.append([variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == "not":
+        elif n_type == "not":
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), variables.id(f)])
                 formula.append([-variables.id(n), -variables.id(f)])
-        elif c.type(n) in ["buf", "bb_input"]:
+        elif n_type in ["buf", "bb_input"]:
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), -variables.id(f)])
                 formula.append([-variables.id(n), variables.id(f)])
-        elif c.type(n) in ["xor", "xnor"]:
+        elif n_type in ["xor", "xnor"]:
             # break into hierarchical xors
             nets = list(c.fanin(n))
 
@@ -137,7 +142,7 @@ def cnf(c):
                 nets.insert(0, new_net)
 
             # add final xor
-            if c.type(n) == "xor":
+            if n_type == "xor":
                 xorClauses(nets[-2], nets[-1], n)
             else:
                 # invert xor
@@ -145,14 +150,14 @@ def cnf(c):
                 xorClauses(nets[-2], nets[-1], f"xor_inv_{n}")
                 formula.append([variables.id(n), variables.id(f"xor_inv_{n}")])
                 formula.append([-variables.id(n), -variables.id(f"xor_inv_{n}")])
-        elif c.type(n) == "0":
+        elif n_type == "0":
             formula.append([-variables.id(n)])
-        elif c.type(n) == "1":
+        elif n_type == "1":
             formula.append([variables.id(n)])
-        elif c.type(n) in ["bb_output", "input"]:
+        elif n_type in ["bb_output", "input"]:
             formula.append([variables.id(n), -variables.id(n)])
         else:
-            raise ValueError(f"Unknown gate type '{c.type(n)}'")
+            raise ValueError(f"Unknown gate type '{n_type}'")
 
     return formula, variables
 
@@ -223,7 +228,7 @@ def approx_model_count(
     int
             Estimate.
     """
-    if shutil.which("approxmc") == None:
+    if shutil.which("approxmc") is None:
         raise OSError("Install 'approxmc' to use 'approx_model_count'")
     if startpoints is None:
         startpoints = c.startpoints()

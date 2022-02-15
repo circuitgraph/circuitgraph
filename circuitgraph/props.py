@@ -1,10 +1,12 @@
 """Functions for analysis of Boolean and circuit properties"""
+from pathlib import Path
+
 from circuitgraph.tx import sensitivity_transform, sensitization_transform, subcircuit
 from circuitgraph.sat import solve, approx_model_count, model_count
 from circuitgraph.utils import clog2, int_to_bin
 
 
-def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_file=None):
+def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_dir=None):
     """
     Calculates the average sensitivity (equal to total influence)
     of node n with respect to its startpoints.
@@ -21,8 +23,8 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_file=None):
             epsilon of approxmc.
     d : float (0-1)
             delta of approxmc.
-    log_file: str
-            Log file for approxmc.
+    log_dir: str
+            Directory to store approxmc logs in.
 
     Returns
     -------
@@ -31,6 +33,12 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_file=None):
     """
     sp = c.startpoints(n)
 
+    if log_dir:
+        log_dir = Path(log_dir)
+        log_dir.mkdir(exist_ok=True)
+    else:
+        log_file = None
+
     avg_sen = 0
     for s in sp:
         # create influence circuit
@@ -38,6 +46,8 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_file=None):
 
         # compute influence
         if approx:
+            if log_dir:
+                log_file = log_dir / f"{s}.approxmc.log"
             mc = approx_model_count(i, {"sat": True}, e=e, d=d, log_file=log_file)
         else:
             mc = model_count(i, {"sat": True})
