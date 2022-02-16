@@ -1,6 +1,4 @@
 import unittest
-import shutil
-from itertools import product
 
 import networkx as nx
 
@@ -211,6 +209,18 @@ class TestCircuit(unittest.TestCase):
         )
         self.assertSetEqual(c.transitive_fanin("d"), set(["ff0.Q"]))
 
+    def test_paths(self):
+        c = cg.from_lib("c17")
+        self.assertListEqual(list(c.paths("N1", "N22")), [["N1", "N10", "N22"]])
+
+        available_paths = [
+            ["N3", "N10", "N22"],
+            ["N3", "N11", "N16", "N22"],
+        ]
+        for path in c.paths("N3", "N22"):
+            self.assertTrue(path in available_paths)
+            available_paths.remove(path)
+
     def test_comb_depth(self):
         c = cg.Circuit()
         c.add("a", "input")
@@ -305,9 +315,7 @@ class TestCircuit(unittest.TestCase):
         mux_outputs = ["o0"]
         mux = cg.BlackBox("mux", mux_inputs, mux_outputs)
         c.add_blackbox(
-            mux,
-            "mux0",
-            {i: j for i, j in zip(mux_inputs + mux_outputs, inputs + outputs)},
+            mux, "mux0", dict(zip(mux_inputs + mux_outputs, inputs + outputs))
         )
 
         # Check types
@@ -350,7 +358,7 @@ class TestCircuit(unittest.TestCase):
         mux_inputs = ["i0", "i1", "sel"]
         mux_outputs = ["o0"]
         mux = cg.BlackBox("mux", mux_inputs, mux_outputs)
-        c.add_blackbox(mux, "mux0", {i: j for i, j in zip(mux_inputs, inputs)})
+        c.add_blackbox(mux, "mux0", dict(zip(mux_inputs, inputs)))
         c.add_blackbox(mux, "mux1", {"i1": "c", "sel": "s", "o0": "o"})
         c.add("inter", "buf", fanin="mux0.o0", fanout="mux1.i0")
 

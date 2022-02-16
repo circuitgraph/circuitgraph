@@ -13,10 +13,10 @@ name and gate type. The supported types are:
 
 Additionally, any node can be marked as an output node.
 """
+from functools import reduce
+from itertools import product, combinations
 
 import networkx as nx
-from functools import reduce
-from itertools import product
 
 
 addable_types = [
@@ -167,8 +167,8 @@ class Circuit:
             if ns in self.graph.nodes:
                 try:
                     return self.graph.nodes[ns]["type"]
-                except KeyError:
-                    raise KeyError(f"Node {ns} does not have a type defined.")
+                except KeyError as e:
+                    raise KeyError(f"Node {ns} does not have a type defined.") from e
             else:
                 raise KeyError(f"Node {ns} does not exist.")
 
@@ -273,8 +273,6 @@ class Circuit:
 
         Parameters
         -------
-        type : str
-                Circuit name.
         blackbox : BlackBox
                 Blackbox.
         name : str
@@ -382,7 +380,7 @@ class Circuit:
     def add(
         self,
         n,
-        type,
+        node_type,
         fanin=None,
         fanout=None,
         output=False,
@@ -397,7 +395,7 @@ class Circuit:
         ----------
         n : str
                 New node name
-        type : str
+        node_type : str
                 New node type
         fanin : iterable of str
                 Nodes to add to new node's fanin
@@ -411,8 +409,9 @@ class Circuit:
                 parsing circuits.
         allow_redefinition: bool
                 If True, calling add with a node `n` that is already in the circuit
-                with `uid` set to False will just update the type, fanin, fanout, and
-                output properties of the node. If False, a ValueError will be raised.
+                with `uid` set to False will just update the node type, fanin, fanout,
+                and output properties of the node. If False, a ValueError will be
+                raised.
         uid: bool
                 If True, the node is given a unique name if it already
                 exists in the circuit.
@@ -454,19 +453,19 @@ class Circuit:
         elif isinstance(fanout, str):
             fanout = [fanout]
 
-        if type not in supported_types:
-            raise ValueError(f"Cannot add unknown type '{type}'")
+        if node_type not in supported_types:
+            raise ValueError(f"Cannot add unknown type '{node_type}'")
 
         # raise error for invalid inputs
-        if len(fanin) > 1 and type in ["buf", "not"]:
-            raise ValueError(f"{type} cannot have more than one fanin")
-        if fanin and type in ["0", "1", "x", "input"]:
-            raise ValueError(f"{type} cannot have fanin")
+        if len(fanin) > 1 and node_type in ["buf", "not"]:
+            raise ValueError(f"{node_type} cannot have more than one fanin")
+        if fanin and node_type in ["0", "1", "x", "input"]:
+            raise ValueError(f"{node_type} cannot have fanin")
         if n[0] in "0123456789":
             raise ValueError(f"cannot add node starting with int: {n}")
 
         # add node
-        self.graph.add_node(n, type=type, output=output)
+        self.graph.add_node(n, type=node_type, output=output)
 
         # connect
         if add_connected_nodes:
@@ -543,8 +542,11 @@ class Circuit:
             if t in ["bb_input"]:
                 raise ValueError(f"cannot connect from {t} '{u}'.")
             if t in ["bb_output"]:
-                if self.type(v) != "buf":
-                    raise ValueError(f"cannot connect from {t} '{u}' to non-buf '{v}'")
+                for v in vs:
+                    if self.type(v) != "buf":
+                        raise ValueError(
+                            f"cannot connect from {t} '{u}' to non-buf '{v}'"
+                        )
                 if len(self.fanout(u)) + len(vs) > 1:
                     raise ValueError(f"fanout of {t} '{u}' cannot be greater than 1.")
 
@@ -753,6 +755,26 @@ class Circuit:
                 for f in self.fanin(ns):
                     self.fanin_depth(f, visited, reachable, visited[ns] + 1)
 
+    def paths(self, source, target, cutoff=None):
+        """
+        Get the paths from node u to node v.
+
+        Parameters
+        ----------
+        source: str
+                Source node.
+        target: str
+                Target node.
+        cutoff: int
+                Depth to stop search at
+
+        Returns
+        -------
+        generator of list of str
+                The paths from source to target.
+        """
+        return nx.all_simple_paths(self.graph, source, target, cutoff=cutoff)
+
     def inputs(self):
         """
         Returns the circuit's inputs
@@ -848,8 +870,7 @@ class Circuit:
 
         if ns:
             return (set(ns) | self.transitive_fanin(ns)) & self.startpoints()
-        else:
-            return self.inputs() | self.filter_type("bb_output")
+        return self.inputs() | self.filter_type("bb_output")
 
     def endpoints(self, ns=None):
         """
@@ -870,8 +891,7 @@ class Circuit:
 
         if ns:
             return (set(ns) | self.transitive_fanout(ns)) & self.endpoints()
-        else:
-            return self.outputs() | self.filter_type("bb_input")
+        return self.outputs() | self.filter_type("bb_input")
 
     def reconvergent_fanout_nodes(self):
         """
@@ -885,10 +905,11 @@ class Circuit:
         """
         for node in self.nodes():
             fo = self.fanout(node)
-            if len(fo) > 1 and reduce(
-                lambda a, b: a & b, (self.transitive_fanout(n) for n in fo)
-            ):
-                yield node
+            if len(fo) > 1:
+                for a, b in combinations(fo, 2):
+                    if self.transitive_fanout(a) & self.transitive_fanout(b):
+                        yield node
+                        break
 
     def has_reconvergent_fanout(self):
         """
@@ -899,13 +920,11 @@ class Circuit:
         bool
             Whether or not reconvergent fanout is present
         """
-        for node in self.nodes():
-            fo = self.fanout(node)
-            if len(fo) > 1 and reduce(
-                lambda a, b: a & b, (self.transitive_fanout(n) for n in fo)
-            ):
-                return True
-        return False
+        try:
+            next(self.reconvergent_fanout_nodes())
+            return True
+        except StopIteration:
+            return False
 
     def is_cyclic(self):
         """

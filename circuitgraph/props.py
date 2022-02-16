@@ -1,9 +1,7 @@
 """Functions for analysis of Boolean and circuit properties"""
 from pathlib import Path
 
-from circuitgraph.tx import sensitivity_transform, sensitization_transform, subcircuit
-from circuitgraph.sat import solve, approx_model_count, model_count
-from circuitgraph.utils import clog2, int_to_bin
+import circuitgraph as cg
 
 
 def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_dir=None):
@@ -42,15 +40,17 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_dir=None):
     avg_sen = 0
     for s in sp:
         # create influence circuit
-        i = sensitization_transform(c, s, n)
+        i = cg.tx.sensitization_transform(c, s, n)
 
         # compute influence
         if approx:
             if log_dir:
                 log_file = log_dir / f"{s}.approxmc.log"
-            mc = approx_model_count(i, {"sat": True}, e=e, d=d, log_file=log_file)
+            mc = cg.sat.approx_model_count(
+                i, {"sat": True}, e=e, d=d, log_file=log_file
+            )
         else:
-            mc = model_count(i, {"sat": True})
+            mc = cg.sat.model_count(i, {"sat": True})
         infl = mc / (2 ** len(sp))
         avg_sen += infl
 
@@ -79,16 +79,16 @@ def sensitivity(c, n):
         return 1
 
     sen = len(sp)
-    s = sensitivity_transform(c, n)
-    vs = int_to_bin(sen, clog2(len(sp)), True)
-    while not solve(s, {f"sen_out_{i}": v for i, v in enumerate(vs)}):
+    s = cg.tx.sensitivity_transform(c, n)
+    vs = cg.utils.int_to_bin(sen, cg.utils.clog2(len(sp)), True)
+    while not cg.sat.solve(s, {f"sen_out_{i}": v for i, v in enumerate(vs)}):
         sen -= 1
-        vs = int_to_bin(sen, clog2(len(sp)), True)
+        vs = cg.utils.int_to_bin(sen, cg.utils.clog2(len(sp)), True)
 
     return sen
 
 
-def sensitize(c, n, assumptions={}):
+def sensitize(c, n, assumptions=None):
     """
     Finds an input that sensitizes n to an endpoint
     under assumptions.
@@ -108,10 +108,13 @@ def sensitize(c, n, assumptions={}):
             Input value.
     """
     # setup circuit
-    s = sensitization_transform(c, n)
+    s = cg.tx.sensitization_transform(c, n)
+
+    if not assumptions:
+        assumptions = {}
 
     # find a sensitizing input
-    result = solve(s, {"sat": True, **assumptions})
+    result = cg.sat.solve(s, {"sat": True, **assumptions})
     if not result:
         return None
     return {g: result[g] for g in s.startpoints()}
@@ -121,7 +124,6 @@ def signal_probability(c, n, approx=True, e=0.9, d=0.1, log_file=None):
     """
     Determines the (approximate) probability of a node being true over all
     startpoint combinations.
-
     Parameters
     ----------
     c : Circuit
@@ -138,19 +140,18 @@ def signal_probability(c, n, approx=True, e=0.9, d=0.1, log_file=None):
             delta of approxmc.
     log_file: str
             Log file for approxmc.
-
     Returns
     -------
     float
             Probability.
     """
     # get subcircuit ending at node
-    subc = subcircuit(c, {n} | c.transitive_fanin(n))
+    subc = cg.tx.subcircuit(c, {n} | c.transitive_fanin(n))
 
     # get count with node true and other inputs fixed
     if approx:
-        count = approx_model_count(subc, {n: True}, e=e, d=d, log_file=log_file)
+        count = cg.sat.approx_model_count(subc, {n: True}, e=e, d=d, log_file=log_file)
     else:
-        count = model_count(subc, {n: True})
+        count = cg.sat.model_count(subc, {n: True})
 
     return count / (2 ** len(subc.startpoints()))

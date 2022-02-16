@@ -1,5 +1,5 @@
 import unittest
-from random import choice, randint
+from random import choice
 from itertools import product
 
 import circuitgraph as cg
@@ -26,7 +26,7 @@ class TestProps(unittest.TestCase):
             # compute influence
             infl = 0
             for vs in product([False, True], repeat=len(sp)):
-                asmp = {i: v for i, v in zip(sp, vs)}
+                asmp = dict(zip(sp, vs))
                 asmp_ns = {i: v if i != s else not v for i, v in zip(sp, vs)}
                 r = cg.sat.solve(self.s27, asmp)[n]
                 r_ns = cg.sat.solve(self.s27, asmp_ns)[n]
@@ -51,7 +51,7 @@ class TestProps(unittest.TestCase):
         sen_sim = 0
         for vs in product([False, True], repeat=len(sp)):
             input_sen = 0
-            input_val = {i: v for i, v in zip(sp, vs)}
+            input_val = dict(zip(sp, vs))
             n_val = cg.sat.solve(self.s27, input_val)[n]
             for s in sp:
                 flip_input_val = {i: v if i != s else not v for i, v in zip(sp, vs)}
@@ -109,6 +109,6 @@ class TestProps(unittest.TestCase):
         # compute prob
         m = 0
         for vs in product([False, True], repeat=len(sp)):
-            asmp = {i: v for i, v in zip(sp, vs)}
+            asmp = dict(zip(sp, vs))
             m += cg.sat.solve(self.s27, asmp)[n]
         self.assertEqual(m / (2 ** len(sp)), p)
