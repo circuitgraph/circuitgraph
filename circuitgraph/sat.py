@@ -38,8 +38,10 @@ def construct_solver(c, assumptions=None, engine="cadical"):
     """
     try:
         from pysat.solvers import Cadical, Glucose4, Lingeling
-    except ImportError:
-        raise ImportError("Install 'python-sat' to use satisfiability functionality")
+    except ImportError as e:
+        raise ImportError(
+            "Install 'python-sat' to use satisfiability functionality"
+        ) from e
 
     formula, variables = cnf(c)
     if assumptions:
@@ -77,8 +79,10 @@ def cnf(c):
     """
     try:
         from pysat.formula import CNF, IDPool
-    except ImportError:
-        raise ImportError("Install 'python-sat' to use satisfiability functionality")
+    except ImportError as e:
+        raise ImportError(
+            "Install 'python-sat' to use satisfiability functionality"
+        ) from e
     variables = IDPool()
     formula = CNF()
 
@@ -121,7 +125,7 @@ def cnf(c):
             nets = list(c.fanin(n))
 
             # xor gen
-            def xorClauses(a, b, c):
+            def xor_clauses(a, b, c):
                 formula.append([-variables.id(c), -variables.id(b), -variables.id(a)])
                 formula.append([-variables.id(c), variables.id(b), variables.id(a)])
                 formula.append([variables.id(c), -variables.id(b), variables.id(a)])
@@ -133,7 +137,7 @@ def cnf(c):
                 variables.id(new_net)
 
                 # add sub xors
-                xorClauses(nets[-2], nets[-1], new_net)
+                xor_clauses(nets[-2], nets[-1], new_net)
 
                 # remove last 2 nets
                 nets = nets[:-2]
@@ -143,11 +147,11 @@ def cnf(c):
 
             # add final xor
             if n_type == "xor":
-                xorClauses(nets[-2], nets[-1], n)
+                xor_clauses(nets[-2], nets[-1], n)
             else:
                 # invert xor
                 variables.id(f"xor_inv_{n}")
-                xorClauses(nets[-2], nets[-1], f"xor_inv_{n}")
+                xor_clauses(nets[-2], nets[-1], f"xor_inv_{n}")
                 formula.append([variables.id(n), variables.id(f"xor_inv_{n}")])
                 formula.append([-variables.id(n), -variables.id(f"xor_inv_{n}")])
         elif n_type == "0":
@@ -198,8 +202,7 @@ def solve(c, assumptions=None):
     if solver.solve():
         model = solver.get_model()
         return {n: model[variables.id(n) - 1] > 0 for n in c.nodes()}
-    else:
-        return False
+    return False
 
 
 def approx_model_count(

@@ -57,7 +57,7 @@ def visualize(c, output_file, suppress_output=True):
             f"read_verilog {tmp_in.name}; "
             f"show -format {fmt} -prefix {prefix} {c.name}",
         ]
-        subprocess.run(cmd, stdout=stdout)
+        subprocess.run(cmd, stdout=stdout, check=True)
 
     # Remove intermediate dot files if necessary
     if fmt != "dot":
@@ -106,10 +106,9 @@ def int_to_bin(i, w, lend=False):
 
     """
 
-    if not lend:
-        return tuple(v == "1" for v in bin(i)[2:].zfill(w))
-    else:
+    if lend:
         return tuple(reversed(tuple(v == "1" for v in bin(i)[2:].zfill(w))))
+    return tuple(v == "1" for v in bin(i)[2:].zfill(w))
 
 
 def bin_to_int(b, lend=False):
@@ -160,8 +159,7 @@ def lint(c, fail_fast=True, unloaded=False, undriven=True, single_input_gates=Fa
     def handle(s):
         if fail_fast:
             raise ValueError(s)
-        else:
-            errors.append(s)
+        errors.append(s)
 
     zero_input_types = ["input", "0", "1", "bb_ouptut"]
     single_input_types = ["buf", "not", "bb_input"]

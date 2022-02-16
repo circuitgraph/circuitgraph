@@ -10,14 +10,11 @@ class TestUtils(unittest.TestCase):
         tmpdir = tempfile.mkdtemp(prefix="circuitgraph_test_visualize")
         c = cg.from_lib("c17")
         cg.visualize(c, f"{tmpdir}/c17.png")
-        if not Path(f"{tmpdir}/c17.png").resolve().is_file():
-            raise AssertionError("Image not created")
-        if Path(f"{tmpdir}/c17.dot").resolve().is_file():
-            raise AssertionError("Dot file left over")
+        self.assertTrue(Path(f"{tmpdir}/c17.png").resolve().is_file())
+        self.assertFalse(Path(f"{tmpdir}/c17.dot").resolve().is_file())
 
         cg.visualize(c, f"{tmpdir}/c17.dot")
-        if not Path(f"{tmpdir}/c17.dot").resolve().is_file():
-            raise AssertionError("Image not created")
+        self.assertTrue(Path(f"{tmpdir}/c17.dot").resolve().is_file())
 
     def test_clog2(self):
         self.assertEqual(cg.utils.clog2(13), 4)

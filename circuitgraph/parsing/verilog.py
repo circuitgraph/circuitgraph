@@ -1,5 +1,4 @@
 from pathlib import Path
-from string import digits
 
 from lark import Lark, Transformer
 
@@ -37,6 +36,7 @@ class VerilogParsingError(Exception):
     """
 
     def __init__(self, message, token, text):
+        super().__init__()
         self.message = message
         self.token = token
         self.line = getattr(token, "line", "?")
@@ -57,8 +57,6 @@ class VerilogParsingWarning(Exception):
     """
     Potentially raised if there is a warning parsing verilog.
     """
-
-    pass
 
 
 class VerilogCircuitGraphTransformer(Transformer):
@@ -84,25 +82,30 @@ class VerilogCircuitGraphTransformer(Transformer):
                 If True, unused nets will cause raise `VerilogParsingWarning`
                 exceptions.
         """
+        super().__init__()
         self.c = Circuit()
         self.text = text
         self.blackboxes = blackboxes
         self.warnings = warnings
         self.error_on_warning = error_on_warning
-        self.tie0 = self.c.add("tie0", "0")
-        self.tie1 = self.c.add("tie1", "1")
-        self.tieX = self.c.add("tieX", "x")
+        self.tie_0 = self.c.add("tie_0", "0")
+        self.tie_1 = self.c.add("tie_1", "1")
+        self.tie_x = self.c.add("tie_x", "x")
         self.io = set()
         self.inputs = set()
         self.outputs = set()
         self.wires = set()
 
     # Helper functions
-    def add_node(self, n, node_type, fanin=[], fanout=[], uid=False):
+    def add_node(self, n, node_type, fanin=None, fanout=None, uid=False):
         """So that nodes are of type `str`, not `lark.Token`"""
-        if type(fanin) not in [list, set]:
+        if not fanin:
+            fanin = []
+        elif type(fanin) not in [list, set]:
             fanin = [fanin]
-        if type(fanout) not in [list, set]:
+        if not fanout:
+            fanout = []
+        elif type(fanout) not in [list, set]:
             fanout = [fanout]
 
         fanin = [str(i) for i in fanin]
@@ -119,8 +122,10 @@ class VerilogCircuitGraphTransformer(Transformer):
             allow_redefinition=True,
         )
 
-    def add_blackbox(self, blackbox, name, connections=dict()):
-        formatted_connections = dict()
+    def add_blackbox(self, blackbox, name, connections=None):
+        if not connections:
+            connections = {}
+        formatted_connections = {}
         for key in connections:
             formatted_connections[str(key)] = str(connections[key])
             if str(connections[key]) not in self.c:
@@ -130,8 +135,7 @@ class VerilogCircuitGraphTransformer(Transformer):
     def warn(self, message):
         if self.error_on_warning:
             raise VerilogParsingWarning(message)
-        else:
-            print(f"Warning: {message}")
+        print(f"Warning: {message}")
 
     def check_for_warnings(self):
         for wire in self.wires:
@@ -183,13 +187,13 @@ class VerilogCircuitGraphTransformer(Transformer):
         for o in self.outputs:
             self.c.set_output(str(o))
 
-        # Remove tie0, tie1 if not used
-        if not self.c.fanout(self.tie0):
-            self.c.remove(self.tie0)
-        if not self.c.fanout(self.tie1):
-            self.c.remove(self.tie1)
-        if not self.c.fanout(self.tieX):
-            self.c.remove(self.tieX)
+        # Remove tie_0, tie_1 if not used
+        if not self.c.fanout(self.tie_0):
+            self.c.remove(self.tie_0)
+        if not self.c.fanout(self.tie_1):
+            self.c.remove(self.tie_1)
+        if not self.c.fanout(self.tie_x):
+            self.c.remove(self.tie_x)
 
         # Check for warnings
         if self.warnings:
@@ -235,17 +239,17 @@ class VerilogCircuitGraphTransformer(Transformer):
                         name,
                         self.text,
                     )
-                self.add_node(ports[0], name_of_module, fanin=[p for p in ports[1:]])
+                self.add_node(ports[0], name_of_module, fanin=ports[1:])
         # Otherwise, try to parse as blackbox
         else:
             try:
                 bb = {i.name: i for i in self.blackboxes}[name_of_module]
-            except KeyError:
+            except KeyError as e:
                 raise VerilogParsingError(
                     f"Blackbox {name_of_module} not in list of defined blackboxes.",
                     name_of_module,
                     self.text,
-                )
+                ) from e
             for name, connections in module_instances:
                 if not isinstance(connections, dict):
                     raise VerilogParsingError(
@@ -267,12 +271,11 @@ class VerilogCircuitGraphTransformer(Transformer):
 
     def list_of_module_connections(self, module_port_connections):
         if isinstance(module_port_connections[0], dict):
-            d = dict()
+            d = {}
             for m in module_port_connections:
                 d.update(m)
             return d
-        else:
-            return module_port_connections
+        return module_port_connections
 
     def module_port_connection(self, expression):
         return expression[0]
@@ -284,7 +287,7 @@ class VerilogCircuitGraphTransformer(Transformer):
     # 5. Behavioral Statements
     def assignment(self, lvalue_and_expression):
         [lvalue, expression] = lvalue_and_expression
-        if lvalue not in [self.tie0, self.tie1, self.tieX]:
+        if lvalue not in [self.tie_0, self.tie_1, self.tie_x]:
             self.add_node(lvalue, "buf", fanin=expression)
 
     # 6. Specify Section
@@ -294,13 +297,13 @@ class VerilogCircuitGraphTransformer(Transformer):
         return s[0]
 
     def constant_zero(self, value):
-        return self.tie0
+        return self.tie_0
 
     def constant_one(self, value):
-        return self.tie1
+        return self.tie_1
 
     def constant_x(self, value):
-        return self.tieX
+        return self.tie_x
 
     def not_gate(self, items):
         io = "_".join(items)

@@ -1,6 +1,4 @@
 import re
-from string import digits
-import random
 from collections import defaultdict
 
 import networkx as nx
@@ -57,12 +55,12 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             Parsed circuit.
     """
 
-    regex = f"module\s+(.+?)\s*\(.*?\);"
+    regex = r"module\s+(.+?)\s*\(.*?\);"
     m = re.search(regex, netlist, re.DOTALL)
     name = m.group(1)
     module = netlist[m.end() :]
 
-    regex = f"endmodule"
+    regex = "endmodule"
     m = re.search(regex, netlist, re.DOTALL)
     module = module[: m.start()]
 
@@ -70,9 +68,9 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
     g = nx.DiGraph()
 
     # parse io
-    regex = "(input)\s(.+?);"
+    regex = r"(input)\s(.+?);"
     inputs = set()
-    for net_type, net_str in re.findall(regex, module, re.DOTALL):
+    for _, net_str in re.findall(regex, module, re.DOTALL):
         nets = net_str.split(",")
         for net in nets:
             inputs.add(net.strip())
@@ -89,11 +87,11 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
     g.add_node(tie_1, type="1")
 
     # parse insts
-    regex = "([a-zA-Z][a-zA-Z\d_]*)\s+([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);"
+    regex = r"([a-zA-Z][a-zA-Z\d_]*)\s+([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);"
 
     all_nets = defaultdict(list)
-    all_edges = list()
-    blackboxes_to_add = dict()
+    all_edges = []
+    blackboxes_to_add = {}
     for gate, inst, net_str in re.findall(regex, module, re.DOTALL):
 
         # parse generics
@@ -111,15 +109,14 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             # get blackbox definition
             try:
                 bb = next(bb for bb in blackboxes if bb.name == gate)
-            except:
-                raise ValueError(f"blackbox {gate} not defined")
+            except StopIteration as e:
+                raise ValueError(f"blackbox {gate} not defined") from e
 
             # parse pins
             all_nets["bb_input"] += [f"{inst}.{n}" for n in bb.inputs()]
             all_nets["bb_output"] += [f"{inst}.{n}" for n in bb.outputs()]
 
-            regex = "\.\s*(\S+)\s*\(\s*(\S+)\s*\)"
-            connections = {}
+            regex = r"\.\s*(\S+)\s*\(\s*(\S+)\s*\)"
             for pin, net in re.findall(regex, net_str):
                 # replace constants
                 if net == "1'b1":
@@ -138,7 +135,7 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
 
             blackboxes_to_add[inst] = bb
 
-    regex = "assign\s+([a-zA-Z][a-zA-Z\d_]*)\s*=\s*([a-zA-Z\d][a-zA-Z\d_']*)\s*;"
+    regex = r"assign\s+([a-zA-Z][a-zA-Z\d_]*)\s*=\s*([a-zA-Z\d][a-zA-Z\d_']*)\s*;"
     for n0, n1 in re.findall(regex, module):
         all_nets["buf"].append(n0)
         if n1 in ["1'b0", "1'h0", "1'd0"]:
@@ -152,9 +149,8 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
         g.add_nodes_from(v, type=k, output=False)
     g.add_edges_from(all_edges)
 
-    regex = "(output)\s(.+?);"
-    outputs = set()
-    for net_type, net_str in re.findall(regex, module, re.DOTALL):
+    regex = r"(output)\s(.+?);"
+    for _, net_str in re.findall(regex, module, re.DOTALL):
         nets = net_str.split(",")
         for net in nets:
             g.nodes[net.strip()]["output"] = True

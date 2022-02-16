@@ -214,7 +214,7 @@ class Circuit:
 
         return set(n for n in self.graph.nodes if self.graph.nodes[n]["type"] in types)
 
-    def add_subcircuit(self, sc, name, connections=None):
+    def add_subcircuit(self, sc, name, connections=None, strip_io=True):
         """
         Adds a subcircuit to circuit.
 
@@ -225,7 +225,11 @@ class Circuit:
         name : str
                 Instance name.
         connections : dict of str:str
-                Optional connections to make.
+                Optional connections to make, where the keys are subcircuit
+                inputs/outputs and the values are circuit nodes.
+        strip_io: bool
+                If True, subcircuit inputs will be set to buffers, and subcircuit
+                outputs will be marked as non-outputs.
         """
         # check if subcircuit bbs exist
         for bb_name in sc.blackboxes:
@@ -250,10 +254,11 @@ class Circuit:
         # add sub circuit
         g = nx.relabel_nodes(sc.graph, mapping)
         self.graph.update(g)
-        for n in sc.inputs():
-            self.set_type(f"{name}_{n}", "buf")
-        for n in sc.outputs():
-            self.set_output(f"{name}_{n}", False)
+        if strip_io:
+            for n in sc.inputs():
+                self.set_type(f"{name}_{n}", "buf")
+            for n in sc.outputs():
+                self.set_output(f"{name}_{n}", False)
 
         # add blackboxes
         for bb_name, bb in sc.blackboxes.items():

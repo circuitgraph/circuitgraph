@@ -79,10 +79,9 @@ def from_file(
             error_on_warning,
             fast,
         )
-    elif fmt == "bench" or path.suffix == ".bench":
+    if fmt == "bench" or path.suffix == ".bench":
         return bench_to_circuit(netlist, name)
-    else:
-        raise ValueError(f"extension {path.suffix} not supported")
+    raise ValueError(f"extension {path.suffix} not supported")
 
 
 def from_lib(name):
@@ -141,7 +140,7 @@ def bench_to_circuit(netlist, name):
         inputs = (
             input_str.replace(" ", "").replace("\n", "").replace("\t", "").split(",")
         )
-        if gate == "BUFF" or gate == "buff":
+        if gate in ("buff", "BUFF"):
             gate = "buf"
         c.add(
             net,
@@ -222,16 +221,16 @@ def verilog_to_circuit(
     m = re.search(regex, netlist, re.DOTALL)
     try:
         module = m.group(1)
-    except AttributeError:
+    except AttributeError as e1:
         if infer_module_name:
             regex = r"(module\s+(.*?)\s*\(.*?\);(.*?)endmodule)"
             m = re.search(regex, netlist, re.DOTALL)
             try:
                 module = m.group(1)
-            except AttributeError:
-                raise ValueError("Could not read netlist: no modules found")
+            except AttributeError as e2:
+                raise ValueError("Could not read netlist: no modules found") from e2
         else:
-            raise ValueError(f"Could not read netlist: {name} module not found")
+            raise ValueError(f"Could not read netlist: {name} module not found") from e1
 
     return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)
 
