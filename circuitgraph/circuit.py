@@ -663,7 +663,7 @@ class Circuit:
             gates |= nx.descendants(self.graph, n)
         return gates
 
-    def fanout_depth(self, ns, visited=None, reachable=None, depth=0):
+    def fanout_depth(self, ns, maximum=True):
         """
         Computes the combinational fanout depth of a node(s).
 
@@ -671,45 +671,52 @@ class Circuit:
         ----------
         ns : str or iterable of str
                 Node(s) to compute depth for.
+        maximum: bool
+                If True, the maximum depth will be found. If False, the minimum depth
+                will be found.
 
         Returns
         -------
         int
                 Depth.
         """
-        if visited is None:
-            # is acyclic
-            if self.is_cyclic():
-                raise ValueError("Cannot compute depth of cyclic circuit")
 
-            # find reachable group and init visited
-            reachable = self.transitive_fanout(ns)
-
-            # set up visited
-            if isinstance(ns, str):
-                visited = {ns: 0}
+        def visit_node(n, visited, reachable, depth):
+            if n in visited:
+                visited[n] = (
+                    max(visited[n], depth) if maximum else min(visited[n], depth)
+                )
             else:
-                visited = {n: 0 for n in ns}
-
-            # recurse
-            for f in self.fanout(ns):
-                self.fanout_depth(f, visited, reachable, depth + 1)
-
-            return max(visited.values())
-
-        else:
-            # update node depth
-            if ns in visited:
-                visited[ns] = max(visited[ns], depth)
-            else:
-                visited[ns] = depth
+                visited[n] = depth
 
             # check if all reachable fanin has been visited
-            if all(n in visited for n in self.fanin(ns) & reachable):
-                for f in self.fanout(ns):
-                    self.fanout_depth(f, visited, reachable, visited[ns] + 1)
+            if all(fi in visited for fi in self.fanin(n) & reachable):
+                for fo in self.fanout(n):
+                    visited = visit_node(fo, visited, reachable, visited[n] + 1)
+            return visited
 
-    def fanin_depth(self, ns, visited=None, reachable=None, depth=0):
+        # is acyclic
+        if self.is_cyclic():
+            raise ValueError("Cannot compute depth of cyclic circuit")
+
+        depth = 0
+
+        # find reachable group and init visited
+        reachable = self.transitive_fanout(ns)
+
+        # set up visited
+        if isinstance(ns, str):
+            visited = {ns: depth}
+        else:
+            visited = {n: depth for n in ns}
+
+        # recurse
+        for f in self.fanout(ns):
+            visited = visit_node(f, visited, reachable, depth + 1)
+
+        return max(visited.values()) if maximum else min(visited.values())
+
+    def fanin_depth(self, ns, maximum=True):
         """
         Computes the combinational fanin depth of a node(s).
 
@@ -717,43 +724,50 @@ class Circuit:
         ----------
         ns : str or iterable of str
                 Node(s) to compute depth for.
+        maximum: bool
+                If True, the maximum depth will be found. If False, the minimum depth
+                will be found.
 
         Returns
         -------
         int
                 Depth.
         """
-        if visited is None:
-            # is acyclic
-            if self.is_cyclic():
-                raise ValueError("Cannot compute depth of cyclic circuit")
 
-            # find reachable group and init visited
-            reachable = self.transitive_fanin(ns)
-
-            # set up visited
-            if isinstance(ns, str):
-                visited = {ns: 0}
+        def visit_node(n, visited, reachable, depth):
+            if n in visited:
+                visited[n] = (
+                    max(visited[n], depth) if maximum else min(visited[n], depth)
+                )
             else:
-                visited = {n: 0 for n in ns}
-
-            # recurse
-            for f in self.fanin(ns):
-                self.fanin_depth(f, visited, reachable, depth + 1)
-
-            return max(visited.values())
-
-        else:
-            # update node depth
-            if ns in visited:
-                visited[ns] = max(visited[ns], depth)
-            else:
-                visited[ns] = depth
+                visited[n] = depth
 
             # check if all reachable fanin has been visited
-            if all(n in visited for n in self.fanout(ns) & reachable):
-                for f in self.fanin(ns):
-                    self.fanin_depth(f, visited, reachable, visited[ns] + 1)
+            if all(fo in visited for fo in self.fanout(n) & reachable):
+                for fi in self.fanin(n):
+                    visited = visit_node(fi, visited, reachable, visited[n] + 1)
+            return visited
+
+        # is acyclic
+        if self.is_cyclic():
+            raise ValueError("Cannot compute depth of cyclic circuit")
+
+        depth = 0
+
+        # find reachable group and init visited
+        reachable = self.transitive_fanin(ns)
+
+        # set up visited
+        if isinstance(ns, str):
+            visited = {ns: depth}
+        else:
+            visited = {n: depth for n in ns}
+
+        # recurse
+        for f in self.fanin(ns):
+            visited = visit_node(f, visited, reachable, depth + 1)
+
+        return max(visited.values()) if maximum else min(visited.values())
 
     def paths(self, source, target, cutoff=None):
         """
