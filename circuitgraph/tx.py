@@ -1054,6 +1054,7 @@ def supergates(c):
                 other_supergate = minimal_supergate_circuits[other_output]
                 if i in other_supergate.nodes() - other_supergate.inputs():
                     g.add_edge(other_output, output)
+                    break
 
     sorted_supergate_circuits = []
     for node in nx.topological_sort(g):
