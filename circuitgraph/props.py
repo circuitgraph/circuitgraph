@@ -53,7 +53,13 @@ def avg_sensitivity(
             if log_dir:
                 log_file = log_dir / f"{s}.approxmc.log"
             mc = cg.sat.approx_model_count(
-                i, {"sat": True}, e=e, d=d, log_file=log_file
+                i,
+                {"sat": True},
+                e=e,
+                d=d,
+                seed=seed,
+                use_xor_clauses=use_xor_clauses,
+                log_file=log_file,
             )
         else:
             mc = cg.sat.model_count(i, {"sat": True})
@@ -163,7 +169,15 @@ def signal_probability(
 
     # get count with node true and other inputs fixed
     if approx:
-        count = cg.sat.approx_model_count(subc, {n: True}, e=e, d=d, log_file=log_file)
+        count = cg.sat.approx_model_count(
+            subc,
+            {n: True},
+            e=e,
+            d=d,
+            seed=seed,
+            use_xor_clauses=use_xor_clauses,
+            log_file=log_file,
+        )
     else:
         count = cg.sat.model_count(subc, {n: True})
 
