@@ -4,7 +4,9 @@ from pathlib import Path
 import circuitgraph as cg
 
 
-def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_dir=None):
+def avg_sensitivity(
+    c, n, approx=True, e=0.9, d=0.1, seed=None, use_xor_clauses=False, log_dir=None
+):
     """
     Calculates the average sensitivity (equal to total influence)
     of node n with respect to its startpoints.
@@ -21,6 +23,10 @@ def avg_sensitivity(c, n, approx=True, e=0.9, d=0.1, log_dir=None):
             epsilon of approxmc.
     d : float (0-1)
             delta of approxmc.
+    seed: int
+            Seed for approxmc.
+    use_xor_clauses: bool
+            Use xor clauses variable for approxmc.
     log_dir: str
             Directory to store approxmc logs in.
 
@@ -120,7 +126,9 @@ def sensitize(c, n, assumptions=None):
     return {g: result[g] for g in s.startpoints()}
 
 
-def signal_probability(c, n, approx=True, e=0.9, d=0.1, log_file=None):
+def signal_probability(
+    c, n, approx=True, e=0.9, d=0.1, seed=None, use_xor_clauses=False, log_file=None
+):
     """
     Determines the (approximate) probability of a node being true over all
     startpoint combinations.
@@ -138,8 +146,13 @@ def signal_probability(c, n, approx=True, e=0.9, d=0.1, log_file=None):
             epsilon of approxmc.
     d : float (0-1)
             delta of approxmc.
+    seed: int
+            seed for approxmc.
+    use_xor_clauses: bool
+            Use xor clauses variable for approxmc.
     log_file: str
             Log file for approxmc.
+
     Returns
     -------
     float

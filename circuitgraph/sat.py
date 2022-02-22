@@ -25,7 +25,7 @@ def construct_solver(c, assumptions=None, engine="cadical"):
     Parameters
     ----------
     c : Circuit
-            circuit to encode.
+            Circuit to encode.
     assumptions : dict of str:int
             Assumptions to add to solver.
 
@@ -34,7 +34,7 @@ def construct_solver(c, assumptions=None, engine="cadical"):
     solver : pysat.Cadical
             SAT solver instance.
     variables : pysat.IDPool
-            solver variable mapping.
+            Solver variable mapping.
     """
     try:
         from pysat.solvers import Cadical, Glucose4, Lingeling
@@ -68,12 +68,12 @@ def cnf(c):
     Parameters
     ----------
     c : Circuit
-            circuit to transform.
+            Circuit to transform.
 
     Returns
     -------
     variables : pysat.IDPool
-            formula variable mapping.
+            Formula variable mapping.
     formula : pysat.CNF
             CNF formula.
     """
@@ -206,7 +206,14 @@ def solve(c, assumptions=None):
 
 
 def approx_model_count(
-    c, assumptions=None, startpoints=None, e=0.9, d=0.1, log_file=None
+    c,
+    assumptions=None,
+    startpoints=None,
+    e=0.9,
+    d=0.1,
+    seed=None,
+    use_xor_clauses=False,
+    log_file=None,
 ):
     """
     Approximates the number of solutions to circuit.
@@ -223,6 +230,11 @@ def approx_model_count(
             epsilon of approxmc.
     d : float (0-1)
             delta of approxmc.
+    seed: int
+            Seed for approxmc.
+    use_xor_clauses: bool
+            If True, parity gates are added as clauses directly using the extended
+            DIMACS format supported by approxmc with xor clauses.
     log_file: str
             If specified, approxmc output will be written to this file.
 
@@ -231,6 +243,13 @@ def approx_model_count(
     int
             Estimate.
     """
+    try:
+        from pysat.formula import IDPool
+    except ImportError as e:
+        raise ImportError(
+            "Install 'python-sat' to use satisfiability functionality"
+        ) from e
+
     if shutil.which("approxmc") is None:
         raise OSError("Install 'approxmc' to use 'approx_model_count'")
     if startpoints is None:
@@ -248,7 +267,7 @@ def approx_model_count(
 
     # write dimacs to tmp
     with tempfile.NamedTemporaryFile(
-        prefix=f"circuitgraph_approxmc_{c.name}_clauses"
+        prefix=f"circuitgraph_approxmc_{c.name}_clauses", mode="w"
     ) as tmp:
         clause_str = "\n".join(
             " ".join(str(v) for v in c) + " 0" for c in formula.clauses
@@ -257,11 +276,51 @@ def approx_model_count(
             f"c ind {enc_inps} 0\np cnf {formula.nv} "
             f"{len(formula.clauses)}\n{clause_str}\n"
         )
-        tmp.write(bytes(dimacs, "ascii"))
+        if use_xor_clauses:
+            # New pool that doesn't have added xor variables
+            new_variables = IDPool()
+            old_var_to_new_var = {}
+            for n in c.nodes():
+                old_var_to_new_var[variables.id(n)] = new_variables.id(n)
+            new_dimacs = ""
+            num_clauses = 0
+            # Remove parity clauses
+            for line in dimacs.split("\n")[2:]:
+                if line.strip():
+                    clause = [int(i) for i in line.split()[:-1]]
+                    node = variables.obj(abs(clause[0]))
+                    # Only add clauses that start with non-parity nodes
+                    if node in c and c.type(node) not in ["xor", "xnor"]:
+                        num_clauses += 1
+                        new_clause = []
+                        for var in clause:
+                            if var >= 0:
+                                new_clause.append(old_var_to_new_var[abs(var)])
+                            else:
+                                new_clause.append(-old_var_to_new_var[abs(var)])
+                        new_clause = " ".join(str(v) for v in new_clause) + " 0"
+                        new_dimacs += new_clause + "\n"
+            # Add back in parity clauses using new format
+            for node in c.filter_type(["xor", "xnor"]):
+                num_clauses += 1
+                fanin_clause = " ".join(str(new_variables.id(n)) for n in c.fanin(node))
+                if c.type(node) == "xor":
+                    new_dimacs += f"x{new_variables.id(node)} {fanin_clause} 0\n"
+                else:
+                    new_dimacs += f"x{new_variables.id(node)} -{fanin_clause} 0\n"
+            # Add back in header
+            enc_inps = " ".join([str(new_variables.id(n)) for n in startpoints])
+            new_dimacs = (
+                f"c ind {enc_inps} 0\np cnf {len(c)} " f"{num_clauses}\n"
+            ) + new_dimacs
+
+        tmp.write(dimacs)
         tmp.flush()
 
         # run approxmc
         cmd = f"approxmc --epsilon={e} --delta={d} {tmp.name}".split()
+        if seed:
+            cmd.append(f"--seed={seed}")
         with open(log_file, "w+") if log_file else tempfile.NamedTemporaryFile(
             prefix=f"circuitgraph_approxmc_{c.name}_log", mode="w+"
         ) as f:
