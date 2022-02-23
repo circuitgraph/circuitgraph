@@ -6,6 +6,7 @@ import tempfile
 
 
 def add_assumptions(formula, variables, assumptions):
+    """Add assumptions to a formula."""
     for n, val in assumptions.items():
         if val:
             formula.append([variables.id(n)])
@@ -14,13 +15,14 @@ def add_assumptions(formula, variables, assumptions):
 
 
 def remap(clauses, offset):
+    """Remap clauses of a formula."""
     new_clauses = [[v + offset if v > 0 else v - offset for v in c] for c in clauses]
     return new_clauses
 
 
 def construct_solver(c, assumptions=None, engine="cadical"):
     """
-    Constructs a SAT solver instance with the given circuit and assumptions.
+    Construct a SAT solver instance with the given circuit and assumptions.
 
     Parameters
     ----------
@@ -64,7 +66,7 @@ def construct_solver(c, assumptions=None, engine="cadical"):
 
 def cnf(c):
     """
-    Converts circuit to CNF using the Tseitin transformation.
+    Convert circuit to CNF using the Tseitin transformation.
 
     Parameters
     ----------
@@ -170,7 +172,7 @@ def cnf(c):
 
 def solve(c, assumptions=None):
     """
-    Trys to find satisfying assignment, with optional assumptions.
+    Try to find satisfying assignment with optional assumptions.
 
     Parameters
     ----------
@@ -219,7 +221,7 @@ def approx_model_count(
     log_file=None,
 ):
     """
-    Approximates the number of solutions to circuit.
+    Approximate the number of solutions to circuit.
 
     Parameters
     ----------
@@ -341,7 +343,7 @@ def approx_model_count(
 
 def model_count(c, assumptions=None):
     """
-    Determines the number of solutions to circuit.
+    Determine the number of solutions to circuit.
 
     Parameters
     ----------
