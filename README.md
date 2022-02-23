@@ -83,7 +83,7 @@ Code should be formatted using [black](https://black.readthedocs.io/en/stable/).
 pip install black pre-commit
 pre-commit install
 ```
-Pre-commit also runs a few other hooks, including a docstring formatter and linter. Docs follow the `numpy` document convention.
+Pre-commit also runs a few other hooks, including a docstring formatter and linter. Docs follow the `numpy` documentation convention.
 
 ## Citation
 
