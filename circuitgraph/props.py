@@ -4,128 +4,144 @@ from pathlib import Path
 import circuitgraph as cg
 
 
-def avg_sensitivity(
-    c,
-    n,
-    supergates=False,
-    approx=True,
-    e=0.9,
-    d=0.1,
-    seed=None,
-    use_xor_clauses=False,
-    log_dir=None,
-):
+def influence(c, ns, supergates=False, approx=True, log_dir=None, **kwargs):
     """
-    Calculate the average sensitivity of node `n`.
+    Compute the influences at node(s).
 
-    Return the average sensitivity (equal to total influence) of a node with
-    respect to its startpoints.
+    Parameters
+    ----------
+    c : Circuit
+            Circuit to compute influence for.
+    ns : str or list of str
+            Node(s) to compute average sensitivity for.
+    supergates : bool
+            If True, break computation into supergates.
+    approx : bool
+            Compute approximate model count using approxmc.
+    log_dir: str or pathlib.Path
+            Directory to store approxmc logs in.
+    kwargs: Keyword arguments
+            Keyword arguments to pass into `approx_model_count`.
+
+    Returns
+    -------
+    dict of str:float or dict of dict of str:float
+            The influence each startpoint has on the node. If multiple nodes
+            are specified, a dict mapping each output to its influences.
+
+    """
+    if isinstance(ns, str):
+        ns = [ns]
+
+    if supergates:
+        # Keep track of influences already computed for a given supergate
+        # Mapping of supergate outputs to dict mapping inputs to influences
+        sg_influences = {}
+
+    all_influences = {}
+    for n in ns:
+        sp = c.startpoints(n)
+
+        if log_dir:
+            log_dir = Path(log_dir)
+            log_dir.mkdir(exist_ok=True)
+
+        def mc(circuit, startpoint, endpoints=None):
+            i = cg.tx.sensitization_transform(circuit, startpoint, endpoints)
+            if approx:
+                log_file = None
+                if log_dir:
+                    log_file = log_dir / f"{s}.approxmc.log"
+                    count = cg.sat.approx_model_count(
+                        i, {"sat": True}, log_file=log_file, **kwargs,
+                    )
+                else:
+                    count = cg.sat.approx_model_count(i, {"sat": True}, **kwargs,)
+            else:
+                count = cg.sat.model_count(i, {"sat": True})
+            return count
+
+        influences = {}
+
+        if supergates:
+            # Mapping of circuit inputs to the supergates they belong to
+            input_map = {}
+            c_n = cg.tx.subcircuit(c, c.transitive_fanin(n) | {n})
+            supergates = cg.tx.supergates(c_n)
+            for sg in supergates:
+                # Mapping of supergate inputs to influence on supergate output
+                (sg_out,) = sg.outputs()
+                if sg_out not in sg_influences:
+                    curr_influences = {}
+                    for s in sg.startpoints():
+                        input_map[s] = sg_out
+                        curr_influences[s] = mc(sg, s) / (2 ** len(sg.startpoints()))
+                    sg_influences[sg_out] = curr_influences
+                else:
+                    for s in sg.startpoints():
+                        input_map[s] = sg_out
+
+            # Multiply influences along each path
+            for i in sp:
+                infl = 1
+                curr_node = i
+                while curr_node != n:
+                    sg_out = input_map[curr_node]
+                    infl *= sg_influences[sg_out][curr_node]
+                    curr_node = sg_out
+                influences[i] = infl
+        else:
+            for s in sp:
+                # create influence circuit
+                influences[s] = mc(c, s, n) / (2 ** len(sp))
+
+        all_influences[n] = influences
+
+    if len(all_influences) == 1:
+        (all_influences,) = all_influences.values()
+    return all_influences
+
+
+def avg_sensitivity(c, ns, supergates=False, approx=True, log_dir=None, **kwargs):
+    """
+    Calculate the average sensitivity node(s) `ns`.
+
+    Return the average sensitivity (equal to total influence) of node(s) with
+    respect to startpoints.
 
     Parameters
     ----------
     c: Circuit
             Circuit to compute average sensitivity for.
-    n : str
-            Node to compute average sensitivity for.
+    ns : str or list of str
+            Node(s) to compute average sensitivity for.
     supergates: bool
             If True, break the sensitivity computation up into supergates.
     approx : bool
             Compute approximate model count using approxmc.
-    e : float (>0)
-            epsilon of approxmc.
-    d : float (0-1)
-            delta of approxmc.
-    seed: int
-            Seed for approxmc.
-    use_xor_clauses: bool
-            Use xor clauses variable for approxmc.
-    log_dir: str
+    log_dir: str or pathlib.Path
             Directory to store approxmc logs in.
+    kwargs: Keyword arguments
+            Keyword arguments to pass into `approx_model_count`.
 
     Returns
     -------
-    float
-            Average sensitivity of node n.
+    float or dict of str:float
+            Average sensitivity of node `ns` or dict mapping nodes in set `ns`
+            to average sensitivities.
 
     """
-    sp = c.startpoints(n)
+    all_influences = influence(
+        c, ns, supergates=supergates, approx=approx, log_dir=log_dir, **kwargs
+    )
 
-    if log_dir:
-        log_dir = Path(log_dir)
-        log_dir.mkdir(exist_ok=True)
-    else:
-        log_file = None
+    if isinstance(ns, str):
+        return sum(all_influences.values())
 
-    def mc(circuit, startpoint, endpoints=None):
-        i = cg.tx.sensitization_transform(circuit, startpoint, endpoints)
-        if approx:
-            log_file = None
-            if log_dir:
-                log_file = log_dir / f"{s}.approxmc.log"
-            count = cg.sat.approx_model_count(
-                i,
-                {"sat": True},
-                e=e,
-                d=d,
-                seed=seed,
-                use_xor_clauses=use_xor_clauses,
-                log_file=log_file,
-            )
-        else:
-            count = cg.sat.model_count(i, {"sat": True})
-        return count
-
-    if supergates:
-        # Mapping of circuit inputs to the supergates they belong to
-        input_map = {}
-        # Mapping of supergates to supergate influences
-        influences = {}
-        c_n = cg.tx.subcircuit(c, c.transitive_fanin(n) | {n})
-        supergates = cg.tx.supergates(c_n)
-        for sg in supergates:
-            # Mapping of supergate inputs to influence on supergate output
-            sg_influences = {}
-            for s in sg.startpoints():
-                input_map[s] = sg
-                sg_influences[s] = mc(sg, s) / (2 ** len(sg.startpoints()))
-            influences[sg] = sg_influences
-
-        # Multiply influences along each path
-        for i in sp:
-            infl = 1
-            curr_node = i
-            while curr_node != n:
-                sg = input_map[curr_node]
-                infl *= influences[sg][curr_node]
-                curr_node = sg.outputs().pop()
-            print(i, infl)
-
-        return
-
-    avg_sen = 0
-    for s in sp:
-        # create influence circuit
-        i = cg.tx.sensitization_transform(c, s, n)
-
-        # compute influence
-        if approx:
-            if log_dir:
-                log_file = log_dir / f"{s}.approxmc.log"
-            mc = cg.sat.approx_model_count(
-                i,
-                {"sat": True},
-                e=e,
-                d=d,
-                seed=seed,
-                use_xor_clauses=use_xor_clauses,
-                log_file=log_file,
-            )
-        else:
-            mc = cg.sat.model_count(i, {"sat": True})
-        infl = mc / (2 ** len(sp))
-        avg_sen += infl
-
-    return avg_sen
+    total_influences = {}
+    for k, v in all_influences.items():
+        total_influences[k] = sum(v.values())
+    return total_influences
 
 
 def sensitivity(c, n):
@@ -191,9 +207,7 @@ def sensitize(c, n, assumptions=None):
     return {g: result[g] for g in s.startpoints()}
 
 
-def signal_probability(
-    c, n, approx=True, e=0.9, d=0.1, seed=None, use_xor_clauses=False, log_file=None
-):
+def signal_probability(c, n, approx=True, **kwargs):
     """
     Determine the (approximate) probability of node `n` being true.
 
@@ -207,16 +221,8 @@ def signal_probability(
             Use approximate model counting through approxmc.
             This is the default behavior, and turned it off
             can make computation time prohibitively expensive.
-    e : float (>0)
-            epsilon of approxmc.
-    d : float (0-1)
-            delta of approxmc.
-    seed: int
-            seed for approxmc.
-    use_xor_clauses: bool
-            Use xor clauses variable for approxmc.
-    log_file: str
-            Log file for approxmc.
+    kwargs: Keyword arguments
+            Keyword arguments to pass into `approx_model_count`.
 
     Returns
     -------
@@ -229,15 +235,7 @@ def signal_probability(
 
     # get count with node true and other inputs fixed
     if approx:
-        count = cg.sat.approx_model_count(
-            subc,
-            {n: True},
-            e=e,
-            d=d,
-            seed=seed,
-            use_xor_clauses=use_xor_clauses,
-            log_file=log_file,
-        )
+        count = cg.sat.approx_model_count(subc, {n: True}, **kwargs)
     else:
         count = cg.sat.model_count(subc, {n: True})
 

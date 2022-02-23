@@ -38,7 +38,25 @@ class TestProps(unittest.TestCase):
 
     def test_avg_sensitivity_supergates(self):
         c = cg.logic.adder(4, carry_in=True)
-        sens = cg.props.avg_sensitivity(c, "out_3", approx=False, supergates=True)
+        total_influences = cg.props.avg_sensitivity(
+            c, c.outputs(), approx=False, supergates=True
+        )
+
+        for n in c.outputs():
+            avg_sen_comp = 0
+            sp = c.startpoints(n)
+            for s in sp:
+                # compute influence
+                infl = 0
+                for vs in product([False, True], repeat=len(sp)):
+                    asmp = dict(zip(sp, vs))
+                    asmp_ns = {i: v if i != s else not v for i, v in zip(sp, vs)}
+                    r = cg.sat.solve(c, asmp)[n]
+                    r_ns = cg.sat.solve(c, asmp_ns)[n]
+                    if r != r_ns:
+                        infl += 1
+                avg_sen_comp += infl / (2 ** len(sp))
+            self.assertEqual(total_influences[n], avg_sen_comp)
 
     def test_sensitivity(self):
         # pick random node and input value
