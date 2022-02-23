@@ -1,4 +1,5 @@
-"""Class for circuit graphs.
+"""
+Class for circuit graphs.
 
 The Circuit class can be constructed from a generic gate-level Verilog file or
 existing graph. Each node in the graph represents a logic gate and has an associated
@@ -96,7 +97,8 @@ class Circuit:
         return self.graph.__iter__()
 
     def copy(self):
-        """Returns a copy of the circuit.
+        """
+        Returns a copy of the circuit.
 
         Returns
         -------
@@ -109,7 +111,8 @@ class Circuit:
         )
 
     def set_type(self, ns, t):
-        """Returns node(s) type(s).
+        """
+        Returns node(s) type(s).
 
         Parameters
         ----------
@@ -128,7 +131,8 @@ class Circuit:
             self.graph.nodes[n]["type"] = t
 
     def type(self, ns):
-        """Returns node(s) type(s).
+        """
+        Returns node(s) type(s).
 
         Parameters
         ----------
@@ -175,7 +179,8 @@ class Circuit:
         return [self.type(n) for n in ns]
 
     def filter_type(self, types):
-        """Returns circuit nodes filtering by type.
+        """
+        Returns circuit nodes filtering by type.
 
         Parameters
         ----------
@@ -215,7 +220,8 @@ class Circuit:
         return {n for n in self.graph.nodes if self.graph.nodes[n]["type"] in types}
 
     def add_subcircuit(self, sc, name, connections=None, strip_io=True):
-        """Adds a subcircuit to circuit.
+        """
+        Adds a subcircuit to circuit.
 
         Parameters
         -------
@@ -273,7 +279,8 @@ class Circuit:
                     self.connect(f"{name}_{sc_n}", ns)
 
     def add_blackbox(self, blackbox, name, connections=None):
-        """Adds a blackbox instance to circuit.
+        """
+        Adds a blackbox instance to circuit.
 
         Parameters
         -------
@@ -310,7 +317,8 @@ class Circuit:
                     raise ValueError(f"node {bb_n} not defined for blackbox {name}")
 
     def fill_blackbox(self, name, c):
-        """Replaces blackbox with circuit.
+        """
+        Replaces blackbox with circuit.
 
         Parameters
         -------
@@ -361,7 +369,8 @@ class Circuit:
             self.blackboxes[f"{name}_{bb_name}"] = bb
 
     def nodes(self):
-        """Returns circuit nodes.
+        """
+        Returns circuit nodes.
 
         Returns
         -------
@@ -372,7 +381,8 @@ class Circuit:
         return set(self.graph.nodes)
 
     def edges(self):
-        """Returns circuit edges.
+        """
+        Returns circuit edges.
 
         Returns
         -------
@@ -393,7 +403,8 @@ class Circuit:
         allow_redefinition=False,
         uid=False,
     ):
-        """Adds a new node to the circuit, optionally connecting it.
+        """
+        Adds a new node to the circuit, optionally connecting it.
 
         Parameters
         ----------
@@ -483,7 +494,8 @@ class Circuit:
         return n
 
     def remove(self, ns):
-        """Removes node(s)
+        """
+        Removes node(s)
 
         Parameters
         ----------
@@ -496,7 +508,8 @@ class Circuit:
         self.graph.remove_nodes_from(ns)
 
     def relabel(self, mapping):
-        """Renames nodes of a circuit in-place.
+        """
+        Renames nodes of a circuit in-place.
 
         Parameters
         ----------
@@ -507,7 +520,8 @@ class Circuit:
         nx.relabel_nodes(self.graph, mapping, copy=False)
 
     def connect(self, us, vs):
-        """Adds connections to the graph.
+        """
+        Adds connections to the graph.
 
         Parameters
         ----------
@@ -559,7 +573,8 @@ class Circuit:
         self.graph.add_edges_from((u, v) for u in us for v in vs)
 
     def disconnect(self, us, vs):
-        """Removes connections to the graph.
+        """
+        Removes connections to the graph.
 
         Parameters
         ----------
@@ -576,7 +591,8 @@ class Circuit:
         self.graph.remove_edges_from((u, v) for u in us for v in vs)
 
     def fanin(self, ns):
-        """Computes the fanin of a node.
+        """
+        Computes the fanin of a node.
 
         Parameters
         ----------
@@ -606,7 +622,8 @@ class Circuit:
         return gates
 
     def fanout(self, ns):
-        """Computes the fanout of a node.
+        """
+        Computes the fanout of a node.
 
         Parameters
         ----------
@@ -627,7 +644,8 @@ class Circuit:
         return gates
 
     def transitive_fanin(self, ns):
-        """Computes the transitive fanin of a node.
+        """
+        Computes the transitive fanin of a node.
 
         Parameters
         ----------
@@ -648,7 +666,8 @@ class Circuit:
         return gates
 
     def transitive_fanout(self, ns):
-        """Computes the transitive fanout of a node.
+        """
+        Computes the transitive fanout of a node.
 
         Parameters
         ----------
@@ -669,7 +688,8 @@ class Circuit:
         return gates
 
     def fanout_depth(self, ns, maximum=True):
-        """Computes the combinational fanout depth of a node(s).
+        """
+        Computes the combinational fanout depth of a node(s).
 
         Parameters
         ----------
@@ -722,7 +742,8 @@ class Circuit:
         return max(visited.values()) if maximum else min(visited.values())
 
     def fanin_depth(self, ns, maximum=True):
-        """Computes the combinational fanin depth of a node(s).
+        """
+        Computes the combinational fanin depth of a node(s).
 
         Parameters
         ----------
@@ -775,7 +796,8 @@ class Circuit:
         return max(visited.values()) if maximum else min(visited.values())
 
     def paths(self, source, target, cutoff=None):
-        """Get the paths from node u to node v.
+        """
+        Get the paths from node u to node v.
 
         Parameters
         ----------
@@ -795,7 +817,8 @@ class Circuit:
         return nx.all_simple_paths(self.graph, source, target, cutoff=cutoff)
 
     def inputs(self):
-        """Returns the circuit's inputs.
+        """
+        Returns the circuit's inputs.
 
         Returns
         -------
@@ -806,7 +829,8 @@ class Circuit:
         return self.filter_type("input")
 
     def is_output(self, node):
-        """Returns True if a node is an output.
+        """
+        Returns True if a node is an output.
 
         Parameters
         ----------
@@ -833,7 +857,8 @@ class Circuit:
             raise KeyError(f"Node {node} does not exist.")
 
     def set_output(self, ns, output=True):
-        """Set a node or nodes as an output or not an output.
+        """
+        Set a node or nodes as an output or not an output.
 
         Parameters
         ----------
@@ -849,7 +874,8 @@ class Circuit:
             self.graph.nodes[n]["output"] = output
 
     def outputs(self):
-        """Returns the circuit's outputs.
+        """
+        Returns the circuit's outputs.
 
         Returns
         -------
@@ -860,7 +886,8 @@ class Circuit:
         return {n for n in self.graph.nodes if self.is_output(n)}
 
     def io(self):
-        """Returns the circuit's io.
+        """
+        Returns the circuit's io.
 
         Returns
         -------
@@ -871,7 +898,8 @@ class Circuit:
         return self.inputs() | self.outputs()
 
     def startpoints(self, ns=None):
-        """Computes the startpoints of a node, nodes, or circuit.
+        """
+        Computes the startpoints of a node, nodes, or circuit.
 
         Parameters
         ----------
@@ -892,7 +920,8 @@ class Circuit:
         return self.inputs() | self.filter_type("bb_output")
 
     def endpoints(self, ns=None):
-        """Computes the endpoints of a node, nodes, or circuit.
+        """
+        Computes the endpoints of a node, nodes, or circuit.
 
         Parameters
         ----------
@@ -913,7 +942,8 @@ class Circuit:
         return self.outputs() | self.filter_type("bb_input")
 
     def reconvergent_fanout_nodes(self):
-        """Get nodes that have fanout that reconverges somewhere later in the
+        """
+        Get nodes that have fanout that reconverges somewhere later in the
         circuit.
 
         Returns
@@ -931,7 +961,8 @@ class Circuit:
                         break
 
     def has_reconvergent_fanout(self):
-        """Check if a circuit has any reconvergent fanout present.
+        """
+        Check if a circuit has any reconvergent fanout present.
 
         Returns
         -------
@@ -946,7 +977,8 @@ class Circuit:
             return False
 
     def is_cyclic(self):
-        """Checks for combinational loops in circuit.
+        """
+        Checks for combinational loops in circuit.
 
         Returns
         -------
@@ -957,7 +989,8 @@ class Circuit:
         return not nx.is_directed_acyclic_graph(self.graph)
 
     def uid(self, n, blocked=None):
-        """Generates a unique net name based on input.
+        """
+        Generates a unique net name based on input.
 
         Parameters
         ----------
@@ -986,7 +1019,8 @@ class Circuit:
         return f"{n}_{i}"
 
     def kcuts(self, n, k, computed=None):
-        """Generates k-cuts.
+        """
+        Generates k-cuts.
 
         Parameters
         ----------
@@ -1027,7 +1061,8 @@ class Circuit:
         return cuts
 
     def topo_sort(self):
-        """Returns a generator of nodes in topologically sorted order.
+        """
+        Returns a generator of nodes in topologically sorted order.
 
         Returns
         -------
@@ -1038,7 +1073,8 @@ class Circuit:
         return nx.topological_sort(self.graph)
 
     def remove_unloaded(self, inputs=False):
-        """Removes nodes with no load until fixed point.
+        """
+        Removes nodes with no load until fixed point.
 
         Parameters
         ----------
@@ -1072,7 +1108,8 @@ class Circuit:
 
 
 class BlackBox:
-    """Class for representing blackboxes.
+    """
+    Class for representing blackboxes.
 
     Blackboxes can be used to represent arbitrary sub-modules such as
     sequential elements. `Circuit` objects hold references to all added
@@ -1129,7 +1166,8 @@ class BlackBox:
         self.output_set = set(outputs)
 
     def inputs(self):
-        """Returns the blackbox's inputs.
+        """
+        Returns the blackbox's inputs.
 
         Returns
         -------
@@ -1140,7 +1178,8 @@ class BlackBox:
         return self.input_set
 
     def outputs(self):
-        """Returns the blackbox's outputs.
+        """
+        Returns the blackbox's outputs.
 
         Returns
         -------
@@ -1151,7 +1190,8 @@ class BlackBox:
         return self.output_set
 
     def io(self):
-        """Returns the blackbox's inputs and outputs.
+        """
+        Returns the blackbox's inputs and outputs.
 
         Returns
         -------

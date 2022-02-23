@@ -15,7 +15,8 @@ def avg_sensitivity(
     use_xor_clauses=False,
     log_dir=None,
 ):
-    """Calculates the average sensitivity (equal to total influence) of node n
+    """
+    Calculates the average sensitivity (equal to total influence) of node n
     with respect to its startpoints.
 
     Parameters
@@ -126,7 +127,8 @@ def avg_sensitivity(
 
 
 def sensitivity(c, n):
-    """Calculates the sensitivity of node n with respect to its startpoints.
+    """
+    Calculates the sensitivity of node n with respect to its startpoints.
 
     Parameters
     ----------
@@ -156,7 +158,8 @@ def sensitivity(c, n):
 
 
 def sensitize(c, n, assumptions=None):
-    """Finds an input that sensitizes n to an endpoint under assumptions.
+    """
+    Finds an input that sensitizes n to an endpoint under assumptions.
 
     Parameters
     ----------
@@ -189,7 +192,8 @@ def sensitize(c, n, assumptions=None):
 def signal_probability(
     c, n, approx=True, e=0.9, d=0.1, seed=None, use_xor_clauses=False, log_file=None
 ):
-    """Determines the (approximate) probability of a node being true over all
+    """
+    Determines the (approximate) probability of a node being true over all
     startpoint combinations.
 
     Parameters

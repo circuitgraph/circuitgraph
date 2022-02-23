@@ -19,7 +19,8 @@ def remap(clauses, offset):
 
 
 def construct_solver(c, assumptions=None, engine="cadical"):
-    """Constructs a SAT solver instance with the given circuit and assumptions.
+    """
+    Constructs a SAT solver instance with the given circuit and assumptions.
 
     Parameters
     ----------
@@ -62,7 +63,8 @@ def construct_solver(c, assumptions=None, engine="cadical"):
 
 
 def cnf(c):
-    """Converts circuit to CNF using the Tseitin transformation.
+    """
+    Converts circuit to CNF using the Tseitin transformation.
 
     Parameters
     ----------
@@ -167,7 +169,8 @@ def cnf(c):
 
 
 def solve(c, assumptions=None):
-    """Trys to find satisfying assignment, with optional assumptions.
+    """
+    Trys to find satisfying assignment, with optional assumptions.
 
     Parameters
     ----------
@@ -215,7 +218,8 @@ def approx_model_count(
     use_xor_clauses=False,
     log_file=None,
 ):
-    """Approximates the number of solutions to circuit.
+    """
+    Approximates the number of solutions to circuit.
 
     Parameters
     ----------
@@ -336,7 +340,8 @@ def approx_model_count(
 
 
 def model_count(c, assumptions=None):
-    """Determines the number of solutions to circuit.
+    """
+    Determines the number of solutions to circuit.
 
     Parameters
     ----------

@@ -8,7 +8,8 @@ addable_types = ["and", "nand", "or", "nor", "xor", "xnor", "buf", "not"]
 
 
 def get_context_window(text, index):
-    """Finds the line containing an index.
+    """
+    Finds the line containing an index.
 
     Parameters
     ----------
@@ -59,7 +60,8 @@ class VerilogCircuitGraphTransformer(Transformer):
     circuitgraph.Circuit."""
 
     def __init__(self, text, blackboxes, warnings=False, error_on_warning=False):
-        """Initializes a new transformer.
+        """
+        Initializes a new transformer.
 
         Parameters
         ----------
@@ -327,7 +329,8 @@ class VerilogCircuitGraphTransformer(Transformer):
 
 
 def parse_verilog_netlist(netlist, blackboxes, warnings=False, error_on_warning=False):
-    """Parses a verilog netlist into a Circuit.
+    """
+    Parses a verilog netlist into a Circuit.
 
     Parameters
     ----------

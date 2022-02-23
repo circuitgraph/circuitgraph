@@ -23,4 +23,4 @@ repos:
     rev: v1.4
     hooks:
       - id: docformatter
-        args: ["--in-place", "--blank", "-r", "circuitgraph"]
+        args: ["--in-place", "--blank", "--pre-summary-newline", "-r", "circuitgraph", "-e", "tests"]

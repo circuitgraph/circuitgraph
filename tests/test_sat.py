@@ -1,5 +1,5 @@
-import unittest
 import shutil
+import unittest
 from itertools import product
 
 import circuitgraph as cg

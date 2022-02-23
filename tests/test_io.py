@@ -1,5 +1,5 @@
-import unittest
 import os
+import unittest
 
 import circuitgraph as cg
 
@@ -38,40 +38,38 @@ class TestIO(unittest.TestCase):
 
         self.assertSetEqual(
             g.nodes(),
-            set(
-                [
-                    "G1",
-                    "G2",
-                    "G3",
-                    "G4",
-                    "G5_0",
-                    "G5_1",
-                    "G17",
-                    "G18",
-                    "G19",
-                    "G20",
-                    "G21",
-                    "G22_0",
-                    "G22_1",
-                    "G8_0",
-                    "G8_1",
-                    "and_G1_G2",
-                    "tie_0",
-                    "tie_1",
-                    "not_G2",
-                    "xor_G3_G4",
-                    "and_G8_0_G5_0",
-                    "xor_G17_and_G8_0_G5_0",
-                    "and_and_G1_G2_xor_G3_G4",
-                    "and_G1_or_not_G2_tie_1",
-                    "or_not_G2_tie_1",
-                ]
-            ),
+            {
+                "G1",
+                "G2",
+                "G3",
+                "G4",
+                "G5_0",
+                "G5_1",
+                "G17",
+                "G18",
+                "G19",
+                "G20",
+                "G21",
+                "G22_0",
+                "G22_1",
+                "G8_0",
+                "G8_1",
+                "and_G1_G2",
+                "tie_0",
+                "tie_1",
+                "not_G2",
+                "xor_G3_G4",
+                "and_G8_0_G5_0",
+                "xor_G17_and_G8_0_G5_0",
+                "and_and_G1_G2_xor_G3_G4",
+                "and_G1_or_not_G2_tie_1",
+                "or_not_G2_tie_1",
+            },
         )
-        self.assertSetEqual(g.fanin("G8_0"), set(["G1", "G3"]))
-        self.assertSetEqual(g.fanin("G17"), set(["G8_1", "tie_1"]))
+        self.assertSetEqual(g.fanin("G8_0"), {"G1", "G3"})
+        self.assertSetEqual(g.fanin("G17"), {"G8_1", "tie_1"})
         self.assertEqual(g.type("G8_1"), "buf")
-        self.assertEqual(g.fanin("G8_1"), set(["tie_1"]))
+        self.assertEqual(g.fanin("G8_1"), {"tie_1"})
 
         self.assertEqual(g.type("G8_0"), "nand")
         self.assertEqual(g.type("G17"), "nor")
@@ -82,27 +80,27 @@ class TestIO(unittest.TestCase):
         self.assertEqual(g.type("tie_1"), "1")
         self.assertEqual(g.type("tie_0"), "0")
 
-        self.assertSetEqual(g.fanin("G19"), set(["and_and_G1_G2_xor_G3_G4"]))
+        self.assertSetEqual(g.fanin("G19"), {"and_and_G1_G2_xor_G3_G4"})
         self.assertSetEqual(
-            g.fanin("and_and_G1_G2_xor_G3_G4"), set(["and_G1_G2", "xor_G3_G4"])
+            g.fanin("and_and_G1_G2_xor_G3_G4"), {"and_G1_G2", "xor_G3_G4"}
         )
-        self.assertSetEqual(g.fanin("and_G1_G2"), set(["G1", "G2"]))
-        self.assertSetEqual(g.fanin("xor_G3_G4"), set(["G3", "G4"]))
-        self.assertSetEqual(g.fanin("G20"), set(["xor_G17_and_G8_0_G5_0"]))
+        self.assertSetEqual(g.fanin("and_G1_G2"), {"G1", "G2"})
+        self.assertSetEqual(g.fanin("xor_G3_G4"), {"G3", "G4"})
+        self.assertSetEqual(g.fanin("G20"), {"xor_G17_and_G8_0_G5_0"})
         self.assertSetEqual(
-            g.fanin("xor_G17_and_G8_0_G5_0"), set(["G17", "and_G8_0_G5_0"]),
+            g.fanin("xor_G17_and_G8_0_G5_0"), {"G17", "and_G8_0_G5_0"},
         )
-        self.assertSetEqual(g.fanin("and_G8_0_G5_0"), set(["G8_0", "G5_0"]))
-        self.assertSetEqual(g.fanin("G22_1"), set(["and_G1_or_not_G2_tie_1"]))
+        self.assertSetEqual(g.fanin("and_G8_0_G5_0"), {"G8_0", "G5_0"})
+        self.assertSetEqual(g.fanin("G22_1"), {"and_G1_or_not_G2_tie_1"})
         self.assertSetEqual(
-            g.fanin("and_G1_or_not_G2_tie_1"), set(["G1", "or_not_G2_tie_1"])
+            g.fanin("and_G1_or_not_G2_tie_1"), {"G1", "or_not_G2_tie_1"}
         )
-        self.assertSetEqual(g.fanin("or_not_G2_tie_1"), set(["not_G2", "tie_1"]))
-        self.assertSetEqual(g.fanin("not_G2"), set(["G2"]))
+        self.assertSetEqual(g.fanin("or_not_G2_tie_1"), {"not_G2", "tie_1"})
+        self.assertSetEqual(g.fanin("not_G2"), {"G2"})
 
-        self.assertSetEqual(g.inputs(), set(["G1", "G2", "G3", "G4", "G5_0", "G5_1"]))
+        self.assertSetEqual(g.inputs(), {"G1", "G2", "G3", "G4", "G5_0", "G5_1"})
         self.assertSetEqual(
-            g.outputs(), set(["G17", "G18", "G19", "G20", "G21", "G22_0", "G22_1"]),
+            g.outputs(), {"G17", "G18", "G19", "G20", "G21", "G22_0", "G22_1"},
         )
 
     def test_fast_verilog(self):

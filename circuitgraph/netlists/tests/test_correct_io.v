@@ -6,7 +6,7 @@ module do_not_parse_0(G2, G3);
 endmodule
 
 /* Comments Outside
-Of a Module 
+Of a Module
 */
 module test_correct_io(G1,G2,G3,G4,G5_0,G5_1,G17,G18,G19,G20,G21,G22_0,G22_1);
   // Comments Inside Module

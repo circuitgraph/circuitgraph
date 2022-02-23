@@ -5,7 +5,8 @@ import circuitgraph as cg
 
 
 def half_adder():
-    """Create an AND/XOR half adder.
+    """
+    Create an AND/XOR half adder.
 
     Returns
     -------
@@ -21,7 +22,8 @@ def half_adder():
 
 
 def full_adder():
-    """Create a full adder from two half adders.
+    """
+    Create a full adder from two half adders.
 
     Returns
     -------
@@ -45,7 +47,8 @@ def full_adder():
 
 
 def adder(width, carry_in=False, carry_out=False):
-    """Create a ripple carry adder.
+    """
+    Create a ripple carry adder.
 
     Parameters
     ----------
@@ -79,7 +82,8 @@ def adder(width, carry_in=False, carry_out=False):
 
 
 def mux(w):
-    """Create a mux.
+    """
+    Create a mux.
 
     Parameters
     ----------
@@ -118,7 +122,8 @@ def mux(w):
 
 
 def popcount(w):
-    """Create a population count circuit.
+    """
+    Create a population count circuit.
 
     Parameters
     ----------

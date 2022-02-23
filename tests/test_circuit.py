@@ -78,8 +78,8 @@ class TestCircuit(unittest.TestCase):
         self.assertListEqual(c.type(["a", "b"]), ["xor", "xor"])
 
         c.add("c", "input")
-        self.assertSetEqual(c.filter_type("xor"), set(["a", "b"]))
-        self.assertSetEqual(c.filter_type(["xor", "input"]), set(["a", "b", "c"]))
+        self.assertSetEqual(c.filter_type("xor"), {"a", "b"})
+        self.assertSetEqual(c.filter_type(["xor", "input"]), {"a", "b", "c"})
         self.assertRaises(ValueError, c.filter_type, ["ad", "input"])
 
     def test_nodes(self):
@@ -88,14 +88,14 @@ class TestCircuit(unittest.TestCase):
         c.add("b", "or")
         c.add("c", "and")
         c.add("d", "xor")
-        self.assertSetEqual(c.nodes(), set(["a", "b", "c", "d"]))
+        self.assertSetEqual(c.nodes(), {"a", "b", "c", "d"})
 
     def test_edges(self):
         c = cg.Circuit()
         c.add("a", "input")
         c.add("b", "input")
         c.add("c", "xor", fanin=["a", "b"])
-        self.assertSetEqual(c.edges(), set([("a", "c"), ("b", "c")]))
+        self.assertSetEqual(c.edges(), {("a", "c"), ("b", "c")})
 
     def test_add(self):
         c = cg.Circuit()
@@ -105,9 +105,7 @@ class TestCircuit(unittest.TestCase):
         c.add("d", "nor")
         c.add("e", "input", fanout=["c", "d"])
         c.add("f", "input", fanout="c")
-        self.assertSetEqual(
-            c.edges(), set([("a", "b"), ("e", "c"), ("e", "d"), ("f", "c")])
-        )
+        self.assertSetEqual(c.edges(), {("a", "b"), ("e", "c"), ("e", "d"), ("f", "c")})
         self.assertRaises(ValueError, c.add, "g", "input", fanin="a")
         self.assertRaises(ValueError, c.add, "0g", "input")
 
@@ -116,9 +114,9 @@ class TestCircuit(unittest.TestCase):
         c.add("a", "input")
         c.add("b", "input")
         c.add("c", "xor", fanin=["a", "b"])
-        self.assertSetEqual(c.nodes(), set(["a", "b", "c"]))
+        self.assertSetEqual(c.nodes(), {"a", "b", "c"})
         c.remove("a")
-        self.assertSetEqual(c.nodes(), set(["b", "c"]))
+        self.assertSetEqual(c.nodes(), {"b", "c"})
         c.remove(["b", "c"])
         self.assertSetEqual(c.nodes(), set())
 
@@ -132,11 +130,9 @@ class TestCircuit(unittest.TestCase):
         self.assertSetEqual(c.edges(), set())
         c.connect("a", "c")
         c.connect("b", "c")
-        self.assertSetEqual(c.edges(), set([("a", "c"), ("b", "c")]))
+        self.assertSetEqual(c.edges(), {("a", "c"), ("b", "c")})
         c.connect(["a", "b"], ["d", "d"])
-        self.assertSetEqual(
-            c.edges(), set([("a", "c"), ("b", "c"), ("a", "d"), ("b", "d")])
-        )
+        self.assertSetEqual(c.edges(), {("a", "c"), ("b", "c"), ("a", "d"), ("b", "d")})
 
         self.assertRaises(ValueError, c.connect, "q", "a")
         self.assertRaises(ValueError, c.connect, ["a", "b"], "e")
@@ -148,11 +144,11 @@ class TestCircuit(unittest.TestCase):
         c = cg.Circuit()
         c.add("a", "input")
         c.add("b", "not", fanin="a")
-        self.assertSetEqual(c.edges(), set([("a", "b")]))
+        self.assertSetEqual(c.edges(), {("a", "b")})
         c.disconnect("a", "b")
         self.assertSetEqual(c.edges(), set())
         c.add("c", "xor", fanin=["a", "b"])
-        self.assertSetEqual(c.edges(), set([("a", "c"), ("b", "c")]))
+        self.assertSetEqual(c.edges(), {("a", "c"), ("b", "c")})
         c.disconnect(["a", "b"], ["c", "c"])
         self.assertSetEqual(c.edges(), set())
 
@@ -164,11 +160,11 @@ class TestCircuit(unittest.TestCase):
         c.add("d", "xor", fanin=["a", "b"])
         c.add("e", "not", fanin="c")
         self.assertSetEqual(c.fanin("a"), set())
-        self.assertSetEqual(c.fanin("d"), set(["a", "b"]))
-        self.assertSetEqual(c.fanin(["d", "e"]), set(["a", "b", "c"]))
+        self.assertSetEqual(c.fanin("d"), {"a", "b"})
+        self.assertSetEqual(c.fanin(["d", "e"]), {"a", "b", "c"})
         self.assertSetEqual(c.fanout("e"), set())
-        self.assertSetEqual(c.fanout("a"), set(["d"]))
-        self.assertSetEqual(c.fanout(["b", "c"]), set(["d", "e"]))
+        self.assertSetEqual(c.fanout("a"), {"d"})
+        self.assertSetEqual(c.fanout(["b", "c"]), {"d", "e"})
 
     def test_transitive_fanin_fanout(self):
         c = cg.Circuit()
@@ -193,21 +189,19 @@ class TestCircuit(unittest.TestCase):
 
         self.assertSetEqual(c.transitive_fanin("a"), set())
         self.assertSetEqual(
-            c.transitive_fanin("j"), set(["a", "b", "c", "e", "f", "h", "ji", "ff1.Q"])
+            c.transitive_fanin("j"), {"a", "b", "c", "e", "f", "h", "ji", "ff1.Q"}
         )
         self.assertSetEqual(
             c.transitive_fanin(["j", "l"]),
-            set(["a", "b", "c", "e", "f", "h", "ji", "ff1.Q", "k"]),
+            {"a", "b", "c", "e", "f", "h", "ji", "ff1.Q", "k"},
         )
         self.assertSetEqual(c.transitive_fanout("l"), set())
-        self.assertSetEqual(
-            c.transitive_fanout(["c"]), set(["f", "g", "h", "ff1.D", "j"])
-        )
+        self.assertSetEqual(c.transitive_fanout(["c"]), {"f", "g", "h", "ff1.D", "j"})
         self.assertSetEqual(
             c.transitive_fanout(["a", "c"]),
-            set(["e", "f", "g", "h", "ff1.D", "j", "ff0.D"]),
+            {"e", "f", "g", "h", "ff1.D", "j", "ff0.D"},
         )
-        self.assertSetEqual(c.transitive_fanin("d"), set(["ff0.Q"]))
+        self.assertSetEqual(c.transitive_fanin("d"), {"ff0.Q"})
 
     def test_paths(self):
         c = cg.from_lib("c17")
@@ -430,9 +424,9 @@ class TestCircuit(unittest.TestCase):
         c.add("a", "input")
         c.add("b", "input")
         c.add("c", "xor", fanin=["a", "b"], output=True)
-        self.assertSetEqual(c.inputs(), set(["a", "b"]))
-        self.assertSetEqual(c.outputs(), set(["c"]))
-        self.assertSetEqual(c.io(), set(["a", "b", "c"]))
+        self.assertSetEqual(c.inputs(), {"a", "b"})
+        self.assertSetEqual(c.outputs(), {"c"})
+        self.assertSetEqual(c.io(), {"a", "b", "c"})
 
     def test_startpoints_endpoints(self):
         c = cg.Circuit()
@@ -455,15 +449,15 @@ class TestCircuit(unittest.TestCase):
         c.add("i", "buf", fanin="dd1", output=True)
 
         self.assertSetEqual(
-            c.startpoints(), set(["clk", "rst", "set", "a", "b", "c", "ff0.Q", "ff1.Q"])
+            c.startpoints(), {"clk", "rst", "set", "a", "b", "c", "ff0.Q", "ff1.Q"}
         )
         self.assertSetEqual(
-            c.endpoints(), set(["ff1.D", "ff0.D", "ff0.CK", "ff1.CK", "h", "i"])
+            c.endpoints(), {"ff1.D", "ff0.D", "ff0.CK", "ff1.CK", "h", "i"}
         )
-        self.assertSetEqual(c.startpoints("h"), set(["ff0.Q"]))
-        self.assertSetEqual(c.endpoints("c"), set(["ff1.D"]))
-        self.assertSetEqual(c.startpoints("c"), set(["c"]))
-        self.assertSetEqual(c.endpoints("e"), set(["ff1.D"]))
+        self.assertSetEqual(c.startpoints("h"), {"ff0.Q"})
+        self.assertSetEqual(c.endpoints("c"), {"ff1.D"})
+        self.assertSetEqual(c.startpoints("c"), {"c"})
+        self.assertSetEqual(c.endpoints("e"), {"ff1.D"})
 
     def test_reconvergent_fanout_nodes(self):
         c = cg.Circuit()
@@ -508,7 +502,7 @@ class TestCircuit(unittest.TestCase):
         c.add("a", "input")
         c.add("b", "xor", fanin="a")
         c.relabel({"a": "n"})
-        self.assertSetEqual(c.nodes(), set(["b", "n"]))
+        self.assertSetEqual(c.nodes(), {"b", "n"})
 
     def test_topo_sort(self):
         c = cg.Circuit()
@@ -530,7 +524,7 @@ class TestCircuit(unittest.TestCase):
         c.add("g", "buf", fanin="f")
         c2 = c.copy()
         c.remove_unloaded()
-        self.assertSetEqual(c.nodes(), set(["a", "b", "c", "d"]))
+        self.assertSetEqual(c.nodes(), {"a", "b", "c", "d"})
 
         c2.remove_unloaded(inputs=True)
-        self.assertSetEqual(c2.nodes(), set(["a", "b", "d"]))
+        self.assertSetEqual(c2.nodes(), {"a", "b", "d"})

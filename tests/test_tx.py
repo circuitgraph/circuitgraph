@@ -1,8 +1,8 @@
-import unittest
-import random
-import tempfile
 import os
+import random
 import shutil
+import tempfile
+import unittest
 from functools import reduce
 from random import choice, randint
 
@@ -140,7 +140,7 @@ class TestTx(unittest.TestCase):
         self.assertTrue(different_output)
 
         # check equivalence with free inputs
-        startpoints = self.s27.startpoints() - set(["clk"])
+        startpoints = self.s27.startpoints() - {"clk"}
         startpoints.pop()
         m = cg.tx.miter(self.s27, startpoints=startpoints)
         live = cg.sat.solve(m)

@@ -9,7 +9,8 @@ from circuitgraph.io import circuit_to_verilog
 
 
 def visualize(c, output_file, suppress_output=True):
-    """Visualize a circuit using Yosys.
+    """
+    Visualize a circuit using Yosys.
 
     Parameters
     ----------
@@ -87,7 +88,8 @@ def clog2(num: int) -> int:
 
 
 def int_to_bin(i, w, lend=False):
-    """Converts integer to binary tuple.
+    """
+    Converts integer to binary tuple.
 
     Parameters
     ----------
@@ -111,7 +113,8 @@ def int_to_bin(i, w, lend=False):
 
 
 def bin_to_int(b, lend=False):
-    """Converts binary number to integer.
+    """
+    Converts binary number to integer.
 
     Parameters
     ----------
@@ -136,7 +139,8 @@ def bin_to_int(b, lend=False):
 
 
 def lint(c, fail_fast=True, unloaded=False, undriven=True, single_input_gates=False):
-    """Raises ValueError if circuit has invalid connections or types.
+    """
+    Raises ValueError if circuit has invalid connections or types.
 
     Parameters
     ----------

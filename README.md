@@ -27,7 +27,7 @@ The documentation can be found [here](https://circuitgraph.github.io/circuitgrap
 
 ## Installation
 
-CircuitGraph requires Python3.6 or greater 
+CircuitGraph requires Python3.6 or greater
 The easiest way to install is via PyPi:
 ```shell
 pip install circuitgraph
@@ -51,17 +51,17 @@ In addition to the packages enumerated in `requirements.txt`, there are a few to
 
 If you would like to use the satisfiability functionality, install [PySAT](https://pysathq.github.io).
 
-If you would like to perform synthesis you can install either Cadence Genus or [Yosys](http://www.clifford.at/yosys/). If you're going to use Genus, you must provide the path to a synthesis library to use by setting the `CIRCUITGRAPH_GENUS_LIBRARY_PATH` variable. 
+If you would like to perform synthesis you can install either Cadence Genus or [Yosys](http://www.clifford.at/yosys/). If you're going to use Genus, you must provide the path to a synthesis library to use by setting the `CIRCUITGRAPH_GENUS_LIBRARY_PATH` variable.
 
 ## Contributing
 
-If you have ideas on how to improve this library we'd love to hear your suggestions. Please open an issue. 
+If you have ideas on how to improve this library we'd love to hear your suggestions. Please open an issue.
 If you want to develop the improvement yourself, please consider the information below.
 
-CI Testing and coverage is setup using [Travis CI](https://travis-ci.org/) and [Codecov](https://codecov.io). 
+CI Testing and coverage is setup using [Travis CI](https://travis-ci.org/) and [Codecov](https://codecov.io).
  If you would like to generate coverage information locally, install coverage and codecov.
 ```shell
-pip install coverage codecov 
+pip install coverage codecov
 make coverage
 ```
 
@@ -77,8 +77,8 @@ pip instsall flake8
 make test
 ```
 
-Code should be formatted using [black](https://black.readthedocs.io/en/stable/). 
-[Pre-commit](https://pre-commit.com) is used to automatically run black on commit. 
+Code should be formatted using [black](https://black.readthedocs.io/en/stable/).
+[Pre-commit](https://pre-commit.com) is used to automatically run black on commit.
 ```shell
 pip install black pre-commit
 pre-commit install

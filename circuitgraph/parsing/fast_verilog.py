@@ -8,10 +8,10 @@ from circuitgraph.parsing import addable_types
 
 
 def fast_parse_verilog_netlist(netlist, blackboxes):
-    """A fast version of `parse_verilog_netlist` that can speed up parsing on
-    very large netlists by making a handful of assumptions. It is much safer to
-    use `parse_verilog_netlist`. This function should only be used if
-    necessary.
+    """
+    A fast version of `parse_verilog_netlist` that can speed up parsing on very
+    large netlists by making a handful of assumptions. It is much safer to use
+    `parse_verilog_netlist`. This function should only be used if necessary.
 
     The input netlist must conform to the following rules:
         - Only one module definition is present
