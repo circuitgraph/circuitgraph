@@ -1,13 +1,13 @@
-"""Functions for transforming circuits"""
-import subprocess
-from tempfile import NamedTemporaryFile
+"""Functions for transforming circuits."""
 import os
 import re
-from pathlib import Path
-from functools import reduce
-from collections import defaultdict
-from queue import Queue
 import shutil
+import subprocess
+from collections import defaultdict
+from functools import reduce
+from pathlib import Path
+from queue import Queue
+from tempfile import NamedTemporaryFile
 
 import networkx as nx
 
@@ -15,8 +15,7 @@ import circuitgraph as cg
 
 
 def strip_io(c):
-    """
-    Removes circuit's outputs and converts inputs to buffers for easy
+    """Removes circuit's outputs and converts inputs to buffers for easy
     instantiation.
 
     Parameters
@@ -28,6 +27,7 @@ def strip_io(c):
     -------
     Circuit
             Circuit with removed io.
+
     """
     g = c.graph.copy()
     for i in c.inputs():
@@ -39,9 +39,7 @@ def strip_io(c):
 
 
 def strip_outputs(c):
-    """
-    Removes a circuit's outputs for easy
-    instantiation.
+    """Removes a circuit's outputs for easy instantiation.
 
     Parameters
     ----------
@@ -52,6 +50,7 @@ def strip_outputs(c):
     -------
     Circuit
             Circuit with removed io.
+
     """
     g = c.graph.copy()
     for o in c.outputs():
@@ -61,9 +60,7 @@ def strip_outputs(c):
 
 
 def strip_inputs(c):
-    """
-    Converts inputs to buffers for easy
-    instantiation.
+    """Converts inputs to buffers for easy instantiation.
 
     Parameters
     ----------
@@ -74,6 +71,7 @@ def strip_inputs(c):
     -------
     Circuit
             Circuit with removed io.
+
     """
     g = c.graph.copy()
     for i in c.inputs():
@@ -83,8 +81,7 @@ def strip_inputs(c):
 
 
 def strip_blackboxes(c, ignore_pins=None):
-    """
-    Converts blackboxes to io.
+    """Converts blackboxes to io.
 
     Parameters
     ----------
@@ -97,6 +94,7 @@ def strip_blackboxes(c, ignore_pins=None):
     -------
     Circuit
             Circuit with removed blackboxes.
+
     """
     if not ignore_pins:
         ignore_pins = []
@@ -129,8 +127,7 @@ def strip_blackboxes(c, ignore_pins=None):
 
 
 def relabel(c, mapping):
-    """
-    Builds copy with relabeled nodes.
+    """Builds copy with relabeled nodes.
 
     Parameters
     ----------
@@ -143,14 +140,14 @@ def relabel(c, mapping):
     -------
     Circuit
             Circuit with removed blackboxes.
+
     """
     g = nx.relabel_nodes(c.graph, mapping)
     return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
 def subcircuit(c, nodes, modify_io=False):
-    """
-    Creates a subcircuit from a set of nodes of a given circuit.
+    """Creates a subcircuit from a set of nodes of a given circuit.
 
     Parameters
     ----------
@@ -166,6 +163,7 @@ def subcircuit(c, nodes, modify_io=False):
     -------
     Circuit
             The subcircuit.
+
     """
     sc = cg.Circuit()
     for node in nodes:
@@ -197,8 +195,7 @@ def syn(
     verilog_exists=False,
     effort="high",
 ):
-    """
-    Synthesizes the circuit using yosys or genus.
+    """Synthesizes the circuit using yosys or genus.
 
     Parameters
     ----------
@@ -238,6 +235,7 @@ def syn(
     -------
     Circuit
             Synthesized circuit.
+
     """
     if engine == "yosys" and shutil.which("yosys") is None:
         raise OSError("'yosys' installation not found")
@@ -265,7 +263,7 @@ def syn(
     if verilog_exists and not pre_syn_file:
         raise ValueError("Must specify pre_syn_file if using verilog_exists")
 
-    with open(pre_syn_file, "r") if verilog_exists else open(
+    with open(pre_syn_file) if verilog_exists else open(
         pre_syn_file, "w"
     ) if pre_syn_file else NamedTemporaryFile(
         prefix="circuitgraph_synthesis_input", suffix=".v", mode="w"
@@ -391,11 +389,11 @@ def syn(
 
 
 def ternary(c):
-    """
-    Encodes the circuit with ternary values. The ternary circuit adds a second net
-    for each net in the original circuit. The second net encodes a don't care,
-    or X, value. That net being high corresponds to a don't care value on original net.
-    If the second net is low, the logical value on the original net is valid.
+    """Encodes the circuit with ternary values. The ternary circuit adds a
+    second net for each net in the original circuit. The second net encodes a
+    don't care, or X, value. That net being high corresponds to a don't care
+    value on original net. If the second net is low, the logical value on the
+    original net is valid.
 
     Parameters
     ----------
@@ -411,6 +409,7 @@ def ternary(c):
     Circuit, dict of str:str
             Encoded circuit and dictionary mapping original net names to added ternary
             net names.
+
     """
     if c.blackboxes:
         raise ValueError(f"{c.name} contains a blackbox")
@@ -488,8 +487,7 @@ def ternary(c):
 
 
 def miter(c0, c1=None, startpoints=None, endpoints=None):
-    """
-    Creates a miter circuit.
+    """Creates a miter circuit.
 
     Parameters
     ----------
@@ -506,6 +504,7 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     -------
     Circuit
             Miter circuit.
+
     """
     # check for blackboxes
     if c0.blackboxes:
@@ -549,10 +548,9 @@ def sequential_unroll(
     remove_unloaded=True,
     prefix="cg_unroll",
 ):
-    """
-    Unroll a sequential circuit. Provides a higher level API than `unroll`
-    by accepting a circuit with sequential elements kept as blackboxes.
-    Assumes that all blackboxes in the circuit are sequential elements.
+    """Unroll a sequential circuit. Provides a higher level API than `unroll`
+    by accepting a circuit with sequential elements kept as blackboxes. Assumes
+    that all blackboxes in the circuit are sequential elements.
 
     Parameters
     ----------
@@ -584,6 +582,7 @@ def sequential_unroll(
     Circuit, dict of str:list of str
             Unrolled circuit and mapping of original circuit io to list of unrolled
             circuit io. The lists are in order of the unroll iterations.
+
     """
     cs = strip_blackboxes(c, ignore_pins=ignore_pins)
     blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
@@ -623,8 +622,7 @@ def sequential_unroll(
 
 
 def unroll(c, n, state_io, prefix="cg_unroll"):
-    """
-    Unrolls a circuit.
+    """Unrolls a circuit.
 
     Parameters
     ----------
@@ -643,6 +641,7 @@ def unroll(c, n, state_io, prefix="cg_unroll"):
     Circuit, dict of str:list of str
             Unrolled circuit and mapping of original circuit io to list of unrolled
             circuit io. The lists are in order of the unroll iterations.
+
     """
     # check for blackboxes
     if c.blackboxes:
@@ -688,9 +687,8 @@ def unroll(c, n, state_io, prefix="cg_unroll"):
 
 
 def sensitization_transform(c, n, endpoints=None):
-    """
-    Creates a circuit to sensitize a node to an endpoint, in the form of a miter
-    circuit with that node inverted in one circuit copy.
+    """Creates a circuit to sensitize a node to an endpoint, in the form of a
+    miter circuit with that node inverted in one circuit copy.
 
     Parameters
     ----------
@@ -706,6 +704,7 @@ def sensitization_transform(c, n, endpoints=None):
     -------
     Circuit
             Output circuit.
+
     """
     # check for blackboxes
     if c.blackboxes:
@@ -740,13 +739,13 @@ def sensitization_transform(c, n, endpoints=None):
 
 
 def sensitivity_transform(c, n):
-    """
-    Creates a circuit to compute sensitivity by creating a miter circuit for each input
-    'i' with the fanin cone of `n` where the second circuit has 'i' inverted, so that
-    the miter output is high when `n` is sensitive to 'i'. The uninverted circuit is
-    shared across all miters and the outputs of the miters are fed into a population
-    count circuit so that the output of the population count circuit gives the
-    sensitivity of `n` for a given input pattern.
+    """Creates a circuit to compute sensitivity by creating a miter circuit for
+    each input 'i' with the fanin cone of `n` where the second circuit has 'i'
+    inverted, so that the miter output is high when `n` is sensitive to 'i'.
+    The uninverted circuit is shared across all miters and the outputs of the
+    miters are fed into a population count circuit so that the output of the
+    population count circuit gives the sensitivity of `n` for a given input
+    pattern.
 
     Parameters
     ----------
@@ -759,6 +758,7 @@ def sensitivity_transform(c, n):
     -------
     Circuit
             Sensitivity circuit.
+
     """
     # check for blackboxes
     if c.blackboxes:
@@ -770,7 +770,7 @@ def sensitivity_transform(c, n):
         raise ValueError(f"{n} has no startpoints")
 
     # get input cone
-    fi_nodes = c.transitive_fanin(n) | set([n])
+    fi_nodes = c.transitive_fanin(n) | {n}
     sub_c = cg.Circuit(graph=c.graph.subgraph(fi_nodes).copy())
 
     # create sensitivity circuit
@@ -812,8 +812,7 @@ def sensitivity_transform(c, n):
 
 
 def limit_fanin(c, k):
-    """
-    Reduces the maximum fanin of circuit gates to k.
+    """Reduces the maximum fanin of circuit gates to k.
 
     Parameters
     ----------
@@ -826,6 +825,7 @@ def limit_fanin(c, k):
     -------
     Circuit
             Output circuit.
+
     """
     if k < 2:
         raise ValueError("maximum fanin, k, must be > 2")
@@ -860,8 +860,7 @@ def limit_fanin(c, k):
 
 
 def acyclic_unroll(c):
-    """
-    Unrolls a cyclic circuit to remove cycles.
+    """Unrolls a cyclic circuit to remove cycles.
 
     Parameters
     ----------
@@ -872,6 +871,7 @@ def acyclic_unroll(c):
     -------
     Circuit
             The unrolled circuit.
+
     """
     if c.blackboxes:
         raise ValueError("Cannot perform acyclic unroll with blackboxes")
@@ -965,9 +965,8 @@ def acyclic_unroll(c):
 
 
 def supergates(c):
-    """
-    Calculate the minimal covering of all circuit nodes with maximal supergates
-    of a circuit.
+    """Calculate the minimal covering of all circuit nodes with maximal
+    supergates of a circuit.
 
     For more information, see
     Seth, Sharad C., and Vishwani D. Agrawal. "A new model for computation
@@ -983,6 +982,7 @@ def supergates(c):
     -------
     list of Circuit
             The supergate circuits, topologically sorted.
+
     """
     # The current algorithm seems to fail for some circuits (like c880) with gates with
     # fanin greater than 2. At the moment not sure if this is a bug in the

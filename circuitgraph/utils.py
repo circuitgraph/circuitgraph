@@ -1,16 +1,15 @@
-"""Various circuit related utilities"""
+"""Various circuit related utilities."""
+import shutil
+import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-import subprocess
-import shutil
 
 from circuitgraph import supported_types
 from circuitgraph.io import circuit_to_verilog
 
 
 def visualize(c, output_file, suppress_output=True):
-    """
-    Visualize a circuit using Yosys.
+    """Visualize a circuit using Yosys.
 
     Parameters
     ----------
@@ -20,6 +19,7 @@ def visualize(c, output_file, suppress_output=True):
             Where to write the image to.
     suppress_output: bool
             If True, yosys stdout will not be printed.
+
     """
     if shutil.which("yosys") is None:
         raise OSError("Install 'yosys' to use 'cg.visualize'")
@@ -87,8 +87,7 @@ def clog2(num: int) -> int:
 
 
 def int_to_bin(i, w, lend=False):
-    """
-    Converts integer to binary tuple.
+    """Converts integer to binary tuple.
 
     Parameters
     ----------
@@ -112,8 +111,7 @@ def int_to_bin(i, w, lend=False):
 
 
 def bin_to_int(b, lend=False):
-    """
-    Converts binary number to integer.
+    """Converts binary number to integer.
 
     Parameters
     ----------
@@ -138,8 +136,7 @@ def bin_to_int(b, lend=False):
 
 
 def lint(c, fail_fast=True, unloaded=False, undriven=True, single_input_gates=False):
-    """
-    Raises ValueError if circuit has invalid connections or types.
+    """Raises ValueError if circuit has invalid connections or types.
 
     Parameters
     ----------
@@ -153,6 +150,7 @@ def lint(c, fail_fast=True, unloaded=False, undriven=True, single_input_gates=Fa
             Fail on undriven node.
     single_input_gates: bool
             Fail on multi-input gates with only a single input.
+
     """
     errors = []
 

@@ -1,17 +1,17 @@
-"""A collection of common logic elements as `Circuit` objects"""
+"""A collection of common logic elements as `Circuit` objects."""
 from itertools import product
 
 import circuitgraph as cg
 
 
 def half_adder():
-    """
-    Create an AND/XOR half adder.
+    """Create an AND/XOR half adder.
 
     Returns
     -------
     Circuit
             Half adder circuit.
+
     """
     c = cg.Circuit(name="half_adder")
     ins = [c.add("x", "input"), c.add("y", "input")]
@@ -21,13 +21,13 @@ def half_adder():
 
 
 def full_adder():
-    """
-    Create a full adder from two half adders.
+    """Create a full adder from two half adders.
 
     Returns
     -------
     Circuit
             Full adder circuit.
+
     """
     c = cg.Circuit("full_adder")
     c.add("x", "input")
@@ -45,8 +45,7 @@ def full_adder():
 
 
 def adder(width, carry_in=False, carry_out=False):
-    """
-    Create a ripple carry adder.
+    """Create a ripple carry adder.
 
     Parameters
     ----------
@@ -61,6 +60,7 @@ def adder(width, carry_in=False, carry_out=False):
     -------
     Circuit
             Adder circuit.
+
     """
     c = cg.Circuit(name="adder")
     carry = c.add("cin", "input" if carry_in else "0")
@@ -79,8 +79,7 @@ def adder(width, carry_in=False, carry_out=False):
 
 
 def mux(w):
-    """
-    Create a mux.
+    """Create a mux.
 
     Parameters
     ----------
@@ -91,6 +90,7 @@ def mux(w):
     -------
     Circuit
             Mux circuit.
+
     """
     c = cg.Circuit(name="mux")
 
@@ -118,8 +118,7 @@ def mux(w):
 
 
 def popcount(w):
-    """
-    Create a population count circuit.
+    """Create a population count circuit.
 
     Parameters
     ----------
@@ -130,6 +129,7 @@ def popcount(w):
     -------
     Circuit
             Population count circuit.
+
     """
     c = cg.Circuit(name="popcount")
     ps = [[c.add(f"in_{i}", "input")] for i in range(w)]

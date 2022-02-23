@@ -4,13 +4,11 @@ from lark import Lark, Transformer
 
 from circuitgraph import Circuit
 
-
 addable_types = ["and", "nand", "or", "nor", "xor", "xnor", "buf", "not"]
 
 
 def get_context_window(text, index):
-    """
-    Finds the line containing an index.
+    """Finds the line containing an index.
 
     Parameters
     ----------
@@ -22,6 +20,7 @@ def get_context_window(text, index):
     Returns:
     str
             The line that `index` is contained in.
+
     """
     previous_newline = max(0, text.rfind("\n", 0, index))
     next_newline = text.find("\n", index)
@@ -31,9 +30,7 @@ def get_context_window(text, index):
 
 
 class VerilogParsingError(Exception):
-    """
-    Raised if there is an issue parsing the verilog.
-    """
+    """Raised if there is an issue parsing the verilog."""
 
     def __init__(self, message, token, text):
         super().__init__()
@@ -54,20 +51,15 @@ class VerilogParsingError(Exception):
 
 
 class VerilogParsingWarning(Exception):
-    """
-    Potentially raised if there is a warning parsing verilog.
-    """
+    """Potentially raised if there is a warning parsing verilog."""
 
 
 class VerilogCircuitGraphTransformer(Transformer):
-    """
-    A lark.Transformer that transforms a parsed verilog netlist into a
-    circuitgraph.Circuit.
-    """
+    """A lark.Transformer that transforms a parsed verilog netlist into a
+    circuitgraph.Circuit."""
 
     def __init__(self, text, blackboxes, warnings=False, error_on_warning=False):
-        """
-        Initializes a new transformer.
+        """Initializes a new transformer.
 
         Parameters
         ----------
@@ -81,6 +73,7 @@ class VerilogCircuitGraphTransformer(Transformer):
         error_on_warning: bool
                 If True, unused nets will cause raise `VerilogParsingWarning`
                 exceptions.
+
         """
         super().__init__()
         self.c = Circuit()
@@ -334,8 +327,7 @@ class VerilogCircuitGraphTransformer(Transformer):
 
 
 def parse_verilog_netlist(netlist, blackboxes, warnings=False, error_on_warning=False):
-    """
-    Parses a verilog netlist into a Circuit
+    """Parses a verilog netlist into a Circuit.
 
     Parameters
     ----------
@@ -353,6 +345,7 @@ def parse_verilog_netlist(netlist, blackboxes, warnings=False, error_on_warning=
     -------
     circuitgraph.Circuit
             The parsed circuit.
+
     """
     transformer = VerilogCircuitGraphTransformer(
         netlist, blackboxes, warnings, error_on_warning

@@ -1,8 +1,8 @@
-"""Functions for executing SAT, #SAT, and approx-#SAT on circuits"""
-import tempfile
+"""Functions for executing SAT, #SAT, and approx-#SAT on circuits."""
 import re
-import subprocess
 import shutil
+import subprocess
+import tempfile
 
 
 def add_assumptions(formula, variables, assumptions):
@@ -19,8 +19,7 @@ def remap(clauses, offset):
 
 
 def construct_solver(c, assumptions=None, engine="cadical"):
-    """
-    Constructs a SAT solver instance with the given circuit and assumptions.
+    """Constructs a SAT solver instance with the given circuit and assumptions.
 
     Parameters
     ----------
@@ -35,6 +34,7 @@ def construct_solver(c, assumptions=None, engine="cadical"):
             SAT solver instance.
     variables : pysat.IDPool
             Solver variable mapping.
+
     """
     try:
         from pysat.solvers import Cadical, Glucose4, Lingeling
@@ -62,8 +62,7 @@ def construct_solver(c, assumptions=None, engine="cadical"):
 
 
 def cnf(c):
-    """
-    Converts circuit to CNF using the Tseitin transformation.
+    """Converts circuit to CNF using the Tseitin transformation.
 
     Parameters
     ----------
@@ -76,6 +75,7 @@ def cnf(c):
             Formula variable mapping.
     formula : pysat.CNF
             CNF formula.
+
     """
     try:
         from pysat.formula import CNF, IDPool
@@ -167,8 +167,7 @@ def cnf(c):
 
 
 def solve(c, assumptions=None):
-    """
-    Trys to find satisfying assignment, with optional assumptions.
+    """Trys to find satisfying assignment, with optional assumptions.
 
     Parameters
     ----------
@@ -197,6 +196,7 @@ def solve(c, assumptions=None):
      'clk[G7]': True, 'output[G17]': True}
     >>> cg.sat.solve(c, assumptions={'G17': True, 'n_20': True, 'G6': False})
     False
+
     """
     solver, variables = construct_solver(c, assumptions)
     if solver.solve():
@@ -215,8 +215,7 @@ def approx_model_count(
     use_xor_clauses=False,
     log_file=None,
 ):
-    """
-    Approximates the number of solutions to circuit.
+    """Approximates the number of solutions to circuit.
 
     Parameters
     ----------
@@ -242,6 +241,7 @@ def approx_model_count(
     -------
     int
             Estimate.
+
     """
     try:
         from pysat.formula import IDPool
@@ -324,7 +324,7 @@ def approx_model_count(
         with open(log_file, "w+") if log_file else tempfile.NamedTemporaryFile(
             prefix=f"circuitgraph_approxmc_{c.name}_log", mode="w+"
         ) as f:
-            subprocess.run(cmd, stdout=f, stderr=f, check=True, universal_newlines=True)
+            subprocess.run(cmd, stdout=f, stderr=f, check=True, text=True)
             f.seek(0)
             result = f.read()
 
@@ -336,8 +336,7 @@ def approx_model_count(
 
 
 def model_count(c, assumptions=None):
-    """
-    Determines the number of solutions to circuit.
+    """Determines the number of solutions to circuit.
 
     Parameters
     ----------
@@ -350,6 +349,7 @@ def model_count(c, assumptions=None):
     -------
     int
             Count.
+
     """
     startpoints = c.startpoints()
     solver, variables = construct_solver(c, assumptions)

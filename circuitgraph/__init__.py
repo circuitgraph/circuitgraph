@@ -1,8 +1,6 @@
-"""
-Python package `circuitgraph` provides a data structure
-for the generation, manipulation, and evaluation of
-Boolean circuits. The circuits are represented in a graph
-format based on the `networkx` package.
+"""Python package `circuitgraph` provides a data structure for the generation,
+manipulation, and evaluation of Boolean circuits. The circuits are represented
+in a graph format based on the `networkx` package.
 
 Features include:
 
@@ -13,18 +11,9 @@ Features include:
 - implementations of common circuit transformations
 
 Look at the examples in `circuitgraph.circuit.Circuit` for a quickstart guide.
+
 """
-from circuitgraph.circuit import Circuit, BlackBox, supported_types
-from circuitgraph.io import (
-    from_file,
-    from_lib,
-    to_file,
-    genus_flops,
-    dc_flops,
-)
+from circuitgraph import logic, props, sat, tx, utils
+from circuitgraph.circuit import BlackBox, Circuit, supported_types
+from circuitgraph.io import dc_flops, from_file, from_lib, genus_flops, to_file
 from circuitgraph.utils import lint, visualize
-from circuitgraph import tx
-from circuitgraph import sat
-from circuitgraph import props
-from circuitgraph import logic
-from circuitgraph import utils

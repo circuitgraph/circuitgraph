@@ -1,6 +1,6 @@
 import unittest
-from random import choice
 from itertools import product
+from random import choice
 
 import circuitgraph as cg
 
@@ -9,7 +9,7 @@ class TestProps(unittest.TestCase):
     def setUp(self):
         self.s27 = cg.tx.strip_blackboxes(cg.from_lib("s27"))
 
-    def test_cg_props_avg_sensitivity(self):
+    def test_avg_sensitivity(self):
         c = cg.Circuit()
         c.add("and", "and")
         c.add("in0", "input", fanout="and")
@@ -35,6 +35,10 @@ class TestProps(unittest.TestCase):
             avg_sen_comp += infl / (2 ** len(sp))
 
         self.assertEqual(avg_sen, avg_sen_comp)
+
+    def test_avg_sensitivity_supergates(self):
+        c = cg.logic.adder(4, carry_in=True)
+        cg.props.avg_sensitivity(c, "out_3", approx=False, supergates=True)
 
     def test_sensitivity(self):
         # pick random node and input value
@@ -65,14 +69,14 @@ class TestProps(unittest.TestCase):
     def test_sensitize(self):
         # pick random node
         nr = choice(
-            tuple(self.s27.nodes() - set(["clk"]) - self.s27.filter_type(["0", "1"]))
+            tuple(self.s27.nodes() - {"clk"} - self.s27.filter_type(["0", "1"]))
         )
 
         # pick startpoint
-        ns = choice(tuple(self.s27.startpoints() - set(["clk"])))
+        ns = choice(tuple(self.s27.startpoints() - {"clk"}))
 
         # pick endpoint
-        ne = choice(tuple(self.s27.endpoints() - set(["clk"])))
+        ne = choice(tuple(self.s27.endpoints() - {"clk"}))
 
         for n in [nr, ns, ne]:
             # get input

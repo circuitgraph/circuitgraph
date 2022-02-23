@@ -1,15 +1,22 @@
-"""Functions for analysis of Boolean and circuit properties"""
+"""Functions for analysis of Boolean and circuit properties."""
 from pathlib import Path
 
 import circuitgraph as cg
 
 
 def avg_sensitivity(
-    c, n, approx=True, e=0.9, d=0.1, seed=None, use_xor_clauses=False, log_dir=None
+    c,
+    n,
+    supergates=False,
+    approx=True,
+    e=0.9,
+    d=0.1,
+    seed=None,
+    use_xor_clauses=False,
+    log_dir=None,
 ):
-    """
-    Calculates the average sensitivity (equal to total influence)
-    of node n with respect to its startpoints.
+    """Calculates the average sensitivity (equal to total influence) of node n
+    with respect to its startpoints.
 
     Parameters
     ----------
@@ -17,6 +24,8 @@ def avg_sensitivity(
             Circuit to compute average sensitivity for.
     n : str
             Node to compute average sensitivity for.
+    supergates: bool
+            If True, break the sensitivity computation up into supergates.
     approx : bool
             Compute approximate model count using approxmc.
     e : float (>0)
@@ -34,6 +43,7 @@ def avg_sensitivity(
     -------
     float
             Average sensitivity of node n.
+
     """
     sp = c.startpoints(n)
 
@@ -42,6 +52,52 @@ def avg_sensitivity(
         log_dir.mkdir(exist_ok=True)
     else:
         log_file = None
+
+    def mc(circuit, startpoint, endpoints=None):
+        i = cg.tx.sensitization_transform(circuit, startpoint, endpoints)
+        if approx:
+            log_file = None
+            if log_dir:
+                log_file = log_dir / f"{s}.approxmc.log"
+            count = cg.sat.approx_model_count(
+                i,
+                {"sat": True},
+                e=e,
+                d=d,
+                seed=seed,
+                use_xor_clauses=use_xor_clauses,
+                log_file=log_file,
+            )
+        else:
+            count = cg.sat.model_count(i, {"sat": True})
+        return count
+
+    if supergates:
+        # Mapping of circuit inputs to the supergates they belong to
+        input_map = {}
+        # Mapping of supergates to supergate influences
+        influences = {}
+        c_n = cg.tx.subcircuit(c, c.transitive_fanin(n) | {n})
+        supergates = cg.tx.supergates(c_n)
+        for sg in supergates:
+            # Mapping of supergate inputs to influence on supergate output
+            sg_influences = {}
+            for s in sg.startpoints():
+                input_map[s] = sg
+                sg_influences[s] = mc(sg, s) / (2 ** len(sg.startpoints()))
+            influences[sg] = sg_influences
+
+        # Multiply influences along each path
+        for i in sp:
+            infl = 1
+            curr_node = i
+            while curr_node != n:
+                sg = input_map[curr_node]
+                infl *= influences[sg][curr_node]
+                curr_node = sg.outputs().pop()
+            print(i, infl)
+
+        return
 
     avg_sen = 0
     for s in sp:
@@ -70,9 +126,7 @@ def avg_sensitivity(
 
 
 def sensitivity(c, n):
-    """
-    Calculates the sensitivity of node n with respect
-    to its startpoints.
+    """Calculates the sensitivity of node n with respect to its startpoints.
 
     Parameters
     ----------
@@ -85,6 +139,7 @@ def sensitivity(c, n):
     -------
     int
             Sensitivity of node n.
+
     """
     sp = c.startpoints(n)
     if n in sp:
@@ -101,9 +156,7 @@ def sensitivity(c, n):
 
 
 def sensitize(c, n, assumptions=None):
-    """
-    Finds an input that sensitizes n to an endpoint
-    under assumptions.
+    """Finds an input that sensitizes n to an endpoint under assumptions.
 
     Parameters
     ----------
@@ -118,6 +171,7 @@ def sensitize(c, n, assumptions=None):
     -------
     dict of str:bool
             Input value.
+
     """
     # setup circuit
     s = cg.tx.sensitization_transform(c, n)
@@ -135,9 +189,9 @@ def sensitize(c, n, assumptions=None):
 def signal_probability(
     c, n, approx=True, e=0.9, d=0.1, seed=None, use_xor_clauses=False, log_file=None
 ):
-    """
-    Determines the (approximate) probability of a node being true over all
+    """Determines the (approximate) probability of a node being true over all
     startpoint combinations.
+
     Parameters
     ----------
     c : Circuit
@@ -163,6 +217,7 @@ def signal_probability(
     -------
     float
             Probability.
+
     """
     # get subcircuit ending at node
     subc = cg.tx.subcircuit(c, {n} | c.transitive_fanin(n))
