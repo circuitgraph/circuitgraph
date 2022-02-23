@@ -38,7 +38,7 @@ class TestProps(unittest.TestCase):
 
     def test_avg_sensitivity_supergates(self):
         c = cg.logic.adder(4, carry_in=True)
-        cg.props.avg_sensitivity(c, "out_3", approx=False, supergates=True)
+        sens = cg.props.avg_sensitivity(c, "out_3", approx=False, supergates=True)
 
     def test_sensitivity(self):
         # pick random node and input value

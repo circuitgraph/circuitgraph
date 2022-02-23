@@ -1,3 +1,4 @@
+"""Utils for parsing verilog with Lark."""
 from pathlib import Path
 
 from lark import Lark, Transformer
@@ -5,9 +6,9 @@ from lark import Lark, Transformer
 from circuitgraph import Circuit, primitive_gates
 
 
-def get_context_window(text, index):
+def _get_context_window(text, index):
     """
-    Finds the line containing an index.
+    Find the line containing an index.
 
     Parameters
     ----------
@@ -16,7 +17,8 @@ def get_context_window(text, index):
     index: int
             The index to search around
 
-    Returns:
+    Returns
+    -------
     str
             The line that `index` is contained in.
 
@@ -39,11 +41,12 @@ class VerilogParsingError(Exception):
         self.column = getattr(token, "column", "?")
         index = getattr(token, "pos_in_stream", None)
         if index:
-            self.context = get_context_window(text, index)
+            self.context = _get_context_window(text, index)
         else:
             self.context = "?"
 
     def __str__(self):
+        """Print the line and column of the error."""
         self.message += f" (line {self.line}, column {self.column}):\n"
         self.message += self.context
         return self.message
@@ -53,13 +56,12 @@ class VerilogParsingWarning(Exception):
     """Potentially raised if there is a warning parsing verilog."""
 
 
-class VerilogCircuitGraphTransformer(Transformer):
-    """A lark.Transformer that transforms a parsed verilog netlist into a
-    circuitgraph.Circuit."""
+class _VerilogCircuitGraphTransformer(Transformer):
+    """A lark.Transformer for parsing a verilog netlist."""
 
     def __init__(self, text, blackboxes, warnings=False, error_on_warning=False):
         """
-        Initializes a new transformer.
+        Initialize a new transformer.
 
         Parameters
         ----------
@@ -91,7 +93,7 @@ class VerilogCircuitGraphTransformer(Transformer):
 
     # Helper functions
     def add_node(self, n, node_type, fanin=None, fanout=None, uid=False):
-        """So that nodes are of type `str`, not `lark.Token`"""
+        """So that nodes are of type `str`, not `lark.Token`."""
         if not fanin:
             fanin = []
         elif type(fanin) not in [list, set]:
@@ -328,7 +330,7 @@ class VerilogCircuitGraphTransformer(Transformer):
 
 def parse_verilog_netlist(netlist, blackboxes, warnings=False, error_on_warning=False):
     """
-    Parses a verilog netlist into a Circuit.
+    Parse a verilog netlist into a Circuit.
 
     Parameters
     ----------
@@ -348,7 +350,7 @@ def parse_verilog_netlist(netlist, blackboxes, warnings=False, error_on_warning=
             The parsed circuit.
 
     """
-    transformer = VerilogCircuitGraphTransformer(
+    transformer = _VerilogCircuitGraphTransformer(
         netlist, blackboxes, warnings, error_on_warning
     )
     with open(Path(__file__).parent.absolute() / "verilog.lark") as f:

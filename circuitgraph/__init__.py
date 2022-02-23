@@ -1,4 +1,6 @@
 """
+Tools for working with circuits as graphs.
+
 Python package `circuitgraph` provides a data structure for the generation,
 manipulation, and evaluation of Boolean circuits. The circuits are represented
 in a graph format based on the `networkx` package.

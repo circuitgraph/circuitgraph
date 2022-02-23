@@ -23,4 +23,10 @@ repos:
     rev: v1.4
     hooks:
       - id: docformatter
-        args: ["--in-place", "--blank", "--pre-summary-newline", "-r", "circuitgraph", "-e", "tests"]
+        args: ["--in-place", "--blank", "--pre-summary-newline", "-r"]
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.1.1
+    hooks:
+      - id: pydocstyle
+        files: ^circuitgraph/
+        args: ["--convention=numpy"]

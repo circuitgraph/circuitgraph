@@ -16,8 +16,7 @@ import circuitgraph as cg
 
 def strip_io(c):
     """
-    Removes circuit's outputs and converts inputs to buffers for easy
-    instantiation.
+    Remove a circuit's outputs and convert inputs to buffers.
 
     Parameters
     ----------
@@ -41,7 +40,7 @@ def strip_io(c):
 
 def strip_outputs(c):
     """
-    Removes a circuit's outputs for easy instantiation.
+    Remove a circuit's outputs for easy instantiation.
 
     Parameters
     ----------
@@ -63,7 +62,7 @@ def strip_outputs(c):
 
 def strip_inputs(c):
     """
-    Converts inputs to buffers for easy instantiation.
+    Convert inputs to buffers for easy instantiation.
 
     Parameters
     ----------
@@ -85,7 +84,7 @@ def strip_inputs(c):
 
 def strip_blackboxes(c, ignore_pins=None):
     """
-    Converts blackboxes to io.
+    Convert blackboxes to io.
 
     Parameters
     ----------
@@ -132,7 +131,7 @@ def strip_blackboxes(c, ignore_pins=None):
 
 def relabel(c, mapping):
     """
-    Builds copy with relabeled nodes.
+    Build copy of circuit with relabeled nodes.
 
     Parameters
     ----------
@@ -153,7 +152,7 @@ def relabel(c, mapping):
 
 def subcircuit(c, nodes, modify_io=False):
     """
-    Creates a subcircuit from a set of nodes of a given circuit.
+    Create a subcircuit from a set of nodes of a given circuit.
 
     Parameters
     ----------
@@ -202,7 +201,7 @@ def syn(
     effort="high",
 ):
     """
-    Synthesizes the circuit using yosys or genus.
+    Synthesize the circuit using a third-party synthesis tool.
 
     Parameters
     ----------
@@ -397,8 +396,9 @@ def syn(
 
 def ternary(c):
     """
-    Encodes the circuit with ternary values. The ternary circuit adds a second
-    net for each net in the original circuit. The second net encodes a don't
+    Encode the circuit with ternary values.
+
+    The ternary circuit adds a second net for each net in the original circuit. The second net encodes a don't
     care, or X, value. That net being high corresponds to a don't care value on
     original net. If the second net is low, the logical value on the original
     net is valid.
@@ -496,7 +496,7 @@ def ternary(c):
 
 def miter(c0, c1=None, startpoints=None, endpoints=None):
     """
-    Creates a miter circuit.
+    Create a miter circuit.
 
     Parameters
     ----------
@@ -558,8 +558,9 @@ def sequential_unroll(
     prefix="cg_unroll",
 ):
     """
-    Unroll a sequential circuit. Provides a higher level API than `unroll` by
-    accepting a circuit with sequential elements kept as blackboxes. Assumes
+    Unroll a sequential circuit.
+
+    Provides a higher level API than `unroll` by accepting a circuit with sequential elements kept as blackboxes. Assumes
     that all blackboxes in the circuit are sequential elements.
 
     Parameters
@@ -633,7 +634,9 @@ def sequential_unroll(
 
 def unroll(c, n, state_io, prefix="cg_unroll"):
     """
-    Unrolls a circuit.
+    Unroll a circuit.
+
+    Create multiple copies of the circuit and connect together state io.
 
     Parameters
     ----------
@@ -699,8 +702,9 @@ def unroll(c, n, state_io, prefix="cg_unroll"):
 
 def sensitization_transform(c, n, endpoints=None):
     """
-    Creates a circuit to sensitize a node to an endpoint, in the form of a
-    miter circuit with that node inverted in one circuit copy.
+    Create a circuit to sensitize a node to an endpoint.
+
+    Create a miter circuit with that node inverted in one circuit copy.
 
     Parameters
     ----------
@@ -752,8 +756,9 @@ def sensitization_transform(c, n, endpoints=None):
 
 def sensitivity_transform(c, n):
     """
-    Creates a circuit to compute sensitivity by creating a miter circuit for
-    each input 'i' with the fanin cone of `n` where the second circuit has 'i'
+    Create a circuit to compute sensitivity.
+
+    Creatie a miter circuit for each input 'i' with the fanin cone of `n` where the second circuit has 'i'
     inverted, so that the miter output is high when `n` is sensitive to 'i'.
     The uninverted circuit is shared across all miters and the outputs of the
     miters are fed into a population count circuit so that the output of the
@@ -826,7 +831,7 @@ def sensitivity_transform(c, n):
 
 def limit_fanin(c, k):
     """
-    Reduces the maximum fanin of circuit gates to k.
+    Reduce the maximum fanin of circuit gates to k.
 
     Parameters
     ----------
@@ -875,7 +880,7 @@ def limit_fanin(c, k):
 
 def acyclic_unroll(c):
     """
-    Unrolls a cyclic circuit to remove cycles.
+    Unroll a cyclic circuit to remove cycles.
 
     Parameters
     ----------
@@ -981,10 +986,10 @@ def acyclic_unroll(c):
 
 def supergates(c):
     """
-    Calculate the minimal covering of all circuit nodes with maximal supergates
-    of a circuit.
+    Break the circuit up into supergates.
 
-    For more information, see
+    Calculate the minimal covering of all circuit nodes with maximal supergates
+    of a circuit. For more information, see
     Seth, Sharad C., and Vishwani D. Agrawal. "A new model for computation
     of probabilistic testability in combinational circuits." Integration 7.1
     (1989): 49-75.
