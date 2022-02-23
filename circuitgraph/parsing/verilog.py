@@ -2,9 +2,7 @@ from pathlib import Path
 
 from lark import Lark, Transformer
 
-from circuitgraph import Circuit
-
-addable_types = ["and", "nand", "or", "nor", "xor", "xnor", "buf", "not"]
+from circuitgraph import Circuit, primitive_gates
 
 
 def get_context_window(text, index):
@@ -226,7 +224,7 @@ class VerilogCircuitGraphTransformer(Transformer):
         name_of_module = name_of_module_and_module_instances[0]
         module_instances = name_of_module_and_module_instances[1:]
         # Check if this is a primitive gate
-        if name_of_module in addable_types:
+        if name_of_module in primitive_gates:
             for name, ports in module_instances:
                 if isinstance(ports, dict):
                     raise VerilogParsingError(

@@ -3,8 +3,7 @@ from collections import defaultdict
 
 import networkx as nx
 
-from circuitgraph import Circuit
-from circuitgraph.parsing import addable_types
+from circuitgraph import Circuit, primitive_gates
 
 
 def fast_parse_verilog_netlist(netlist, blackboxes):
@@ -95,7 +94,7 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
     for gate, inst, net_str in re.findall(regex, module, re.DOTALL):
 
         # parse generics
-        if gate in addable_types:
+        if gate in primitive_gates:
             # parse nets
             nets = [n.strip() for n in net_str.split(",")]
 

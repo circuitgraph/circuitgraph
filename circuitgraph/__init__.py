@@ -14,7 +14,13 @@ Features include:
 Look at the examples in `circuitgraph.circuit.Circuit` for a quickstart guide.
 
 """
-from circuitgraph import logic, props, sat, tx, utils
-from circuitgraph.circuit import BlackBox, Circuit, supported_types
+from circuitgraph.circuit import (
+    BlackBox,
+    Circuit,
+    primitive_gates,
+    addable_types,
+    supported_types,
+)
 from circuitgraph.io import dc_flops, from_file, from_lib, genus_flops, to_file
 from circuitgraph.utils import lint, visualize
+from circuitgraph import logic, props, sat, tx, utils

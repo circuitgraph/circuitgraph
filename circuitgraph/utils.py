@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-from circuitgraph import supported_types
+from circuitgraph.circuit import supported_types
 from circuitgraph.io import circuit_to_verilog
 
 

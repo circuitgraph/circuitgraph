@@ -20,7 +20,7 @@ from itertools import combinations, product
 
 import networkx as nx
 
-addable_types = [
+primitive_gates = [
     "buf",
     "and",
     "or",
@@ -29,6 +29,9 @@ addable_types = [
     "nand",
     "nor",
     "xnor",
+]
+
+addable_types = primitive_gates + [
     "0",
     "1",
     "x",
