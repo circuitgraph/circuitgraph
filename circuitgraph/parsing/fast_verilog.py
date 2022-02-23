@@ -1,3 +1,10 @@
+"""
+Utils for parsing verilog with regex.
+
+Faster than Lark parsing for large netlists, but less safe and more
+restrictive.
+
+"""
 import re
 from collections import defaultdict
 
@@ -8,9 +15,11 @@ from circuitgraph import Circuit, primitive_gates
 
 def fast_parse_verilog_netlist(netlist, blackboxes):
     """
-    A fast version of `parse_verilog_netlist` that can speed up parsing on very
-    large netlists by making a handful of assumptions. It is much safer to use
-    `parse_verilog_netlist`. This function should only be used if necessary.
+    Parse a verilog netlist quickly but with some restrictions.
+
+    Can speed up parsing on very large netlists by making a handful of
+    assumptions. It is much safer to use `parse_verilog_netlist`. This
+    function should only be used if necessary.
 
     The input netlist must conform to the following rules:
         - Only one module definition is present
@@ -47,13 +56,13 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             Verilog code.
     blackboxes: seq of BlackBox
             Blackboxes in module.
+
     Returns
     -------
     Circuit
             Parsed circuit.
 
     """
-
     regex = r"module\s+(.+?)\s*\(.*?\);"
     m = re.search(regex, netlist, re.DOTALL)
     name = m.group(1)
