@@ -214,10 +214,11 @@ def approx_model_count(
     c,
     assumptions=None,
     startpoints=None,
-    e=0.9,
-    d=0.1,
+    e=None,
+    d=None,
     seed=None,
-    use_xor_clauses=False,
+    detach_xor=True,
+    use_xor_clauses=True,
     log_file=None,
 ):
     """
@@ -237,6 +238,8 @@ def approx_model_count(
             delta of approxmc.
     seed: int
             Seed for approxmc.
+    detach_xor: bool
+            Detatch xor arg for approxmc.
     use_xor_clauses: bool
             If True, parity gates are added as clauses directly using the extended
             DIMACS format supported by approxmc with xor clauses.
@@ -282,7 +285,7 @@ def approx_model_count(
             f"c ind {enc_inps} 0\np cnf {formula.nv} "
             f"{len(formula.clauses)}\n{clause_str}\n"
         )
-        if use_xor_clauses:
+        if use_xor_clauses and c.filter_type(["xor", "xnor"]):
             # New pool that doesn't have added xor variables
             new_variables = IDPool()
             old_var_to_new_var = {}
@@ -314,19 +317,34 @@ def approx_model_count(
                     new_dimacs += f"x{new_variables.id(node)} {fanin_clause} 0\n"
                 else:
                     new_dimacs += f"x{new_variables.id(node)} -{fanin_clause} 0\n"
+            # Add back any assumptions about parity nodes
+            for node, value in assumptions.items():
+                if c.type(node) in ["xor", "xnor"]:
+                    if value:
+                        new_dimacs += f"{new_variables.id(node)} 0\n"
+                    else:
+                        new_dimacs += f"-{new_variables.id(node)} 0\n"
             # Add back in header
             enc_inps = " ".join([str(new_variables.id(n)) for n in startpoints])
             new_dimacs = (
                 f"c ind {enc_inps} 0\np cnf {len(c)} " f"{num_clauses}\n"
             ) + new_dimacs
+            dimacs = new_dimacs
 
         tmp.write(dimacs)
         tmp.flush()
 
         # run approxmc
-        cmd = f"approxmc --epsilon={e} --delta={d} {tmp.name}".split()
+        cmd = ["approxmc"]
+        if e:
+            cmd.append(f"--epsilon={e}")
+        if d:
+            cmd.append(f"--delta={d}")
         if seed:
             cmd.append(f"--seed={seed}")
+        if not detach_xor:
+            cmd.append("--detachxor=0")
+        cmd.append(tmp.name)
         with open(log_file, "w+") if log_file else tempfile.NamedTemporaryFile(
             prefix=f"circuitgraph_approxmc_{c.name}_log", mode="w+"
         ) as f:

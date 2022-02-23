@@ -1,4 +1,6 @@
+import re
 import shutil
+import tempfile
 import unittest
 from itertools import product
 
@@ -151,10 +153,20 @@ class TestSat(unittest.TestCase):
             asmp = dict(zip(sp, vs))
             m += cg.sat.solve(c, asmp)["e"]
 
-        self.assertEqual(
-            cg.sat.approx_model_count(c, assumptions={"e": True}, use_xor_clauses=True),
-            m,
-        )
+        with tempfile.NamedTemporaryFile(
+            prefix="circuitgraph_test_approxmc_model_count_xors", mode="r"
+        ) as tmp_in:
+            self.assertEqual(
+                cg.sat.approx_model_count(
+                    c,
+                    assumptions={"e": True},
+                    use_xor_clauses=True,
+                    log_file=tmp_in.name,
+                ),
+                m,
+            )
+            match = re.search(r"c -- xor clauses added: (\d+)", tmp_in.read())
+            self.assertEqual(int(match[1]), 1)
 
         c = cg.Circuit()
         c.add("a", "input")
@@ -170,7 +182,17 @@ class TestSat(unittest.TestCase):
             asmp = dict(zip(sp, vs))
             m += cg.sat.solve(c, asmp)["f"]
 
-        self.assertEqual(
-            cg.sat.approx_model_count(c, assumptions={"f": True}, use_xor_clauses=True),
-            m,
-        )
+        with tempfile.NamedTemporaryFile(
+            prefix="circuitgraph_test_approxmc_model_count_xors", mode="r"
+        ) as tmp_in:
+            self.assertEqual(
+                cg.sat.approx_model_count(
+                    c,
+                    assumptions={"f": True},
+                    use_xor_clauses=True,
+                    log_file=tmp_in.name,
+                ),
+                m,
+            )
+            match = re.search(r"c -- xor clauses added: (\d+)", tmp_in.read())
+            self.assertEqual(int(match[1]), 2)

@@ -67,6 +67,8 @@ def influence(c, ns, supergates=False, approx=True, log_dir=None, **kwargs):
             # Mapping of circuit inputs to the supergates they belong to
             input_map = {}
             c_n = cg.tx.subcircuit(c, c.transitive_fanin(n) | {n})
+            c_n.set_output(c_n.outputs(), False)
+            c_n.set_output(n)
             supergates = cg.tx.supergates(c_n)
             for sg in supergates:
                 # Mapping of supergate inputs to influence on supergate output
@@ -82,14 +84,14 @@ def influence(c, ns, supergates=False, approx=True, log_dir=None, **kwargs):
                         input_map[s] = sg_out
 
             # Multiply influences along each path
-            for i in sp:
+            for s in sp:
                 infl = 1
-                curr_node = i
+                curr_node = s
                 while curr_node != n:
                     sg_out = input_map[curr_node]
                     infl *= sg_influences[sg_out][curr_node]
                     curr_node = sg_out
-                influences[i] = infl
+                influences[s] = infl
         else:
             for s in sp:
                 # create influence circuit
