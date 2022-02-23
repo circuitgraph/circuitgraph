@@ -1,8 +1,13 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0  # Use the ref you want to point at
+    rev: v4.1.0
     hooks:
     - id: trailing-whitespace
+  - repo: https://github.com/pycqa/flake8
+    rev: 4.0.1
+    hooks:
+    - id: flake8
+      args: ["--select=E9,F63,F7,F82"]
   - repo: https://github.com/pycqa/isort
     rev: 5.10.1
     hooks:
