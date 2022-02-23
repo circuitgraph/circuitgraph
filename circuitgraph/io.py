@@ -30,7 +30,7 @@ def from_file(
     fast=False,
 ):
     """
-    Creates a new `Circuit` from a verilog file.
+    Create a new `Circuit` from a verilog file.
 
     Parameters
     ----------
@@ -86,7 +86,7 @@ def from_file(
 
 def from_lib(name):
     """
-    Creates a new `Circuit` from a netlist in the `netlists` folder.
+    Create a new `Circuit` from a netlist in the `netlists` folder.
 
     Parameters
     ----------
@@ -105,7 +105,7 @@ def from_lib(name):
 
 def bench_to_circuit(netlist, name):
     """
-    Creates a new Circuit from a netlist string.
+    Create a new Circuit from a netlist string.
 
     Parameters
     ----------
@@ -178,7 +178,7 @@ def verilog_to_circuit(
     fast=False,
 ):
     """
-    Creates a new Circuit from a module inside Verilog code.
+    Create a new Circuit from a module inside Verilog code.
 
     Parameters
     ----------
@@ -211,7 +211,6 @@ def verilog_to_circuit(
             Parsed circuit.
 
     """
-
     if blackboxes is None:
         blackboxes = []
 
@@ -239,7 +238,7 @@ def verilog_to_circuit(
 
 def to_file(c, path, fmt="verilog", behavioral=False):
     """
-    Writes a `Circuit` to a Verilog file.
+    Write a `Circuit` to a Verilog file.
 
     Parameters
     ----------
@@ -262,7 +261,7 @@ def to_file(c, path, fmt="verilog", behavioral=False):
 
 def circuit_to_verilog(c, behavioral=False):
     """
-    Generates a str of Verilog code from a `CircuitGraph`.
+    Generate a `str` of Verilog code from a `CircuitGraph`.
 
     Parameters
     ----------
@@ -362,7 +361,7 @@ def circuit_to_verilog(c, behavioral=False):
 
 def circuit_to_bench(c):
     """
-    Generates a str of Bench code from a `CircuitGraph`.
+    Generate a `str` of Bench code from a `CircuitGraph`.
 
     Parameters
     ----------
