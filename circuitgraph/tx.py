@@ -984,27 +984,36 @@ def acyclic_unroll(c):
     return acyc
 
 
-def supergates(c):
+def supergates(c, construct_supercircuit=False):
     """
     Break the circuit up into supergates.
 
     Calculate the minimal covering of all circuit nodes with maximal supergates
     of a circuit. For more information, see
-    Seth, Sharad C., and Vishwani D. Agrawal. "A new model for computation
-    of probabilistic testability in combinational circuits." Integration 7.1
+    Sharad C. Seth and Vishwani D. Agrawal. "A new model for computation of
+    probabilistic testability in combinational circuits." Integration 7.1
     (1989): 49-75.
 
     Parameters
     ----------
     c: Circuit
             The circuit to compute supergates for
+    construct_supercircuit: bool
+            If True, a circuit connecting together the supergates as black boxes
+            will be formed. Currently this only works if `c` has only one output.
 
     Returns
     -------
-    list of Circuit
-            The supergate circuits, topologically sorted.
+    list of Circuit or (Circuit, dict of str:Circuit)
+            If `construct_supercircuit` is `False`, the supergate circuits,
+            topologically sorted. Otherwise, the supercircuit and a dict
+            mapping blackbox names to corresponding supergates.
 
     """
+    if construct_supercircuit and len(c.outputs()) > 1:
+        raise ValueError(
+            "Can only use `construct_supercircuit` one a single-output circuit"
+        )
     # The current algorithm seems to fail for some circuits (like c880) with gates with
     # fanin greater than 2. At the moment not sure if this is a bug in the
     # implementation or expected behavior
@@ -1066,19 +1075,37 @@ def supergates(c):
         if supergate.nodes() - remaining_cover:
             minimal_supergate_circuits[supergate.outputs().pop()] = supergate
 
-    # Find topological ordering of supergates
-    g = nx.DiGraph()
-    for output, supergate in minimal_supergate_circuits.items():
-        g.add_node(output)
-        for i in supergate.inputs() - c.inputs():
-            for other_output in set(minimal_supergate_circuits) - {output}:
-                other_supergate = minimal_supergate_circuits[other_output]
-                if i in other_supergate.nodes() - other_supergate.inputs():
-                    g.add_edge(other_output, output)
-                    break
+    if construct_supercircuit:
+        superc = cg.Circuit(f"{c.name}_supergates")
+        for i in c.inputs():
+            superc.add(i, "input")
+        for o in c.outputs():
+            superc.add(o, "buf", output=True)
 
-    sorted_supergate_circuits = []
-    for node in nx.topological_sort(g):
-        sorted_supergate_circuits.append(minimal_supergate_circuits[node])
+        supergate_map = {}
+        for output, supergate in minimal_supergate_circuits.items():
+            sg_name = f"sg_{output}"
+            supergate_map[sg_name] = supergate
+            bb = cg.BlackBox(name=sg_name, inputs=supergate.inputs(), outputs={output})
+            for n in supergate.io():
+                if n not in superc:
+                    superc.add(n, "buf")
+            superc.add_blackbox(bb, sg_name, {i: i for i in supergate.io()})
 
-    return sorted_supergate_circuits
+        return superc, supergate_map
+
+    else:
+        # Find topological ordering of supergates
+        g = nx.DiGraph()
+        for output, supergate in minimal_supergate_circuits.items():
+            g.add_node(output)
+            for i in supergate.inputs() - c.inputs():
+                for other_output in set(minimal_supergate_circuits) - {output}:
+                    other_supergate = minimal_supergate_circuits[other_output]
+                    if i in other_supergate.nodes() - other_supergate.inputs():
+                        g.add_edge(other_output, output)
+
+        sorted_supergate_circuits = []
+        for node in nx.topological_sort(g):
+            sorted_supergate_circuits.append(minimal_supergate_circuits[node])
+        return sorted_supergate_circuits
