@@ -1,4 +1,15 @@
-"""Functions for transforming circuits."""
+"""
+Functions for transforming circuits.
+
+Examples
+--------
+Synthesize a circuit using yosys
+
+>>> import circuitgraph as cg
+>>> c = cg.from_lib("c1908")
+>>> c = cg.tx.syn(c, suppress_output=True)
+
+"""
 import os
 import re
 import shutil
@@ -398,10 +409,10 @@ def ternary(c):
     """
     Encode the circuit with ternary values.
 
-    The ternary circuit adds a second net for each net in the original circuit. The second net encodes a don't
-    care, or X, value. That net being high corresponds to a don't care value on
-    original net. If the second net is low, the logical value on the original
-    net is valid.
+    The ternary circuit adds a second net for each net in the original circuit.
+    The second net encodes a don't care, or X, value. That net being high
+    corresponds to a don't care value on original net. If the second net is
+    low, the logical value on the original net is valid.
 
     Parameters
     ----------
@@ -560,8 +571,9 @@ def sequential_unroll(
     """
     Unroll a sequential circuit.
 
-    Provides a higher level API than `unroll` by accepting a circuit with sequential elements kept as blackboxes. Assumes
-    that all blackboxes in the circuit are sequential elements.
+    Provides a higher level API than `unroll` by accepting a circuit with
+    sequential elements kept as blackboxes. Assumes that all blackboxes in
+    the circuit are sequential elements.
 
     Parameters
     ----------
@@ -758,12 +770,12 @@ def sensitivity_transform(c, n):
     """
     Create a circuit to compute sensitivity.
 
-    Creatie a miter circuit for each input 'i' with the fanin cone of `n` where the second circuit has 'i'
-    inverted, so that the miter output is high when `n` is sensitive to 'i'.
-    The uninverted circuit is shared across all miters and the outputs of the
-    miters are fed into a population count circuit so that the output of the
-    population count circuit gives the sensitivity of `n` for a given input
-    pattern.
+    Creatie a miter circuit for each input 'i' with the fanin cone of `n`
+    where the second circuit has 'i' inverted, so that the miter output is
+    high when `n` is sensitive to 'i'. The uninverted circuit is shared
+    across all miters and the outputs of the miters are fed into a
+    population count circuit so that the output of the population count
+    circuit gives the sensitivity of `n` for a given input pattern.
 
     Parameters
     ----------
@@ -1094,18 +1106,17 @@ def supergates(c, construct_supercircuit=False):
 
         return superc, supergate_map
 
-    else:
-        # Find topological ordering of supergates
-        g = nx.DiGraph()
-        for output, supergate in minimal_supergate_circuits.items():
-            g.add_node(output)
-            for i in supergate.inputs() - c.inputs():
-                for other_output in set(minimal_supergate_circuits) - {output}:
-                    other_supergate = minimal_supergate_circuits[other_output]
-                    if i in other_supergate.nodes() - other_supergate.inputs():
-                        g.add_edge(other_output, output)
+    # Find topological ordering of supergates
+    g = nx.DiGraph()
+    for output, supergate in minimal_supergate_circuits.items():
+        g.add_node(output)
+        for i in supergate.inputs() - c.inputs():
+            for other_output in set(minimal_supergate_circuits) - {output}:
+                other_supergate = minimal_supergate_circuits[other_output]
+                if i in other_supergate.nodes() - other_supergate.inputs():
+                    g.add_edge(other_output, output)
 
-        sorted_supergate_circuits = []
-        for node in nx.topological_sort(g):
-            sorted_supergate_circuits.append(minimal_supergate_circuits[node])
-        return sorted_supergate_circuits
+    sorted_supergate_circuits = []
+    for node in nx.topological_sort(g):
+        sorted_supergate_circuits.append(minimal_supergate_circuits[node])
+    return sorted_supergate_circuits

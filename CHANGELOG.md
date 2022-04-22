@@ -1,23 +1,38 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2022-04-22
+### Fixed
+- Visualization with BlackBoxes.
+
+### Added
+- Supergate construction functionality.
+
+### Changed
+- `output` is no longer a node type but an extra property. It can be accessed using `Circuit.is_output` and `Circuit.set_output`. Any node with a primitive gate type can also be marked as an output.
+- Import structure has changed. Most functions should now be referrenced based on their parent module, e.g., `cg.tx.syn` instead of `cg.syn`.
+- Most module names have been shortened for ease of use with new import structure.
+- Renamed `sat` function to `solve`.
+- Removed `copy` from `tx`. Copying a circuit can be done using `Circuit.copy`.
+
+
 ## [0.1.3] - 2021-09-24
 ### Added
 - More robust checks for incorrect circuit construction
 - More robust parsing, including faster parsing using regex
 - Simple circuit visualization
-- `X` type for nodes (similar to `0`, and `1`)
+- `x` type for nodes (similar to `0`, and `1`)
 - Sequential unroll transform
 
 ## [0.1.2] - 2021-01-24
-### FIXED
+### Fixed
 - Synthesis now works with python3.6 again
 
 ### Added
 - DesignCompiler synthesis
 
 ## [0.1.1] - 2021-01-22
-### FIXED
+### Fixed
 - Parsing is now being included correctly
 
 ### Added

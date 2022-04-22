@@ -1,4 +1,16 @@
-"""Various circuit related utilities."""
+"""
+Various circuit related utilities.
+
+Examples
+--------
+Lint a circuit to check for unloaded nets
+
+>>> import circuitgraph as cg
+>>> c = cg.from_lib("c17")
+>>> c.set_output("N22", False)
+>>> cg.lint(c)
+
+"""
 import shutil
 import subprocess
 from pathlib import Path
@@ -74,13 +86,15 @@ def clog2(num):
     Examples
     --------
     Here are the values of ``clog2(N)`` for :math:`1 \le N < 18`:
-        >>> [clog2(n) for n in range(1, 18)]
+    >>> [clog2(n) for n in range(1, 18)]
     [0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5]
+
     This function is undefined for non-positive integers:
-        >>> clog2(0)
+    >>> clog2(0)
     Traceback (most recent call last):
         ...
     ValueError: expected num >= 1
+
     """
     if num < 1:
         raise ValueError("expected num >= 1")

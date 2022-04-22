@@ -8,6 +8,7 @@ docs/index.html : circuitgraph/* docs/templates/*
 test :
 	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 	python3 -m unittest
+	python3 -m doctest circuitgraph/*.py
 
 test_% :
 	python3 -m unittest tests/test_$*.py

@@ -8,11 +8,11 @@ name and gate type. The supported types are:
 - Standard input-order-independent gates:
     ['and', 'nand', 'or', 'nor', 'not', 'buf', 'xor', 'xnor']
 - IO and Constant values:
-    ['input', '1', '0']
+    ['input', '1', '0', 'x']
 - Blackbox IO (must be added through `add_blackbox`)
     ['bb_output', 'bb_input']
 
-Additionally, any node can be marked as an output node.
+Additionally, a node can be marked as an output node.
 
 """
 from functools import reduce
@@ -64,18 +64,41 @@ class Circuit:
         >>> import circuitgraph as cg
         >>> c = cg.Circuit()
 
-        Add an AND gate named 'x'.
+        Add circuit inputs
 
-        >>> c.add('x','and')
+        >>> c.add('i0', 'input')
+        'i0'
+        >>> c.add('i1', 'input')
+        'i1'
 
-        Add an additional nodes and connect them.
+        Add an AND gate named 'g0'.
 
-        >>> c.add('y','or',fanout='x')
-        >>> c.add('z','xor',fanin=['x','y'])
+        >>> c.add('g0', 'and')
+        'g0'
+
+        Connect the inputs to the AND gate.
+
+        >>> c.connect('i0', 'g0')
+        >>> c.connect('i1', 'g0')
+        >>> c.fanin('g0') == {'i0', 'i1'}
+        True
+
+        Or, make connections when adding nodes.
+
+        >>> c.add('g1', 'or', fanin=['i0', 'i1'])
+        'g1'
+
+        Nodes can marked as outputs.
+
+        >>> c.set_output('g1')
+        >>> c.add('g2', 'nor', fanin=['g0', 'g1'], output=True)
+        'g2'
+        >>> c.outputs() == {'g1', 'g2'}
+        True
 
         Another way to create the circuit is through a file.
 
-        >>> c = cg.from_file('path/circuit.v')
+        >>> c = cg.from_file('path/to/circuit.v') # doctest: +SKIP
 
         """
         if name:
@@ -162,17 +185,24 @@ class Circuit:
         --------
         Create a with several gate types.
 
+        >>> import circuitgraph as cg
         >>> c = cg.Circuit()
-        >>> for i,g in enumerate(['xor','or','xor']): c.add(f'g{i}', g)
+        >>> c.add(f'g0', 'xor')
+        'g0'
+        >>> c.add(f'g1', 'or')
+        'g1'
+        >>> c.add(f'g2', 'xor')
+        'g2'
+
 
         Calling `type` for a single gate returns a single type
 
         >>> c.type('g0')
-        {'xor'}
+        'xor'
 
         Calling `type` on an iterable returns a set of types
 
-        >>> c.type(c.nodes())
+        >>> c.type(['g0', 'g1', 'g2'])
         ['xor', 'or', 'xor']
 
         """
@@ -205,18 +235,24 @@ class Circuit:
         --------
         Create a circuit with several gate types.
 
+        >>> import circuitgraph as cg
         >>> c = cg.Circuit()
-        >>> for i,g in enumerate(['xor','or','xor']): c.add(f'g{i}',g)
+        >>> c.add(f'g0', 'xor')
+        'g0'
+        >>> c.add(f'g1', 'or')
+        'g1'
+        >>> c.add(f'g2', 'xor')
+        'g2'
 
         Calling `nodes` with no argument returns all nodes in the circuit
 
-        >>> c.nodes()
-        {'g0', 'g1', 'g2'}
+        >>> c.nodes() == {'g0', 'g1', 'g2'}
+        True
 
         Passing a node type, we can selectively return nodes.
 
-        >>> c.filter_type('xor')
-        {'g2', 'g0'}
+        >>> c.filter_type('xor') == {'g2', 'g0'}
+        True
 
         """
         if isinstance(types, str):
@@ -327,14 +363,14 @@ class Circuit:
 
     def fill_blackbox(self, name, c):
         """
-        Replace blackbox with circuit.
+        Replace a blackbox with a circuit.
 
         Parameters
         ----------
         name : str
-                Instance name.
+                The name of the blackbox to replace.
         c : Circuit
-                Circuit.
+                The circuit.
 
         """
         # check if bb exists
@@ -395,7 +431,7 @@ class Circuit:
 
         Returns
         -------
-        networkx.EdgeView
+        set of tuple of str, str
                 Edges in circuit
 
         """
@@ -451,17 +487,17 @@ class Circuit:
 
         >>> import circuitgraph as cg
         >>> c = cg.Circuit()
-        >>> c.add('a','or')
+        >>> c.add('a', 'or')
         'a'
 
         In the above example the function returns the name of the new node.
         This allows us to quickly generate an AND tree with the following
         syntax.
 
-        >>> c.add('g','and',fanin=[c.add(f'in_{i}','input') for i in range(4)])
+        >>> c.add('g', 'and', fanin=[c.add(f'i{i}', 'input') for i in range(4)])
         'g'
-        >>> c.fanin('g')
-        {'in_1', 'in_0', 'in_3', 'in_2'}
+        >>> c.fanin('g') == {'i0', 'i1', 'i2', 'i3'}
+        True
 
         """
         # clean arguments
@@ -615,12 +651,12 @@ class Circuit:
 
         Example
         -------
-        >>> c.fanout('n_20')
-        {'G17'}
-        >>> c.fanout('n_11')
-        {'n_12'}
-        >>> c.fanout(['n_11','n_20'])
-        {'n_12', 'G17'}
+        >>> import circuitgraph as cg
+        >>> c = cg.from_lib("c17")
+        >>> c.fanin('N23') == {'N16', 'N19'}
+        True
+        >>> c.fanin(['N10','N19']) == {'N1', 'N3', 'N7', 'N11'}
+        True
 
         """
         gates = set()
@@ -1156,10 +1192,15 @@ class BlackBox:
 
         >>> c = cg.Circuit()
         >>> c.add("i0", "input")
+        'i0'
         >>> c.add("i1", "input")
+        'i1'
         >>> c.add("a", "and", fanin=["i0", "i1"])
+        'a'
         >>> c.add("clock", "input")
+        'clock'
         >>> c.add("data_out", "buf", output=True)
+        'data_out'
 
         Add the BlackBox to a circuit
 

@@ -1,4 +1,31 @@
-"""Functions for executing SAT, #SAT, and approx-#SAT on circuits."""
+"""
+Functions for executing SAT, #SAT, and approx-#SAT on circuits.
+
+Examples
+--------
+Use sat solver to simulate circuit values
+
+>>> import circuitgraph as cg
+>>> c = cg.Circuit()
+>>> c.add("i0", "input")
+'i0'
+>>> c.add("i1", "input")
+'i1'
+>>> c.add("g0", "and", fanin=["i0", "i1"])
+'g0'
+>>> res = cg.sat.solve(c, assumptions={"i0": True, "i1": False})
+>>> res["g0"]
+False
+
+Setup a miter circuit
+
+>>> c1 = cg.from_lib("c17")
+>>> c2 = c1.copy()
+>>> m = cg.tx.miter(c1, c2)
+>>> cg.sat.solve(m, assumptions={"sat": True})
+False
+
+"""
 import re
 import shutil
 import subprocess
@@ -190,15 +217,6 @@ def solve(c, assumptions=None):
     -------
     >>> import circuitgraph as cg
     >>> c = cg.from_lib('s27')
-    >>> cg.sat.solve(c)
-    {'G17': True, 'n_20': False, 'n_12': True, 'n_11': False,
-     'G0': True, 'n_9': True, 'n_10': True, 'n_7': False, 'n_8': False,
-     'n_1': False, 'G7': True, 'n_4': True, 'n_5': True, 'n_6': True,
-     'G2': False, 'n_3': False, 'n_2': False, 'G6': True, 'G3': True,
-     'n_0': False, 'G1': True, 'G5': True, 'n_21': False, 'd[G5]': True,
-     'r[G5]': True, 'clk[G5]': True, 'clk': True, 'd[G6]': False,
-     'r[G6]': True, 'clk[G6]': True, 'd[G7]': True, 'r[G7]': True,
-     'clk[G7]': True, 'output[G17]': True}
     >>> cg.sat.solve(c, assumptions={'G17': True, 'n_20': True, 'G6': False})
     False
 
@@ -218,7 +236,7 @@ def approx_model_count(
     d=None,
     seed=None,
     detach_xor=True,
-    use_xor_clauses=True,
+    use_xor_clauses=False,
     log_file=None,
 ):
     """
@@ -254,10 +272,10 @@ def approx_model_count(
     """
     try:
         from pysat.formula import IDPool
-    except ImportError as e:
+    except ImportError as err:
         raise ImportError(
             "Install 'python-sat' to use satisfiability functionality"
-        ) from e
+        ) from err
 
     if shutil.which("approxmc") is None:
         raise OSError("Install 'approxmc' to use 'approx_model_count'")

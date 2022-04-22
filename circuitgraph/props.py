@@ -1,4 +1,24 @@
-"""Functions for analysis of Boolean and circuit properties."""
+"""
+Functions for analysis of Boolean and circuit properties.
+
+Examples
+--------
+>>> import circuitgraph as cg
+>>> c = cg.Circuit()
+>>> c.add("i0", "input")
+'i0'
+>>> c.add("i1", "input")
+'i1'
+>>> c.add("g0", "or", fanin=["i0", "i1"])
+'g0'
+>>> c.add("g1", "not", fanin=["g0"])
+'g1'
+>>> cg.props.signal_probability(c, "g0", approx=False)
+0.75
+>>> cg.props.signal_probability(c, "g1", approx=False)
+0.25
+
+"""
 from pathlib import Path
 
 import circuitgraph as cg

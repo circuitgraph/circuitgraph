@@ -1,4 +1,58 @@
-"""A collection of common logic elements as `Circuit` objects."""
+"""
+A collection of common logic elements as `Circuit` objects.
+
+They can be added to existing circuits using `Circuit.add_subcircuit`
+
+Examples
+--------
+Either add `a` and `c` or `b` and `c` depending on `sel`.
+
+>>> import circuitgraph as cg
+
+>>> a = cg.logic.half_adder()
+>>> m = cg.logic.mux(2)
+
+>>> c = cg.Circuit()
+>>> c.add("a", "input")
+'a'
+>>> c.add("b", "input")
+'b'
+>>> c.add("c", "input")
+'c'
+>>> c.add("sel", "input")
+'sel'
+>>> c.add("d", "buf")
+'d'
+>>> c.add("sum", "buf", output=True)
+'sum'
+>>> c.add("carry", "buf", output=True)
+'carry'
+
+Add mux subcircuit
+
+>>> mux_conns = {"in_0": "a", "in_1": "b", "sel_0": "sel", "out": "d"}
+>>> c.add_subcircuit(m, "mux", mux_conns)
+
+Add adder subcircuit
+
+>>> add_conns = {"x": "c", "y": "d", "c": "carry", "s": "sum"}
+>>> c.add_subcircuit(a, "adder", add_conns)
+
+Simulate to verify
+
+>>> res = cg.sat.solve(c, {"a": 0, "b": 1, "c": 1, "sel": 0}) # a + c
+>>> res["sum"]
+True
+>>> res["carry"]
+False
+
+>>> res = cg.sat.solve(c, {"a": 0, "b": 1, "c": 1, "sel": 1}) # b + c
+>>> res["sum"]
+False
+>>> res["carry"]
+True
+
+"""
 from itertools import product
 
 import circuitgraph as cg
