@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.tx API documentation</title>
-<meta name="description" content="Functions for transforming circuits" />
+<meta name="description" content="Functions for transforming circuits …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
@@ -22,20 +22,38 @@
 <h1 class="title">Module <code>circuitgraph.tx</code></h1>
 </header>
 <section id="section-intro">
-<p>Functions for transforming circuits</p>
+<p>Functions for transforming circuits.</p>
+<h2 id="examples">Examples</h2>
+<p>Synthesize a circuit using yosys</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = cg.from_lib(&quot;c1908&quot;)
+&gt;&gt;&gt; c = cg.tx.syn(c, suppress_output=True)
+</code></pre>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">&#34;&#34;&#34;Functions for transforming circuits&#34;&#34;&#34;
-import subprocess
-from tempfile import NamedTemporaryFile
+<pre><code class="python">&#34;&#34;&#34;
+Functions for transforming circuits.
+
+Examples
+--------
+Synthesize a circuit using yosys
+
+&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = cg.from_lib(&#34;c1908&#34;)
+&gt;&gt;&gt; c = cg.tx.syn(c, suppress_output=True)
+
+&#34;&#34;&#34;
 import os
 import re
-from pathlib import Path
-from collections import defaultdict
-from queue import Queue
 import shutil
+import subprocess
+from collections import defaultdict
+from functools import reduce
+from pathlib import Path
+from queue import Queue
+from tempfile import NamedTemporaryFile
 
 import networkx as nx
 
@@ -44,8 +62,7 @@ import circuitgraph as cg
 
 def strip_io(c):
     &#34;&#34;&#34;
-    Removes circuit&#39;s outputs and converts inputs to buffers for easy
-    instantiation.
+    Remove a circuit&#39;s outputs and convert inputs to buffers.
 
     Parameters
     ----------
@@ -56,6 +73,7 @@ def strip_io(c):
     -------
     Circuit
             Circuit with removed io.
+
     &#34;&#34;&#34;
     g = c.graph.copy()
     for i in c.inputs():
@@ -68,8 +86,7 @@ def strip_io(c):
 
 def strip_outputs(c):
     &#34;&#34;&#34;
-    Removes a circuit&#39;s outputs for easy
-    instantiation.
+    Remove a circuit&#39;s outputs for easy instantiation.
 
     Parameters
     ----------
@@ -80,6 +97,7 @@ def strip_outputs(c):
     -------
     Circuit
             Circuit with removed io.
+
     &#34;&#34;&#34;
     g = c.graph.copy()
     for o in c.outputs():
@@ -90,8 +108,7 @@ def strip_outputs(c):
 
 def strip_inputs(c):
     &#34;&#34;&#34;
-    Converts inputs to buffers for easy
-    instantiation.
+    Convert inputs to buffers for easy instantiation.
 
     Parameters
     ----------
@@ -102,6 +119,7 @@ def strip_inputs(c):
     -------
     Circuit
             Circuit with removed io.
+
     &#34;&#34;&#34;
     g = c.graph.copy()
     for i in c.inputs():
@@ -112,7 +130,7 @@ def strip_inputs(c):
 
 def strip_blackboxes(c, ignore_pins=None):
     &#34;&#34;&#34;
-    Converts blackboxes to io.
+    Convert blackboxes to io.
 
     Parameters
     ----------
@@ -125,6 +143,7 @@ def strip_blackboxes(c, ignore_pins=None):
     -------
     Circuit
             Circuit with removed blackboxes.
+
     &#34;&#34;&#34;
     if not ignore_pins:
         ignore_pins = []
@@ -158,7 +177,7 @@ def strip_blackboxes(c, ignore_pins=None):
 
 def relabel(c, mapping):
     &#34;&#34;&#34;
-    Builds copy with relabeled nodes.
+    Build copy of circuit with relabeled nodes.
 
     Parameters
     ----------
@@ -171,14 +190,15 @@ def relabel(c, mapping):
     -------
     Circuit
             Circuit with removed blackboxes.
+
     &#34;&#34;&#34;
     g = nx.relabel_nodes(c.graph, mapping)
     return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())
 
 
-def subcircuit(c, nodes):
+def subcircuit(c, nodes, modify_io=False):
     &#34;&#34;&#34;
-    Creates a subcircuit from a set of nodes of a given circuit.
+    Create a subcircuit from a set of nodes of a given circuit.
 
     Parameters
     ----------
@@ -186,20 +206,30 @@ def subcircuit(c, nodes):
             The circuit to create a subcircuit from.
     nodes: list of str
             The nodes to include in the subcircuit.
+    modify_io: bool
+            If True, gates without drivers will be turned into inputs and gates without
+            fanout will be marked as outputs.
 
     Returns
     -------
     Circuit
             The subcircuit.
+
     &#34;&#34;&#34;
     sc = cg.Circuit()
     for node in nodes:
         if c.type(node) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
             raise NotImplementedError(&#34;Cannot create a subcircuit with blackboxes&#34;)
-        sc.add(node, type=c.type(node), output=c.is_output(node))
+        sc.add(node, c.type(node), output=c.is_output(node))
     for edge in c.edges():
         if edge[0] in nodes and edge[1] in nodes:
             sc.connect(edge[0], edge[1])
+    if modify_io:
+        for node in sc:
+            if sc.type(node) not in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;] and not sc.fanin(node):
+                sc.set_type(node, &#34;input&#34;)
+            if not sc.fanout(node):
+                sc.set_output(node)
     return sc
 
 
@@ -217,7 +247,7 @@ def syn(
     effort=&#34;high&#34;,
 ):
     &#34;&#34;&#34;
-    Synthesizes the circuit using yosys or genus.
+    Synthesize the circuit using a third-party synthesis tool.
 
     Parameters
     ----------
@@ -257,6 +287,7 @@ def syn(
     -------
     Circuit
             Synthesized circuit.
+
     &#34;&#34;&#34;
     if engine == &#34;yosys&#34; and shutil.which(&#34;yosys&#34;) is None:
         raise OSError(&#34;&#39;yosys&#39; installation not found&#34;)
@@ -284,7 +315,7 @@ def syn(
     if verilog_exists and not pre_syn_file:
         raise ValueError(&#34;Must specify pre_syn_file if using verilog_exists&#34;)
 
-    with open(pre_syn_file, &#34;r&#34;) if verilog_exists else open(
+    with open(pre_syn_file) if verilog_exists else open(
         pre_syn_file, &#34;w&#34;
     ) if pre_syn_file else NamedTemporaryFile(
         prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
@@ -299,14 +330,12 @@ def syn(
             if engine == &#34;genus&#34;:
                 try:
                     lib_path = os.environ[&#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34;]
-                except KeyError:
+                except KeyError as e:
                     raise ValueError(
-                        &#34;In order to run synthesis with Genus, &#34;
-                        &#34;please set the &#34;
-                        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH &#34;
-                        &#34;variable in your os environment to the &#34;
-                        &#34;path to the tech library to use&#34;
-                    )
+                        &#34;In order to run synthesis with Genus, please set the &#34;
+                        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH variable in your os &#34;
+                        &#34;environment to the path to the tech library to use&#34;
+                    ) from e
                 cmd = [
                     &#34;genus&#34;,
                     &#34;-no_gui&#34;,
@@ -325,14 +354,12 @@ def syn(
             elif engine == &#34;dc&#34;:
                 try:
                     lib_path = os.environ[&#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34;]
-                except KeyError:
+                except KeyError as e:
                     raise ValueError(
-                        &#34;In order to run synthesis with DC, &#34;
-                        &#34;please set the &#34;
-                        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH &#34;
-                        &#34;variable in your os environment to the &#34;
-                        &#34;path to the GTECH library&#34;
-                    )
+                        &#34;In order to run synthesis with DC, please set the &#34;
+                        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH variable in your os environment &#34;
+                        &#34;to the path to the GTECH library&#34;
+                    ) from e
                 libname = &#34;GTECH&#34;
                 usable_cells = [f&#34;{libname.lower()}/{libname}_NOT&#34;]
                 for gate in [&#34;OR&#34;, &#34;NOR&#34;, &#34;AND&#34;, &#34;NAND&#34;, &#34;XOR&#34;, &#34;XNOR&#34;]:
@@ -379,7 +406,9 @@ def syn(
                 stderr = open(stderr_file, &#34;w&#34;)
             else:
                 stderr = None
-            subprocess.run(cmd, stdout=stdout, stderr=stderr, cwd=working_dir)
+            subprocess.run(
+                cmd, stdout=stdout, stderr=stderr, cwd=working_dir, check=True
+            )
             if stdout_file:
                 stdout.close()
             if stderr_file:
@@ -413,10 +442,12 @@ def syn(
 
 def ternary(c):
     &#34;&#34;&#34;
-    Encodes the circuit with ternary values. The ternary circuit adds a second net
-    for each net in the original circuit. The second net encodes a don&#39;t care,
-    or X, value. That net being high corresponds to a don&#39;t care value on original net.
-    If the second net is low, the logical value on the original net is valid.
+    Encode the circuit with ternary values.
+
+    The ternary circuit adds a second net for each net in the original circuit.
+    The second net encodes a don&#39;t care, or X, value. That net being high
+    corresponds to a don&#39;t care value on original net. If the second net is
+    low, the logical value on the original net is valid.
 
     Parameters
     ----------
@@ -432,6 +463,7 @@ def ternary(c):
     Circuit, dict of str:str
             Encoded circuit and dictionary mapping original net names to added ternary
             net names.
+
     &#34;&#34;&#34;
     if c.blackboxes:
         raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
@@ -510,7 +542,7 @@ def ternary(c):
 
 def miter(c0, c1=None, startpoints=None, endpoints=None):
     &#34;&#34;&#34;
-    Creates a miter circuit.
+    Create a miter circuit.
 
     Parameters
     ----------
@@ -527,6 +559,7 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
     -------
     Circuit
             Miter circuit.
+
     &#34;&#34;&#34;
     # check for blackboxes
     if c0.blackboxes:
@@ -552,7 +585,7 @@ def miter(c0, c1=None, startpoints=None, endpoints=None):
         m.add(n, &#34;input&#34;, fanout=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;])
 
     # compare outputs
-    m.add(&#34;sat&#34;, &#34;or&#34;, output=True)
+    m.add(&#34;sat&#34;, &#34;or&#34; if len(endpoints) &gt; 1 else &#34;buf&#34;, output=True)
     for n in endpoints:
         m.add(f&#34;dif_{n}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;], fanout=&#34;sat&#34;)
 
@@ -571,9 +604,11 @@ def sequential_unroll(
     prefix=&#34;cg_unroll&#34;,
 ):
     &#34;&#34;&#34;
-    Unroll a sequential circuit. Provides a higher level API than `unroll`
-    by accepting a circuit with sequential elements kept as blackboxes.
-    Assumes that all blackboxes in the circuit are sequential elements.
+    Unroll a sequential circuit.
+
+    Provides a higher level API than `unroll` by accepting a circuit with
+    sequential elements kept as blackboxes. Assumes that all blackboxes in
+    the circuit are sequential elements.
 
     Parameters
     ----------
@@ -605,6 +640,7 @@ def sequential_unroll(
     Circuit, dict of str:list of str
             Unrolled circuit and mapping of original circuit io to list of unrolled
             circuit io. The lists are in order of the unroll iterations.
+
     &#34;&#34;&#34;
     cs = strip_blackboxes(c, ignore_pins=ignore_pins)
     blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
@@ -645,7 +681,9 @@ def sequential_unroll(
 
 def unroll(c, n, state_io, prefix=&#34;cg_unroll&#34;):
     &#34;&#34;&#34;
-    Unrolls a circuit.
+    Unroll a circuit.
+
+    Create multiple copies of the circuit and connect together state io.
 
     Parameters
     ----------
@@ -664,6 +702,7 @@ def unroll(c, n, state_io, prefix=&#34;cg_unroll&#34;):
     Circuit, dict of str:list of str
             Unrolled circuit and mapping of original circuit io to list of unrolled
             circuit io. The lists are in order of the unroll iterations.
+
     &#34;&#34;&#34;
     # check for blackboxes
     if c.blackboxes:
@@ -710,8 +749,9 @@ def unroll(c, n, state_io, prefix=&#34;cg_unroll&#34;):
 
 def sensitization_transform(c, n, endpoints=None):
     &#34;&#34;&#34;
-    Creates a circuit to sensitize a node to an endpoint, in the form of a miter
-    circuit with that node inverted in one circuit copy.
+    Create a circuit to sensitize a node to an endpoint.
+
+    Create a miter circuit with that node inverted in one circuit copy.
 
     Parameters
     ----------
@@ -727,10 +767,11 @@ def sensitization_transform(c, n, endpoints=None):
     -------
     Circuit
             Output circuit.
+
     &#34;&#34;&#34;
     # check for blackboxes
     if c.blackboxes:
-        raise ValueError(f&#34;Circuit contains a blackbox&#34;)
+        raise ValueError(&#34;Circuit contains a blackbox&#34;)
 
     if endpoints:
         if isinstance(endpoints, str):
@@ -743,12 +784,14 @@ def sensitization_transform(c, n, endpoints=None):
         subc = subcircuit(c, endpoints | fi)
         for node in subc:
             subc.set_output(node, node in endpoints)
+        miter_name = f&#34;{c.name}_sensitize_{n}_to_{&#39;_&#39;.join(endpoints)}&#34;
     else:
         subc = c
+        miter_name = f&#34;{c.name}_sensitize_{n}&#34;
 
     # create miter
     m = miter(subc)
-    m.name = f&#34;{c.name}_sensitized_{n}&#34;
+    m.name = miter_name
 
     # flip node in c1
     m.disconnect(m.fanin(f&#34;c1_{n}&#34;), f&#34;c1_{n}&#34;)
@@ -760,12 +803,14 @@ def sensitization_transform(c, n, endpoints=None):
 
 def sensitivity_transform(c, n):
     &#34;&#34;&#34;
-    Creates a circuit to compute sensitivity by creating a miter circuit for each input
-    &#39;i&#39; with the fanin cone of `n` where the second circuit has &#39;i&#39; inverted, so that
-    the miter output is high when `n` is sensitive to &#39;i&#39;. The uninverted circuit is
-    shared across all miters and the outputs of the miters are fed into a population
-    count circuit so that the output of the population count circuit gives the
-    sensitivity of `n` for a given input pattern.
+    Create a circuit to compute sensitivity.
+
+    Creatie a miter circuit for each input &#39;i&#39; with the fanin cone of `n`
+    where the second circuit has &#39;i&#39; inverted, so that the miter output is
+    high when `n` is sensitive to &#39;i&#39;. The uninverted circuit is shared
+    across all miters and the outputs of the miters are fed into a
+    population count circuit so that the output of the population count
+    circuit gives the sensitivity of `n` for a given input pattern.
 
     Parameters
     ----------
@@ -778,6 +823,7 @@ def sensitivity_transform(c, n):
     -------
     Circuit
             Sensitivity circuit.
+
     &#34;&#34;&#34;
     # check for blackboxes
     if c.blackboxes:
@@ -789,7 +835,7 @@ def sensitivity_transform(c, n):
         raise ValueError(f&#34;{n} has no startpoints&#34;)
 
     # get input cone
-    fi_nodes = c.transitive_fanin(n) | set([n])
+    fi_nodes = c.transitive_fanin(n) | {n}
     sub_c = cg.Circuit(graph=c.graph.subgraph(fi_nodes).copy())
 
     # create sensitivity circuit
@@ -832,7 +878,7 @@ def sensitivity_transform(c, n):
 
 def limit_fanin(c, k):
     &#34;&#34;&#34;
-    Reduces the maximum fanin of circuit gates to k.
+    Reduce the maximum fanin of circuit gates to k.
 
     Parameters
     ----------
@@ -845,9 +891,10 @@ def limit_fanin(c, k):
     -------
     Circuit
             Output circuit.
+
     &#34;&#34;&#34;
     if k &lt; 2:
-        raise ValueError(f&#34;maximum fanin, k, must be &gt; 2&#34;)
+        raise ValueError(&#34;maximum fanin, k, must be &gt; 2&#34;)
 
     gatemap = {
         &#34;and&#34;: &#34;and&#34;,
@@ -880,7 +927,7 @@ def limit_fanin(c, k):
 
 def acyclic_unroll(c):
     &#34;&#34;&#34;
-    Unrolls a cyclic circuit to remove cycles.
+    Unroll a cyclic circuit to remove cycles.
 
     Parameters
     ----------
@@ -891,46 +938,50 @@ def acyclic_unroll(c):
     -------
     Circuit
             The unrolled circuit.
+
     &#34;&#34;&#34;
     if c.blackboxes:
         raise ValueError(&#34;Cannot perform acyclic unroll with blackboxes&#34;)
 
-    def approx_min_fas(DG):
-        DGC = DG.copy()
+    def approx_min_fas(g):
+        g_copy = g.copy()
         s1, s2 = [], []
-        while DGC.nodes:
+        while g_copy.nodes:
             # find sinks
-            sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+            sinks = [n for n in g_copy.nodes if g_copy.out_degree(n) == 0]
             while sinks:
                 s2 += sinks
-                DGC.remove_nodes_from(sinks)
-                sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+                g_copy.remove_nodes_from(sinks)
+                sinks = [n for n in g_copy.nodes if g_copy.out_degree(n) == 0]
 
             # find sources
-            sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+            sources = [n for n in g_copy.nodes if g_copy.in_degree(n) == 0]
             while sources:
                 s1 += sources
-                DGC.remove_nodes_from(sources)
-                sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+                g_copy.remove_nodes_from(sources)
+                sources = [n for n in g_copy.nodes if g_copy.in_degree(n) == 0]
 
             # choose max in/out degree difference
-            if DGC.nodes:
-                n = max(DGC.nodes, key=lambda x: DGC.out_degree(x) - DGC.in_degree(x))
+            if g_copy.nodes:
+                n = max(
+                    g_copy.nodes,
+                    key=lambda x: g_copy.out_degree(x) - g_copy.in_degree(x),
+                )
                 s1.append(n)
-                DGC.remove_node(n)
+                g_copy.remove_node(n)
 
         ordering = s1 + list(reversed(s2))
         feedback_edges = [
-            e for e in DG.edges if ordering.index(e[0]) &gt; ordering.index(e[1])
+            e for e in g.edges if ordering.index(e[0]) &gt; ordering.index(e[1])
         ]
         feedback_edges = [
-            (u, v) for u, v in feedback_edges if u in nx.descendants(DG, v)
+            (u, v) for u, v in feedback_edges if u in nx.descendants(g, v)
         ]
 
-        DGC = DG.copy()
-        DGC.remove_edges_from(feedback_edges)
+        g_copy = g.copy()
+        g_copy.remove_edges_from(feedback_edges)
         try:
-            if nx.find_cycle(DGC):
+            if nx.find_cycle(g_copy):
                 raise ValueError(&#34;approx_min_fas has failed&#34;)
         except nx.NetworkXNoCycle:
             pass
@@ -938,7 +989,7 @@ def acyclic_unroll(c):
         return feedback_edges
 
     # find feedback nodes
-    feedback = set([e[0] for e in approx_min_fas(c.graph)])
+    feedback = {e[0] for e in approx_min_fas(c.graph)}
 
     # get startpoints
     sp = c.startpoints()
@@ -980,76 +1031,130 @@ def acyclic_unroll(c):
     return acyc
 
 
-def supergates(c):
+def supergates(c, construct_supercircuit=False):
     &#34;&#34;&#34;
-    Calculate the supergates of a circuit. That is, find the
-    maximal covering of minimal subcircuits with logically
-    independent inputs. This is done on a per-output basis.
+    Break the circuit up into supergates.
 
-    For more information, see
-    Seth, Sharad C., and Vishwani D. Agrawal. &#34;A new model for computation
-    of probabilistic testability in combinational circuits.&#34; Integration 7.1
+    Calculate the minimal covering of all circuit nodes with maximal supergates
+    of a circuit. For more information, see
+    Sharad C. Seth and Vishwani D. Agrawal. &#34;A new model for computation of
+    probabilistic testability in combinational circuits.&#34; Integration 7.1
     (1989): 49-75.
 
     Parameters
     ----------
     c: Circuit
             The circuit to compute supergates for
+    construct_supercircuit: bool
+            If True, a circuit connecting together the supergates as black boxes
+            will be formed. Currently this only works if `c` has only one output.
 
     Returns
     -------
-    dict of str to list of Circuit, dict of str to networkx.DiGraph
-            The supergates per each output, as Circuit objects,
-            and the connections between supergates per each output,
-            as a networkx.Digraph object.
+    list of Circuit or (Circuit, dict of str:Circuit)
+            If `construct_supercircuit` is `False`, the supergate circuits,
+            topologically sorted. Otherwise, the supercircuit and a dict
+            mapping blackbox names to corresponding supergates.
+
     &#34;&#34;&#34;
-    scs_per_output = dict()
-    g_per_output = dict()
+    if construct_supercircuit and len(c.outputs()) &gt; 1:
+        raise ValueError(
+            &#34;Can only use `construct_supercircuit` one a single-output circuit&#34;
+        )
+    # The current algorithm seems to fail for some circuits (like c880) with gates with
+    # fanin greater than 2. At the moment not sure if this is a bug in the
+    # implementation or expected behavior
+    c = limit_fanin(c, 2)
+    supergate_circuits = set()
     for output in c.outputs():
-        co = subcircuit(c, c.transitive_fanin(output) | {output})
-        G = co.graph.copy()
+        c_output = subcircuit(c, c.transitive_fanin(output) | {output})
+        c_output.set_output(c_output.outputs(), False)
+        c_output.set_output(output, True)
+
+        g = c_output.graph.copy()
+
+        # Add backwards edge for every forward edge not connected to an output
         rm_edges = []
-        for u, v in G.edges:
-            G.add_edge(v, u)
+        for u, v in g.edges:
+            g.add_edge(v, u)
             if v == output:
                 rm_edges.append((u, v))
-
         for u, v in rm_edges:
-            G.remove_edge(u, v)
+            g.remove_edge(u, v)
 
-        doms = nx.immediate_dominators(G, output)
+        # Get dominator tree
+        doms = nx.immediate_dominators(g, output)
         dom_tree = defaultdict(set)
         for k, v in doms.items():
             dom_tree[v].add(k)
 
+        # Build supergates starting at the output
         dom_tree[output].remove(output)
-
         frontier = Queue()
         frontier.put(output)
-        scs = []
-
-        super_G = nx.DiGraph()
-        super_G.add_node(output)
-
         while not frontier.empty():
+            # Build the supergate for this node
             node = frontier.get()
-            sg = {node}
+            supergate = {node}
+            # Include children and single successors
             fanins = Queue()
             for fi in dom_tree[node]:
                 fanins.put(fi)
             while not fanins.empty():
                 fi = fanins.get()
-                sg.add(fi)
+                supergate.add(fi)
                 if len(dom_tree[fi]) &gt; 1:
                     frontier.put(fi)
-                    super_G.add_node(fi)
-                    super_G.add_edge(fi, node)
                 elif len(dom_tree[fi]) == 1:
                     fanins.put(dom_tree[fi].pop())
-            scs.append(subcircuit(co, sg))
-        scs_per_output[output] = scs
-        g_per_output[output] = super_G
-    return scs_per_output, g_per_output</code></pre>
+            supergate_circuit = subcircuit(c_output, supergate, modify_io=True)
+            supergate_circuit.set_output(node, True)
+            supergate_circuits.add(supergate_circuit)
+
+    # Find minimal covering of supergates indexed by the output
+    minimal_supergate_circuits = {}
+    for supergate in supergate_circuits:
+        remaining_cover = reduce(
+            lambda a, b: a | b,
+            (s.nodes() - s.inputs() for s in supergate_circuits - {supergate}),
+            set(),
+        )
+        if supergate.nodes() - remaining_cover:
+            minimal_supergate_circuits[supergate.outputs().pop()] = supergate
+
+    if construct_supercircuit:
+        superc = cg.Circuit(f&#34;{c.name}_supergates&#34;)
+        for i in c.inputs():
+            superc.add(i, &#34;input&#34;)
+        for o in c.outputs():
+            superc.add(o, &#34;buf&#34;, output=True)
+
+        supergate_map = {}
+        for output, supergate in minimal_supergate_circuits.items():
+            sg_name = f&#34;sg_{output}&#34;
+            supergate_map[sg_name] = supergate
+            bb = cg.BlackBox(name=sg_name, inputs=supergate.inputs(), outputs={output})
+            for n in supergate.io():
+                if n not in superc:
+                    superc.add(n, &#34;buf&#34;)
+            superc.add_blackbox(bb, sg_name, {i: i for i in supergate.io()})
+
+        return superc, supergate_map
+
+    # Find topological ordering of supergates
+    g = nx.DiGraph()
+    for output, supergate in minimal_supergate_circuits.items():
+        g.add_node(output)
+        for i in supergate.inputs() - c.inputs():
+            for other_output in set(minimal_supergate_circuits) - {output}:
+                other_supergate = minimal_supergate_circuits[other_output]
+                if i in other_supergate.nodes() - other_supergate.inputs():
+                    g.add_edge(other_output, output)
+
+    sorted_supergate_circuits = []
+    for node in nx.topological_sort(g):
+        sorted_supergate_circuits.append(minimal_supergate_circuits[node])
+    return sorted_supergate_circuits</code></pre>
 </details>
 </section>
 <section>
@@ -1063,7 +1168,7 @@ def supergates(c):
 <span>def <span class="ident">acyclic_unroll</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Unrolls a cyclic circuit to remove cycles.</p>
+<div class="desc"><p>Unroll a cyclic circuit to remove cycles.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1080,7 +1185,7 @@ def supergates(c):
 </summary>
 <pre><code class="python">def acyclic_unroll(c):
     &#34;&#34;&#34;
-    Unrolls a cyclic circuit to remove cycles.
+    Unroll a cyclic circuit to remove cycles.
 
     Parameters
     ----------
@@ -1091,46 +1196,50 @@ def supergates(c):
     -------
     Circuit
             The unrolled circuit.
+
     &#34;&#34;&#34;
     if c.blackboxes:
         raise ValueError(&#34;Cannot perform acyclic unroll with blackboxes&#34;)
 
-    def approx_min_fas(DG):
-        DGC = DG.copy()
+    def approx_min_fas(g):
+        g_copy = g.copy()
         s1, s2 = [], []
-        while DGC.nodes:
+        while g_copy.nodes:
             # find sinks
-            sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+            sinks = [n for n in g_copy.nodes if g_copy.out_degree(n) == 0]
             while sinks:
                 s2 += sinks
-                DGC.remove_nodes_from(sinks)
-                sinks = [n for n in DGC.nodes if DGC.out_degree(n) == 0]
+                g_copy.remove_nodes_from(sinks)
+                sinks = [n for n in g_copy.nodes if g_copy.out_degree(n) == 0]
 
             # find sources
-            sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+            sources = [n for n in g_copy.nodes if g_copy.in_degree(n) == 0]
             while sources:
                 s1 += sources
-                DGC.remove_nodes_from(sources)
-                sources = [n for n in DGC.nodes if DGC.in_degree(n) == 0]
+                g_copy.remove_nodes_from(sources)
+                sources = [n for n in g_copy.nodes if g_copy.in_degree(n) == 0]
 
             # choose max in/out degree difference
-            if DGC.nodes:
-                n = max(DGC.nodes, key=lambda x: DGC.out_degree(x) - DGC.in_degree(x))
+            if g_copy.nodes:
+                n = max(
+                    g_copy.nodes,
+                    key=lambda x: g_copy.out_degree(x) - g_copy.in_degree(x),
+                )
                 s1.append(n)
-                DGC.remove_node(n)
+                g_copy.remove_node(n)
 
         ordering = s1 + list(reversed(s2))
         feedback_edges = [
-            e for e in DG.edges if ordering.index(e[0]) &gt; ordering.index(e[1])
+            e for e in g.edges if ordering.index(e[0]) &gt; ordering.index(e[1])
         ]
         feedback_edges = [
-            (u, v) for u, v in feedback_edges if u in nx.descendants(DG, v)
+            (u, v) for u, v in feedback_edges if u in nx.descendants(g, v)
         ]
 
-        DGC = DG.copy()
-        DGC.remove_edges_from(feedback_edges)
+        g_copy = g.copy()
+        g_copy.remove_edges_from(feedback_edges)
         try:
-            if nx.find_cycle(DGC):
+            if nx.find_cycle(g_copy):
                 raise ValueError(&#34;approx_min_fas has failed&#34;)
         except nx.NetworkXNoCycle:
             pass
@@ -1138,7 +1247,7 @@ def supergates(c):
         return feedback_edges
 
     # find feedback nodes
-    feedback = set([e[0] for e in approx_min_fas(c.graph)])
+    feedback = {e[0] for e in approx_min_fas(c.graph)}
 
     # get startpoints
     sp = c.startpoints()
@@ -1184,7 +1293,7 @@ def supergates(c):
 <span>def <span class="ident">limit_fanin</span></span>(<span>c, k)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Reduces the maximum fanin of circuit gates to k.</p>
+<div class="desc"><p>Reduce the maximum fanin of circuit gates to k.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1203,7 +1312,7 @@ def supergates(c):
 </summary>
 <pre><code class="python">def limit_fanin(c, k):
     &#34;&#34;&#34;
-    Reduces the maximum fanin of circuit gates to k.
+    Reduce the maximum fanin of circuit gates to k.
 
     Parameters
     ----------
@@ -1216,9 +1325,10 @@ def supergates(c):
     -------
     Circuit
             Output circuit.
+
     &#34;&#34;&#34;
     if k &lt; 2:
-        raise ValueError(f&#34;maximum fanin, k, must be &gt; 2&#34;)
+        raise ValueError(&#34;maximum fanin, k, must be &gt; 2&#34;)
 
     gatemap = {
         &#34;and&#34;: &#34;and&#34;,
@@ -1253,7 +1363,7 @@ def supergates(c):
 <span>def <span class="ident">miter</span></span>(<span>c0, c1=None, startpoints=None, endpoints=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a miter circuit.</p>
+<div class="desc"><p>Create a miter circuit.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c0</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1276,7 +1386,7 @@ def supergates(c):
 </summary>
 <pre><code class="python">def miter(c0, c1=None, startpoints=None, endpoints=None):
     &#34;&#34;&#34;
-    Creates a miter circuit.
+    Create a miter circuit.
 
     Parameters
     ----------
@@ -1293,6 +1403,7 @@ def supergates(c):
     -------
     Circuit
             Miter circuit.
+
     &#34;&#34;&#34;
     # check for blackboxes
     if c0.blackboxes:
@@ -1318,7 +1429,7 @@ def supergates(c):
         m.add(n, &#34;input&#34;, fanout=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;])
 
     # compare outputs
-    m.add(&#34;sat&#34;, &#34;or&#34;, output=True)
+    m.add(&#34;sat&#34;, &#34;or&#34; if len(endpoints) &gt; 1 else &#34;buf&#34;, output=True)
     for n in endpoints:
         m.add(f&#34;dif_{n}&#34;, &#34;xor&#34;, fanin=[f&#34;c0_{n}&#34;, f&#34;c1_{n}&#34;], fanout=&#34;sat&#34;)
 
@@ -1329,7 +1440,7 @@ def supergates(c):
 <span>def <span class="ident">relabel</span></span>(<span>c, mapping)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Builds copy with relabeled nodes.</p>
+<div class="desc"><p>Build copy of circuit with relabeled nodes.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1348,7 +1459,7 @@ def supergates(c):
 </summary>
 <pre><code class="python">def relabel(c, mapping):
     &#34;&#34;&#34;
-    Builds copy with relabeled nodes.
+    Build copy of circuit with relabeled nodes.
 
     Parameters
     ----------
@@ -1361,6 +1472,7 @@ def supergates(c):
     -------
     Circuit
             Circuit with removed blackboxes.
+
     &#34;&#34;&#34;
     g = nx.relabel_nodes(c.graph, mapping)
     return cg.Circuit(graph=g, name=c.name, blackboxes=c.blackboxes.copy())</code></pre>
@@ -1370,12 +1482,13 @@ def supergates(c):
 <span>def <span class="ident">sensitivity_transform</span></span>(<span>c, n)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a circuit to compute sensitivity by creating a miter circuit for each input
-'i' with the fanin cone of <code>n</code> where the second circuit has 'i' inverted, so that
-the miter output is high when <code>n</code> is sensitive to 'i'. The uninverted circuit is
-shared across all miters and the outputs of the miters are fed into a population
-count circuit so that the output of the population count circuit gives the
-sensitivity of <code>n</code> for a given input pattern.</p>
+<div class="desc"><p>Create a circuit to compute sensitivity.</p>
+<p>Creatie a miter circuit for each input 'i' with the fanin cone of <code>n</code>
+where the second circuit has 'i' inverted, so that the miter output is
+high when <code>n</code> is sensitive to 'i'. The uninverted circuit is shared
+across all miters and the outputs of the miters are fed into a
+population count circuit so that the output of the population count
+circuit gives the sensitivity of <code>n</code> for a given input pattern.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1394,12 +1507,14 @@ sensitivity of <code>n</code> for a given input pattern.</p>
 </summary>
 <pre><code class="python">def sensitivity_transform(c, n):
     &#34;&#34;&#34;
-    Creates a circuit to compute sensitivity by creating a miter circuit for each input
-    &#39;i&#39; with the fanin cone of `n` where the second circuit has &#39;i&#39; inverted, so that
-    the miter output is high when `n` is sensitive to &#39;i&#39;. The uninverted circuit is
-    shared across all miters and the outputs of the miters are fed into a population
-    count circuit so that the output of the population count circuit gives the
-    sensitivity of `n` for a given input pattern.
+    Create a circuit to compute sensitivity.
+
+    Creatie a miter circuit for each input &#39;i&#39; with the fanin cone of `n`
+    where the second circuit has &#39;i&#39; inverted, so that the miter output is
+    high when `n` is sensitive to &#39;i&#39;. The uninverted circuit is shared
+    across all miters and the outputs of the miters are fed into a
+    population count circuit so that the output of the population count
+    circuit gives the sensitivity of `n` for a given input pattern.
 
     Parameters
     ----------
@@ -1412,6 +1527,7 @@ sensitivity of <code>n</code> for a given input pattern.</p>
     -------
     Circuit
             Sensitivity circuit.
+
     &#34;&#34;&#34;
     # check for blackboxes
     if c.blackboxes:
@@ -1423,7 +1539,7 @@ sensitivity of <code>n</code> for a given input pattern.</p>
         raise ValueError(f&#34;{n} has no startpoints&#34;)
 
     # get input cone
-    fi_nodes = c.transitive_fanin(n) | set([n])
+    fi_nodes = c.transitive_fanin(n) | {n}
     sub_c = cg.Circuit(graph=c.graph.subgraph(fi_nodes).copy())
 
     # create sensitivity circuit
@@ -1468,8 +1584,8 @@ sensitivity of <code>n</code> for a given input pattern.</p>
 <span>def <span class="ident">sensitization_transform</span></span>(<span>c, n, endpoints=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a circuit to sensitize a node to an endpoint, in the form of a miter
-circuit with that node inverted in one circuit copy.</p>
+<div class="desc"><p>Create a circuit to sensitize a node to an endpoint.</p>
+<p>Create a miter circuit with that node inverted in one circuit copy.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1491,8 +1607,9 @@ can be used for sensitization.</dd>
 </summary>
 <pre><code class="python">def sensitization_transform(c, n, endpoints=None):
     &#34;&#34;&#34;
-    Creates a circuit to sensitize a node to an endpoint, in the form of a miter
-    circuit with that node inverted in one circuit copy.
+    Create a circuit to sensitize a node to an endpoint.
+
+    Create a miter circuit with that node inverted in one circuit copy.
 
     Parameters
     ----------
@@ -1508,10 +1625,11 @@ can be used for sensitization.</dd>
     -------
     Circuit
             Output circuit.
+
     &#34;&#34;&#34;
     # check for blackboxes
     if c.blackboxes:
-        raise ValueError(f&#34;Circuit contains a blackbox&#34;)
+        raise ValueError(&#34;Circuit contains a blackbox&#34;)
 
     if endpoints:
         if isinstance(endpoints, str):
@@ -1524,12 +1642,14 @@ can be used for sensitization.</dd>
         subc = subcircuit(c, endpoints | fi)
         for node in subc:
             subc.set_output(node, node in endpoints)
+        miter_name = f&#34;{c.name}_sensitize_{n}_to_{&#39;_&#39;.join(endpoints)}&#34;
     else:
         subc = c
+        miter_name = f&#34;{c.name}_sensitize_{n}&#34;
 
     # create miter
     m = miter(subc)
-    m.name = f&#34;{c.name}_sensitized_{n}&#34;
+    m.name = miter_name
 
     # flip node in c1
     m.disconnect(m.fanin(f&#34;c1_{n}&#34;), f&#34;c1_{n}&#34;)
@@ -1543,9 +1663,10 @@ can be used for sensitization.</dd>
 <span>def <span class="ident">sequential_unroll</span></span>(<span>c, n, reg_d_port, reg_q_port, ignore_pins=None, add_flop_outputs=False, initial_values=None, remove_unloaded=True, prefix='cg_unroll')</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Unroll a sequential circuit. Provides a higher level API than <code><a title="circuitgraph.tx.unroll" href="#circuitgraph.tx.unroll">unroll()</a></code>
-by accepting a circuit with sequential elements kept as blackboxes.
-Assumes that all blackboxes in the circuit are sequential elements.</p>
+<div class="desc"><p>Unroll a sequential circuit.</p>
+<p>Provides a higher level API than <code><a title="circuitgraph.tx.unroll" href="#circuitgraph.tx.unroll">unroll()</a></code> by accepting a circuit with
+sequential elements kept as blackboxes. Assumes that all blackboxes in
+the circuit are sequential elements.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1593,9 +1714,11 @@ circuit io. The lists are in order of the unroll iterations.</dd>
     prefix=&#34;cg_unroll&#34;,
 ):
     &#34;&#34;&#34;
-    Unroll a sequential circuit. Provides a higher level API than `unroll`
-    by accepting a circuit with sequential elements kept as blackboxes.
-    Assumes that all blackboxes in the circuit are sequential elements.
+    Unroll a sequential circuit.
+
+    Provides a higher level API than `unroll` by accepting a circuit with
+    sequential elements kept as blackboxes. Assumes that all blackboxes in
+    the circuit are sequential elements.
 
     Parameters
     ----------
@@ -1627,6 +1750,7 @@ circuit io. The lists are in order of the unroll iterations.</dd>
     Circuit, dict of str:list of str
             Unrolled circuit and mapping of original circuit io to list of unrolled
             circuit io. The lists are in order of the unroll iterations.
+
     &#34;&#34;&#34;
     cs = strip_blackboxes(c, ignore_pins=ignore_pins)
     blackbox = c.blackboxes[set(c.blackboxes.keys()).pop()]
@@ -1669,7 +1793,7 @@ circuit io. The lists are in order of the unroll iterations.</dd>
 <span>def <span class="ident">strip_blackboxes</span></span>(<span>c, ignore_pins=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Converts blackboxes to io.</p>
+<div class="desc"><p>Convert blackboxes to io.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1688,7 +1812,7 @@ circuit io. The lists are in order of the unroll iterations.</dd>
 </summary>
 <pre><code class="python">def strip_blackboxes(c, ignore_pins=None):
     &#34;&#34;&#34;
-    Converts blackboxes to io.
+    Convert blackboxes to io.
 
     Parameters
     ----------
@@ -1701,6 +1825,7 @@ circuit io. The lists are in order of the unroll iterations.</dd>
     -------
     Circuit
             Circuit with removed blackboxes.
+
     &#34;&#34;&#34;
     if not ignore_pins:
         ignore_pins = []
@@ -1736,8 +1861,7 @@ circuit io. The lists are in order of the unroll iterations.</dd>
 <span>def <span class="ident">strip_inputs</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Converts inputs to buffers for easy
-instantiation.</p>
+<div class="desc"><p>Convert inputs to buffers for easy instantiation.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1754,8 +1878,7 @@ instantiation.</p>
 </summary>
 <pre><code class="python">def strip_inputs(c):
     &#34;&#34;&#34;
-    Converts inputs to buffers for easy
-    instantiation.
+    Convert inputs to buffers for easy instantiation.
 
     Parameters
     ----------
@@ -1766,6 +1889,7 @@ instantiation.</p>
     -------
     Circuit
             Circuit with removed io.
+
     &#34;&#34;&#34;
     g = c.graph.copy()
     for i in c.inputs():
@@ -1778,8 +1902,7 @@ instantiation.</p>
 <span>def <span class="ident">strip_io</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Removes circuit's outputs and converts inputs to buffers for easy
-instantiation.</p>
+<div class="desc"><p>Remove a circuit's outputs and convert inputs to buffers.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1796,8 +1919,7 @@ instantiation.</p>
 </summary>
 <pre><code class="python">def strip_io(c):
     &#34;&#34;&#34;
-    Removes circuit&#39;s outputs and converts inputs to buffers for easy
-    instantiation.
+    Remove a circuit&#39;s outputs and convert inputs to buffers.
 
     Parameters
     ----------
@@ -1808,6 +1930,7 @@ instantiation.</p>
     -------
     Circuit
             Circuit with removed io.
+
     &#34;&#34;&#34;
     g = c.graph.copy()
     for i in c.inputs():
@@ -1822,8 +1945,7 @@ instantiation.</p>
 <span>def <span class="ident">strip_outputs</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Removes a circuit's outputs for easy
-instantiation.</p>
+<div class="desc"><p>Remove a circuit's outputs for easy instantiation.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -1840,8 +1962,7 @@ instantiation.</p>
 </summary>
 <pre><code class="python">def strip_outputs(c):
     &#34;&#34;&#34;
-    Removes a circuit&#39;s outputs for easy
-    instantiation.
+    Remove a circuit&#39;s outputs for easy instantiation.
 
     Parameters
     ----------
@@ -1852,6 +1973,7 @@ instantiation.</p>
     -------
     Circuit
             Circuit with removed io.
+
     &#34;&#34;&#34;
     g = c.graph.copy()
     for o in c.outputs():
@@ -1861,16 +1983,19 @@ instantiation.</p>
 </details>
 </dd>
 <dt id="circuitgraph.tx.subcircuit"><code class="name flex">
-<span>def <span class="ident">subcircuit</span></span>(<span>c, nodes)</span>
+<span>def <span class="ident">subcircuit</span></span>(<span>c, nodes, modify_io=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a subcircuit from a set of nodes of a given circuit.</p>
+<div class="desc"><p>Create a subcircuit from a set of nodes of a given circuit.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>The circuit to create a subcircuit from.</dd>
 <dt><strong><code>nodes</code></strong> :&ensp;<code>list</code> of <code>str</code></dt>
 <dd>The nodes to include in the subcircuit.</dd>
+<dt><strong><code>modify_io</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, gates without drivers will be turned into inputs and gates without
+fanout will be marked as outputs.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1881,9 +2006,9 @@ instantiation.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def subcircuit(c, nodes):
+<pre><code class="python">def subcircuit(c, nodes, modify_io=False):
     &#34;&#34;&#34;
-    Creates a subcircuit from a set of nodes of a given circuit.
+    Create a subcircuit from a set of nodes of a given circuit.
 
     Parameters
     ----------
@@ -1891,127 +2016,193 @@ instantiation.</p>
             The circuit to create a subcircuit from.
     nodes: list of str
             The nodes to include in the subcircuit.
+    modify_io: bool
+            If True, gates without drivers will be turned into inputs and gates without
+            fanout will be marked as outputs.
 
     Returns
     -------
     Circuit
             The subcircuit.
+
     &#34;&#34;&#34;
     sc = cg.Circuit()
     for node in nodes:
         if c.type(node) in [&#34;bb_output&#34;, &#34;bb_input&#34;]:
             raise NotImplementedError(&#34;Cannot create a subcircuit with blackboxes&#34;)
-        sc.add(node, type=c.type(node), output=c.is_output(node))
+        sc.add(node, c.type(node), output=c.is_output(node))
     for edge in c.edges():
         if edge[0] in nodes and edge[1] in nodes:
             sc.connect(edge[0], edge[1])
+    if modify_io:
+        for node in sc:
+            if sc.type(node) not in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;] and not sc.fanin(node):
+                sc.set_type(node, &#34;input&#34;)
+            if not sc.fanout(node):
+                sc.set_output(node)
     return sc</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tx.supergates"><code class="name flex">
-<span>def <span class="ident">supergates</span></span>(<span>c)</span>
+<span>def <span class="ident">supergates</span></span>(<span>c, construct_supercircuit=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Calculate the supergates of a circuit. That is, find the
-maximal covering of minimal subcircuits with logically
-independent inputs. This is done on a per-output basis.</p>
-<p>For more information, see
-Seth, Sharad C., and Vishwani D. Agrawal. "A new model for computation
-of probabilistic testability in combinational circuits." Integration 7.1
+<div class="desc"><p>Break the circuit up into supergates.</p>
+<p>Calculate the minimal covering of all circuit nodes with maximal supergates
+of a circuit. For more information, see
+Sharad C. Seth and Vishwani D. Agrawal. "A new model for computation of
+probabilistic testability in combinational circuits." Integration 7.1
 (1989): 49-75.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>The circuit to compute supergates for</dd>
+<dt><strong><code>construct_supercircuit</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, a circuit connecting together the supergates as black boxes
+will be formed. Currently this only works if <code>c</code> has only one output.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>dict</code> of <code>str to list</code> of <code>Circuit, dict</code> of <code>str to networkx.DiGraph</code></dt>
-<dd>The supergates per each output, as Circuit objects,
-and the connections between supergates per each output,
-as a networkx.Digraph object.</dd>
+<dt><code>list</code> of <code>Circuit</code> or <code>(Circuit, dict</code> of <code>str:Circuit)</code></dt>
+<dd>If <code>construct_supercircuit</code> is <code>False</code>, the supergate circuits,
+topologically sorted. Otherwise, the supercircuit and a dict
+mapping blackbox names to corresponding supergates.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def supergates(c):
+<pre><code class="python">def supergates(c, construct_supercircuit=False):
     &#34;&#34;&#34;
-    Calculate the supergates of a circuit. That is, find the
-    maximal covering of minimal subcircuits with logically
-    independent inputs. This is done on a per-output basis.
+    Break the circuit up into supergates.
 
-    For more information, see
-    Seth, Sharad C., and Vishwani D. Agrawal. &#34;A new model for computation
-    of probabilistic testability in combinational circuits.&#34; Integration 7.1
+    Calculate the minimal covering of all circuit nodes with maximal supergates
+    of a circuit. For more information, see
+    Sharad C. Seth and Vishwani D. Agrawal. &#34;A new model for computation of
+    probabilistic testability in combinational circuits.&#34; Integration 7.1
     (1989): 49-75.
 
     Parameters
     ----------
     c: Circuit
             The circuit to compute supergates for
+    construct_supercircuit: bool
+            If True, a circuit connecting together the supergates as black boxes
+            will be formed. Currently this only works if `c` has only one output.
 
     Returns
     -------
-    dict of str to list of Circuit, dict of str to networkx.DiGraph
-            The supergates per each output, as Circuit objects,
-            and the connections between supergates per each output,
-            as a networkx.Digraph object.
+    list of Circuit or (Circuit, dict of str:Circuit)
+            If `construct_supercircuit` is `False`, the supergate circuits,
+            topologically sorted. Otherwise, the supercircuit and a dict
+            mapping blackbox names to corresponding supergates.
+
     &#34;&#34;&#34;
-    scs_per_output = dict()
-    g_per_output = dict()
+    if construct_supercircuit and len(c.outputs()) &gt; 1:
+        raise ValueError(
+            &#34;Can only use `construct_supercircuit` one a single-output circuit&#34;
+        )
+    # The current algorithm seems to fail for some circuits (like c880) with gates with
+    # fanin greater than 2. At the moment not sure if this is a bug in the
+    # implementation or expected behavior
+    c = limit_fanin(c, 2)
+    supergate_circuits = set()
     for output in c.outputs():
-        co = subcircuit(c, c.transitive_fanin(output) | {output})
-        G = co.graph.copy()
+        c_output = subcircuit(c, c.transitive_fanin(output) | {output})
+        c_output.set_output(c_output.outputs(), False)
+        c_output.set_output(output, True)
+
+        g = c_output.graph.copy()
+
+        # Add backwards edge for every forward edge not connected to an output
         rm_edges = []
-        for u, v in G.edges:
-            G.add_edge(v, u)
+        for u, v in g.edges:
+            g.add_edge(v, u)
             if v == output:
                 rm_edges.append((u, v))
-
         for u, v in rm_edges:
-            G.remove_edge(u, v)
+            g.remove_edge(u, v)
 
-        doms = nx.immediate_dominators(G, output)
+        # Get dominator tree
+        doms = nx.immediate_dominators(g, output)
         dom_tree = defaultdict(set)
         for k, v in doms.items():
             dom_tree[v].add(k)
 
+        # Build supergates starting at the output
         dom_tree[output].remove(output)
-
         frontier = Queue()
         frontier.put(output)
-        scs = []
-
-        super_G = nx.DiGraph()
-        super_G.add_node(output)
-
         while not frontier.empty():
+            # Build the supergate for this node
             node = frontier.get()
-            sg = {node}
+            supergate = {node}
+            # Include children and single successors
             fanins = Queue()
             for fi in dom_tree[node]:
                 fanins.put(fi)
             while not fanins.empty():
                 fi = fanins.get()
-                sg.add(fi)
+                supergate.add(fi)
                 if len(dom_tree[fi]) &gt; 1:
                     frontier.put(fi)
-                    super_G.add_node(fi)
-                    super_G.add_edge(fi, node)
                 elif len(dom_tree[fi]) == 1:
                     fanins.put(dom_tree[fi].pop())
-            scs.append(subcircuit(co, sg))
-        scs_per_output[output] = scs
-        g_per_output[output] = super_G
-    return scs_per_output, g_per_output</code></pre>
+            supergate_circuit = subcircuit(c_output, supergate, modify_io=True)
+            supergate_circuit.set_output(node, True)
+            supergate_circuits.add(supergate_circuit)
+
+    # Find minimal covering of supergates indexed by the output
+    minimal_supergate_circuits = {}
+    for supergate in supergate_circuits:
+        remaining_cover = reduce(
+            lambda a, b: a | b,
+            (s.nodes() - s.inputs() for s in supergate_circuits - {supergate}),
+            set(),
+        )
+        if supergate.nodes() - remaining_cover:
+            minimal_supergate_circuits[supergate.outputs().pop()] = supergate
+
+    if construct_supercircuit:
+        superc = cg.Circuit(f&#34;{c.name}_supergates&#34;)
+        for i in c.inputs():
+            superc.add(i, &#34;input&#34;)
+        for o in c.outputs():
+            superc.add(o, &#34;buf&#34;, output=True)
+
+        supergate_map = {}
+        for output, supergate in minimal_supergate_circuits.items():
+            sg_name = f&#34;sg_{output}&#34;
+            supergate_map[sg_name] = supergate
+            bb = cg.BlackBox(name=sg_name, inputs=supergate.inputs(), outputs={output})
+            for n in supergate.io():
+                if n not in superc:
+                    superc.add(n, &#34;buf&#34;)
+            superc.add_blackbox(bb, sg_name, {i: i for i in supergate.io()})
+
+        return superc, supergate_map
+
+    # Find topological ordering of supergates
+    g = nx.DiGraph()
+    for output, supergate in minimal_supergate_circuits.items():
+        g.add_node(output)
+        for i in supergate.inputs() - c.inputs():
+            for other_output in set(minimal_supergate_circuits) - {output}:
+                other_supergate = minimal_supergate_circuits[other_output]
+                if i in other_supergate.nodes() - other_supergate.inputs():
+                    g.add_edge(other_output, output)
+
+    sorted_supergate_circuits = []
+    for node in nx.topological_sort(g):
+        sorted_supergate_circuits.append(minimal_supergate_circuits[node])
+    return sorted_supergate_circuits</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.tx.syn"><code class="name flex">
 <span>def <span class="ident">syn</span></span>(<span>c, engine='yosys', suppress_output=False, stdout_file=None, stderr_file=None, working_dir='.', fast_parsing=False, pre_syn_file=None, post_syn_file=None, verilog_exists=False, effort='high')</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Synthesizes the circuit using yosys or genus.</p>
+<div class="desc"><p>Synthesize the circuit using a third-party synthesis tool.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -2069,7 +2260,7 @@ already present in <code>pre_syn_file</code>.</dd>
     effort=&#34;high&#34;,
 ):
     &#34;&#34;&#34;
-    Synthesizes the circuit using yosys or genus.
+    Synthesize the circuit using a third-party synthesis tool.
 
     Parameters
     ----------
@@ -2109,6 +2300,7 @@ already present in <code>pre_syn_file</code>.</dd>
     -------
     Circuit
             Synthesized circuit.
+
     &#34;&#34;&#34;
     if engine == &#34;yosys&#34; and shutil.which(&#34;yosys&#34;) is None:
         raise OSError(&#34;&#39;yosys&#39; installation not found&#34;)
@@ -2136,7 +2328,7 @@ already present in <code>pre_syn_file</code>.</dd>
     if verilog_exists and not pre_syn_file:
         raise ValueError(&#34;Must specify pre_syn_file if using verilog_exists&#34;)
 
-    with open(pre_syn_file, &#34;r&#34;) if verilog_exists else open(
+    with open(pre_syn_file) if verilog_exists else open(
         pre_syn_file, &#34;w&#34;
     ) if pre_syn_file else NamedTemporaryFile(
         prefix=&#34;circuitgraph_synthesis_input&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
@@ -2151,14 +2343,12 @@ already present in <code>pre_syn_file</code>.</dd>
             if engine == &#34;genus&#34;:
                 try:
                     lib_path = os.environ[&#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH&#34;]
-                except KeyError:
+                except KeyError as e:
                     raise ValueError(
-                        &#34;In order to run synthesis with Genus, &#34;
-                        &#34;please set the &#34;
-                        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH &#34;
-                        &#34;variable in your os environment to the &#34;
-                        &#34;path to the tech library to use&#34;
-                    )
+                        &#34;In order to run synthesis with Genus, please set the &#34;
+                        &#34;CIRCUITGRAPH_GENUS_LIBRARY_PATH variable in your os &#34;
+                        &#34;environment to the path to the tech library to use&#34;
+                    ) from e
                 cmd = [
                     &#34;genus&#34;,
                     &#34;-no_gui&#34;,
@@ -2177,14 +2367,12 @@ already present in <code>pre_syn_file</code>.</dd>
             elif engine == &#34;dc&#34;:
                 try:
                     lib_path = os.environ[&#34;CIRCUITGRAPH_DC_LIBRARY_PATH&#34;]
-                except KeyError:
+                except KeyError as e:
                     raise ValueError(
-                        &#34;In order to run synthesis with DC, &#34;
-                        &#34;please set the &#34;
-                        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH &#34;
-                        &#34;variable in your os environment to the &#34;
-                        &#34;path to the GTECH library&#34;
-                    )
+                        &#34;In order to run synthesis with DC, please set the &#34;
+                        &#34;CIRCUITGRAPH_DC_LIBRARY_PATH variable in your os environment &#34;
+                        &#34;to the path to the GTECH library&#34;
+                    ) from e
                 libname = &#34;GTECH&#34;
                 usable_cells = [f&#34;{libname.lower()}/{libname}_NOT&#34;]
                 for gate in [&#34;OR&#34;, &#34;NOR&#34;, &#34;AND&#34;, &#34;NAND&#34;, &#34;XOR&#34;, &#34;XNOR&#34;]:
@@ -2231,7 +2419,9 @@ already present in <code>pre_syn_file</code>.</dd>
                 stderr = open(stderr_file, &#34;w&#34;)
             else:
                 stderr = None
-            subprocess.run(cmd, stdout=stdout, stderr=stderr, cwd=working_dir)
+            subprocess.run(
+                cmd, stdout=stdout, stderr=stderr, cwd=working_dir, check=True
+            )
             if stdout_file:
                 stdout.close()
             if stderr_file:
@@ -2267,10 +2457,11 @@ already present in <code>pre_syn_file</code>.</dd>
 <span>def <span class="ident">ternary</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Encodes the circuit with ternary values. The ternary circuit adds a second net
-for each net in the original circuit. The second net encodes a don't care,
-or X, value. That net being high corresponds to a don't care value on original net.
-If the second net is low, the logical value on the original net is valid.</p>
+<div class="desc"><p>Encode the circuit with ternary values.</p>
+<p>The ternary circuit adds a second net for each net in the original circuit.
+The second net encodes a don't care, or X, value. That net being high
+corresponds to a don't care value on original net. If the second net is
+low, the logical value on the original net is valid.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -2292,10 +2483,12 @@ net names.</dd>
 </summary>
 <pre><code class="python">def ternary(c):
     &#34;&#34;&#34;
-    Encodes the circuit with ternary values. The ternary circuit adds a second net
-    for each net in the original circuit. The second net encodes a don&#39;t care,
-    or X, value. That net being high corresponds to a don&#39;t care value on original net.
-    If the second net is low, the logical value on the original net is valid.
+    Encode the circuit with ternary values.
+
+    The ternary circuit adds a second net for each net in the original circuit.
+    The second net encodes a don&#39;t care, or X, value. That net being high
+    corresponds to a don&#39;t care value on original net. If the second net is
+    low, the logical value on the original net is valid.
 
     Parameters
     ----------
@@ -2311,6 +2504,7 @@ net names.</dd>
     Circuit, dict of str:str
             Encoded circuit and dictionary mapping original net names to added ternary
             net names.
+
     &#34;&#34;&#34;
     if c.blackboxes:
         raise ValueError(f&#34;{c.name} contains a blackbox&#34;)
@@ -2391,7 +2585,8 @@ net names.</dd>
 <span>def <span class="ident">unroll</span></span>(<span>c, n, state_io, prefix='cg_unroll')</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Unrolls a circuit.</p>
+<div class="desc"><p>Unroll a circuit.</p>
+<p>Create multiple copies of the circuit and connect together state io.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -2416,7 +2611,9 @@ circuit io. The lists are in order of the unroll iterations.</dd>
 </summary>
 <pre><code class="python">def unroll(c, n, state_io, prefix=&#34;cg_unroll&#34;):
     &#34;&#34;&#34;
-    Unrolls a circuit.
+    Unroll a circuit.
+
+    Create multiple copies of the circuit and connect together state io.
 
     Parameters
     ----------
@@ -2435,6 +2632,7 @@ circuit io. The lists are in order of the unroll iterations.</dd>
     Circuit, dict of str:list of str
             Unrolled circuit and mapping of original circuit io to list of unrolled
             circuit io. The lists are in order of the unroll iterations.
+
     &#34;&#34;&#34;
     # check for blackboxes
     if c.blackboxes:
@@ -2491,7 +2689,9 @@ circuit io. The lists are in order of the unroll iterations.</dd>
 </header>
 <h1>Index</h1>
 <div class="toc">
-<ul></ul>
+<ul>
+<li><a href="#examples">Examples</a></li>
+</ul>
 </div>
 <ul id="index">
 <li><h3>Super-module</h3>

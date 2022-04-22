@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.sat API documentation</title>
-<meta name="description" content="Functions for executing SAT, #SAT, and approx-#SAT on circuits" />
+<meta name="description" content="Functions for executing SAT, #SAT, and approx-#SAT on circuits …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
@@ -22,20 +22,68 @@
 <h1 class="title">Module <code>circuitgraph.sat</code></h1>
 </header>
 <section id="section-intro">
-<p>Functions for executing SAT, #SAT, and approx-#SAT on circuits</p>
+<p>Functions for executing SAT, #SAT, and approx-#SAT on circuits.</p>
+<h2 id="examples">Examples</h2>
+<p>Use sat solver to simulate circuit values</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; c.add(&quot;i0&quot;, &quot;input&quot;)
+'i0'
+&gt;&gt;&gt; c.add(&quot;i1&quot;, &quot;input&quot;)
+'i1'
+&gt;&gt;&gt; c.add(&quot;g0&quot;, &quot;and&quot;, fanin=[&quot;i0&quot;, &quot;i1&quot;])
+'g0'
+&gt;&gt;&gt; res = cg.sat.solve(c, assumptions={&quot;i0&quot;: True, &quot;i1&quot;: False})
+&gt;&gt;&gt; res[&quot;g0&quot;]
+False
+</code></pre>
+<p>Setup a miter circuit</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; c1 = cg.from_lib(&quot;c17&quot;)
+&gt;&gt;&gt; c2 = c1.copy()
+&gt;&gt;&gt; m = cg.tx.miter(c1, c2)
+&gt;&gt;&gt; cg.sat.solve(m, assumptions={&quot;sat&quot;: True})
+False
+</code></pre>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">&#34;&#34;&#34;Functions for executing SAT, #SAT, and approx-#SAT on circuits&#34;&#34;&#34;
-import tempfile
+<pre><code class="python">&#34;&#34;&#34;
+Functions for executing SAT, #SAT, and approx-#SAT on circuits.
+
+Examples
+--------
+Use sat solver to simulate circuit values
+
+&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; c.add(&#34;i0&#34;, &#34;input&#34;)
+&#39;i0&#39;
+&gt;&gt;&gt; c.add(&#34;i1&#34;, &#34;input&#34;)
+&#39;i1&#39;
+&gt;&gt;&gt; c.add(&#34;g0&#34;, &#34;and&#34;, fanin=[&#34;i0&#34;, &#34;i1&#34;])
+&#39;g0&#39;
+&gt;&gt;&gt; res = cg.sat.solve(c, assumptions={&#34;i0&#34;: True, &#34;i1&#34;: False})
+&gt;&gt;&gt; res[&#34;g0&#34;]
+False
+
+Setup a miter circuit
+
+&gt;&gt;&gt; c1 = cg.from_lib(&#34;c17&#34;)
+&gt;&gt;&gt; c2 = c1.copy()
+&gt;&gt;&gt; m = cg.tx.miter(c1, c2)
+&gt;&gt;&gt; cg.sat.solve(m, assumptions={&#34;sat&#34;: True})
+False
+
+&#34;&#34;&#34;
 import re
-import code
-import subprocess
 import shutil
+import subprocess
+import tempfile
 
 
 def add_assumptions(formula, variables, assumptions):
+    &#34;&#34;&#34;Add assumptions to a formula.&#34;&#34;&#34;
     for n, val in assumptions.items():
         if val:
             formula.append([variables.id(n)])
@@ -44,18 +92,19 @@ def add_assumptions(formula, variables, assumptions):
 
 
 def remap(clauses, offset):
+    &#34;&#34;&#34;Remap clauses of a formula.&#34;&#34;&#34;
     new_clauses = [[v + offset if v &gt; 0 else v - offset for v in c] for c in clauses]
     return new_clauses
 
 
 def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
     &#34;&#34;&#34;
-    Constructs a SAT solver instance with the given circuit and assumptions.
+    Construct a SAT solver instance with the given circuit and assumptions.
 
     Parameters
     ----------
     c : Circuit
-            circuit to encode.
+            Circuit to encode.
     assumptions : dict of str:int
             Assumptions to add to solver.
 
@@ -64,12 +113,15 @@ def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
     solver : pysat.Cadical
             SAT solver instance.
     variables : pysat.IDPool
-            solver variable mapping.
+            Solver variable mapping.
+
     &#34;&#34;&#34;
     try:
         from pysat.solvers import Cadical, Glucose4, Lingeling
-    except ImportError:
-        raise ImportError(&#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;)
+    except ImportError as e:
+        raise ImportError(
+            &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
+        ) from e
 
     formula, variables = cnf(c)
     if assumptions:
@@ -91,61 +143,70 @@ def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
 
 def cnf(c):
     &#34;&#34;&#34;
-    Converts circuit to CNF using the Tseitin transformation.
+    Convert circuit to CNF using the Tseitin transformation.
 
     Parameters
     ----------
     c : Circuit
-            circuit to transform.
+            Circuit to transform.
 
     Returns
     -------
     variables : pysat.IDPool
-            formula variable mapping.
+            Formula variable mapping.
     formula : pysat.CNF
             CNF formula.
+
     &#34;&#34;&#34;
     try:
         from pysat.formula import CNF, IDPool
-    except ImportError:
-        raise ImportError(&#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;)
+    except ImportError as e:
+        raise ImportError(
+            &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
+        ) from e
     variables = IDPool()
     formula = CNF()
 
     for n in c.nodes():
         variables.id(n)
-        if c.type(n) == &#34;and&#34;:
+        n_type = c.type(n)
+        if n_type in [&#34;and&#34;, &#34;or&#34;, &#34;xor&#34;] and len(c.fanin(n)) == 1:
+            n_type = &#34;buf&#34;
+        elif n_type in [&#34;nand&#34;, &#34;nor&#34;, &#34;xnor&#34;] and len(c.fanin(n)) == 1:
+            n_type = &#34;not&#34;
+
+        if n_type == &#34;and&#34;:
             for f in c.fanin(n):
                 formula.append([-variables.id(n), variables.id(f)])
             formula.append([variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == &#34;nand&#34;:
+        elif n_type == &#34;nand&#34;:
             for f in c.fanin(n):
                 formula.append([variables.id(n), variables.id(f)])
             formula.append([-variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == &#34;or&#34;:
+        elif n_type == &#34;or&#34;:
             for f in c.fanin(n):
                 formula.append([variables.id(n), -variables.id(f)])
             formula.append([-variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == &#34;nor&#34;:
+        elif n_type == &#34;nor&#34;:
             for f in c.fanin(n):
                 formula.append([-variables.id(n), -variables.id(f)])
             formula.append([variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == &#34;not&#34;:
+        elif n_type == &#34;not&#34;:
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), variables.id(f)])
                 formula.append([-variables.id(n), -variables.id(f)])
-        elif c.type(n) in [&#34;buf&#34;, &#34;bb_input&#34;]:
+        elif n_type in [&#34;buf&#34;, &#34;bb_input&#34;]:
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), -variables.id(f)])
                 formula.append([-variables.id(n), variables.id(f)])
-        elif c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;]:
+        elif n_type in [&#34;xor&#34;, &#34;xnor&#34;]:
             # break into hierarchical xors
             nets = list(c.fanin(n))
 
             # xor gen
-            def xorClauses(a, b, c):
+            def xor_clauses(a, b, c):
                 formula.append([-variables.id(c), -variables.id(b), -variables.id(a)])
                 formula.append([-variables.id(c), variables.id(b), variables.id(a)])
                 formula.append([variables.id(c), -variables.id(b), variables.id(a)])
@@ -157,7 +218,7 @@ def cnf(c):
                 variables.id(new_net)
 
                 # add sub xors
-                xorClauses(nets[-2], nets[-1], new_net)
+                xor_clauses(nets[-2], nets[-1], new_net)
 
                 # remove last 2 nets
                 nets = nets[:-2]
@@ -166,29 +227,29 @@ def cnf(c):
                 nets.insert(0, new_net)
 
             # add final xor
-            if c.type(n) == &#34;xor&#34;:
-                xorClauses(nets[-2], nets[-1], n)
+            if n_type == &#34;xor&#34;:
+                xor_clauses(nets[-2], nets[-1], n)
             else:
                 # invert xor
                 variables.id(f&#34;xor_inv_{n}&#34;)
-                xorClauses(nets[-2], nets[-1], f&#34;xor_inv_{n}&#34;)
+                xor_clauses(nets[-2], nets[-1], f&#34;xor_inv_{n}&#34;)
                 formula.append([variables.id(n), variables.id(f&#34;xor_inv_{n}&#34;)])
                 formula.append([-variables.id(n), -variables.id(f&#34;xor_inv_{n}&#34;)])
-        elif c.type(n) == &#34;0&#34;:
+        elif n_type == &#34;0&#34;:
             formula.append([-variables.id(n)])
-        elif c.type(n) == &#34;1&#34;:
+        elif n_type == &#34;1&#34;:
             formula.append([variables.id(n)])
-        elif c.type(n) in [&#34;bb_output&#34;, &#34;input&#34;]:
+        elif n_type in [&#34;bb_output&#34;, &#34;input&#34;]:
             formula.append([variables.id(n), -variables.id(n)])
         else:
-            raise ValueError(f&#34;Unknown gate type &#39;{c.type(n)}&#39;&#34;)
+            raise ValueError(f&#34;Unknown gate type &#39;{n_type}&#39;&#34;)
 
     return formula, variables
 
 
 def solve(c, assumptions=None):
     &#34;&#34;&#34;
-    Trys to find satisfying assignment, with optional assumptions.
+    Try to find satisfying assignment with optional assumptions.
 
     Parameters
     ----------
@@ -206,31 +267,30 @@ def solve(c, assumptions=None):
     -------
     &gt;&gt;&gt; import circuitgraph as cg
     &gt;&gt;&gt; c = cg.from_lib(&#39;s27&#39;)
-    &gt;&gt;&gt; cg.sat.solve(c)
-    {&#39;G17&#39;: True, &#39;n_20&#39;: False, &#39;n_12&#39;: True, &#39;n_11&#39;: False,
-     &#39;G0&#39;: True, &#39;n_9&#39;: True, &#39;n_10&#39;: True, &#39;n_7&#39;: False, &#39;n_8&#39;: False,
-     &#39;n_1&#39;: False, &#39;G7&#39;: True, &#39;n_4&#39;: True, &#39;n_5&#39;: True, &#39;n_6&#39;: True,
-     &#39;G2&#39;: False, &#39;n_3&#39;: False, &#39;n_2&#39;: False, &#39;G6&#39;: True, &#39;G3&#39;: True,
-     &#39;n_0&#39;: False, &#39;G1&#39;: True, &#39;G5&#39;: True, &#39;n_21&#39;: False, &#39;d[G5]&#39;: True,
-     &#39;r[G5]&#39;: True, &#39;clk[G5]&#39;: True, &#39;clk&#39;: True, &#39;d[G6]&#39;: False,
-     &#39;r[G6]&#39;: True, &#39;clk[G6]&#39;: True, &#39;d[G7]&#39;: True, &#39;r[G7]&#39;: True,
-     &#39;clk[G7]&#39;: True, &#39;output[G17]&#39;: True}
     &gt;&gt;&gt; cg.sat.solve(c, assumptions={&#39;G17&#39;: True, &#39;n_20&#39;: True, &#39;G6&#39;: False})
     False
+
     &#34;&#34;&#34;
     solver, variables = construct_solver(c, assumptions)
     if solver.solve():
         model = solver.get_model()
         return {n: model[variables.id(n) - 1] &gt; 0 for n in c.nodes()}
-    else:
-        return False
+    return False
 
 
 def approx_model_count(
-    c, assumptions=None, startpoints=None, e=0.9, d=0.1, log_file=None
+    c,
+    assumptions=None,
+    startpoints=None,
+    e=None,
+    d=None,
+    seed=None,
+    detach_xor=True,
+    use_xor_clauses=False,
+    log_file=None,
 ):
     &#34;&#34;&#34;
-    Approximates the number of solutions to circuit.
+    Approximate the number of solutions to circuit.
 
     Parameters
     ----------
@@ -241,9 +301,16 @@ def approx_model_count(
     startpoints : iter of str
             Startpoints to use for approxmc.
     e : float (&gt;0)
-            epsilon of approxmc,
+            epsilon of approxmc.
     d : float (0-1)
             delta of approxmc.
+    seed: int
+            Seed for approxmc.
+    detach_xor: bool
+            Detatch xor arg for approxmc.
+    use_xor_clauses: bool
+            If True, parity gates are added as clauses directly using the extended
+            DIMACS format supported by approxmc with xor clauses.
     log_file: str
             If specified, approxmc output will be written to this file.
 
@@ -251,8 +318,16 @@ def approx_model_count(
     -------
     int
             Estimate.
+
     &#34;&#34;&#34;
-    if shutil.which(&#34;approxmc&#34;) == None:
+    try:
+        from pysat.formula import IDPool
+    except ImportError as err:
+        raise ImportError(
+            &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
+        ) from err
+
+    if shutil.which(&#34;approxmc&#34;) is None:
         raise OSError(&#34;Install &#39;approxmc&#39; to use &#39;approx_model_count&#39;&#34;)
     if startpoints is None:
         startpoints = c.startpoints()
@@ -268,7 +343,9 @@ def approx_model_count(
     enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in startpoints])
 
     # write dimacs to tmp
-    with tempfile.NamedTemporaryFile(prefix=f&#34;circuitgraph_approxmc_{c.name}_&#34;) as tmp:
+    with tempfile.NamedTemporaryFile(
+        prefix=f&#34;circuitgraph_approxmc_{c.name}_clauses&#34;, mode=&#34;w&#34;
+    ) as tmp:
         clause_str = &#34;\n&#34;.join(
             &#34; &#34;.join(str(v) for v in c) + &#34; 0&#34; for c in formula.clauses
         )
@@ -276,23 +353,72 @@ def approx_model_count(
             f&#34;c ind {enc_inps} 0\np cnf {formula.nv} &#34;
             f&#34;{len(formula.clauses)}\n{clause_str}\n&#34;
         )
-        tmp.write(bytes(dimacs, &#34;ascii&#34;))
+        if use_xor_clauses and c.filter_type([&#34;xor&#34;, &#34;xnor&#34;]):
+            # New pool that doesn&#39;t have added xor variables
+            new_variables = IDPool()
+            old_var_to_new_var = {}
+            for n in c.nodes():
+                old_var_to_new_var[variables.id(n)] = new_variables.id(n)
+            new_dimacs = &#34;&#34;
+            num_clauses = 0
+            # Remove parity clauses
+            for line in dimacs.split(&#34;\n&#34;)[2:]:
+                if line.strip():
+                    clause = [int(i) for i in line.split()[:-1]]
+                    node = variables.obj(abs(clause[0]))
+                    # Only add clauses that start with non-parity nodes
+                    if node in c and c.type(node) not in [&#34;xor&#34;, &#34;xnor&#34;]:
+                        num_clauses += 1
+                        new_clause = []
+                        for var in clause:
+                            if var &gt;= 0:
+                                new_clause.append(old_var_to_new_var[abs(var)])
+                            else:
+                                new_clause.append(-old_var_to_new_var[abs(var)])
+                        new_clause = &#34; &#34;.join(str(v) for v in new_clause) + &#34; 0&#34;
+                        new_dimacs += new_clause + &#34;\n&#34;
+            # Add back in parity clauses using new format
+            for node in c.filter_type([&#34;xor&#34;, &#34;xnor&#34;]):
+                num_clauses += 1
+                fanin_clause = &#34; &#34;.join(str(new_variables.id(n)) for n in c.fanin(node))
+                if c.type(node) == &#34;xor&#34;:
+                    new_dimacs += f&#34;x{new_variables.id(node)} {fanin_clause} 0\n&#34;
+                else:
+                    new_dimacs += f&#34;x{new_variables.id(node)} -{fanin_clause} 0\n&#34;
+            # Add back any assumptions about parity nodes
+            for node, value in assumptions.items():
+                if c.type(node) in [&#34;xor&#34;, &#34;xnor&#34;]:
+                    if value:
+                        new_dimacs += f&#34;{new_variables.id(node)} 0\n&#34;
+                    else:
+                        new_dimacs += f&#34;-{new_variables.id(node)} 0\n&#34;
+            # Add back in header
+            enc_inps = &#34; &#34;.join([str(new_variables.id(n)) for n in startpoints])
+            new_dimacs = (
+                f&#34;c ind {enc_inps} 0\np cnf {len(c)} &#34; f&#34;{num_clauses}\n&#34;
+            ) + new_dimacs
+            dimacs = new_dimacs
+
+        tmp.write(dimacs)
         tmp.flush()
 
         # run approxmc
-        cmd = f&#34;approxmc --epsilon={e} --delta={d} {tmp.name}&#34;.split()
-        if log_file:
-            with open(log_file, &#34;w+&#34;) as f:
-                subprocess.run(
-                    cmd, stdout=f, stderr=f, check=True, universal_newlines=True
-                )
-                f.seek(0)
-                result = f.read()
-        else:
-            result = subprocess.run(
-                cmd, capture_output=True, check=True, universal_newlines=True
-            )
-            result = result.stdout
+        cmd = [&#34;approxmc&#34;]
+        if e:
+            cmd.append(f&#34;--epsilon={e}&#34;)
+        if d:
+            cmd.append(f&#34;--delta={d}&#34;)
+        if seed:
+            cmd.append(f&#34;--seed={seed}&#34;)
+        if not detach_xor:
+            cmd.append(&#34;--detachxor=0&#34;)
+        cmd.append(tmp.name)
+        with open(log_file, &#34;w+&#34;) if log_file else tempfile.NamedTemporaryFile(
+            prefix=f&#34;circuitgraph_approxmc_{c.name}_log&#34;, mode=&#34;w+&#34;
+        ) as f:
+            subprocess.run(cmd, stdout=f, stderr=f, check=True, text=True)
+            f.seek(0)
+            result = f.read()
 
     # parse results
     m = re.search(r&#34;s mc (\d+)&#34;, result)
@@ -303,7 +429,7 @@ def approx_model_count(
 
 def model_count(c, assumptions=None):
     &#34;&#34;&#34;
-    Determines the number of solutions to circuit.
+    Determine the number of solutions to circuit.
 
     Parameters
     ----------
@@ -316,6 +442,7 @@ def model_count(c, assumptions=None):
     -------
     int
             Count.
+
     &#34;&#34;&#34;
     startpoints = c.startpoints()
     solver, variables = construct_solver(c, assumptions)
@@ -339,12 +466,13 @@ def model_count(c, assumptions=None):
 <span>def <span class="ident">add_assumptions</span></span>(<span>formula, variables, assumptions)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Add assumptions to a formula.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def add_assumptions(formula, variables, assumptions):
+    &#34;&#34;&#34;Add assumptions to a formula.&#34;&#34;&#34;
     for n, val in assumptions.items():
         if val:
             formula.append([variables.id(n)])
@@ -353,10 +481,10 @@ def model_count(c, assumptions=None):
 </details>
 </dd>
 <dt id="circuitgraph.sat.approx_model_count"><code class="name flex">
-<span>def <span class="ident">approx_model_count</span></span>(<span>c, assumptions=None, startpoints=None, e=0.9, d=0.1, log_file=None)</span>
+<span>def <span class="ident">approx_model_count</span></span>(<span>c, assumptions=None, startpoints=None, e=None, d=None, seed=None, detach_xor=True, use_xor_clauses=False, log_file=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Approximates the number of solutions to circuit.</p>
+<div class="desc"><p>Approximate the number of solutions to circuit.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -366,9 +494,16 @@ def model_count(c, assumptions=None):
 <dt><strong><code>startpoints</code></strong> :&ensp;<code>iter</code> of <code>str</code></dt>
 <dd>Startpoints to use for approxmc.</dd>
 <dt><strong><code>e</code></strong> :&ensp;<code>float (&gt;0)</code></dt>
-<dd>epsilon of approxmc,</dd>
+<dd>epsilon of approxmc.</dd>
 <dt><strong><code>d</code></strong> :&ensp;<code>float (0-1)</code></dt>
 <dd>delta of approxmc.</dd>
+<dt><strong><code>seed</code></strong> :&ensp;<code>int</code></dt>
+<dd>Seed for approxmc.</dd>
+<dt><strong><code>detach_xor</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Detatch xor arg for approxmc.</dd>
+<dt><strong><code>use_xor_clauses</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, parity gates are added as clauses directly using the extended
+DIMACS format supported by approxmc with xor clauses.</dd>
 <dt><strong><code>log_file</code></strong> :&ensp;<code>str</code></dt>
 <dd>If specified, approxmc output will be written to this file.</dd>
 </dl>
@@ -382,10 +517,18 @@ def model_count(c, assumptions=None):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def approx_model_count(
-    c, assumptions=None, startpoints=None, e=0.9, d=0.1, log_file=None
+    c,
+    assumptions=None,
+    startpoints=None,
+    e=None,
+    d=None,
+    seed=None,
+    detach_xor=True,
+    use_xor_clauses=False,
+    log_file=None,
 ):
     &#34;&#34;&#34;
-    Approximates the number of solutions to circuit.
+    Approximate the number of solutions to circuit.
 
     Parameters
     ----------
@@ -396,9 +539,16 @@ def model_count(c, assumptions=None):
     startpoints : iter of str
             Startpoints to use for approxmc.
     e : float (&gt;0)
-            epsilon of approxmc,
+            epsilon of approxmc.
     d : float (0-1)
             delta of approxmc.
+    seed: int
+            Seed for approxmc.
+    detach_xor: bool
+            Detatch xor arg for approxmc.
+    use_xor_clauses: bool
+            If True, parity gates are added as clauses directly using the extended
+            DIMACS format supported by approxmc with xor clauses.
     log_file: str
             If specified, approxmc output will be written to this file.
 
@@ -406,8 +556,16 @@ def model_count(c, assumptions=None):
     -------
     int
             Estimate.
+
     &#34;&#34;&#34;
-    if shutil.which(&#34;approxmc&#34;) == None:
+    try:
+        from pysat.formula import IDPool
+    except ImportError as err:
+        raise ImportError(
+            &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
+        ) from err
+
+    if shutil.which(&#34;approxmc&#34;) is None:
         raise OSError(&#34;Install &#39;approxmc&#39; to use &#39;approx_model_count&#39;&#34;)
     if startpoints is None:
         startpoints = c.startpoints()
@@ -423,7 +581,9 @@ def model_count(c, assumptions=None):
     enc_inps = &#34; &#34;.join([str(variables.id(n)) for n in startpoints])
 
     # write dimacs to tmp
-    with tempfile.NamedTemporaryFile(prefix=f&#34;circuitgraph_approxmc_{c.name}_&#34;) as tmp:
+    with tempfile.NamedTemporaryFile(
+        prefix=f&#34;circuitgraph_approxmc_{c.name}_clauses&#34;, mode=&#34;w&#34;
+    ) as tmp:
         clause_str = &#34;\n&#34;.join(
             &#34; &#34;.join(str(v) for v in c) + &#34; 0&#34; for c in formula.clauses
         )
@@ -431,23 +591,72 @@ def model_count(c, assumptions=None):
             f&#34;c ind {enc_inps} 0\np cnf {formula.nv} &#34;
             f&#34;{len(formula.clauses)}\n{clause_str}\n&#34;
         )
-        tmp.write(bytes(dimacs, &#34;ascii&#34;))
+        if use_xor_clauses and c.filter_type([&#34;xor&#34;, &#34;xnor&#34;]):
+            # New pool that doesn&#39;t have added xor variables
+            new_variables = IDPool()
+            old_var_to_new_var = {}
+            for n in c.nodes():
+                old_var_to_new_var[variables.id(n)] = new_variables.id(n)
+            new_dimacs = &#34;&#34;
+            num_clauses = 0
+            # Remove parity clauses
+            for line in dimacs.split(&#34;\n&#34;)[2:]:
+                if line.strip():
+                    clause = [int(i) for i in line.split()[:-1]]
+                    node = variables.obj(abs(clause[0]))
+                    # Only add clauses that start with non-parity nodes
+                    if node in c and c.type(node) not in [&#34;xor&#34;, &#34;xnor&#34;]:
+                        num_clauses += 1
+                        new_clause = []
+                        for var in clause:
+                            if var &gt;= 0:
+                                new_clause.append(old_var_to_new_var[abs(var)])
+                            else:
+                                new_clause.append(-old_var_to_new_var[abs(var)])
+                        new_clause = &#34; &#34;.join(str(v) for v in new_clause) + &#34; 0&#34;
+                        new_dimacs += new_clause + &#34;\n&#34;
+            # Add back in parity clauses using new format
+            for node in c.filter_type([&#34;xor&#34;, &#34;xnor&#34;]):
+                num_clauses += 1
+                fanin_clause = &#34; &#34;.join(str(new_variables.id(n)) for n in c.fanin(node))
+                if c.type(node) == &#34;xor&#34;:
+                    new_dimacs += f&#34;x{new_variables.id(node)} {fanin_clause} 0\n&#34;
+                else:
+                    new_dimacs += f&#34;x{new_variables.id(node)} -{fanin_clause} 0\n&#34;
+            # Add back any assumptions about parity nodes
+            for node, value in assumptions.items():
+                if c.type(node) in [&#34;xor&#34;, &#34;xnor&#34;]:
+                    if value:
+                        new_dimacs += f&#34;{new_variables.id(node)} 0\n&#34;
+                    else:
+                        new_dimacs += f&#34;-{new_variables.id(node)} 0\n&#34;
+            # Add back in header
+            enc_inps = &#34; &#34;.join([str(new_variables.id(n)) for n in startpoints])
+            new_dimacs = (
+                f&#34;c ind {enc_inps} 0\np cnf {len(c)} &#34; f&#34;{num_clauses}\n&#34;
+            ) + new_dimacs
+            dimacs = new_dimacs
+
+        tmp.write(dimacs)
         tmp.flush()
 
         # run approxmc
-        cmd = f&#34;approxmc --epsilon={e} --delta={d} {tmp.name}&#34;.split()
-        if log_file:
-            with open(log_file, &#34;w+&#34;) as f:
-                subprocess.run(
-                    cmd, stdout=f, stderr=f, check=True, universal_newlines=True
-                )
-                f.seek(0)
-                result = f.read()
-        else:
-            result = subprocess.run(
-                cmd, capture_output=True, check=True, universal_newlines=True
-            )
-            result = result.stdout
+        cmd = [&#34;approxmc&#34;]
+        if e:
+            cmd.append(f&#34;--epsilon={e}&#34;)
+        if d:
+            cmd.append(f&#34;--delta={d}&#34;)
+        if seed:
+            cmd.append(f&#34;--seed={seed}&#34;)
+        if not detach_xor:
+            cmd.append(&#34;--detachxor=0&#34;)
+        cmd.append(tmp.name)
+        with open(log_file, &#34;w+&#34;) if log_file else tempfile.NamedTemporaryFile(
+            prefix=f&#34;circuitgraph_approxmc_{c.name}_log&#34;, mode=&#34;w+&#34;
+        ) as f:
+            subprocess.run(cmd, stdout=f, stderr=f, check=True, text=True)
+            f.seek(0)
+            result = f.read()
 
     # parse results
     m = re.search(r&#34;s mc (\d+)&#34;, result)
@@ -460,16 +669,16 @@ def model_count(c, assumptions=None):
 <span>def <span class="ident">cnf</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Converts circuit to CNF using the Tseitin transformation.</p>
+<div class="desc"><p>Convert circuit to CNF using the Tseitin transformation.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>circuit to transform.</dd>
+<dd>Circuit to transform.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><strong><code>variables</code></strong> :&ensp;<code>pysat.IDPool</code></dt>
-<dd>formula variable mapping.</dd>
+<dd>Formula variable mapping.</dd>
 <dt><strong><code>formula</code></strong> :&ensp;<code>pysat.CNF</code></dt>
 <dd>CNF formula.</dd>
 </dl></div>
@@ -479,61 +688,70 @@ def model_count(c, assumptions=None):
 </summary>
 <pre><code class="python">def cnf(c):
     &#34;&#34;&#34;
-    Converts circuit to CNF using the Tseitin transformation.
+    Convert circuit to CNF using the Tseitin transformation.
 
     Parameters
     ----------
     c : Circuit
-            circuit to transform.
+            Circuit to transform.
 
     Returns
     -------
     variables : pysat.IDPool
-            formula variable mapping.
+            Formula variable mapping.
     formula : pysat.CNF
             CNF formula.
+
     &#34;&#34;&#34;
     try:
         from pysat.formula import CNF, IDPool
-    except ImportError:
-        raise ImportError(&#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;)
+    except ImportError as e:
+        raise ImportError(
+            &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
+        ) from e
     variables = IDPool()
     formula = CNF()
 
     for n in c.nodes():
         variables.id(n)
-        if c.type(n) == &#34;and&#34;:
+        n_type = c.type(n)
+        if n_type in [&#34;and&#34;, &#34;or&#34;, &#34;xor&#34;] and len(c.fanin(n)) == 1:
+            n_type = &#34;buf&#34;
+        elif n_type in [&#34;nand&#34;, &#34;nor&#34;, &#34;xnor&#34;] and len(c.fanin(n)) == 1:
+            n_type = &#34;not&#34;
+
+        if n_type == &#34;and&#34;:
             for f in c.fanin(n):
                 formula.append([-variables.id(n), variables.id(f)])
             formula.append([variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == &#34;nand&#34;:
+        elif n_type == &#34;nand&#34;:
             for f in c.fanin(n):
                 formula.append([variables.id(n), variables.id(f)])
             formula.append([-variables.id(n)] + [-variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == &#34;or&#34;:
+        elif n_type == &#34;or&#34;:
             for f in c.fanin(n):
                 formula.append([variables.id(n), -variables.id(f)])
             formula.append([-variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == &#34;nor&#34;:
+        elif n_type == &#34;nor&#34;:
             for f in c.fanin(n):
                 formula.append([-variables.id(n), -variables.id(f)])
             formula.append([variables.id(n)] + [variables.id(f) for f in c.fanin(n)])
-        elif c.type(n) == &#34;not&#34;:
+        elif n_type == &#34;not&#34;:
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), variables.id(f)])
                 formula.append([-variables.id(n), -variables.id(f)])
-        elif c.type(n) in [&#34;buf&#34;, &#34;bb_input&#34;]:
+        elif n_type in [&#34;buf&#34;, &#34;bb_input&#34;]:
             if c.fanin(n):
                 f = c.fanin(n).pop()
                 formula.append([variables.id(n), -variables.id(f)])
                 formula.append([-variables.id(n), variables.id(f)])
-        elif c.type(n) in [&#34;xor&#34;, &#34;xnor&#34;]:
+        elif n_type in [&#34;xor&#34;, &#34;xnor&#34;]:
             # break into hierarchical xors
             nets = list(c.fanin(n))
 
             # xor gen
-            def xorClauses(a, b, c):
+            def xor_clauses(a, b, c):
                 formula.append([-variables.id(c), -variables.id(b), -variables.id(a)])
                 formula.append([-variables.id(c), variables.id(b), variables.id(a)])
                 formula.append([variables.id(c), -variables.id(b), variables.id(a)])
@@ -545,7 +763,7 @@ def model_count(c, assumptions=None):
                 variables.id(new_net)
 
                 # add sub xors
-                xorClauses(nets[-2], nets[-1], new_net)
+                xor_clauses(nets[-2], nets[-1], new_net)
 
                 # remove last 2 nets
                 nets = nets[:-2]
@@ -554,22 +772,22 @@ def model_count(c, assumptions=None):
                 nets.insert(0, new_net)
 
             # add final xor
-            if c.type(n) == &#34;xor&#34;:
-                xorClauses(nets[-2], nets[-1], n)
+            if n_type == &#34;xor&#34;:
+                xor_clauses(nets[-2], nets[-1], n)
             else:
                 # invert xor
                 variables.id(f&#34;xor_inv_{n}&#34;)
-                xorClauses(nets[-2], nets[-1], f&#34;xor_inv_{n}&#34;)
+                xor_clauses(nets[-2], nets[-1], f&#34;xor_inv_{n}&#34;)
                 formula.append([variables.id(n), variables.id(f&#34;xor_inv_{n}&#34;)])
                 formula.append([-variables.id(n), -variables.id(f&#34;xor_inv_{n}&#34;)])
-        elif c.type(n) == &#34;0&#34;:
+        elif n_type == &#34;0&#34;:
             formula.append([-variables.id(n)])
-        elif c.type(n) == &#34;1&#34;:
+        elif n_type == &#34;1&#34;:
             formula.append([variables.id(n)])
-        elif c.type(n) in [&#34;bb_output&#34;, &#34;input&#34;]:
+        elif n_type in [&#34;bb_output&#34;, &#34;input&#34;]:
             formula.append([variables.id(n), -variables.id(n)])
         else:
-            raise ValueError(f&#34;Unknown gate type &#39;{c.type(n)}&#39;&#34;)
+            raise ValueError(f&#34;Unknown gate type &#39;{n_type}&#39;&#34;)
 
     return formula, variables</code></pre>
 </details>
@@ -578,11 +796,11 @@ def model_count(c, assumptions=None):
 <span>def <span class="ident">construct_solver</span></span>(<span>c, assumptions=None, engine='cadical')</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Constructs a SAT solver instance with the given circuit and assumptions.</p>
+<div class="desc"><p>Construct a SAT solver instance with the given circuit and assumptions.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
-<dd>circuit to encode.</dd>
+<dd>Circuit to encode.</dd>
 <dt><strong><code>assumptions</code></strong> :&ensp;<code>dict</code> of <code>str:int</code></dt>
 <dd>Assumptions to add to solver.</dd>
 </dl>
@@ -591,7 +809,7 @@ def model_count(c, assumptions=None):
 <dt><strong><code>solver</code></strong> :&ensp;<code>pysat.Cadical</code></dt>
 <dd>SAT solver instance.</dd>
 <dt><strong><code>variables</code></strong> :&ensp;<code>pysat.IDPool</code></dt>
-<dd>solver variable mapping.</dd>
+<dd>Solver variable mapping.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -599,12 +817,12 @@ def model_count(c, assumptions=None):
 </summary>
 <pre><code class="python">def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
     &#34;&#34;&#34;
-    Constructs a SAT solver instance with the given circuit and assumptions.
+    Construct a SAT solver instance with the given circuit and assumptions.
 
     Parameters
     ----------
     c : Circuit
-            circuit to encode.
+            Circuit to encode.
     assumptions : dict of str:int
             Assumptions to add to solver.
 
@@ -613,12 +831,15 @@ def model_count(c, assumptions=None):
     solver : pysat.Cadical
             SAT solver instance.
     variables : pysat.IDPool
-            solver variable mapping.
+            Solver variable mapping.
+
     &#34;&#34;&#34;
     try:
         from pysat.solvers import Cadical, Glucose4, Lingeling
-    except ImportError:
-        raise ImportError(&#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;)
+    except ImportError as e:
+        raise ImportError(
+            &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
+        ) from e
 
     formula, variables = cnf(c)
     if assumptions:
@@ -642,7 +863,7 @@ def model_count(c, assumptions=None):
 <span>def <span class="ident">model_count</span></span>(<span>c, assumptions=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Determines the number of solutions to circuit.</p>
+<div class="desc"><p>Determine the number of solutions to circuit.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -661,7 +882,7 @@ def model_count(c, assumptions=None):
 </summary>
 <pre><code class="python">def model_count(c, assumptions=None):
     &#34;&#34;&#34;
-    Determines the number of solutions to circuit.
+    Determine the number of solutions to circuit.
 
     Parameters
     ----------
@@ -674,6 +895,7 @@ def model_count(c, assumptions=None):
     -------
     int
             Count.
+
     &#34;&#34;&#34;
     startpoints = c.startpoints()
     solver, variables = construct_solver(c, assumptions)
@@ -690,12 +912,13 @@ def model_count(c, assumptions=None):
 <span>def <span class="ident">remap</span></span>(<span>clauses, offset)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Remap clauses of a formula.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def remap(clauses, offset):
+    &#34;&#34;&#34;Remap clauses of a formula.&#34;&#34;&#34;
     new_clauses = [[v + offset if v &gt; 0 else v - offset for v in c] for c in clauses]
     return new_clauses</code></pre>
 </details>
@@ -704,7 +927,7 @@ def model_count(c, assumptions=None):
 <span>def <span class="ident">solve</span></span>(<span>c, assumptions=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Trys to find satisfying assignment, with optional assumptions.</p>
+<div class="desc"><p>Try to find satisfying assignment with optional assumptions.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -720,15 +943,6 @@ def model_count(c, assumptions=None):
 <h2 id="example">Example</h2>
 <pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
 &gt;&gt;&gt; c = cg.from_lib('s27')
-&gt;&gt;&gt; cg.sat.solve(c)
-{'G17': True, 'n_20': False, 'n_12': True, 'n_11': False,
- 'G0': True, 'n_9': True, 'n_10': True, 'n_7': False, 'n_8': False,
- 'n_1': False, 'G7': True, 'n_4': True, 'n_5': True, 'n_6': True,
- 'G2': False, 'n_3': False, 'n_2': False, 'G6': True, 'G3': True,
- 'n_0': False, 'G1': True, 'G5': True, 'n_21': False, 'd[G5]': True,
- 'r[G5]': True, 'clk[G5]': True, 'clk': True, 'd[G6]': False,
- 'r[G6]': True, 'clk[G6]': True, 'd[G7]': True, 'r[G7]': True,
- 'clk[G7]': True, 'output[G17]': True}
 &gt;&gt;&gt; cg.sat.solve(c, assumptions={'G17': True, 'n_20': True, 'G6': False})
 False
 </code></pre></div>
@@ -738,7 +952,7 @@ False
 </summary>
 <pre><code class="python">def solve(c, assumptions=None):
     &#34;&#34;&#34;
-    Trys to find satisfying assignment, with optional assumptions.
+    Try to find satisfying assignment with optional assumptions.
 
     Parameters
     ----------
@@ -756,24 +970,15 @@ False
     -------
     &gt;&gt;&gt; import circuitgraph as cg
     &gt;&gt;&gt; c = cg.from_lib(&#39;s27&#39;)
-    &gt;&gt;&gt; cg.sat.solve(c)
-    {&#39;G17&#39;: True, &#39;n_20&#39;: False, &#39;n_12&#39;: True, &#39;n_11&#39;: False,
-     &#39;G0&#39;: True, &#39;n_9&#39;: True, &#39;n_10&#39;: True, &#39;n_7&#39;: False, &#39;n_8&#39;: False,
-     &#39;n_1&#39;: False, &#39;G7&#39;: True, &#39;n_4&#39;: True, &#39;n_5&#39;: True, &#39;n_6&#39;: True,
-     &#39;G2&#39;: False, &#39;n_3&#39;: False, &#39;n_2&#39;: False, &#39;G6&#39;: True, &#39;G3&#39;: True,
-     &#39;n_0&#39;: False, &#39;G1&#39;: True, &#39;G5&#39;: True, &#39;n_21&#39;: False, &#39;d[G5]&#39;: True,
-     &#39;r[G5]&#39;: True, &#39;clk[G5]&#39;: True, &#39;clk&#39;: True, &#39;d[G6]&#39;: False,
-     &#39;r[G6]&#39;: True, &#39;clk[G6]&#39;: True, &#39;d[G7]&#39;: True, &#39;r[G7]&#39;: True,
-     &#39;clk[G7]&#39;: True, &#39;output[G17]&#39;: True}
     &gt;&gt;&gt; cg.sat.solve(c, assumptions={&#39;G17&#39;: True, &#39;n_20&#39;: True, &#39;G6&#39;: False})
     False
+
     &#34;&#34;&#34;
     solver, variables = construct_solver(c, assumptions)
     if solver.solve():
         model = solver.get_model()
         return {n: model[variables.id(n) - 1] &gt; 0 for n in c.nodes()}
-    else:
-        return False</code></pre>
+    return False</code></pre>
 </details>
 </dd>
 </dl>
@@ -788,7 +993,9 @@ False
 </header>
 <h1>Index</h1>
 <div class="toc">
-<ul></ul>
+<ul>
+<li><a href="#examples">Examples</a></li>
+</ul>
 </div>
 <ul id="index">
 <li><h3>Super-module</h3>

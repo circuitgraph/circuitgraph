@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.parsing.fast_verilog API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="Utils for parsing verilog with regex …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
@@ -22,27 +22,35 @@
 <h1 class="title">Module <code>circuitgraph.parsing.fast_verilog</code></h1>
 </header>
 <section id="section-intro">
+<p>Utils for parsing verilog with regex.</p>
+<p>Faster than Lark parsing for large netlists, but less safe and more
+restrictive.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import re
-from string import digits
-import random
+<pre><code class="python">&#34;&#34;&#34;
+Utils for parsing verilog with regex.
+
+Faster than Lark parsing for large netlists, but less safe and more
+restrictive.
+
+&#34;&#34;&#34;
+import re
 from collections import defaultdict
 
 import networkx as nx
 
-from circuitgraph import Circuit
-from circuitgraph.parsing import addable_types
+from circuitgraph import Circuit, primitive_gates
 
 
 def fast_parse_verilog_netlist(netlist, blackboxes):
     &#34;&#34;&#34;
-    A fast version of `parse_verilog_netlist` that can speed up parsing on
-    very large netlists by making a handful of assumptions. It is much
-    safer to use `parse_verilog_netlist`. This function should only be used
-    if necessary.
+    Parse a verilog netlist quickly but with some restrictions.
+
+    Can speed up parsing on very large netlists by making a handful of
+    assumptions. It is much safer to use `parse_verilog_netlist`. This
+    function should only be used if necessary.
 
     The input netlist must conform to the following rules:
         - Only one module definition is present
@@ -79,18 +87,19 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             Verilog code.
     blackboxes: seq of BlackBox
             Blackboxes in module.
+
     Returns
     -------
     Circuit
             Parsed circuit.
-    &#34;&#34;&#34;
 
-    regex = f&#34;module\s+(.+?)\s*\(.*?\);&#34;
+    &#34;&#34;&#34;
+    regex = r&#34;module\s+(.+?)\s*\(.*?\);&#34;
     m = re.search(regex, netlist, re.DOTALL)
     name = m.group(1)
     module = netlist[m.end() :]
 
-    regex = f&#34;endmodule&#34;
+    regex = &#34;endmodule&#34;
     m = re.search(regex, netlist, re.DOTALL)
     module = module[: m.start()]
 
@@ -98,9 +107,9 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
     g = nx.DiGraph()
 
     # parse io
-    regex = &#34;(input)\s(.+?);&#34;
+    regex = r&#34;(input)\s(.+?);&#34;
     inputs = set()
-    for net_type, net_str in re.findall(regex, module, re.DOTALL):
+    for _, net_str in re.findall(regex, module, re.DOTALL):
         nets = net_str.split(&#34;,&#34;)
         for net in nets:
             inputs.add(net.strip())
@@ -117,15 +126,15 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
     g.add_node(tie_1, type=&#34;1&#34;)
 
     # parse insts
-    regex = &#34;([a-zA-Z][a-zA-Z\d_]*)\s+([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);&#34;
+    regex = r&#34;([a-zA-Z][a-zA-Z\d_]*)\s+([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);&#34;
 
     all_nets = defaultdict(list)
-    all_edges = list()
-    blackboxes_to_add = dict()
+    all_edges = []
+    blackboxes_to_add = {}
     for gate, inst, net_str in re.findall(regex, module, re.DOTALL):
 
         # parse generics
-        if gate in addable_types:
+        if gate in primitive_gates:
             # parse nets
             nets = [n.strip() for n in net_str.split(&#34;,&#34;)]
 
@@ -139,15 +148,14 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
             # get blackbox definition
             try:
                 bb = next(bb for bb in blackboxes if bb.name == gate)
-            except:
-                raise ValueError(f&#34;blackbox {gate} not defined&#34;)
+            except StopIteration as e:
+                raise ValueError(f&#34;blackbox {gate} not defined&#34;) from e
 
             # parse pins
             all_nets[&#34;bb_input&#34;] += [f&#34;{inst}.{n}&#34; for n in bb.inputs()]
             all_nets[&#34;bb_output&#34;] += [f&#34;{inst}.{n}&#34; for n in bb.outputs()]
 
-            regex = &#34;\.\s*(\S+)\s*\(\s*(\S+)\s*\)&#34;
-            connections = {}
+            regex = r&#34;\.\s*(\S+)\s*\(\s*(\S+)\s*\)&#34;
             for pin, net in re.findall(regex, net_str):
                 # replace constants
                 if net == &#34;1&#39;b1&#34;:
@@ -166,7 +174,7 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
 
             blackboxes_to_add[inst] = bb
 
-    regex = &#34;assign\s+([a-zA-Z][a-zA-Z\d_]*)\s*=\s*([a-zA-Z\d][a-zA-Z\d_&#39;]*)\s*;&#34;
+    regex = r&#34;assign\s+([a-zA-Z][a-zA-Z\d_]*)\s*=\s*([a-zA-Z\d][a-zA-Z\d_&#39;]*)\s*;&#34;
     for n0, n1 in re.findall(regex, module):
         all_nets[&#34;buf&#34;].append(n0)
         if n1 in [&#34;1&#39;b0&#34;, &#34;1&#39;h0&#34;, &#34;1&#39;d0&#34;]:
@@ -180,9 +188,8 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
         g.add_nodes_from(v, type=k, output=False)
     g.add_edges_from(all_edges)
 
-    regex = &#34;(output)\s(.+?);&#34;
-    outputs = set()
-    for net_type, net_str in re.findall(regex, module, re.DOTALL):
+    regex = r&#34;(output)\s(.+?);&#34;
+    for _, net_str in re.findall(regex, module, re.DOTALL):
         nets = net_str.split(&#34;,&#34;)
         for net in nets:
             g.nodes[net.strip()][&#34;output&#34;] = True
@@ -211,10 +218,10 @@ def fast_parse_verilog_netlist(netlist, blackboxes):
 <span>def <span class="ident">fast_parse_verilog_netlist</span></span>(<span>netlist, blackboxes)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>A fast version of <code>parse_verilog_netlist</code> that can speed up parsing on
-very large netlists by making a handful of assumptions. It is much
-safer to use <code>parse_verilog_netlist</code>. This function should only be used
-if necessary.</p>
+<div class="desc"><p>Parse a verilog netlist quickly but with some restrictions.</p>
+<p>Can speed up parsing on very large netlists by making a handful of
+assumptions. It is much safer to use <code>parse_verilog_netlist</code>. This
+function should only be used if necessary.</p>
 <p>The input netlist must conform to the following rules:
 - Only one module definition is present
 - There are no comments
@@ -257,10 +264,11 @@ the circuit.</p>
 </summary>
 <pre><code class="python">def fast_parse_verilog_netlist(netlist, blackboxes):
     &#34;&#34;&#34;
-    A fast version of `parse_verilog_netlist` that can speed up parsing on
-    very large netlists by making a handful of assumptions. It is much
-    safer to use `parse_verilog_netlist`. This function should only be used
-    if necessary.
+    Parse a verilog netlist quickly but with some restrictions.
+
+    Can speed up parsing on very large netlists by making a handful of
+    assumptions. It is much safer to use `parse_verilog_netlist`. This
+    function should only be used if necessary.
 
     The input netlist must conform to the following rules:
         - Only one module definition is present
@@ -297,18 +305,19 @@ the circuit.</p>
             Verilog code.
     blackboxes: seq of BlackBox
             Blackboxes in module.
+
     Returns
     -------
     Circuit
             Parsed circuit.
-    &#34;&#34;&#34;
 
-    regex = f&#34;module\s+(.+?)\s*\(.*?\);&#34;
+    &#34;&#34;&#34;
+    regex = r&#34;module\s+(.+?)\s*\(.*?\);&#34;
     m = re.search(regex, netlist, re.DOTALL)
     name = m.group(1)
     module = netlist[m.end() :]
 
-    regex = f&#34;endmodule&#34;
+    regex = &#34;endmodule&#34;
     m = re.search(regex, netlist, re.DOTALL)
     module = module[: m.start()]
 
@@ -316,9 +325,9 @@ the circuit.</p>
     g = nx.DiGraph()
 
     # parse io
-    regex = &#34;(input)\s(.+?);&#34;
+    regex = r&#34;(input)\s(.+?);&#34;
     inputs = set()
-    for net_type, net_str in re.findall(regex, module, re.DOTALL):
+    for _, net_str in re.findall(regex, module, re.DOTALL):
         nets = net_str.split(&#34;,&#34;)
         for net in nets:
             inputs.add(net.strip())
@@ -335,15 +344,15 @@ the circuit.</p>
     g.add_node(tie_1, type=&#34;1&#34;)
 
     # parse insts
-    regex = &#34;([a-zA-Z][a-zA-Z\d_]*)\s+([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);&#34;
+    regex = r&#34;([a-zA-Z][a-zA-Z\d_]*)\s+([a-zA-Z][a-zA-Z\d_]*)\s*\(([^;]+)\);&#34;
 
     all_nets = defaultdict(list)
-    all_edges = list()
-    blackboxes_to_add = dict()
+    all_edges = []
+    blackboxes_to_add = {}
     for gate, inst, net_str in re.findall(regex, module, re.DOTALL):
 
         # parse generics
-        if gate in addable_types:
+        if gate in primitive_gates:
             # parse nets
             nets = [n.strip() for n in net_str.split(&#34;,&#34;)]
 
@@ -357,15 +366,14 @@ the circuit.</p>
             # get blackbox definition
             try:
                 bb = next(bb for bb in blackboxes if bb.name == gate)
-            except:
-                raise ValueError(f&#34;blackbox {gate} not defined&#34;)
+            except StopIteration as e:
+                raise ValueError(f&#34;blackbox {gate} not defined&#34;) from e
 
             # parse pins
             all_nets[&#34;bb_input&#34;] += [f&#34;{inst}.{n}&#34; for n in bb.inputs()]
             all_nets[&#34;bb_output&#34;] += [f&#34;{inst}.{n}&#34; for n in bb.outputs()]
 
-            regex = &#34;\.\s*(\S+)\s*\(\s*(\S+)\s*\)&#34;
-            connections = {}
+            regex = r&#34;\.\s*(\S+)\s*\(\s*(\S+)\s*\)&#34;
             for pin, net in re.findall(regex, net_str):
                 # replace constants
                 if net == &#34;1&#39;b1&#34;:
@@ -384,7 +392,7 @@ the circuit.</p>
 
             blackboxes_to_add[inst] = bb
 
-    regex = &#34;assign\s+([a-zA-Z][a-zA-Z\d_]*)\s*=\s*([a-zA-Z\d][a-zA-Z\d_&#39;]*)\s*;&#34;
+    regex = r&#34;assign\s+([a-zA-Z][a-zA-Z\d_]*)\s*=\s*([a-zA-Z\d][a-zA-Z\d_&#39;]*)\s*;&#34;
     for n0, n1 in re.findall(regex, module):
         all_nets[&#34;buf&#34;].append(n0)
         if n1 in [&#34;1&#39;b0&#34;, &#34;1&#39;h0&#34;, &#34;1&#39;d0&#34;]:
@@ -398,9 +406,8 @@ the circuit.</p>
         g.add_nodes_from(v, type=k, output=False)
     g.add_edges_from(all_edges)
 
-    regex = &#34;(output)\s(.+?);&#34;
-    outputs = set()
-    for net_type, net_str in re.findall(regex, module, re.DOTALL):
+    regex = r&#34;(output)\s(.+?);&#34;
+    for _, net_str in re.findall(regex, module, re.DOTALL):
         nets = net_str.split(&#34;,&#34;)
         for net in nets:
             g.nodes[net.strip()][&#34;output&#34;] = True

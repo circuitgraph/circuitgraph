@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.logic API documentation</title>
-<meta name="description" content="A collection of common logic elements as `Circuit` objects" />
+<meta name="description" content="A collection of common logic elements as `Circuit` objects …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
@@ -22,52 +22,190 @@
 <h1 class="title">Module <code>circuitgraph.logic</code></h1>
 </header>
 <section id="section-intro">
-<p>A collection of common logic elements as <code>Circuit</code> objects</p>
+<p>A collection of common logic elements as <code>Circuit</code> objects.</p>
+<p>They can be added to existing circuits using <code>Circuit.add_subcircuit</code></p>
+<h2 id="examples">Examples</h2>
+<p>Either add <code>a</code> and <code>c</code> or <code>b</code> and <code>c</code> depending on <code>sel</code>.</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
+</code></pre>
+<pre><code class="language-python-repl">&gt;&gt;&gt; a = cg.logic.half_adder()
+&gt;&gt;&gt; m = cg.logic.mux(2)
+</code></pre>
+<pre><code class="language-python-repl">&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; c.add(&quot;a&quot;, &quot;input&quot;)
+'a'
+&gt;&gt;&gt; c.add(&quot;b&quot;, &quot;input&quot;)
+'b'
+&gt;&gt;&gt; c.add(&quot;c&quot;, &quot;input&quot;)
+'c'
+&gt;&gt;&gt; c.add(&quot;sel&quot;, &quot;input&quot;)
+'sel'
+&gt;&gt;&gt; c.add(&quot;d&quot;, &quot;buf&quot;)
+'d'
+&gt;&gt;&gt; c.add(&quot;sum&quot;, &quot;buf&quot;, output=True)
+'sum'
+&gt;&gt;&gt; c.add(&quot;carry&quot;, &quot;buf&quot;, output=True)
+'carry'
+</code></pre>
+<p>Add mux subcircuit</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; mux_conns = {&quot;in_0&quot;: &quot;a&quot;, &quot;in_1&quot;: &quot;b&quot;, &quot;sel_0&quot;: &quot;sel&quot;, &quot;out&quot;: &quot;d&quot;}
+&gt;&gt;&gt; c.add_subcircuit(m, &quot;mux&quot;, mux_conns)
+</code></pre>
+<p>Add adder subcircuit</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; add_conns = {&quot;x&quot;: &quot;c&quot;, &quot;y&quot;: &quot;d&quot;, &quot;c&quot;: &quot;carry&quot;, &quot;s&quot;: &quot;sum&quot;}
+&gt;&gt;&gt; c.add_subcircuit(a, &quot;adder&quot;, add_conns)
+</code></pre>
+<p>Simulate to verify</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; res = cg.sat.solve(c, {&quot;a&quot;: 0, &quot;b&quot;: 1, &quot;c&quot;: 1, &quot;sel&quot;: 0}) # a + c
+&gt;&gt;&gt; res[&quot;sum&quot;]
+True
+&gt;&gt;&gt; res[&quot;carry&quot;]
+False
+</code></pre>
+<pre><code class="language-python-repl">&gt;&gt;&gt; res = cg.sat.solve(c, {&quot;a&quot;: 0, &quot;b&quot;: 1, &quot;c&quot;: 1, &quot;sel&quot;: 1}) # b + c
+&gt;&gt;&gt; res[&quot;sum&quot;]
+False
+&gt;&gt;&gt; res[&quot;carry&quot;]
+True
+</code></pre>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">&#34;&#34;&#34;A collection of common logic elements as `Circuit` objects&#34;&#34;&#34;
+<pre><code class="python">&#34;&#34;&#34;
+A collection of common logic elements as `Circuit` objects.
+
+They can be added to existing circuits using `Circuit.add_subcircuit`
+
+Examples
+--------
+Either add `a` and `c` or `b` and `c` depending on `sel`.
+
+&gt;&gt;&gt; import circuitgraph as cg
+
+&gt;&gt;&gt; a = cg.logic.half_adder()
+&gt;&gt;&gt; m = cg.logic.mux(2)
+
+&gt;&gt;&gt; c = cg.Circuit()
+&gt;&gt;&gt; c.add(&#34;a&#34;, &#34;input&#34;)
+&#39;a&#39;
+&gt;&gt;&gt; c.add(&#34;b&#34;, &#34;input&#34;)
+&#39;b&#39;
+&gt;&gt;&gt; c.add(&#34;c&#34;, &#34;input&#34;)
+&#39;c&#39;
+&gt;&gt;&gt; c.add(&#34;sel&#34;, &#34;input&#34;)
+&#39;sel&#39;
+&gt;&gt;&gt; c.add(&#34;d&#34;, &#34;buf&#34;)
+&#39;d&#39;
+&gt;&gt;&gt; c.add(&#34;sum&#34;, &#34;buf&#34;, output=True)
+&#39;sum&#39;
+&gt;&gt;&gt; c.add(&#34;carry&#34;, &#34;buf&#34;, output=True)
+&#39;carry&#39;
+
+Add mux subcircuit
+
+&gt;&gt;&gt; mux_conns = {&#34;in_0&#34;: &#34;a&#34;, &#34;in_1&#34;: &#34;b&#34;, &#34;sel_0&#34;: &#34;sel&#34;, &#34;out&#34;: &#34;d&#34;}
+&gt;&gt;&gt; c.add_subcircuit(m, &#34;mux&#34;, mux_conns)
+
+Add adder subcircuit
+
+&gt;&gt;&gt; add_conns = {&#34;x&#34;: &#34;c&#34;, &#34;y&#34;: &#34;d&#34;, &#34;c&#34;: &#34;carry&#34;, &#34;s&#34;: &#34;sum&#34;}
+&gt;&gt;&gt; c.add_subcircuit(a, &#34;adder&#34;, add_conns)
+
+Simulate to verify
+
+&gt;&gt;&gt; res = cg.sat.solve(c, {&#34;a&#34;: 0, &#34;b&#34;: 1, &#34;c&#34;: 1, &#34;sel&#34;: 0}) # a + c
+&gt;&gt;&gt; res[&#34;sum&#34;]
+True
+&gt;&gt;&gt; res[&#34;carry&#34;]
+False
+
+&gt;&gt;&gt; res = cg.sat.solve(c, {&#34;a&#34;: 0, &#34;b&#34;: 1, &#34;c&#34;: 1, &#34;sel&#34;: 1}) # b + c
+&gt;&gt;&gt; res[&#34;sum&#34;]
+False
+&gt;&gt;&gt; res[&#34;carry&#34;]
+True
+
+&#34;&#34;&#34;
 from itertools import product
-import random
 
-from circuitgraph import Circuit
-from circuitgraph.utils import clog2
+import circuitgraph as cg
 
 
-def adder(w):
+def half_adder():
     &#34;&#34;&#34;
-    Create an adder.
+    Create an AND/XOR half adder.
+
+    Returns
+    -------
+    Circuit
+            Half adder circuit.
+
+    &#34;&#34;&#34;
+    c = cg.Circuit(name=&#34;half_adder&#34;)
+    ins = [c.add(&#34;x&#34;, &#34;input&#34;), c.add(&#34;y&#34;, &#34;input&#34;)]
+    c.add(&#34;c&#34;, &#34;and&#34;, fanin=ins, output=True)
+    c.add(&#34;s&#34;, &#34;xor&#34;, fanin=ins, output=True)
+    return c
+
+
+def full_adder():
+    &#34;&#34;&#34;
+    Create a full adder from two half adders.
+
+    Returns
+    -------
+    Circuit
+            Full adder circuit.
+
+    &#34;&#34;&#34;
+    c = cg.Circuit(&#34;full_adder&#34;)
+    c.add(&#34;x&#34;, &#34;input&#34;)
+    c.add(&#34;y&#34;, &#34;input&#34;)
+    c.add(&#34;cin&#34;, &#34;input&#34;)
+
+    c.add_subcircuit(half_adder(), &#34;x_y_ha&#34;, connections={&#34;x&#34;: &#34;x&#34;, &#34;y&#34;: &#34;y&#34;})
+    c.add_subcircuit(
+        half_adder(), &#34;cin_s_ha&#34;, connections={&#34;x&#34;: &#34;x_y_ha_s&#34;, &#34;y&#34;: &#34;cin&#34;}
+    )
+
+    c.add(&#34;cout&#34;, &#34;or&#34;, fanin=[&#34;x_y_ha_c&#34;, &#34;cin_s_ha_c&#34;], output=True)
+    c.add(&#34;s&#34;, &#34;buf&#34;, fanin=&#34;cin_s_ha_s&#34;, output=True)
+    return c
+
+
+def adder(width, carry_in=False, carry_out=False):
+    &#34;&#34;&#34;
+    Create a ripple carry adder.
 
     Parameters
     ----------
-    w : int
+    width : int
             Input width of adder.
+    carry_in: bool
+            Add a carry input.
+    carry_out: bool
+            Add a carry output.
 
     Returns
     -------
     Circuit
             Adder circuit.
+
     &#34;&#34;&#34;
-    c = Circuit(name=&#34;adder&#34;)
-    carry = c.add(&#34;null&#34;, &#34;0&#34;)
-    for i in range(w):
-        # sum
-        c.add(f&#34;a_{i}&#34;, &#34;input&#34;)
-        c.add(f&#34;b_{i}&#34;, &#34;input&#34;)
-        c.add(f&#34;out_{i}&#34;, &#34;xor&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;, carry], output=True)
-
-        # carry
-        c.add(f&#34;and_ab_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;])
-        c.add(f&#34;and_ac_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, carry])
-        c.add(f&#34;and_bc_{i}&#34;, &#34;and&#34;, fanin=[f&#34;b_{i}&#34;, carry])
-        carry = c.add(
-            f&#34;carry_{i}&#34;,
-            &#34;or&#34;,
-            fanin=[f&#34;and_ab_{i}&#34;, f&#34;and_ac_{i}&#34;, f&#34;and_bc_{i}&#34;],
+    c = cg.Circuit(name=&#34;adder&#34;)
+    carry = c.add(&#34;cin&#34;, &#34;input&#34; if carry_in else &#34;0&#34;)
+    for bit in range(width):
+        a = c.add(f&#34;a_{bit}&#34;, &#34;input&#34;)
+        b = c.add(f&#34;b_{bit}&#34;, &#34;input&#34;)
+        out = c.add(f&#34;out_{bit}&#34;, &#34;buf&#34;, output=True)
+        c.add_subcircuit(
+            full_adder(), f&#34;fa_{bit}&#34;, {&#34;x&#34;: a, &#34;y&#34;: b, &#34;cin&#34;: carry, &#34;s&#34;: out}
         )
+        carry = f&#34;fa_{bit}_cout&#34;
 
-    c.add(f&#34;out_{w}&#34;, &#34;buf&#34;, fanin=carry, output=True)
+    if carry_out:
+        c.add(&#34;cout&#34;, &#34;buf&#34;, fanin=carry, output=True)
     return c
 
 
@@ -84,14 +222,15 @@ def mux(w):
     -------
     Circuit
             Mux circuit.
+
     &#34;&#34;&#34;
-    c = Circuit(name=&#34;mux&#34;)
+    c = cg.Circuit(name=&#34;mux&#34;)
 
     # create inputs
     for i in range(w):
         c.add(f&#34;in_{i}&#34;, &#34;input&#34;)
     sels = []
-    for i in range(clog2(w)):
+    for i in range(cg.utils.clog2(w)):
         c.add(f&#34;sel_{i}&#34;, &#34;input&#34;)
         c.add(f&#34;not_sel_{i}&#34;, &#34;not&#34;, fanin=f&#34;sel_{i}&#34;)
         sels.append([f&#34;not_sel_{i}&#34;, f&#34;sel_{i}&#34;])
@@ -123,8 +262,9 @@ def popcount(w):
     -------
     Circuit
             Population count circuit.
+
     &#34;&#34;&#34;
-    c = Circuit(name=&#34;popcount&#34;)
+    c = cg.Circuit(name=&#34;popcount&#34;)
     ps = [[c.add(f&#34;in_{i}&#34;, &#34;input&#34;)] for i in range(w)]
     c.add(&#34;tie0&#34;, &#34;0&#34;)
 
@@ -142,7 +282,8 @@ def popcount(w):
             ns += [&#34;tie0&#34;]
 
         # instantiate and connect adder
-        c.add_subcircuit(adder(aw), f&#34;add_{i}&#34;)
+        c.add_subcircuit(adder(aw, carry_out=True), f&#34;add_{i}&#34;)
+        c.relabel({f&#34;add_{i}_cout&#34;: f&#34;add_{i}_out_{aw}&#34;})
         for j, (n, m) in enumerate(zip(ns, ms)):
             c.connect(n, f&#34;add_{i}_a_{j}&#34;)
             c.connect(m, f&#34;add_{i}_b_{j}&#34;)
@@ -158,144 +299,7 @@ def popcount(w):
     if not c.fanout(&#34;tie0&#34;):
         c.remove(&#34;tie0&#34;)
 
-    return c
-
-
-def xor_hash(n, m):
-    &#34;&#34;&#34;
-    Create a XOR hash function H_{xor}(n,m,3) as in:
-    Chakraborty, Supratik, Kuldeep S. Meel, and Moshe Y. Vardi.
-    &#34;A scalable approximate model counter.&#34; International Conference on
-    Principles and Practice of Constraint Programming. Springer,
-    Berlin, Heidelberg, 2013.
-
-    Each output of the hash is the xor/xnor of a random subset of the input.
-
-    Parameters
-    ----------
-    n : int
-            Input width of the hash function.
-    m : int
-            Output width of the hash function.
-
-    Returns
-    -------
-    Circuit
-            XOR hash function.
-    &#34;&#34;&#34;
-    h = Circuit()
-
-    for i in range(n):
-        h.add(f&#34;in_{i}&#34;, &#34;input&#34;)
-
-    for o in range(m):
-        h.add(f&#34;out_{o}&#34;, &#34;buf&#34;, output=True)
-
-        # select inputs
-        cons = [bool(random.getrandbits(1)) for i in range(n)]
-
-        if sum(cons) == 0:
-            # constant output
-            h.add(
-                f&#34;c_{o}&#34;, &#34;1&#34; if bool(random.getrandbits(1)) else &#34;0&#34;, fanout=f&#34;out_{o}&#34;
-            )
-        else:
-            # choose between xor/xnor
-            h.add(f&#34;xor_{o}&#34;, &#34;xor&#34;, fanout=f&#34;out_{o}&#34;)
-            h.add(
-                f&#34;c_{o}&#34;,
-                &#34;1&#34; if bool(random.getrandbits(1)) &lt; 0.5 else &#34;0&#34;,
-                fanout=f&#34;xor_{o}&#34;,
-            )
-            for i, con in enumerate(cons):
-                if con:
-                    h.connect(f&#34;in_{i}&#34;, f&#34;xor_{o}&#34;)
-
-    return h
-
-
-def banyan(bw):
-    &#34;&#34;&#34;
-    Create a Banyan switching network.
-
-    Parameters
-    ----------
-    bw : int
-            Input/output width of the network.
-
-    Returns
-    -------
-    Circuit
-            Network circuit.
-    &#34;&#34;&#34;
-    b = Circuit()
-
-    # generate switch
-    m = mux(2)
-    s = Circuit(name=&#34;switch&#34;)
-    s.add_subcircuit(m, f&#34;m0&#34;)
-    s.add_subcircuit(m, f&#34;m1&#34;)
-    s.add(&#34;in_0&#34;, &#34;buf&#34;, fanout=[&#34;m0_in_0&#34;, &#34;m1_in_1&#34;])
-    s.add(&#34;in_1&#34;, &#34;buf&#34;, fanout=[&#34;m0_in_1&#34;, &#34;m1_in_0&#34;])
-    s.add(&#34;out_0&#34;, &#34;buf&#34;, fanin=&#34;m0_out&#34;)
-    s.add(&#34;out_1&#34;, &#34;buf&#34;, fanin=&#34;m1_out&#34;)
-    s.add(&#34;sel&#34;, &#34;input&#34;, fanout=[&#34;m0_sel_0&#34;, &#34;m1_sel_0&#34;])
-
-    # generate banyan
-    I = int(2 * clog2(bw) - 2)
-    J = int(bw / 2)
-
-    # add switches
-    for i in range(I * J):
-        b.add_subcircuit(s, f&#34;swb_{i}&#34;)
-
-    # make connections
-    swb_ins = [f&#34;swb_{i//2}_in_{i%2}&#34; for i in range(I * J * 2)]
-    swb_outs = [f&#34;swb_{i//2}_out_{i%2}&#34; for i in range(I * J * 2)]
-
-    # connect switches
-    for i in range(clog2(J)):
-        r = J / (2**i)
-        for j in range(J):
-            t = (j % r) &gt;= (r / 2)
-            # straight
-            out_i = int((i * bw) + (2 * j) + t)
-            in_i = int((i * bw + bw) + (2 * j) + t)
-            b.connect(swb_outs[out_i], swb_ins[in_i])
-
-            # cross
-            out_i = int((i * bw) + (2 * j) + (1 - t) + ((r - 1) * ((1 - t) * 2 - 1)))
-            in_i = int((i * bw + bw) + (2 * j) + (1 - t))
-            b.connect(swb_outs[out_i], swb_ins[in_i])
-
-            if r &gt; 2:
-                # straight
-                out_i = int(((I * J * 2) - ((2 + i) * bw)) + (2 * j) + t)
-                in_i = int(((I * J * 2) - ((1 + i) * bw)) + (2 * j) + t)
-                b.connect(swb_outs[out_i], swb_ins[in_i])
-
-                # cross
-                out_i = int(
-                    ((I * J * 2) - ((2 + i) * bw))
-                    + (2 * j)
-                    + (1 - t)
-                    + ((r - 1) * ((1 - t) * 2 - 1))
-                )
-                in_i = int(((I * J * 2) - ((1 + i) * bw)) + (2 * j) + (1 - t))
-                b.connect(swb_outs[out_i], swb_ins[in_i])
-
-    # create banyan io
-    net_ins = swb_ins[:bw]
-    net_outs = swb_outs[-bw:]
-
-    for i, net_in in enumerate(net_ins):
-        b.add(f&#34;in_{i}&#34;, &#34;input&#34;, fanout=net_in)
-    for i, net_out in enumerate(net_outs):
-        b.add(f&#34;out_{i}&#34;, &#34;buf&#34;, fanin=net_out, output=True)
-    for i in range(I * J):
-        b.add(f&#34;sel_{i}&#34;, &#34;input&#34;, fanout=f&#34;swb_{i}_sel&#34;)
-
-    return b</code></pre>
+    return c</code></pre>
 </details>
 </section>
 <section>
@@ -306,14 +310,18 @@ def banyan(bw):
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="circuitgraph.logic.adder"><code class="name flex">
-<span>def <span class="ident">adder</span></span>(<span>w)</span>
+<span>def <span class="ident">adder</span></span>(<span>width, carry_in=False, carry_out=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Create an adder.</p>
+<div class="desc"><p>Create a ripple carry adder.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
-<dt><strong><code>w</code></strong> :&ensp;<code>int</code></dt>
+<dt><strong><code>width</code></strong> :&ensp;<code>int</code></dt>
 <dd>Input width of adder.</dd>
+<dt><strong><code>carry_in</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Add a carry input.</dd>
+<dt><strong><code>carry_out</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Add a carry output.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -324,143 +332,109 @@ def banyan(bw):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def adder(w):
+<pre><code class="python">def adder(width, carry_in=False, carry_out=False):
     &#34;&#34;&#34;
-    Create an adder.
+    Create a ripple carry adder.
 
     Parameters
     ----------
-    w : int
+    width : int
             Input width of adder.
+    carry_in: bool
+            Add a carry input.
+    carry_out: bool
+            Add a carry output.
 
     Returns
     -------
     Circuit
             Adder circuit.
+
     &#34;&#34;&#34;
-    c = Circuit(name=&#34;adder&#34;)
-    carry = c.add(&#34;null&#34;, &#34;0&#34;)
-    for i in range(w):
-        # sum
-        c.add(f&#34;a_{i}&#34;, &#34;input&#34;)
-        c.add(f&#34;b_{i}&#34;, &#34;input&#34;)
-        c.add(f&#34;out_{i}&#34;, &#34;xor&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;, carry], output=True)
-
-        # carry
-        c.add(f&#34;and_ab_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, f&#34;b_{i}&#34;])
-        c.add(f&#34;and_ac_{i}&#34;, &#34;and&#34;, fanin=[f&#34;a_{i}&#34;, carry])
-        c.add(f&#34;and_bc_{i}&#34;, &#34;and&#34;, fanin=[f&#34;b_{i}&#34;, carry])
-        carry = c.add(
-            f&#34;carry_{i}&#34;,
-            &#34;or&#34;,
-            fanin=[f&#34;and_ab_{i}&#34;, f&#34;and_ac_{i}&#34;, f&#34;and_bc_{i}&#34;],
+    c = cg.Circuit(name=&#34;adder&#34;)
+    carry = c.add(&#34;cin&#34;, &#34;input&#34; if carry_in else &#34;0&#34;)
+    for bit in range(width):
+        a = c.add(f&#34;a_{bit}&#34;, &#34;input&#34;)
+        b = c.add(f&#34;b_{bit}&#34;, &#34;input&#34;)
+        out = c.add(f&#34;out_{bit}&#34;, &#34;buf&#34;, output=True)
+        c.add_subcircuit(
+            full_adder(), f&#34;fa_{bit}&#34;, {&#34;x&#34;: a, &#34;y&#34;: b, &#34;cin&#34;: carry, &#34;s&#34;: out}
         )
+        carry = f&#34;fa_{bit}_cout&#34;
 
-    c.add(f&#34;out_{w}&#34;, &#34;buf&#34;, fanin=carry, output=True)
+    if carry_out:
+        c.add(&#34;cout&#34;, &#34;buf&#34;, fanin=carry, output=True)
     return c</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.logic.banyan"><code class="name flex">
-<span>def <span class="ident">banyan</span></span>(<span>bw)</span>
+<dt id="circuitgraph.logic.full_adder"><code class="name flex">
+<span>def <span class="ident">full_adder</span></span>(<span>)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Create a Banyan switching network.</p>
-<h2 id="parameters">Parameters</h2>
-<dl>
-<dt><strong><code>bw</code></strong> :&ensp;<code>int</code></dt>
-<dd>Input/output width of the network.</dd>
-</dl>
+<div class="desc"><p>Create a full adder from two half adders.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>Circuit</code></dt>
-<dd>Network circuit.</dd>
+<dd>Full adder circuit.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def banyan(bw):
+<pre><code class="python">def full_adder():
     &#34;&#34;&#34;
-    Create a Banyan switching network.
-
-    Parameters
-    ----------
-    bw : int
-            Input/output width of the network.
+    Create a full adder from two half adders.
 
     Returns
     -------
     Circuit
-            Network circuit.
+            Full adder circuit.
+
     &#34;&#34;&#34;
-    b = Circuit()
+    c = cg.Circuit(&#34;full_adder&#34;)
+    c.add(&#34;x&#34;, &#34;input&#34;)
+    c.add(&#34;y&#34;, &#34;input&#34;)
+    c.add(&#34;cin&#34;, &#34;input&#34;)
 
-    # generate switch
-    m = mux(2)
-    s = Circuit(name=&#34;switch&#34;)
-    s.add_subcircuit(m, f&#34;m0&#34;)
-    s.add_subcircuit(m, f&#34;m1&#34;)
-    s.add(&#34;in_0&#34;, &#34;buf&#34;, fanout=[&#34;m0_in_0&#34;, &#34;m1_in_1&#34;])
-    s.add(&#34;in_1&#34;, &#34;buf&#34;, fanout=[&#34;m0_in_1&#34;, &#34;m1_in_0&#34;])
-    s.add(&#34;out_0&#34;, &#34;buf&#34;, fanin=&#34;m0_out&#34;)
-    s.add(&#34;out_1&#34;, &#34;buf&#34;, fanin=&#34;m1_out&#34;)
-    s.add(&#34;sel&#34;, &#34;input&#34;, fanout=[&#34;m0_sel_0&#34;, &#34;m1_sel_0&#34;])
+    c.add_subcircuit(half_adder(), &#34;x_y_ha&#34;, connections={&#34;x&#34;: &#34;x&#34;, &#34;y&#34;: &#34;y&#34;})
+    c.add_subcircuit(
+        half_adder(), &#34;cin_s_ha&#34;, connections={&#34;x&#34;: &#34;x_y_ha_s&#34;, &#34;y&#34;: &#34;cin&#34;}
+    )
 
-    # generate banyan
-    I = int(2 * clog2(bw) - 2)
-    J = int(bw / 2)
+    c.add(&#34;cout&#34;, &#34;or&#34;, fanin=[&#34;x_y_ha_c&#34;, &#34;cin_s_ha_c&#34;], output=True)
+    c.add(&#34;s&#34;, &#34;buf&#34;, fanin=&#34;cin_s_ha_s&#34;, output=True)
+    return c</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.logic.half_adder"><code class="name flex">
+<span>def <span class="ident">half_adder</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Create an AND/XOR half adder.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Half adder circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def half_adder():
+    &#34;&#34;&#34;
+    Create an AND/XOR half adder.
 
-    # add switches
-    for i in range(I * J):
-        b.add_subcircuit(s, f&#34;swb_{i}&#34;)
+    Returns
+    -------
+    Circuit
+            Half adder circuit.
 
-    # make connections
-    swb_ins = [f&#34;swb_{i//2}_in_{i%2}&#34; for i in range(I * J * 2)]
-    swb_outs = [f&#34;swb_{i//2}_out_{i%2}&#34; for i in range(I * J * 2)]
-
-    # connect switches
-    for i in range(clog2(J)):
-        r = J / (2**i)
-        for j in range(J):
-            t = (j % r) &gt;= (r / 2)
-            # straight
-            out_i = int((i * bw) + (2 * j) + t)
-            in_i = int((i * bw + bw) + (2 * j) + t)
-            b.connect(swb_outs[out_i], swb_ins[in_i])
-
-            # cross
-            out_i = int((i * bw) + (2 * j) + (1 - t) + ((r - 1) * ((1 - t) * 2 - 1)))
-            in_i = int((i * bw + bw) + (2 * j) + (1 - t))
-            b.connect(swb_outs[out_i], swb_ins[in_i])
-
-            if r &gt; 2:
-                # straight
-                out_i = int(((I * J * 2) - ((2 + i) * bw)) + (2 * j) + t)
-                in_i = int(((I * J * 2) - ((1 + i) * bw)) + (2 * j) + t)
-                b.connect(swb_outs[out_i], swb_ins[in_i])
-
-                # cross
-                out_i = int(
-                    ((I * J * 2) - ((2 + i) * bw))
-                    + (2 * j)
-                    + (1 - t)
-                    + ((r - 1) * ((1 - t) * 2 - 1))
-                )
-                in_i = int(((I * J * 2) - ((1 + i) * bw)) + (2 * j) + (1 - t))
-                b.connect(swb_outs[out_i], swb_ins[in_i])
-
-    # create banyan io
-    net_ins = swb_ins[:bw]
-    net_outs = swb_outs[-bw:]
-
-    for i, net_in in enumerate(net_ins):
-        b.add(f&#34;in_{i}&#34;, &#34;input&#34;, fanout=net_in)
-    for i, net_out in enumerate(net_outs):
-        b.add(f&#34;out_{i}&#34;, &#34;buf&#34;, fanin=net_out, output=True)
-    for i in range(I * J):
-        b.add(f&#34;sel_{i}&#34;, &#34;input&#34;, fanout=f&#34;swb_{i}_sel&#34;)
-
-    return b</code></pre>
+    &#34;&#34;&#34;
+    c = cg.Circuit(name=&#34;half_adder&#34;)
+    ins = [c.add(&#34;x&#34;, &#34;input&#34;), c.add(&#34;y&#34;, &#34;input&#34;)]
+    c.add(&#34;c&#34;, &#34;and&#34;, fanin=ins, output=True)
+    c.add(&#34;s&#34;, &#34;xor&#34;, fanin=ins, output=True)
+    return c</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.logic.mux"><code class="name flex">
@@ -495,14 +469,15 @@ def banyan(bw):
     -------
     Circuit
             Mux circuit.
+
     &#34;&#34;&#34;
-    c = Circuit(name=&#34;mux&#34;)
+    c = cg.Circuit(name=&#34;mux&#34;)
 
     # create inputs
     for i in range(w):
         c.add(f&#34;in_{i}&#34;, &#34;input&#34;)
     sels = []
-    for i in range(clog2(w)):
+    for i in range(cg.utils.clog2(w)):
         c.add(f&#34;sel_{i}&#34;, &#34;input&#34;)
         c.add(f&#34;not_sel_{i}&#34;, &#34;not&#34;, fanin=f&#34;sel_{i}&#34;)
         sels.append([f&#34;not_sel_{i}&#34;, f&#34;sel_{i}&#34;])
@@ -553,8 +528,9 @@ def banyan(bw):
     -------
     Circuit
             Population count circuit.
+
     &#34;&#34;&#34;
-    c = Circuit(name=&#34;popcount&#34;)
+    c = cg.Circuit(name=&#34;popcount&#34;)
     ps = [[c.add(f&#34;in_{i}&#34;, &#34;input&#34;)] for i in range(w)]
     c.add(&#34;tie0&#34;, &#34;0&#34;)
 
@@ -572,7 +548,8 @@ def banyan(bw):
             ns += [&#34;tie0&#34;]
 
         # instantiate and connect adder
-        c.add_subcircuit(adder(aw), f&#34;add_{i}&#34;)
+        c.add_subcircuit(adder(aw, carry_out=True), f&#34;add_{i}&#34;)
+        c.relabel({f&#34;add_{i}_cout&#34;: f&#34;add_{i}_out_{aw}&#34;})
         for j, (n, m) in enumerate(zip(ns, ms)):
             c.connect(n, f&#34;add_{i}_a_{j}&#34;)
             c.connect(m, f&#34;add_{i}_b_{j}&#34;)
@@ -591,85 +568,6 @@ def banyan(bw):
     return c</code></pre>
 </details>
 </dd>
-<dt id="circuitgraph.logic.xor_hash"><code class="name flex">
-<span>def <span class="ident">xor_hash</span></span>(<span>n, m)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Create a XOR hash function H_{xor}(n,m,3) as in:
-Chakraborty, Supratik, Kuldeep S. Meel, and Moshe Y. Vardi.
-"A scalable approximate model counter." International Conference on
-Principles and Practice of Constraint Programming. Springer,
-Berlin, Heidelberg, 2013.</p>
-<p>Each output of the hash is the xor/xnor of a random subset of the input.</p>
-<h2 id="parameters">Parameters</h2>
-<dl>
-<dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
-<dd>Input width of the hash function.</dd>
-<dt><strong><code>m</code></strong> :&ensp;<code>int</code></dt>
-<dd>Output width of the hash function.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>Circuit</code></dt>
-<dd>XOR hash function.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def xor_hash(n, m):
-    &#34;&#34;&#34;
-    Create a XOR hash function H_{xor}(n,m,3) as in:
-    Chakraborty, Supratik, Kuldeep S. Meel, and Moshe Y. Vardi.
-    &#34;A scalable approximate model counter.&#34; International Conference on
-    Principles and Practice of Constraint Programming. Springer,
-    Berlin, Heidelberg, 2013.
-
-    Each output of the hash is the xor/xnor of a random subset of the input.
-
-    Parameters
-    ----------
-    n : int
-            Input width of the hash function.
-    m : int
-            Output width of the hash function.
-
-    Returns
-    -------
-    Circuit
-            XOR hash function.
-    &#34;&#34;&#34;
-    h = Circuit()
-
-    for i in range(n):
-        h.add(f&#34;in_{i}&#34;, &#34;input&#34;)
-
-    for o in range(m):
-        h.add(f&#34;out_{o}&#34;, &#34;buf&#34;, output=True)
-
-        # select inputs
-        cons = [bool(random.getrandbits(1)) for i in range(n)]
-
-        if sum(cons) == 0:
-            # constant output
-            h.add(
-                f&#34;c_{o}&#34;, &#34;1&#34; if bool(random.getrandbits(1)) else &#34;0&#34;, fanout=f&#34;out_{o}&#34;
-            )
-        else:
-            # choose between xor/xnor
-            h.add(f&#34;xor_{o}&#34;, &#34;xor&#34;, fanout=f&#34;out_{o}&#34;)
-            h.add(
-                f&#34;c_{o}&#34;,
-                &#34;1&#34; if bool(random.getrandbits(1)) &lt; 0.5 else &#34;0&#34;,
-                fanout=f&#34;xor_{o}&#34;,
-            )
-            for i, con in enumerate(cons):
-                if con:
-                    h.connect(f&#34;in_{i}&#34;, f&#34;xor_{o}&#34;)
-
-    return h</code></pre>
-</details>
-</dd>
 </dl>
 </section>
 <section>
@@ -682,7 +580,9 @@ Berlin, Heidelberg, 2013.</p>
 </header>
 <h1>Index</h1>
 <div class="toc">
-<ul></ul>
+<ul>
+<li><a href="#examples">Examples</a></li>
+</ul>
 </div>
 <ul id="index">
 <li><h3>Super-module</h3>
@@ -693,10 +593,10 @@ Berlin, Heidelberg, 2013.</p>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="circuitgraph.logic.adder" href="#circuitgraph.logic.adder">adder</a></code></li>
-<li><code><a title="circuitgraph.logic.banyan" href="#circuitgraph.logic.banyan">banyan</a></code></li>
+<li><code><a title="circuitgraph.logic.full_adder" href="#circuitgraph.logic.full_adder">full_adder</a></code></li>
+<li><code><a title="circuitgraph.logic.half_adder" href="#circuitgraph.logic.half_adder">half_adder</a></code></li>
 <li><code><a title="circuitgraph.logic.mux" href="#circuitgraph.logic.mux">mux</a></code></li>
 <li><code><a title="circuitgraph.logic.popcount" href="#circuitgraph.logic.popcount">popcount</a></code></li>
-<li><code><a title="circuitgraph.logic.xor_hash" href="#circuitgraph.logic.xor_hash">xor_hash</a></code></li>
 </ul>
 </li>
 </ul>

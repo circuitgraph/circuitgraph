@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph API documentation</title>
-<meta name="description" content="Python package `circuitgraph` provides a data structure
-for the generation, manipulation, and evaluation of
-Boolean circuits. The circuits are …" />
+<meta name="description" content="Tools for working with circuits as graphs …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
@@ -24,16 +22,16 @@ Boolean circuits. The circuits are …" />
 <h1 class="title">Package <code>circuitgraph</code></h1>
 </header>
 <section id="section-intro">
-<p>Python package <code><a title="circuitgraph" href="#circuitgraph">circuitgraph</a></code> provides a data structure
-for the generation, manipulation, and evaluation of
-Boolean circuits. The circuits are represented in a graph
-format based on the <code>networkx</code> package.</p>
+<p>Tools for working with circuits as graphs.</p>
+<p>Python package <code><a title="circuitgraph" href="#circuitgraph">circuitgraph</a></code> provides a data structure for the generation,
+manipulation, and evaluation of Boolean circuits. The circuits are represented
+in a graph format based on the <code>networkx</code> package.</p>
 <p>Features include:</p>
 <ul>
 <li>parsing of generic verilog modules</li>
 <li>easy circuit composition</li>
 <li>synthesis interface to Genus and Yosys</li>
-<li>SAT,#SAT, and approx-#SAT solver integration via <code>pysat</code> and <code>approxmc</code></li>
+<li>SAT, #SAT, and approx-#SAT solver integration via <code>pysat</code> and <code>approxmc</code></li>
 <li>implementations of common circuit transformations</li>
 </ul>
 <p>Look at the examples in <code><a title="circuitgraph.circuit.Circuit" href="circuit.html#circuitgraph.circuit.Circuit">Circuit</a></code> for a quickstart guide.</p>
@@ -42,35 +40,33 @@ format based on the <code>networkx</code> package.</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;
-Python package `circuitgraph` provides a data structure
-for the generation, manipulation, and evaluation of
-Boolean circuits. The circuits are represented in a graph
-format based on the `networkx` package.
+Tools for working with circuits as graphs.
+
+Python package `circuitgraph` provides a data structure for the generation,
+manipulation, and evaluation of Boolean circuits. The circuits are represented
+in a graph format based on the `networkx` package.
 
 Features include:
 
 - parsing of generic verilog modules
 - easy circuit composition
 - synthesis interface to Genus and Yosys
-- SAT,#SAT, and approx-#SAT solver integration via `pysat` and `approxmc`
+- SAT, #SAT, and approx-#SAT solver integration via `pysat` and `approxmc`
 - implementations of common circuit transformations
 
 Look at the examples in `circuitgraph.circuit.Circuit` for a quickstart guide.
+
 &#34;&#34;&#34;
-from circuitgraph.circuit import Circuit, BlackBox, supported_types
-from circuitgraph.io import (
-    from_file,
-    from_lib,
-    to_file,
-    genus_flops,
-    dc_flops,
+from circuitgraph.circuit import (
+    BlackBox,
+    Circuit,
+    primitive_gates,
+    addable_types,
+    supported_types,
 )
+from circuitgraph.io import dc_flops, from_file, from_lib, genus_flops, to_file
 from circuitgraph.utils import lint, visualize
-from circuitgraph import tx
-from circuitgraph import sat
-from circuitgraph import props
-from circuitgraph import logic
-from circuitgraph import utils</code></pre>
+from circuitgraph import logic, props, sat, tx, utils</code></pre>
 </details>
 </section>
 <section>
@@ -82,31 +78,31 @@ from circuitgraph import utils</code></pre>
 </dd>
 <dt><code class="name"><a title="circuitgraph.io" href="io.html">circuitgraph.io</a></code></dt>
 <dd>
-<div class="desc"><p>Functions for reading/writing CircuitGraphs</p></div>
+<div class="desc"><p>Functions for reading/writing CircuitGraphs.</p></div>
 </dd>
 <dt><code class="name"><a title="circuitgraph.logic" href="logic.html">circuitgraph.logic</a></code></dt>
 <dd>
-<div class="desc"><p>A collection of common logic elements as <code>Circuit</code> objects</p></div>
+<div class="desc"><p>A collection of common logic elements as <code>Circuit</code> objects …</p></div>
 </dd>
 <dt><code class="name"><a title="circuitgraph.parsing" href="parsing/index.html">circuitgraph.parsing</a></code></dt>
 <dd>
-<div class="desc"><p>Utilities for parsing netlists</p></div>
+<div class="desc"><p>Utilities for parsing netlists.</p></div>
 </dd>
 <dt><code class="name"><a title="circuitgraph.props" href="props.html">circuitgraph.props</a></code></dt>
 <dd>
-<div class="desc"><p>Functions for analysis of Boolean and circuit properties</p></div>
+<div class="desc"><p>Functions for analysis of Boolean and circuit properties …</p></div>
 </dd>
 <dt><code class="name"><a title="circuitgraph.sat" href="sat.html">circuitgraph.sat</a></code></dt>
 <dd>
-<div class="desc"><p>Functions for executing SAT, #SAT, and approx-#SAT on circuits</p></div>
+<div class="desc"><p>Functions for executing SAT, #SAT, and approx-#SAT on circuits …</p></div>
 </dd>
 <dt><code class="name"><a title="circuitgraph.tx" href="tx.html">circuitgraph.tx</a></code></dt>
 <dd>
-<div class="desc"><p>Functions for transforming circuits</p></div>
+<div class="desc"><p>Functions for transforming circuits …</p></div>
 </dd>
 <dt><code class="name"><a title="circuitgraph.utils" href="utils.html">circuitgraph.utils</a></code></dt>
 <dd>
-<div class="desc"><p>Various circuit related utilities</p></div>
+<div class="desc"><p>Various circuit related utilities …</p></div>
 </dd>
 </dl>
 </section>

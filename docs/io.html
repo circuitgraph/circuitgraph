@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.io API documentation</title>
-<meta name="description" content="Functions for reading/writing CircuitGraphs" />
+<meta name="description" content="Functions for reading/writing CircuitGraphs." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
@@ -22,18 +22,17 @@
 <h1 class="title">Module <code>circuitgraph.io</code></h1>
 </header>
 <section id="section-intro">
-<p>Functions for reading/writing CircuitGraphs</p>
+<p>Functions for reading/writing CircuitGraphs.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">&#34;&#34;&#34;Functions for reading/writing CircuitGraphs&#34;&#34;&#34;
+<pre><code class="python">&#34;&#34;&#34;Functions for reading/writing CircuitGraphs.&#34;&#34;&#34;
 import re
 from pathlib import Path
 
-from circuitgraph import Circuit, BlackBox
-from circuitgraph.parsing import parse_verilog_netlist, fast_parse_verilog_netlist
-
+from circuitgraph import BlackBox, Circuit
+from circuitgraph.parsing import fast_parse_verilog_netlist, parse_verilog_netlist
 
 genus_flops = [
     BlackBox(&#34;flopd&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;]),
@@ -60,7 +59,7 @@ def from_file(
     fast=False,
 ):
     &#34;&#34;&#34;
-    Creates a new `Circuit` from a verilog file.
+    Create a new `Circuit` from a verilog file.
 
     Parameters
     ----------
@@ -90,13 +89,14 @@ def from_file(
     -------
     Circuit
             the parsed circuit.
+
     &#34;&#34;&#34;
     path = Path(path)
     infer_module_name = False
     if name is None:
         infer_module_name = True
         name = path.stem
-    with open(path, &#34;r&#34;) as f:
+    with open(path) as f:
         netlist = f.read()
     if fmt == &#34;verilog&#34; or path.suffix == &#34;.v&#34;:
         return verilog_to_circuit(
@@ -108,16 +108,14 @@ def from_file(
             error_on_warning,
             fast,
         )
-    elif fmt == &#34;bench&#34; or path.suffix == &#34;.bench&#34;:
+    if fmt == &#34;bench&#34; or path.suffix == &#34;.bench&#34;:
         return bench_to_circuit(netlist, name)
-    else:
-        raise ValueError(f&#34;extension {path.suffix} not supported&#34;)
+    raise ValueError(f&#34;extension {path.suffix} not supported&#34;)
 
 
 def from_lib(name):
     &#34;&#34;&#34;
-    Creates a new `Circuit` from a netlist in the `netlists`
-    folder
+    Create a new `Circuit` from a netlist in the `netlists` folder.
 
     Parameters
     ----------
@@ -127,6 +125,7 @@ def from_lib(name):
     -------
     Circuit
             the parsed circuit.
+
     &#34;&#34;&#34;
     bbs = [BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])]
     [path] = Path(__file__).parent.absolute().glob(f&#34;netlists/{name}.*&#34;)
@@ -135,7 +134,7 @@ def from_lib(name):
 
 def bench_to_circuit(netlist, name):
     &#34;&#34;&#34;
-    Creates a new Circuit from a netlist string.
+    Create a new Circuit from a netlist string.
 
     Parameters
     ----------
@@ -148,6 +147,7 @@ def bench_to_circuit(netlist, name):
     -------
     Circuit
             the parsed circuit.
+
     &#34;&#34;&#34;
     # create circuit
     c = Circuit(name=name)
@@ -170,7 +170,7 @@ def bench_to_circuit(netlist, name):
         inputs = (
             input_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
         )
-        if gate == &#34;BUFF&#34; or gate == &#34;buff&#34;:
+        if gate in (&#34;buff&#34;, &#34;BUFF&#34;):
             gate = &#34;buf&#34;
         c.add(
             net,
@@ -207,7 +207,7 @@ def verilog_to_circuit(
     fast=False,
 ):
     &#34;&#34;&#34;
-    Creates a new Circuit from a module inside Verilog code.
+    Create a new Circuit from a module inside Verilog code.
 
     Parameters
     ----------
@@ -238,8 +238,8 @@ def verilog_to_circuit(
     -------
     Circuit
             Parsed circuit.
-    &#34;&#34;&#34;
 
+    &#34;&#34;&#34;
     if blackboxes is None:
         blackboxes = []
 
@@ -251,23 +251,23 @@ def verilog_to_circuit(
     m = re.search(regex, netlist, re.DOTALL)
     try:
         module = m.group(1)
-    except AttributeError:
+    except AttributeError as e1:
         if infer_module_name:
             regex = r&#34;(module\s+(.*?)\s*\(.*?\);(.*?)endmodule)&#34;
             m = re.search(regex, netlist, re.DOTALL)
             try:
                 module = m.group(1)
-            except AttributeError:
-                raise ValueError(&#34;Could not read netlist: no modules found&#34;)
+            except AttributeError as e2:
+                raise ValueError(&#34;Could not read netlist: no modules found&#34;) from e2
         else:
-            raise ValueError(f&#34;Could not read netlist: {name} module not found&#34;)
+            raise ValueError(f&#34;Could not read netlist: {name} module not found&#34;) from e1
 
     return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)
 
 
 def to_file(c, path, fmt=&#34;verilog&#34;, behavioral=False):
     &#34;&#34;&#34;
-    Writes a `Circuit` to a Verilog file.
+    Write a `Circuit` to a Verilog file.
 
     Parameters
     ----------
@@ -277,6 +277,7 @@ def to_file(c, path, fmt=&#34;verilog&#34;, behavioral=False):
             the path to the file to read from.
     fmt: str
             the format of the file (verilog or bench)
+
     &#34;&#34;&#34;
     with open(path, &#34;w&#34;) as f:
         if fmt == &#34;verilog&#34;:
@@ -289,7 +290,7 @@ def to_file(c, path, fmt=&#34;verilog&#34;, behavioral=False):
 
 def circuit_to_verilog(c, behavioral=False):
     &#34;&#34;&#34;
-    Generates a str of Verilog code from a `CircuitGraph`.
+    Generate a `str` of Verilog code from a `CircuitGraph`.
 
     Parameters
     ----------
@@ -302,6 +303,7 @@ def circuit_to_verilog(c, behavioral=False):
     -------
     str
         Verilog code.
+
     &#34;&#34;&#34;
     c = Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
     # sanitize escaped nets
@@ -388,7 +390,7 @@ def circuit_to_verilog(c, behavioral=False):
 
 def circuit_to_bench(c):
     &#34;&#34;&#34;
-    Generates a str of Bench code from a `CircuitGraph`.
+    Generate a `str` of Bench code from a `CircuitGraph`.
 
     Parameters
     ----------
@@ -399,6 +401,7 @@ def circuit_to_bench(c):
     -------
     str
         Bench code.
+
     &#34;&#34;&#34;
     insts = []
 
@@ -421,7 +424,7 @@ def circuit_to_bench(c):
     bench = f&#34;# {c.name}\n&#34;
     bench += &#34;&#34;.join(f&#34;INPUT({inp})\n&#34; for inp in c.inputs())
     bench += &#34;\n&#34;
-    bench += &#34;&#34;.join(f&#34;OUTPUT({out};)\n&#34; for out in c.outputs())
+    bench += &#34;&#34;.join(f&#34;OUTPUT({out})\n&#34; for out in c.outputs())
     bench += &#34;\n&#34;
     bench += &#34;\n&#34;.join(insts)
 
@@ -439,7 +442,7 @@ def circuit_to_bench(c):
 <span>def <span class="ident">bench_to_circuit</span></span>(<span>netlist, name)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a new Circuit from a netlist string.</p>
+<div class="desc"><p>Create a new Circuit from a netlist string.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>netlist</code></strong> :&ensp;<code>str</code></dt>
@@ -458,7 +461,7 @@ def circuit_to_bench(c):
 </summary>
 <pre><code class="python">def bench_to_circuit(netlist, name):
     &#34;&#34;&#34;
-    Creates a new Circuit from a netlist string.
+    Create a new Circuit from a netlist string.
 
     Parameters
     ----------
@@ -471,6 +474,7 @@ def circuit_to_bench(c):
     -------
     Circuit
             the parsed circuit.
+
     &#34;&#34;&#34;
     # create circuit
     c = Circuit(name=name)
@@ -493,7 +497,7 @@ def circuit_to_bench(c):
         inputs = (
             input_str.replace(&#34; &#34;, &#34;&#34;).replace(&#34;\n&#34;, &#34;&#34;).replace(&#34;\t&#34;, &#34;&#34;).split(&#34;,&#34;)
         )
-        if gate == &#34;BUFF&#34; or gate == &#34;buff&#34;:
+        if gate in (&#34;buff&#34;, &#34;BUFF&#34;):
             gate = &#34;buf&#34;
         c.add(
             net,
@@ -524,7 +528,7 @@ def circuit_to_bench(c):
 <span>def <span class="ident">circuit_to_bench</span></span>(<span>c)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Generates a str of Bench code from a <code>CircuitGraph</code>.</p>
+<div class="desc"><p>Generate a <code>str</code> of Bench code from a <code>CircuitGraph</code>.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -541,7 +545,7 @@ def circuit_to_bench(c):
 </summary>
 <pre><code class="python">def circuit_to_bench(c):
     &#34;&#34;&#34;
-    Generates a str of Bench code from a `CircuitGraph`.
+    Generate a `str` of Bench code from a `CircuitGraph`.
 
     Parameters
     ----------
@@ -552,6 +556,7 @@ def circuit_to_bench(c):
     -------
     str
         Bench code.
+
     &#34;&#34;&#34;
     insts = []
 
@@ -574,7 +579,7 @@ def circuit_to_bench(c):
     bench = f&#34;# {c.name}\n&#34;
     bench += &#34;&#34;.join(f&#34;INPUT({inp})\n&#34; for inp in c.inputs())
     bench += &#34;\n&#34;
-    bench += &#34;&#34;.join(f&#34;OUTPUT({out};)\n&#34; for out in c.outputs())
+    bench += &#34;&#34;.join(f&#34;OUTPUT({out})\n&#34; for out in c.outputs())
     bench += &#34;\n&#34;
     bench += &#34;\n&#34;.join(insts)
 
@@ -585,7 +590,7 @@ def circuit_to_bench(c):
 <span>def <span class="ident">circuit_to_verilog</span></span>(<span>c, behavioral=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Generates a str of Verilog code from a <code>CircuitGraph</code>.</p>
+<div class="desc"><p>Generate a <code>str</code> of Verilog code from a <code>CircuitGraph</code>.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
@@ -604,7 +609,7 @@ def circuit_to_bench(c):
 </summary>
 <pre><code class="python">def circuit_to_verilog(c, behavioral=False):
     &#34;&#34;&#34;
-    Generates a str of Verilog code from a `CircuitGraph`.
+    Generate a `str` of Verilog code from a `CircuitGraph`.
 
     Parameters
     ----------
@@ -617,6 +622,7 @@ def circuit_to_bench(c):
     -------
     str
         Verilog code.
+
     &#34;&#34;&#34;
     c = Circuit(graph=c.graph.copy(), name=c.name, blackboxes=c.blackboxes.copy())
     # sanitize escaped nets
@@ -705,7 +711,7 @@ def circuit_to_bench(c):
 <span>def <span class="ident">from_file</span></span>(<span>path, name=None, fmt=None, blackboxes=None, warnings=False, error_on_warning=False, fast=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a new <code>Circuit</code> from a verilog file.</p>
+<div class="desc"><p>Create a new <code>Circuit</code> from a verilog file.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>path</code></strong> :&ensp;<code>str</code> or <code>pathlib.Path</code></dt>
@@ -749,7 +755,7 @@ using this flag.</dd>
     fast=False,
 ):
     &#34;&#34;&#34;
-    Creates a new `Circuit` from a verilog file.
+    Create a new `Circuit` from a verilog file.
 
     Parameters
     ----------
@@ -779,13 +785,14 @@ using this flag.</dd>
     -------
     Circuit
             the parsed circuit.
+
     &#34;&#34;&#34;
     path = Path(path)
     infer_module_name = False
     if name is None:
         infer_module_name = True
         name = path.stem
-    with open(path, &#34;r&#34;) as f:
+    with open(path) as f:
         netlist = f.read()
     if fmt == &#34;verilog&#34; or path.suffix == &#34;.v&#34;:
         return verilog_to_circuit(
@@ -797,18 +804,16 @@ using this flag.</dd>
             error_on_warning,
             fast,
         )
-    elif fmt == &#34;bench&#34; or path.suffix == &#34;.bench&#34;:
+    if fmt == &#34;bench&#34; or path.suffix == &#34;.bench&#34;:
         return bench_to_circuit(netlist, name)
-    else:
-        raise ValueError(f&#34;extension {path.suffix} not supported&#34;)</code></pre>
+    raise ValueError(f&#34;extension {path.suffix} not supported&#34;)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.io.from_lib"><code class="name flex">
 <span>def <span class="ident">from_lib</span></span>(<span>name)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a new <code>Circuit</code> from a netlist in the <code>netlists</code>
-folder</p>
+<div class="desc"><p>Create a new <code>Circuit</code> from a netlist in the <code>netlists</code> folder.</p>
 <h2 id="parameters">Parameters</h2>
 <p>name: the name of the circuit.</p>
 <h2 id="returns">Returns</h2>
@@ -822,8 +827,7 @@ folder</p>
 </summary>
 <pre><code class="python">def from_lib(name):
     &#34;&#34;&#34;
-    Creates a new `Circuit` from a netlist in the `netlists`
-    folder
+    Create a new `Circuit` from a netlist in the `netlists` folder.
 
     Parameters
     ----------
@@ -833,6 +837,7 @@ folder</p>
     -------
     Circuit
             the parsed circuit.
+
     &#34;&#34;&#34;
     bbs = [BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])]
     [path] = Path(__file__).parent.absolute().glob(f&#34;netlists/{name}.*&#34;)
@@ -843,7 +848,7 @@ folder</p>
 <span>def <span class="ident">to_file</span></span>(<span>c, path, fmt='verilog', behavioral=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Writes a <code>Circuit</code> to a Verilog file.</p>
+<div class="desc"><p>Write a <code>Circuit</code> to a Verilog file.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circut</code></dt>
@@ -859,7 +864,7 @@ folder</p>
 </summary>
 <pre><code class="python">def to_file(c, path, fmt=&#34;verilog&#34;, behavioral=False):
     &#34;&#34;&#34;
-    Writes a `Circuit` to a Verilog file.
+    Write a `Circuit` to a Verilog file.
 
     Parameters
     ----------
@@ -869,6 +874,7 @@ folder</p>
             the path to the file to read from.
     fmt: str
             the format of the file (verilog or bench)
+
     &#34;&#34;&#34;
     with open(path, &#34;w&#34;) as f:
         if fmt == &#34;verilog&#34;:
@@ -883,7 +889,7 @@ folder</p>
 <span>def <span class="ident">verilog_to_circuit</span></span>(<span>netlist, name, infer_module_name=False, blackboxes=None, warnings=False, error_on_warning=False, fast=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a new Circuit from a module inside Verilog code.</p>
+<div class="desc"><p>Create a new Circuit from a module inside Verilog code.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>netlist</code></strong> :&ensp;<code>str</code></dt>
@@ -928,7 +934,7 @@ using this flag.</dd>
     fast=False,
 ):
     &#34;&#34;&#34;
-    Creates a new Circuit from a module inside Verilog code.
+    Create a new Circuit from a module inside Verilog code.
 
     Parameters
     ----------
@@ -959,8 +965,8 @@ using this flag.</dd>
     -------
     Circuit
             Parsed circuit.
-    &#34;&#34;&#34;
 
+    &#34;&#34;&#34;
     if blackboxes is None:
         blackboxes = []
 
@@ -972,16 +978,16 @@ using this flag.</dd>
     m = re.search(regex, netlist, re.DOTALL)
     try:
         module = m.group(1)
-    except AttributeError:
+    except AttributeError as e1:
         if infer_module_name:
             regex = r&#34;(module\s+(.*?)\s*\(.*?\);(.*?)endmodule)&#34;
             m = re.search(regex, netlist, re.DOTALL)
             try:
                 module = m.group(1)
-            except AttributeError:
-                raise ValueError(&#34;Could not read netlist: no modules found&#34;)
+            except AttributeError as e2:
+                raise ValueError(&#34;Could not read netlist: no modules found&#34;) from e2
         else:
-            raise ValueError(f&#34;Could not read netlist: {name} module not found&#34;)
+            raise ValueError(f&#34;Could not read netlist: {name} module not found&#34;) from e1
 
     return parse_verilog_netlist(module, blackboxes, warnings, error_on_warning)</code></pre>
 </details>

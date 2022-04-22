@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>circuitgraph.utils API documentation</title>
-<meta name="description" content="Various circuit related utilities" />
+<meta name="description" content="Various circuit related utilities …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/github.min.css" crossorigin>
@@ -22,18 +22,37 @@
 <h1 class="title">Module <code>circuitgraph.utils</code></h1>
 </header>
 <section id="section-intro">
-<p>Various circuit related utilities</p>
+<p>Various circuit related utilities.</p>
+<h2 id="examples">Examples</h2>
+<p>Lint a circuit to check for unloaded nets</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = cg.from_lib(&quot;c17&quot;)
+&gt;&gt;&gt; c.set_output(&quot;N22&quot;, False)
+&gt;&gt;&gt; cg.lint(c)
+</code></pre>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">&#34;&#34;&#34;Various circuit related utilities&#34;&#34;&#34;
+<pre><code class="python">&#34;&#34;&#34;
+Various circuit related utilities.
+
+Examples
+--------
+Lint a circuit to check for unloaded nets
+
+&gt;&gt;&gt; import circuitgraph as cg
+&gt;&gt;&gt; c = cg.from_lib(&#34;c17&#34;)
+&gt;&gt;&gt; c.set_output(&#34;N22&#34;, False)
+&gt;&gt;&gt; cg.lint(c)
+
+&#34;&#34;&#34;
+import shutil
+import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-import subprocess
-import shutil
 
-from circuitgraph import supported_types
+from circuitgraph.circuit import supported_types
 from circuitgraph.io import circuit_to_verilog
 
 
@@ -49,8 +68,9 @@ def visualize(c, output_file, suppress_output=True):
             Where to write the image to.
     suppress_output: bool
             If True, yosys stdout will not be printed.
+
     &#34;&#34;&#34;
-    if shutil.which(&#34;yosys&#34;) == None:
+    if shutil.which(&#34;yosys&#34;) is None:
         raise OSError(&#34;Install &#39;yosys&#39; to use &#39;cg.visualize&#39;&#34;)
 
     verilog = circuit_to_verilog(c)
@@ -86,25 +106,31 @@ def visualize(c, output_file, suppress_output=True):
             f&#34;read_verilog {tmp_in.name}; &#34;
             f&#34;show -format {fmt} -prefix {prefix} {c.name}&#34;,
         ]
-        subprocess.run(cmd, stdout=stdout)
+        subprocess.run(cmd, stdout=stdout, check=True)
 
     # Remove intermediate dot files if necessary
     if fmt != &#34;dot&#34;:
         prefix.with_suffix(&#34;.dot&#34;).unlink()
 
 
-def clog2(num: int) -&gt; int:
-    r&#34;&#34;&#34;Return the ceiling log base two of an integer :math:`\ge 1`.
-    This function tells you the minimum dimension of a Boolean space with at
-    least N points.
-    For example, here are the values of ``clog2(N)`` for :math:`1 \le N &lt; 18`:
-        &gt;&gt;&gt; [clog2(n) for n in range(1, 18)]
+def clog2(num):
+    r&#34;&#34;&#34;
+    Return the ceiling log base two of an integer :math:`\ge 1`.
+
+    Gives minimum dimension of a Boolean space with at least N points.
+
+    Examples
+    --------
+    Here are the values of ``clog2(N)`` for :math:`1 \le N &lt; 18`:
+    &gt;&gt;&gt; [clog2(n) for n in range(1, 18)]
     [0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5]
+
     This function is undefined for non-positive integers:
-        &gt;&gt;&gt; clog2(0)
+    &gt;&gt;&gt; clog2(0)
     Traceback (most recent call last):
         ...
     ValueError: expected num &gt;= 1
+
     &#34;&#34;&#34;
     if num &lt; 1:
         raise ValueError(&#34;expected num &gt;= 1&#34;)
@@ -117,7 +143,7 @@ def clog2(num: int) -&gt; int:
 
 def int_to_bin(i, w, lend=False):
     &#34;&#34;&#34;
-    Converts integer to binary tuple.
+    Convert integer to binary tuple.
 
     Parameters
     ----------
@@ -134,16 +160,14 @@ def int_to_bin(i, w, lend=False):
             Binary tuple.
 
     &#34;&#34;&#34;
-
-    if not lend:
-        return tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))
-    else:
+    if lend:
         return tuple(reversed(tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))))
+    return tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))
 
 
 def bin_to_int(b, lend=False):
     &#34;&#34;&#34;
-    Converts binary number to integer.
+    Convert binary number to integer.
 
     Parameters
     ----------
@@ -158,7 +182,6 @@ def bin_to_int(b, lend=False):
             Value as integer.
 
     &#34;&#34;&#34;
-
     if not lend:
         s = &#34;&#34;.join(&#34;1&#34; if v else &#34;0&#34; for v in b)
     else:
@@ -167,25 +190,36 @@ def bin_to_int(b, lend=False):
     return int(s, 2)
 
 
-def lint(c, exhaustive=False, unloaded=False, undriven=True):
+def lint(c, fail_fast=True, unloaded=False, undriven=True, single_input_gates=False):
     &#34;&#34;&#34;
-    Checks circuit for missing connections.
+    Raise ValueError if circuit has invalid connections or types.
 
     Parameters
     ----------
     c: Circuit
             The Circuit to lint.
+    fail_fast: bool
+            Exit after the first error.
+    unloaded: bool
+            Fail on unloaded node.
+    undriven: bool
+            Fail on undriven node.
+    single_input_gates: bool
+            Fail on multi-input gates with only a single input.
+
     &#34;&#34;&#34;
     errors = []
 
     def handle(s):
-        if exhaustive:
-            errors.append(s)
-        else:
+        if fail_fast:
             raise ValueError(s)
+        errors.append(s)
 
-    # node types
+    zero_input_types = [&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_ouptut&#34;]
+    single_input_types = [&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;]
+    multi_input_types = [&#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;]
     for g in c.nodes():
+        # check types
         if &#34;type&#34; not in c.graph.nodes[g]:
             handle(f&#34;no type for node &#39;{g}&#39;&#34;)
         t = c.graph.nodes[g][&#34;type&#34;]
@@ -194,53 +228,67 @@ def lint(c, exhaustive=False, unloaded=False, undriven=True):
         if &#34;.&#34; in g and g.split(&#34;.&#34;)[0] not in c.blackboxes:
             handle(f&#34;node &#39;{g}&#39; has blackbox syntax with no instance&#34;)
 
-    # incorrect connections
-    for g in c.filter_type([&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_output&#34;]):
-        if len(c.fanin(g)) &gt; 0:
-            handle(f&#34;{c.type(g)} &#39;{g}&#39; has fanin&#34;)
+        # input/constant drivers
+        if c.type(g) in zero_input_types and len(c.fanin(g)) &gt; 0:
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has fanin&#34;)
+
+        # black-box output fanout
         if c.type(g) == &#34;bb_output&#34;:
             if len(c.fanout(g)) &gt; 1:
-                handle(f&#34;{c.type(g)} &#39;{g}&#39; has fanout greater than 1&#34;)
+                handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has fanout greater than 1&#34;)
             if c.fanout(g) and c.type(c.fanout(g).pop()) != &#34;buf&#34;:
-                handle(f&#34;{c.type(g)} &#39;{g}&#39; has non-buf fanout&#34;)
+                handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has non-buf fanout&#34;)
 
-    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;]):
-        if len(c.fanin(g)) &gt; 1:
-            handle(f&#34;{c.type(g)} {g} has fanin count &gt; 1&#34;)
+        # multiple drivers
+        if c.type(g) in single_input_types and len(c.fanin(g)) &gt; 1:
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has fanin count &gt; 1&#34;)
 
-    # dangling connections
-    if undriven:
-        for g in c.filter_type(
-            [&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;, &#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;,]
+        # no drivers
+        if (
+            undriven
+            and c.type(g) in single_input_types + multi_input_types
+            and len(c.fanin(g)) &lt; 1
         ):
-            if len(c.fanin(g)) &lt; 1:
-                handle(f&#34;{c.type(g)} {g} has no fanin&#34;)
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has no fanin&#34;)
 
-    if unloaded:
-        for g in c.nodes() - c.outputs():
-            if not c.fanout(g):
-                handle(f&#34;{c.type(g)} {g} has no fanout&#34;)
+        # single drivers
+        if (
+            single_input_gates
+            and c.type(g) in multi_input_types
+            and len(c.fanin(g)) &lt; 2
+        ):
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has fanin less than 2&#34;)
+
+        # unloaded
+        if unloaded and not c.is_output(g) and not c.fanout(g):
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has no fanout&#34;)
 
     # blackboxes
     for name, bb in c.blackboxes.items():
         for g in bb.inputs():
             if f&#34;{name}.{g}&#34; not in c.graph.nodes:
-                handle(f&#34;missing blackbox pin {name}.{g}&#34;)
+                handle(f&#34;missing blackbox pin &#39;{name}.{g}&#39;&#34;)
             else:
                 t = c.graph.nodes[f&#34;{name}.{g}&#34;][&#34;type&#34;]
                 if t != &#34;bb_input&#34;:
-                    handle(f&#34;blackbox pin {name}.{g} has incorrect type {t}&#34;)
+                    handle(f&#34;blackbox pin &#39;{name}.{g}&#39; has incorrect type &#39;{t}&#39;&#34;)
 
         for g in bb.outputs():
             if f&#34;{name}.{g}&#34; not in c.graph.nodes:
-                handle(f&#34;missing blackbox pin {name}.{g}&#34;)
+                handle(f&#34;missing blackbox pin &#39;{name}.{g}&#39;&#34;)
             else:
                 t = c.graph.nodes[f&#34;{name}.{g}&#34;][&#34;type&#34;]
                 if t != &#34;bb_output&#34;:
-                    handle(f&#34;blackbox pin {name}.{g} has incorrect type {t}&#34;)
+                    handle(f&#34;blackbox pin &#39;{name}.{g}&#39; has incorrect type &#39;{t}&#39;&#34;)
 
     if errors:
-        raise ValueError(&#34;\n&#34;.join(errors))</code></pre>
+        msg = &#34;f{len(errors}} total errors.\n&#34;
+        if len(errors) &gt; 10:
+            msg += &#34;\n&#34;.join(errors[:10])
+            msg += f&#34;\nplus {len(errors) - 10} other errors...&#34;
+        else:
+            msg += &#34;\n&#34;.join(errors)
+        raise ValueError(msg)</code></pre>
 </details>
 </section>
 <section>
@@ -254,7 +302,7 @@ def lint(c, exhaustive=False, unloaded=False, undriven=True):
 <span>def <span class="ident">bin_to_int</span></span>(<span>b, lend=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Converts binary number to integer.</p>
+<div class="desc"><p>Convert binary number to integer.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>b</code></strong> :&ensp;<code>tuple</code> of <code>bool</code></dt>
@@ -273,7 +321,7 @@ def lint(c, exhaustive=False, unloaded=False, undriven=True):
 </summary>
 <pre><code class="python">def bin_to_int(b, lend=False):
     &#34;&#34;&#34;
-    Converts binary number to integer.
+    Convert binary number to integer.
 
     Parameters
     ----------
@@ -288,7 +336,6 @@ def lint(c, exhaustive=False, unloaded=False, undriven=True):
             Value as integer.
 
     &#34;&#34;&#34;
-
     if not lend:
         s = &#34;&#34;.join(&#34;1&#34; if v else &#34;0&#34; for v in b)
     else:
@@ -298,36 +345,44 @@ def lint(c, exhaustive=False, unloaded=False, undriven=True):
 </details>
 </dd>
 <dt id="circuitgraph.utils.clog2"><code class="name flex">
-<span>def <span class="ident">clog2</span></span>(<span>num: int) ‑> int</span>
+<span>def <span class="ident">clog2</span></span>(<span>num)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Return the ceiling log base two of an integer :math:<code>\ge 1</code>.
-This function tells you the minimum dimension of a Boolean space with at
-least N points.
-For example, here are the values of <code><a title="circuitgraph.utils.clog2" href="#circuitgraph.utils.clog2">clog2()</a>(N)</code> for :math:<code>1 \le N &lt; 18</code>:
-&gt;&gt;&gt; [clog2(n) for n in range(1, 18)]
+<div class="desc"><p>Return the ceiling log base two of an integer :math:<code>\ge 1</code>.</p>
+<p>Gives minimum dimension of a Boolean space with at least N points.</p>
+<h2 id="examples">Examples</h2>
+<p>Here are the values of <code><a title="circuitgraph.utils.clog2" href="#circuitgraph.utils.clog2">clog2()</a>(N)</code> for :math:<code>1 \le N &lt; 18</code>:</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; [clog2(n) for n in range(1, 18)]
 [0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5]
-This function is undefined for non-positive integers:
-&gt;&gt;&gt; clog2(0)
+</code></pre>
+<p>This function is undefined for non-positive integers:</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; clog2(0)
 Traceback (most recent call last):
-&hellip;
-ValueError: expected num &gt;= 1</p></div>
+    ...
+ValueError: expected num &gt;= 1
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def clog2(num: int) -&gt; int:
-    r&#34;&#34;&#34;Return the ceiling log base two of an integer :math:`\ge 1`.
-    This function tells you the minimum dimension of a Boolean space with at
-    least N points.
-    For example, here are the values of ``clog2(N)`` for :math:`1 \le N &lt; 18`:
-        &gt;&gt;&gt; [clog2(n) for n in range(1, 18)]
+<pre><code class="python">def clog2(num):
+    r&#34;&#34;&#34;
+    Return the ceiling log base two of an integer :math:`\ge 1`.
+
+    Gives minimum dimension of a Boolean space with at least N points.
+
+    Examples
+    --------
+    Here are the values of ``clog2(N)`` for :math:`1 \le N &lt; 18`:
+    &gt;&gt;&gt; [clog2(n) for n in range(1, 18)]
     [0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5]
+
     This function is undefined for non-positive integers:
-        &gt;&gt;&gt; clog2(0)
+    &gt;&gt;&gt; clog2(0)
     Traceback (most recent call last):
         ...
     ValueError: expected num &gt;= 1
+
     &#34;&#34;&#34;
     if num &lt; 1:
         raise ValueError(&#34;expected num &gt;= 1&#34;)
@@ -342,7 +397,7 @@ ValueError: expected num &gt;= 1</p></div>
 <span>def <span class="ident">int_to_bin</span></span>(<span>i, w, lend=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Converts integer to binary tuple.</p>
+<div class="desc"><p>Convert integer to binary tuple.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>i</code></strong> :&ensp;<code>int</code></dt>
@@ -363,7 +418,7 @@ ValueError: expected num &gt;= 1</p></div>
 </summary>
 <pre><code class="python">def int_to_bin(i, w, lend=False):
     &#34;&#34;&#34;
-    Converts integer to binary tuple.
+    Convert integer to binary tuple.
 
     Parameters
     ----------
@@ -380,46 +435,63 @@ ValueError: expected num &gt;= 1</p></div>
             Binary tuple.
 
     &#34;&#34;&#34;
-
-    if not lend:
-        return tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))
-    else:
-        return tuple(reversed(tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))))</code></pre>
+    if lend:
+        return tuple(reversed(tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))))
+    return tuple(v == &#34;1&#34; for v in bin(i)[2:].zfill(w))</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.utils.lint"><code class="name flex">
-<span>def <span class="ident">lint</span></span>(<span>c, exhaustive=False, unloaded=False, undriven=True)</span>
+<span>def <span class="ident">lint</span></span>(<span>c, fail_fast=True, unloaded=False, undriven=True, single_input_gates=False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Checks circuit for missing connections.</p>
+<div class="desc"><p>Raise ValueError if circuit has invalid connections or types.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>The Circuit to lint.</dd>
+<dt><strong><code>fail_fast</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Exit after the first error.</dd>
+<dt><strong><code>unloaded</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Fail on unloaded node.</dd>
+<dt><strong><code>undriven</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Fail on undriven node.</dd>
+<dt><strong><code>single_input_gates</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Fail on multi-input gates with only a single input.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def lint(c, exhaustive=False, unloaded=False, undriven=True):
+<pre><code class="python">def lint(c, fail_fast=True, unloaded=False, undriven=True, single_input_gates=False):
     &#34;&#34;&#34;
-    Checks circuit for missing connections.
+    Raise ValueError if circuit has invalid connections or types.
 
     Parameters
     ----------
     c: Circuit
             The Circuit to lint.
+    fail_fast: bool
+            Exit after the first error.
+    unloaded: bool
+            Fail on unloaded node.
+    undriven: bool
+            Fail on undriven node.
+    single_input_gates: bool
+            Fail on multi-input gates with only a single input.
+
     &#34;&#34;&#34;
     errors = []
 
     def handle(s):
-        if exhaustive:
-            errors.append(s)
-        else:
+        if fail_fast:
             raise ValueError(s)
+        errors.append(s)
 
-    # node types
+    zero_input_types = [&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_ouptut&#34;]
+    single_input_types = [&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;]
+    multi_input_types = [&#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;]
     for g in c.nodes():
+        # check types
         if &#34;type&#34; not in c.graph.nodes[g]:
             handle(f&#34;no type for node &#39;{g}&#39;&#34;)
         t = c.graph.nodes[g][&#34;type&#34;]
@@ -428,53 +500,67 @@ ValueError: expected num &gt;= 1</p></div>
         if &#34;.&#34; in g and g.split(&#34;.&#34;)[0] not in c.blackboxes:
             handle(f&#34;node &#39;{g}&#39; has blackbox syntax with no instance&#34;)
 
-    # incorrect connections
-    for g in c.filter_type([&#34;input&#34;, &#34;0&#34;, &#34;1&#34;, &#34;bb_output&#34;]):
-        if len(c.fanin(g)) &gt; 0:
-            handle(f&#34;{c.type(g)} &#39;{g}&#39; has fanin&#34;)
+        # input/constant drivers
+        if c.type(g) in zero_input_types and len(c.fanin(g)) &gt; 0:
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has fanin&#34;)
+
+        # black-box output fanout
         if c.type(g) == &#34;bb_output&#34;:
             if len(c.fanout(g)) &gt; 1:
-                handle(f&#34;{c.type(g)} &#39;{g}&#39; has fanout greater than 1&#34;)
+                handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has fanout greater than 1&#34;)
             if c.fanout(g) and c.type(c.fanout(g).pop()) != &#34;buf&#34;:
-                handle(f&#34;{c.type(g)} &#39;{g}&#39; has non-buf fanout&#34;)
+                handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has non-buf fanout&#34;)
 
-    for g in c.filter_type([&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;]):
-        if len(c.fanin(g)) &gt; 1:
-            handle(f&#34;{c.type(g)} {g} has fanin count &gt; 1&#34;)
+        # multiple drivers
+        if c.type(g) in single_input_types and len(c.fanin(g)) &gt; 1:
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has fanin count &gt; 1&#34;)
 
-    # dangling connections
-    if undriven:
-        for g in c.filter_type(
-            [&#34;buf&#34;, &#34;not&#34;, &#34;bb_input&#34;, &#34;and&#34;, &#34;nand&#34;, &#34;or&#34;, &#34;nor&#34;, &#34;xor&#34;, &#34;xnor&#34;,]
+        # no drivers
+        if (
+            undriven
+            and c.type(g) in single_input_types + multi_input_types
+            and len(c.fanin(g)) &lt; 1
         ):
-            if len(c.fanin(g)) &lt; 1:
-                handle(f&#34;{c.type(g)} {g} has no fanin&#34;)
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has no fanin&#34;)
 
-    if unloaded:
-        for g in c.nodes() - c.outputs():
-            if not c.fanout(g):
-                handle(f&#34;{c.type(g)} {g} has no fanout&#34;)
+        # single drivers
+        if (
+            single_input_gates
+            and c.type(g) in multi_input_types
+            and len(c.fanin(g)) &lt; 2
+        ):
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has fanin less than 2&#34;)
+
+        # unloaded
+        if unloaded and not c.is_output(g) and not c.fanout(g):
+            handle(f&#34;&#39;{c.type(g)}&#39; node &#39;{g}&#39; has no fanout&#34;)
 
     # blackboxes
     for name, bb in c.blackboxes.items():
         for g in bb.inputs():
             if f&#34;{name}.{g}&#34; not in c.graph.nodes:
-                handle(f&#34;missing blackbox pin {name}.{g}&#34;)
+                handle(f&#34;missing blackbox pin &#39;{name}.{g}&#39;&#34;)
             else:
                 t = c.graph.nodes[f&#34;{name}.{g}&#34;][&#34;type&#34;]
                 if t != &#34;bb_input&#34;:
-                    handle(f&#34;blackbox pin {name}.{g} has incorrect type {t}&#34;)
+                    handle(f&#34;blackbox pin &#39;{name}.{g}&#39; has incorrect type &#39;{t}&#39;&#34;)
 
         for g in bb.outputs():
             if f&#34;{name}.{g}&#34; not in c.graph.nodes:
-                handle(f&#34;missing blackbox pin {name}.{g}&#34;)
+                handle(f&#34;missing blackbox pin &#39;{name}.{g}&#39;&#34;)
             else:
                 t = c.graph.nodes[f&#34;{name}.{g}&#34;][&#34;type&#34;]
                 if t != &#34;bb_output&#34;:
-                    handle(f&#34;blackbox pin {name}.{g} has incorrect type {t}&#34;)
+                    handle(f&#34;blackbox pin &#39;{name}.{g}&#39; has incorrect type &#39;{t}&#39;&#34;)
 
     if errors:
-        raise ValueError(&#34;\n&#34;.join(errors))</code></pre>
+        msg = &#34;f{len(errors}} total errors.\n&#34;
+        if len(errors) &gt; 10:
+            msg += &#34;\n&#34;.join(errors[:10])
+            msg += f&#34;\nplus {len(errors) - 10} other errors...&#34;
+        else:
+            msg += &#34;\n&#34;.join(errors)
+        raise ValueError(msg)</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.utils.visualize"><code class="name flex">
@@ -507,8 +593,9 @@ ValueError: expected num &gt;= 1</p></div>
             Where to write the image to.
     suppress_output: bool
             If True, yosys stdout will not be printed.
+
     &#34;&#34;&#34;
-    if shutil.which(&#34;yosys&#34;) == None:
+    if shutil.which(&#34;yosys&#34;) is None:
         raise OSError(&#34;Install &#39;yosys&#39; to use &#39;cg.visualize&#39;&#34;)
 
     verilog = circuit_to_verilog(c)
@@ -544,7 +631,7 @@ ValueError: expected num &gt;= 1</p></div>
             f&#34;read_verilog {tmp_in.name}; &#34;
             f&#34;show -format {fmt} -prefix {prefix} {c.name}&#34;,
         ]
-        subprocess.run(cmd, stdout=stdout)
+        subprocess.run(cmd, stdout=stdout, check=True)
 
     # Remove intermediate dot files if necessary
     if fmt != &#34;dot&#34;:
@@ -563,7 +650,9 @@ ValueError: expected num &gt;= 1</p></div>
 </header>
 <h1>Index</h1>
 <div class="toc">
-<ul></ul>
+<ul>
+<li><a href="#examples">Examples</a></li>
+</ul>
 </div>
 <ul id="index">
 <li><h3>Super-module</h3>
