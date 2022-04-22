@@ -51,14 +51,15 @@ In addition to the packages enumerated in `requirements.txt`, there are a few to
 
 If you would like to use the satisfiability functionality, install [PySAT](https://pysathq.github.io).
 
-If you would like to perform synthesis you can install either Cadence Genus or [Yosys](http://www.clifford.at/yosys/). If you're going to use Genus, you must provide the path to a synthesis library to use by setting the `CIRCUITGRAPH_GENUS_LIBRARY_PATH` variable.
+Open source synthesis can be perofmred by installing [Yosys](http://www.clifford.at/yosys/) and adding it to your path.
+Alternatively, Genus or DesignCompiler can be used by providing the path to a generic library to use by setting the `CIRCUITGRAPH_GENUS_LIBRARY_PATH` and `CIRCUITGRAPH_DC_LIBRARY_PATH` environment variables.
 
 ## Contributing
 
 If you have ideas on how to improve this library we'd love to hear your suggestions. Please open an issue.
 If you want to develop the improvement yourself, please consider the information below.
 
-CI Testing and coverage is setup using [Travis CI](https://travis-ci.org/) and [Codecov](https://codecov.io).
+Coverage is computed using [Codecov](https://codecov.io).
  If you would like to generate coverage information locally, install coverage and codecov.
 ```shell
 pip install coverage codecov
