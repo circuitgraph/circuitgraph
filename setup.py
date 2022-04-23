@@ -5,7 +5,7 @@ with open("README.md") as fh:
 
 setuptools.setup(
     name="circuitgraph",
-    version="0.1.3",
+    version="0.2.0",
     author="Ruben Purdy, Joseph Sweeney",
     author_email="rpurdy@andrew.cmu.edu, joesweeney@cmu.edu",
     description="Tools for working with boolean circuits as graphs.",
