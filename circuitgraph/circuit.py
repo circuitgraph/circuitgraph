@@ -14,6 +14,119 @@ name and gate type. The supported types are:
 
 Additionally, a node can be marked as an output node.
 
+Examples
+--------
+Create an empty circuit.
+
+>>> import circuitgraph as cg
+>>> c = cg.Circuit()
+
+Add circuit inputs
+
+>>> c.add('i0', 'input')
+'i0'
+>>> c.add('i1', 'input')
+'i1'
+
+Add an AND gate named 'g0'.
+
+>>> c.add('g0', 'and')
+'g0'
+
+Connect the inputs to the AND gate.
+
+>>> c.connect('i0', 'g0')
+>>> c.connect('i1', 'g0')
+>>> c.fanin('g0') == {'i0', 'i1'}
+True
+
+Or, make connections when adding nodes.
+
+>>> c.add('g1', 'or', fanin=['i0', 'i1'])
+'g1'
+
+Nodes can marked as outputs.
+
+>>> c.set_output('g1')
+>>> c.add('g2', 'nor', fanin=['g0', 'g1'], output=True)
+'g2'
+>>> c.outputs() == {'g1', 'g2'}
+True
+
+Another way to create the circuit is through a file.
+
+>>> c = cg.from_file('path/to/circuit.v') # doctest: +SKIP
+
+Non-primitve gates can be added using blackboxes. References to blackboxes
+are stored in `Circuit` objects and are represented in the circuit graph
+through `bb_input` and `bb_output` types. `bb_input` nodes are like buffers:
+they can be driven by a single driver. Each `bb_output` must be connected to a
+single `buf` node.
+
+>>> c = cg.Circuit()
+>>> c.add("i0", "input")
+'i0'
+>>> c.add("i1", "input")
+'i1'
+>>> c.add("s", "input")
+'s'
+>>> c.add("o", "buf", output=True)
+'o'
+
+Define the blackboxes for a mux.
+
+>>> bb = cg.BlackBox("mux", inputs=["in_0", "in_1", "sel_0"], outputs=["out"])
+
+Add the blackbox to the circuit. Specify how blackbox inputs/outputs connect
+to circuit nodes.
+
+>>> c.add_blackbox(bb, "mux_i", {"in_0": "i0", "in_1": "i1", "sel_0": "s", "out": "o"})
+>>> set(c.blackboxes)
+{'mux_i'}
+
+`bb_input` and `bb_output` nodes get added to the graph and connected.
+
+>>> c.type("mux_i.in_0")
+'bb_input'
+>>> c.type("mux_i.out")
+'bb_output'
+>>> c.fanin("mux_i.in_0")
+{'i0'}
+>>> c.fanout("mux_i.out")
+{'o'}
+
+Blackboxes can then be replaced with `Circuit` objects.
+
+>>> m = cg.Circuit("mux")
+>>> inputs = [m.add("in_0", "input"), m.add("in_1", "input")]
+>>> sels = [m.add("sel_0", "input"), m.add("not_sel_0", "not", fanin="sel_0")]
+>>> ands = [
+...     m.add("and_0", "and", fanin=[sels[0], inputs[0]]),
+...     m.add("and_1", "and", fanin=[sels[1], inputs[1]])
+... ]
+>>> m.add("out", "or", output=True, fanin=ands)
+'out'
+>>> c.fill_blackbox("mux_i", m)
+
+Mux nodes get added to the circuit
+
+>>> c.type("mux_i_sel_0")
+'buf'
+>>> c.type("mux_i_and_0")
+'and'
+>>> c.fanout("mux_i_out")
+{'o'}
+
+Blackboxes can also be used for sequential elements.
+
+>>> flop = BlackBox("flop", ["clk", "d"], ["q"])
+
+Files containing instanations of flops can still be parsed as long as the
+instantiations use dot notation for ports, e.g.,
+`flop flop_i(.clk(clk), .d(data_in), .q(data_out));`
+by passing the blackbox into `from_file`
+>>> c = cg.from_file("/path/to/file.v", blackboxes=[flop]) # doctest: +SKIP
+
 """
 from functools import reduce
 from itertools import combinations, product
@@ -56,49 +169,6 @@ class Circuit:
                 Graph data structure to be used in new instance.
         blackboxes : dict of str:BlackBox
                 Record of blackboxes, mapping instsance name to BlackBox type
-
-        Examples
-        --------
-        Create an empty circuit.
-
-        >>> import circuitgraph as cg
-        >>> c = cg.Circuit()
-
-        Add circuit inputs
-
-        >>> c.add('i0', 'input')
-        'i0'
-        >>> c.add('i1', 'input')
-        'i1'
-
-        Add an AND gate named 'g0'.
-
-        >>> c.add('g0', 'and')
-        'g0'
-
-        Connect the inputs to the AND gate.
-
-        >>> c.connect('i0', 'g0')
-        >>> c.connect('i1', 'g0')
-        >>> c.fanin('g0') == {'i0', 'i1'}
-        True
-
-        Or, make connections when adding nodes.
-
-        >>> c.add('g1', 'or', fanin=['i0', 'i1'])
-        'g1'
-
-        Nodes can marked as outputs.
-
-        >>> c.set_output('g1')
-        >>> c.add('g2', 'nor', fanin=['g0', 'g1'], output=True)
-        'g2'
-        >>> c.outputs() == {'g1', 'g2'}
-        True
-
-        Another way to create the circuit is through a file.
-
-        >>> c = cg.from_file('path/to/circuit.v') # doctest: +SKIP
 
         """
         if name:
@@ -334,7 +404,8 @@ class Circuit:
         name : str
                 Instance name.
         connections : dict of str:str
-                Optional connections to make.
+                Optional connections to make. Mapping from blackbox
+                inputs/outputs to circuit nodes.
 
         """
         # check if exists
