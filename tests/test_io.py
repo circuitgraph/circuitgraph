@@ -36,72 +36,36 @@ class TestIO(unittest.TestCase):
     def test_verilog(self):
         g = cg.from_file(f"{self.test_path}/test_correct_io.v")
 
-        self.assertSetEqual(
-            g.nodes(),
-            {
-                "G1",
-                "G2",
-                "G3",
-                "G4",
-                "G5_0",
-                "G5_1",
-                "G17",
-                "G18",
-                "G19",
-                "G20",
-                "G21",
-                "G22_0",
-                "G22_1",
-                "G8_0",
-                "G8_1",
-                "and_G1_G2",
-                "tie_0",
-                "tie_1",
-                "not_G2",
-                "xor_G3_G4",
-                "and_G8_0_G5_0",
-                "xor_G17_and_G8_0_G5_0",
-                "and_and_G1_G2_xor_G3_G4",
-                "and_G1_or_not_G2_tie_1",
-                "or_not_G2_tie_1",
-            },
-        )
-        self.assertSetEqual(g.fanin("G8_0"), {"G1", "G3"})
-        self.assertSetEqual(g.fanin("G17"), {"G8_1", "tie_1"})
-        self.assertEqual(g.type("G8_1"), "buf")
-        self.assertEqual(g.fanin("G8_1"), {"tie_1"})
+        c = cg.Circuit()
+        c.add("G1", "input")
+        c.add("G2", "input")
+        c.add("G3", "input")
+        c.add("G4", "input")
+        c.add("G5_0", "input")
+        c.add("G5_1", "input")
 
-        self.assertEqual(g.type("G8_0"), "nand")
-        self.assertEqual(g.type("G17"), "nor")
-        self.assertEqual(g.type("G18"), "and")
-        self.assertTrue(g.is_output("G18"))
-        self.assertEqual(g.type("G22_0"), "xor")
-        self.assertTrue(g.is_output("G22_0"))
-        self.assertEqual(g.type("tie_1"), "1")
-        self.assertEqual(g.type("tie_0"), "0")
+        c.add("tie_1", "1")
+        c.add("tie_0", "0")
 
-        self.assertSetEqual(g.fanin("G19"), {"and_and_G1_G2_xor_G3_G4"})
-        self.assertSetEqual(
-            g.fanin("and_and_G1_G2_xor_G3_G4"), {"and_G1_G2", "xor_G3_G4"}
-        )
-        self.assertSetEqual(g.fanin("and_G1_G2"), {"G1", "G2"})
-        self.assertSetEqual(g.fanin("xor_G3_G4"), {"G3", "G4"})
-        self.assertSetEqual(g.fanin("G20"), {"xor_G17_and_G8_0_G5_0"})
-        self.assertSetEqual(
-            g.fanin("xor_G17_and_G8_0_G5_0"), {"G17", "and_G8_0_G5_0"},
-        )
-        self.assertSetEqual(g.fanin("and_G8_0_G5_0"), {"G8_0", "G5_0"})
-        self.assertSetEqual(g.fanin("G22_1"), {"and_G1_or_not_G2_tie_1"})
-        self.assertSetEqual(
-            g.fanin("and_G1_or_not_G2_tie_1"), {"G1", "or_not_G2_tie_1"}
-        )
-        self.assertSetEqual(g.fanin("or_not_G2_tie_1"), {"not_G2", "tie_1"})
-        self.assertSetEqual(g.fanin("not_G2"), {"G2"})
+        c.add("G8_0", "nand", fanin=["G1", "G3"])
+        c.add("G8_1", "buf", fanin="tie_1")
+        c.add("G17", "nor", fanin=["G8_1", "tie_1"], output=True)
+        c.add("G18", "and", fanin=["G2", "G5_0"], output=True)
+        c.add("G22_0", "xor", fanin=["G5_1", "G4"], output=True)
 
-        self.assertSetEqual(g.inputs(), {"G1", "G2", "G3", "G4", "G5_0", "G5_1"})
-        self.assertSetEqual(
-            g.outputs(), {"G17", "G18", "G19", "G20", "G21", "G22_0", "G22_1"},
-        )
+        c.add("G3_xor_G4", "xor", fanin=["G3", "G4"])
+        c.add("G2_and_G3_xor_G4", "and", fanin=["G2", "G3_xor_G4"])
+        c.add("G19", "and", fanin=["G1", "G2_and_G3_xor_G4"], output=True)
+        c.add("G8_0_and_G5_0", "and", fanin=["G8_0", "G5_0"])
+        c.add("G20", "xor", fanin=["G17", "G8_0_and_G5_0"], output=True)
+        c.add("G21", "buf", fanin="tie_0", output=True)
+        c.add("G22_1", "buf", fanin=["G1"], output=True)
+
+        m = cg.tx.miter(g, c)
+        live = cg.sat.solve(m)
+        self.assertTrue(live)
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
 
     def test_fast_verilog(self):
         g = cg.from_file(f"{self.test_path}/../c432.v")

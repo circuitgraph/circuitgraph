@@ -405,6 +405,41 @@ def syn(
     return cg.io.verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
 
 
+def aig(c):
+    """
+    Transform a circuit into and and-inverter graph.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to transform to an AIG.
+
+    Returns
+    -------
+    Circuit
+            The AIG circuit.
+
+    """
+    with NamedTemporaryFile(
+        prefix="circuitgraph_aig_input", suffix=".v", mode="w"
+    ) as tmp_in:
+        cg.to_file(c, tmp_in.name)
+        with NamedTemporaryFile(
+            prefix="circuitgraph_aig_output", suffix=".v", mode="r"
+        ) as tmp_out:
+            execute = (
+                f"read_verilog {tmp_in.name}; aigmap; "
+                "opt; "
+                f"write_verilog -noattr {tmp_out.name}"
+            )
+            subprocess.run(
+                ["yosys", "-p", execute], stdout=subprocess.DEVNULL, check=True
+            )
+            c = cg.from_file(tmp_out.name)
+    # c = remove_bufs(c)
+    return c
+
+
 def ternary(c):
     """
     Encode the circuit with ternary values.

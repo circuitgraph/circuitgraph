@@ -276,6 +276,21 @@ class TestTx(unittest.TestCase):
         self.assertFalse(different_output)
         shutil.rmtree(tmpdir)
 
+    @unittest.skipIf(shutil.which("yosys") is None, "Yosys is not installed")
+    def test_aig(self):
+        aig = cg.tx.aig(self.c432)
+        m = cg.tx.miter(self.c432, aig)
+        live = cg.sat.solve(m)
+        self.assertTrue(live)
+        different_output = cg.sat.solve(m, assumptions={"sat": True})
+        self.assertFalse(different_output)
+        for node in aig:
+            self.assertTrue(aig.type(node) in ["input", "and", "not"])
+            if aig.type(node) == "and":
+                self.assertTrue(len(aig.fanin(node)) == 2)
+            elif aig.type(node) == "not":
+                self.assertTrue(len(aig.fanin(node)) == 1)
+
     def test_ternary(self):
         # Test AND gate behavior
         c = cg.Circuit()
