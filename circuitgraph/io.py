@@ -5,6 +5,8 @@ from pathlib import Path
 from circuitgraph import BlackBox, Circuit
 from circuitgraph.parsing import fast_parse_verilog_netlist, parse_verilog_netlist
 
+generic_flop = BlackBox("ff", ["clk", "d"], ["q"])
+
 genus_flops = [
     BlackBox("flopd", ["CK", "D"], ["Q"]),
     BlackBox("fflopd", ["CK", "D"], ["Q"]),

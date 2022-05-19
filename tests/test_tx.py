@@ -543,3 +543,8 @@ class TestTx(unittest.TestCase):
             for n0 in supergate.inputs():
                 for n1 in supergate.inputs() - {n0}:
                     self.assertFalse(c.transitive_fanin(n0) & c.transitive_fanin(n1))
+
+    def test_insert_registers(self):
+        c = cg.from_lib("c880")
+        c_reg = cg.tx.insert_registers(c, 2, q_suffix="_cg_insert_reg_q_")
+        # FIXME: Simulate to check if c_reg still behaves like c
