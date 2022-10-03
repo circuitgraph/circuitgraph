@@ -885,7 +885,7 @@ def limit_fanin(c, k):
     c : Circuit
             Input circuit.
     k : str
-            Maximum fanin. (k > 2)
+            Maximum fanin. (k >= 2)
 
     Returns
     -------
@@ -894,7 +894,7 @@ def limit_fanin(c, k):
 
     """
     if k < 2:
-        raise ValueError("maximum fanin, k, must be > 2")
+        raise ValueError(f"'k' must be >= 2, not '{k}'")
 
     gatemap = {
         "and": "and",
@@ -918,6 +918,46 @@ def limit_fanin(c, k):
                 gatemap[ck.type(n)],
                 fanin=[f0, f1],
                 fanout=n,
+                uid=True,
+            )
+            i += 1
+
+    return ck
+
+
+def limit_fanout(c, k):
+    """
+    Reduce the maximum fanout of circuit gates to k.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    k : str
+            Maximum fanout. (k >= 2)
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+
+    """
+    if k < 2:
+        raise ValueError(f"'k' must be >= 2, not '{k}'")
+
+    ck = c.copy()
+    for n in ck.nodes():
+        i = 0
+        while len(ck.fanout(n)) > k:
+            fo = ck.fanout(n)
+            f0 = fo.pop()
+            f1 = fo.pop()
+            ck.disconnect(n, [f0, f1])
+            ck.add(
+                f"{n}_limit_fanout_{i}",
+                "buf",
+                fanin=n,
+                fanout=[f0, f1],
                 uid=True,
             )
             i += 1

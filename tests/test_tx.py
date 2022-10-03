@@ -48,7 +48,12 @@ class TestTx(unittest.TestCase):
         num_unroll = 4
         initial_values = {f: str(random.getrandbits(1)) for f in c.blackboxes}
         cu, io_map = cg.tx.sequential_unroll(
-            c, num_unroll, "D", "Q", ["CK"], initial_values=initial_values,
+            c,
+            num_unroll,
+            "D",
+            "Q",
+            ["CK"],
+            initial_values=initial_values,
         )
         self.assertEqual(len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll)
         self.assertEqual(len(cu.outputs()), len(c.outputs()) * num_unroll)
@@ -59,7 +64,12 @@ class TestTx(unittest.TestCase):
         c = cg.from_lib("s27")
         num_unroll = 4
         cu, _ = cg.tx.sequential_unroll(
-            c, num_unroll, "D", "Q", ["CK"], add_flop_outputs=True,
+            c,
+            num_unroll,
+            "D",
+            "Q",
+            ["CK"],
+            add_flop_outputs=True,
         )
         self.assertEqual(
             len(cu.inputs()), (len(c.inputs()) - 1) * num_unroll + len(c.blackboxes)
@@ -152,7 +162,8 @@ class TestTx(unittest.TestCase):
         c17 = cg.from_lib("c17")
         sc = cg.tx.subcircuit(c17, c17.transitive_fanin("N22") | {"N22"})
         self.assertSetEqual(
-            sc.nodes(), {"N22", "N10", "N16", "N1", "N3", "N2", "N11", "N6"},
+            sc.nodes(),
+            {"N22", "N10", "N16", "N1", "N3", "N2", "N11", "N6"},
         )
         self.assertSetEqual(
             sc.edges(),
@@ -412,6 +423,26 @@ class TestTx(unittest.TestCase):
 
         for n in ck:
             self.assertTrue(len(ck.fanin(n)) <= k)
+
+    def test_limit_fanout(self):
+        k = 2
+        c = cg.from_lib("c1355")
+
+        any_greater = False
+        for n in c:
+            if len(c.fanout(n)) > k:
+                any_greater = True
+                break
+        self.assertTrue(any_greater)
+
+        ck = cg.tx.limit_fanout(c, k)
+
+        # check conversion
+        m = cg.tx.miter(c, ck)
+        self.assertFalse(cg.sat.solve(m, assumptions={"sat": True}))
+
+        for n in ck:
+            self.assertTrue(len(ck.fanout(n)) <= k)
 
     def test_acyclic_unroll(self):
         c = cg.Circuit()

@@ -100,7 +100,7 @@ def from_lib(name):
             the parsed circuit.
 
     """
-    bbs = [BlackBox("ff", ["CK", "D"], ["Q"])]
+    bbs = [BlackBox("ff", ["CK", "D"], ["Q"])] + genus_flops + dc_flops
     [path] = Path(__file__).parent.absolute().glob(f"netlists/{name}.*")
     return from_file(path, name, blackboxes=bbs)
 
@@ -337,7 +337,8 @@ def circuit_to_verilog(c, behavioral=False):
                         insts.append(f"assign {n} = {fanin}")
             else:
                 fanin = ", ".join(fanin)
-                insts.append(f"{c.type(n)} g_{len(insts)} " f"({n}, {fanin})")
+                gate_name = c.uid(f"g_{len(insts)}")
+                insts.append(f"{c.type(n)} {gate_name}({n}, {fanin})")
         elif c.type(n) in ["0", "1", "x"]:
             insts.append(f"assign {n} = 1'b{c.type(n)}")
             wires.append(n)
