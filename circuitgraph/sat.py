@@ -366,7 +366,14 @@ def approx_model_count(
         with open(log_file, "w+") if log_file else tempfile.NamedTemporaryFile(
             prefix=f"circuitgraph_approxmc_{c.name}_log", mode="w+"
         ) as f:
-            subprocess.run(cmd, stdout=f, stderr=f, check=True, text=True)
+            subprocess.run(
+                cmd,
+                stdout=f,
+                stderr=f,
+                check=True,
+                encoding="utf8",
+                universal_newlines=True,
+            )
             f.seek(0)
             result = f.read()
 

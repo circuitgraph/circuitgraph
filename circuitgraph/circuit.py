@@ -214,7 +214,7 @@ class Circuit:
 
     def set_type(self, ns, t):
         """
-        Return node(s) type(s).
+        Set the type of a node or nodes.
 
         Parameters
         ----------
