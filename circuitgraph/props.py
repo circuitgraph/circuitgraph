@@ -33,7 +33,7 @@ def influence(c, ns, supergates=False, approx=True, log_dir=None, **kwargs):
     c : Circuit
             Circuit to compute influence for.
     ns : str or list of str
-            Node(s) to compute average sensitivity for.
+            Node(s) to compute influence for.
     supergates : bool
             If True, break computation into supergates.
     approx : bool

@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] -
+### Fixed
+- Approximate model counting subprocess newlines and encoding
+- `set_type` docstring
+- `props.influence` docstring
+- Ternary transform for circuits with xor/xnor gates
+
+### Added
+- Generic flop bloackbox
+- `insert_registers` transform
+- `limit_fanout` transform
+- `levelize` function
+
+
 ## [0.2.0] - 2022-04-22
 ### Fixed
 - Visualization with BlackBoxes.

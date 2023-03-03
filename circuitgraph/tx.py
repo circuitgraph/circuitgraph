@@ -525,7 +525,7 @@ def ternary(c):
             t.add(
                 mapping[n],
                 "or",
-                fanin=(mapping[p] for p in c.fanin(n)),
+                fanin=[mapping[p] for p in c.fanin(n)],
                 output=c.is_output(n),
                 add_connected_nodes=True,
                 allow_redefinition=True,
