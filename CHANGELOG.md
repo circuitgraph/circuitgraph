@@ -7,12 +7,16 @@ All notable changes to this project will be documented in this file.
 - `set_type` docstring
 - `props.influence` docstring
 - Ternary transform for circuits with xor/xnor gates
+- `sat.construct_solver` works with newer versions of `python-sat`
 
 ### Added
-- Generic flop bloackbox
+- Generic flop blackbox
 - `insert_registers` transform
 - `limit_fanout` transform
 - `levelize` function
+
+### Changed
+- `sat.construct_solver` accepts a `pysat.Solver` class instead of a string for greater flexibility. If no solver is specified, `Cadical` (`Cadical153` for newer versions of `python-sat`) will be used.
 
 
 ## [0.2.0] - 2022-04-22
