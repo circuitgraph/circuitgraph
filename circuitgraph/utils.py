@@ -68,7 +68,7 @@ def visualize(c, output_file, suppress_output=True):
             "yosys",
             "-p",
             f"read_verilog {tmp_in.name}; "
-            f"show -format {fmt} -prefix {prefix} {c.name}",
+            f"show -stretch -format {fmt} -prefix {prefix} {c.name}",
         ]
         subprocess.run(cmd, stdout=stdout, check=True)
 
