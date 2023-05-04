@@ -67,7 +67,7 @@ def construct_solver(c, assumptions=None, engine="cadical"):
 
     """
     try:
-        from pysat.solvers import Cadical, Glucose4, Lingeling
+        from pysat.solvers import Cadical153 as Cadical, Glucose4, Lingeling
     except ImportError as e:
         raise ImportError(
             "Install 'python-sat' to use satisfiability functionality"
