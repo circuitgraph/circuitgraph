@@ -104,7 +104,7 @@ def visualize(c, output_file, suppress_output=True):
             &#34;yosys&#34;,
             &#34;-p&#34;,
             f&#34;read_verilog {tmp_in.name}; &#34;
-            f&#34;show -format {fmt} -prefix {prefix} {c.name}&#34;,
+            f&#34;show -stretch -format {fmt} -prefix {prefix} {c.name}&#34;,
         ]
         subprocess.run(cmd, stdout=stdout, check=True)
 
@@ -629,7 +629,7 @@ ValueError: expected num &gt;= 1
             &#34;yosys&#34;,
             &#34;-p&#34;,
             f&#34;read_verilog {tmp_in.name}; &#34;
-            f&#34;show -format {fmt} -prefix {prefix} {c.name}&#34;,
+            f&#34;show -stretch -format {fmt} -prefix {prefix} {c.name}&#34;,
         ]
         subprocess.run(cmd, stdout=stdout, check=True)
 

@@ -134,3 +134,15 @@ class TestProps(unittest.TestCase):
             asmp = dict(zip(sp, vs))
             m += cg.sat.solve(self.s27, asmp)[n]
         self.assertEqual(m / (2 ** len(sp)), p)
+
+    def test_levelize(self):
+        c = cg.Circuit()
+        levels = {}
+        levels[c.add("i0", "input")] = 0
+        levels[c.add("i1", "input")] = 0
+        levels[c.add("const0", "0")] = 0
+        levels[c.add("g0", "and", fanin=["i0", "i1"])] = 1
+        levels[c.add("g1", "and", fanin=["i0", "g0"])] = 2
+        levels[c.add("g2", "or", output=True, fanin=["const0", "g1"])] = 3
+
+        self.assertEqual(levels, cg.props.levelize(c))

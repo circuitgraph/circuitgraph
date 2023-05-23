@@ -78,7 +78,7 @@ def influence(c, ns, supergates=False, approx=True, log_dir=None, **kwargs):
     c : Circuit
             Circuit to compute influence for.
     ns : str or list of str
-            Node(s) to compute average sensitivity for.
+            Node(s) to compute influence for.
     supergates : bool
             If True, break computation into supergates.
     approx : bool
@@ -118,10 +118,17 @@ def influence(c, ns, supergates=False, approx=True, log_dir=None, **kwargs):
                 if log_dir:
                     log_file = log_dir / f&#34;{s}.approxmc.log&#34;
                     count = cg.sat.approx_model_count(
-                        i, {&#34;sat&#34;: True}, log_file=log_file, **kwargs,
+                        i,
+                        {&#34;sat&#34;: True},
+                        log_file=log_file,
+                        **kwargs,
                     )
                 else:
-                    count = cg.sat.approx_model_count(i, {&#34;sat&#34;: True}, **kwargs,)
+                    count = cg.sat.approx_model_count(
+                        i,
+                        {&#34;sat&#34;: True},
+                        **kwargs,
+                    )
             else:
                 count = cg.sat.model_count(i, {&#34;sat&#34;: True})
             return count
@@ -306,7 +313,34 @@ def signal_probability(c, n, approx=True, **kwargs):
     else:
         count = cg.sat.model_count(subc, {n: True})
 
-    return count / (2 ** len(subc.startpoints()))</code></pre>
+    return count / (2 ** len(subc.startpoints()))
+
+
+def levelize(c):
+    &#34;&#34;&#34;
+    Levelize a circuit.
+
+    Compute the logical level of each gate in the circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            Input circuit.
+
+    Returns
+    -------
+    dict of str:int
+            Mapping of gate names to levels.
+    &#34;&#34;&#34;
+    if c.is_cyclic():
+        raise ValueError(&#34;Cannot levelize cyclic circuit&#34;)
+
+    levels = {n: 0 for n in c.inputs() | c.filter_type((&#34;0&#34;, &#34;1&#34;, &#34;x&#34;))}
+    for n in c.topo_sort():
+        if n in levels:
+            continue
+        levels[n] = max(levels[fi] for fi in c.fanin(n)) + 1
+    return levels</code></pre>
 </details>
 </section>
 <section>
@@ -400,7 +434,7 @@ to average sensitivities.</dd>
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>Circuit to compute influence for.</dd>
 <dt><strong><code>ns</code></strong> :&ensp;<code>str</code> or <code>list</code> of <code>str</code></dt>
-<dd>Node(s) to compute average sensitivity for.</dd>
+<dd>Node(s) to compute influence for.</dd>
 <dt><strong><code>supergates</code></strong> :&ensp;<code>bool</code></dt>
 <dd>If True, break computation into supergates.</dd>
 <dt><strong><code>approx</code></strong> :&ensp;<code>bool</code></dt>
@@ -429,7 +463,7 @@ are specified, a dict mapping each output to its influences.</dd>
     c : Circuit
             Circuit to compute influence for.
     ns : str or list of str
-            Node(s) to compute average sensitivity for.
+            Node(s) to compute influence for.
     supergates : bool
             If True, break computation into supergates.
     approx : bool
@@ -469,10 +503,17 @@ are specified, a dict mapping each output to its influences.</dd>
                 if log_dir:
                     log_file = log_dir / f&#34;{s}.approxmc.log&#34;
                     count = cg.sat.approx_model_count(
-                        i, {&#34;sat&#34;: True}, log_file=log_file, **kwargs,
+                        i,
+                        {&#34;sat&#34;: True},
+                        log_file=log_file,
+                        **kwargs,
                     )
                 else:
-                    count = cg.sat.approx_model_count(i, {&#34;sat&#34;: True}, **kwargs,)
+                    count = cg.sat.approx_model_count(
+                        i,
+                        {&#34;sat&#34;: True},
+                        **kwargs,
+                    )
             else:
                 count = cg.sat.model_count(i, {&#34;sat&#34;: True})
             return count
@@ -518,6 +559,53 @@ are specified, a dict mapping each output to its influences.</dd>
     if len(all_influences) == 1:
         (all_influences,) = all_influences.values()
     return all_influences</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.props.levelize"><code class="name flex">
+<span>def <span class="ident">levelize</span></span>(<span>c)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Levelize a circuit.</p>
+<p>Compute the logical level of each gate in the circuit.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code> of <code>str:int</code></dt>
+<dd>Mapping of gate names to levels.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def levelize(c):
+    &#34;&#34;&#34;
+    Levelize a circuit.
+
+    Compute the logical level of each gate in the circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            Input circuit.
+
+    Returns
+    -------
+    dict of str:int
+            Mapping of gate names to levels.
+    &#34;&#34;&#34;
+    if c.is_cyclic():
+        raise ValueError(&#34;Cannot levelize cyclic circuit&#34;)
+
+    levels = {n: 0 for n in c.inputs() | c.filter_type((&#34;0&#34;, &#34;1&#34;, &#34;x&#34;))}
+    for n in c.topo_sort():
+        if n in levels:
+            continue
+        levels[n] = max(levels[fi] for fi in c.fanin(n)) + 1
+    return levels</code></pre>
 </details>
 </dd>
 <dt id="circuitgraph.props.sensitivity"><code class="name flex">
@@ -712,9 +800,10 @@ can make computation time prohibitively expensive.</dd>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
+<ul class="two-column">
 <li><code><a title="circuitgraph.props.avg_sensitivity" href="#circuitgraph.props.avg_sensitivity">avg_sensitivity</a></code></li>
 <li><code><a title="circuitgraph.props.influence" href="#circuitgraph.props.influence">influence</a></code></li>
+<li><code><a title="circuitgraph.props.levelize" href="#circuitgraph.props.levelize">levelize</a></code></li>
 <li><code><a title="circuitgraph.props.sensitivity" href="#circuitgraph.props.sensitivity">sensitivity</a></code></li>
 <li><code><a title="circuitgraph.props.sensitize" href="#circuitgraph.props.sensitize">sensitize</a></code></li>
 <li><code><a title="circuitgraph.props.signal_probability" href="#circuitgraph.props.signal_probability">signal_probability</a></code></li>

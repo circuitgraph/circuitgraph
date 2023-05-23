@@ -34,6 +34,8 @@ from pathlib import Path
 from circuitgraph import BlackBox, Circuit
 from circuitgraph.parsing import fast_parse_verilog_netlist, parse_verilog_netlist
 
+generic_flop = BlackBox(&#34;ff&#34;, [&#34;clk&#34;, &#34;d&#34;], [&#34;q&#34;])
+
 genus_flops = [
     BlackBox(&#34;flopd&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;]),
     BlackBox(&#34;fflopd&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;]),
@@ -127,7 +129,7 @@ def from_lib(name):
             the parsed circuit.
 
     &#34;&#34;&#34;
-    bbs = [BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])]
+    bbs = [BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])] + genus_flops + dc_flops
     [path] = Path(__file__).parent.absolute().glob(f&#34;netlists/{name}.*&#34;)
     return from_file(path, name, blackboxes=bbs)
 
@@ -364,7 +366,8 @@ def circuit_to_verilog(c, behavioral=False):
                         insts.append(f&#34;assign {n} = {fanin}&#34;)
             else:
                 fanin = &#34;, &#34;.join(fanin)
-                insts.append(f&#34;{c.type(n)} g_{len(insts)} &#34; f&#34;({n}, {fanin})&#34;)
+                gate_name = c.uid(f&#34;g_{len(insts)}&#34;)
+                insts.append(f&#34;{c.type(n)} {gate_name}({n}, {fanin})&#34;)
         elif c.type(n) in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;]:
             insts.append(f&#34;assign {n} = 1&#39;b{c.type(n)}&#34;)
             wires.append(n)
@@ -683,7 +686,8 @@ def circuit_to_bench(c):
                         insts.append(f&#34;assign {n} = {fanin}&#34;)
             else:
                 fanin = &#34;, &#34;.join(fanin)
-                insts.append(f&#34;{c.type(n)} g_{len(insts)} &#34; f&#34;({n}, {fanin})&#34;)
+                gate_name = c.uid(f&#34;g_{len(insts)}&#34;)
+                insts.append(f&#34;{c.type(n)} {gate_name}({n}, {fanin})&#34;)
         elif c.type(n) in [&#34;0&#34;, &#34;1&#34;, &#34;x&#34;]:
             insts.append(f&#34;assign {n} = 1&#39;b{c.type(n)}&#34;)
             wires.append(n)
@@ -839,7 +843,7 @@ using this flag.</dd>
             the parsed circuit.
 
     &#34;&#34;&#34;
-    bbs = [BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])]
+    bbs = [BlackBox(&#34;ff&#34;, [&#34;CK&#34;, &#34;D&#34;], [&#34;Q&#34;])] + genus_flops + dc_flops
     [path] = Path(__file__).parent.absolute().glob(f&#34;netlists/{name}.*&#34;)
     return from_file(path, name, blackboxes=bbs)</code></pre>
 </details>

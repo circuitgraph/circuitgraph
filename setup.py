@@ -5,7 +5,7 @@ with open("README.md") as fh:
 
 setuptools.setup(
     name="circuitgraph",
-    version="0.2.0",
+    version="0.2.1",
     author="Ruben Purdy, Joseph Sweeney",
     author_email="rpurdy@andrew.cmu.edu, joesweeney@cmu.edu",
     description="Tools for working with boolean circuits as graphs.",
@@ -24,5 +24,8 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
-    install_requires=["lark", "networkx",],
+    install_requires=[
+        "lark",
+        "networkx",
+    ],
 )

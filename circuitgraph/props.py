@@ -33,7 +33,7 @@ def influence(c, ns, supergates=False, approx=True, log_dir=None, **kwargs):
     c : Circuit
             Circuit to compute influence for.
     ns : str or list of str
-            Node(s) to compute average sensitivity for.
+            Node(s) to compute influence for.
     supergates : bool
             If True, break computation into supergates.
     approx : bool
@@ -73,10 +73,17 @@ def influence(c, ns, supergates=False, approx=True, log_dir=None, **kwargs):
                 if log_dir:
                     log_file = log_dir / f"{s}.approxmc.log"
                     count = cg.sat.approx_model_count(
-                        i, {"sat": True}, log_file=log_file, **kwargs,
+                        i,
+                        {"sat": True},
+                        log_file=log_file,
+                        **kwargs,
                     )
                 else:
-                    count = cg.sat.approx_model_count(i, {"sat": True}, **kwargs,)
+                    count = cg.sat.approx_model_count(
+                        i,
+                        {"sat": True},
+                        **kwargs,
+                    )
             else:
                 count = cg.sat.model_count(i, {"sat": True})
             return count
@@ -262,3 +269,30 @@ def signal_probability(c, n, approx=True, **kwargs):
         count = cg.sat.model_count(subc, {n: True})
 
     return count / (2 ** len(subc.startpoints()))
+
+
+def levelize(c):
+    """
+    Levelize a circuit.
+
+    Compute the logical level of each gate in the circuit.
+
+    Parameters
+    ----------
+    c: Circuit
+            Input circuit.
+
+    Returns
+    -------
+    dict of str:int
+            Mapping of gate names to levels.
+    """
+    if c.is_cyclic():
+        raise ValueError("Cannot levelize cyclic circuit")
+
+    levels = {n: 0 for n in c.inputs() | c.filter_type(("0", "1", "x"))}
+    for n in c.topo_sort():
+        if n in levels:
+            continue
+        levels[n] = max(levels[fi] for fi in c.fanin(n)) + 1
+    return levels

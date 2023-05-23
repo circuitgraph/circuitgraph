@@ -525,7 +525,7 @@ def ternary(c):
             t.add(
                 mapping[n],
                 "or",
-                fanin=(mapping[p] for p in c.fanin(n)),
+                fanin=[mapping[p] for p in c.fanin(n)],
                 output=c.is_output(n),
                 add_connected_nodes=True,
                 allow_redefinition=True,
@@ -885,7 +885,7 @@ def limit_fanin(c, k):
     c : Circuit
             Input circuit.
     k : str
-            Maximum fanin. (k > 2)
+            Maximum fanin. (k >= 2)
 
     Returns
     -------
@@ -894,7 +894,7 @@ def limit_fanin(c, k):
 
     """
     if k < 2:
-        raise ValueError("maximum fanin, k, must be > 2")
+        raise ValueError(f"'k' must be >= 2, not '{k}'")
 
     gatemap = {
         "and": "and",
@@ -918,6 +918,46 @@ def limit_fanin(c, k):
                 gatemap[ck.type(n)],
                 fanin=[f0, f1],
                 fanout=n,
+                uid=True,
+            )
+            i += 1
+
+    return ck
+
+
+def limit_fanout(c, k):
+    """
+    Reduce the maximum fanout of circuit gates to k.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    k : str
+            Maximum fanout. (k >= 2)
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+
+    """
+    if k < 2:
+        raise ValueError(f"'k' must be >= 2, not '{k}'")
+
+    ck = c.copy()
+    for n in ck.nodes():
+        i = 0
+        while len(ck.fanout(n)) > k:
+            fo = ck.fanout(n)
+            f0 = fo.pop()
+            f1 = fo.pop()
+            ck.disconnect(n, [f0, f1])
+            ck.add(
+                f"{n}_limit_fanout_{i}",
+                "buf",
+                fanin=n,
+                fanout=[f0, f1],
                 uid=True,
             )
             i += 1
@@ -1155,3 +1195,68 @@ def supergates(c, construct_supercircuit=False):
     for node in nx.topological_sort(g):
         sorted_supergate_circuits.append(minimal_supergate_circuits[node])
     return sorted_supergate_circuits
+
+
+def insert_registers(
+    c,
+    num_stages,
+    ff=cg.generic_flop,
+    d_port="d",
+    q_port="q",
+    other_flop_io={"clk": "clk"},
+    q_suffix="_cg_insert_reg_q_",
+):
+    """
+    Insert pipeline registers into a combinational design.
+
+    Parameters
+    ----------
+    c: circuitgraph.Circuit
+            The circuit to insert registers into.
+    num_stages: int
+            The number of stages to add.
+    ff: circuitgraph.BlackBox
+            The flip flop blackbox to use.
+    d_port: str
+            The d port on the flip flop blackbox.
+    q_port: str
+            The q port on the flip flop blackbox.
+    other_flop_io: dict of str:str
+            Other io to connect on the flop (e.g. clk, rst ports).
+            Dict maps circuit nodes to flop ports. If a node is
+            present in the dict but not in the circuit, it will be
+            added as an input.
+    q_suffix: str
+            Inserted q nodes are named with the suffix `{q_suffix}{i}` where
+            `i` is the level the flop is inserted at.
+
+    Returns
+    -------
+    circuitgraph.Circuit
+            The circuit with added registers.
+
+    """
+    c_reg = c.copy()
+    nodes_at_depths = []
+    max_depth = 0
+    for n in c_reg:
+        depth = c_reg.fanin_depth(n)
+        while depth >= len(nodes_at_depths):
+            nodes_at_depths.append([])
+        nodes_at_depths[depth].append(n)
+        if depth > max_depth:
+            max_depth = depth
+
+    depth_inc = round(max_depth / (num_stages + 1))
+    for n in other_flop_io:
+        if n not in c_reg:
+            c_reg.add(n, "input")
+    for i in range(depth_inc, max_depth, depth_inc):
+        for n in nodes_at_depths[i]:
+            fanout = c_reg.fanout(n)
+            c_reg.disconnect(n, fanout)
+            q = c_reg.add(f"{n}{q_suffix}{i}", "buf", uid=True, fanout=fanout)
+            conns = {d_port: n, q_port: q}
+            conns.update(other_flop_io)
+            c_reg.add_blackbox(ff, f"ff_{n}", conns)
+    return c_reg

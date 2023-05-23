@@ -47,7 +47,7 @@ def remap(clauses, offset):
     return new_clauses
 
 
-def construct_solver(c, assumptions=None, engine="cadical"):
+def construct_solver(c, assumptions=None, solver_cls=None, solver_args=None):
     """
     Construct a SAT solver instance with the given circuit and assumptions.
 
@@ -57,21 +57,35 @@ def construct_solver(c, assumptions=None, engine="cadical"):
             Circuit to encode.
     assumptions : dict of str:int
             Assumptions to add to solver.
+    solver_cls : pysat.Solver
+            The class of solver to use. If None, `Cadical` is used.
+    solver_args : dict of str:Any
+            Arguments to pass into the solver constructor. For `Glucose`
+            solvers, this should include `'incr': True` to set incremental
+            mode.
 
     Returns
     -------
-    solver : pysat.Cadical
+    solver : pysat.Solver
             SAT solver instance.
     variables : pysat.IDPool
             Solver variable mapping.
 
     """
-    try:
-        from pysat.solvers import Cadical, Glucose4, Lingeling
-    except ImportError as e:
-        raise ImportError(
-            "Install 'python-sat' to use satisfiability functionality"
-        ) from e
+    if not solver_cls:
+        try:
+            from pysat.solvers import Cadical153
+
+            solver_cls = Cadical153
+        except ImportError:
+            try:
+                from pysat.solvers import Cadical
+
+                solver_cls = Cadical
+            except ImportError as e:
+                raise ImportError(
+                    "Install 'python-sat' to use satisfiability functionality"
+                ) from e
 
     formula, variables = cnf(c)
     if assumptions:
@@ -80,14 +94,9 @@ def construct_solver(c, assumptions=None, engine="cadical"):
                 raise ValueError(f"Node '{n}' in assumptions is not in circuit")
         add_assumptions(formula, variables, assumptions)
 
-    if engine == "cadical":
-        solver = Cadical(bootstrap_with=formula)
-    elif engine == "glucose":
-        solver = Glucose4(bootstrap_with=formula, incr=True)
-    elif engine == "lingeling":
-        solver = Lingeling(bootstrap_with=formula)
-    else:
-        raise ValueError(f"unsupported solver: {engine}")
+    if not solver_args:
+        solver_args = {}
+    solver = solver_cls(bootstrap_with=formula, **solver_args)
     return solver, variables
 
 
@@ -366,7 +375,14 @@ def approx_model_count(
         with open(log_file, "w+") if log_file else tempfile.NamedTemporaryFile(
             prefix=f"circuitgraph_approxmc_{c.name}_log", mode="w+"
         ) as f:
-            subprocess.run(cmd, stdout=f, stderr=f, check=True, text=True)
+            subprocess.run(
+                cmd,
+                stdout=f,
+                stderr=f,
+                check=True,
+                encoding="utf8",
+                universal_newlines=True,
+            )
             f.seek(0)
             result = f.read()
 
