@@ -115,6 +115,7 @@ class _VerilogCircuitGraphTransformer(Transformer):
         self.tie_0 = self.c.add(&#34;tie_0&#34;, &#34;0&#34;)
         self.tie_1 = self.c.add(&#34;tie_1&#34;, &#34;1&#34;)
         self.tie_x = self.c.add(&#34;tie_x&#34;, &#34;x&#34;)
+        self.gate_expressions = set()
         self.io = set()
         self.inputs = set()
         self.outputs = set()
@@ -312,7 +313,10 @@ class _VerilogCircuitGraphTransformer(Transformer):
     def assignment(self, lvalue_and_expression):
         [lvalue, expression] = lvalue_and_expression
         if lvalue not in [self.tie_0, self.tie_1, self.tie_x]:
-            self.add_node(lvalue, &#34;buf&#34;, fanin=expression)
+            if expression in self.gate_expressions:
+                self.c.relabel({expression: str(lvalue)})
+            else:
+                self.add_node(lvalue, &#34;buf&#34;, fanin=expression)
 
     # 6. Specify Section
 
@@ -331,30 +335,42 @@ class _VerilogCircuitGraphTransformer(Transformer):
 
     def not_gate(self, items):
         io = &#34;_&#34;.join(items)
-        return self.add_node(f&#34;not_{io}&#34;, &#34;not&#34;, fanin=items[0], uid=True)
+        node = self.add_node(f&#34;not_{io}&#34;, &#34;not&#34;, fanin=items[0], uid=True)
+        self.gate_expressions.add(node)
+        return node
 
     def xor_gate(self, items):
         io = &#34;_&#34;.join(items)
-        return self.add_node(f&#34;xor_{io}&#34;, &#34;xor&#34;, fanin=[items[0], items[1]], uid=True)
+        node = self.add_node(f&#34;xor_{io}&#34;, &#34;xor&#34;, fanin=[items[0], items[1]], uid=True)
+        self.gate_expressions.add(node)
+        return node
 
     def xnor_gate(self, items):
         io = &#34;_&#34;.join(items)
-        return self.add_node(f&#34;xnor_{io}&#34;, &#34;xnor&#34;, fanin=[items[0], items[1]], uid=True)
+        node = self.add_node(f&#34;xnor_{io}&#34;, &#34;xnor&#34;, fanin=[items[0], items[1]], uid=True)
+        self.gate_expressions.add(node)
+        return node
 
     def and_gate(self, items):
         io = &#34;_&#34;.join(items)
-        return self.add_node(f&#34;and_{io}&#34;, &#34;and&#34;, fanin=[items[0], items[1]], uid=True)
+        node = self.add_node(f&#34;and_{io}&#34;, &#34;and&#34;, fanin=[items[0], items[1]], uid=True)
+        self.gate_expressions.add(node)
+        return node
 
     def or_gate(self, items):
         io = &#34;_&#34;.join(items)
-        return self.add_node(f&#34;or_{io}&#34;, &#34;or&#34;, fanin=[items[0], items[1]], uid=True)
+        node = self.add_node(f&#34;or_{io}&#34;, &#34;or&#34;, fanin=[items[0], items[1]], uid=True)
+        self.gate_expressions.add(node)
+        return node
 
     def ternary(self, items):
         io = &#34;_&#34;.join(items)
         n = self.add_node(f&#34;mux_n_{io}&#34;, &#34;not&#34;, fanin=items[0], uid=True)
         a0 = self.add_node(f&#34;mux_a0_{io}&#34;, &#34;and&#34;, fanin=[n, items[2]], uid=True)
         a1 = self.add_node(f&#34;mux_a1_{io}&#34;, &#34;and&#34;, fanin=[items[0], items[1]], uid=True)
-        return self.add_node(f&#34;mux_o_{io}&#34;, &#34;or&#34;, fanin=[a0, a1], uid=True)
+        node = self.add_node(f&#34;mux_o_{io}&#34;, &#34;or&#34;, fanin=[a0, a1], uid=True)
+        self.gate_expressions.add(node)
+        return node
 
 
 def parse_verilog_netlist(netlist, blackboxes, warnings=False, error_on_warning=False):

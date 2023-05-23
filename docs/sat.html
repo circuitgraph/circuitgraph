@@ -97,7 +97,7 @@ def remap(clauses, offset):
     return new_clauses
 
 
-def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
+def construct_solver(c, assumptions=None, solver_cls=None, solver_args=None):
     &#34;&#34;&#34;
     Construct a SAT solver instance with the given circuit and assumptions.
 
@@ -107,21 +107,35 @@ def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
             Circuit to encode.
     assumptions : dict of str:int
             Assumptions to add to solver.
+    solver_cls : pysat.Solver
+            The class of solver to use. If None, `Cadical` is used.
+    solver_args : dict of str:Any
+            Arguments to pass into the solver constructor. For `Glucose`
+            solvers, this should include `&#39;incr&#39;: True` to set incremental
+            mode.
 
     Returns
     -------
-    solver : pysat.Cadical
+    solver : pysat.Solver
             SAT solver instance.
     variables : pysat.IDPool
             Solver variable mapping.
 
     &#34;&#34;&#34;
-    try:
-        from pysat.solvers import Cadical, Glucose4, Lingeling
-    except ImportError as e:
-        raise ImportError(
-            &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
-        ) from e
+    if not solver_cls:
+        try:
+            from pysat.solvers import Cadical153
+
+            solver_cls = Cadical153
+        except ImportError:
+            try:
+                from pysat.solvers import Cadical
+
+                solver_cls = Cadical
+            except ImportError as e:
+                raise ImportError(
+                    &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
+                ) from e
 
     formula, variables = cnf(c)
     if assumptions:
@@ -130,14 +144,9 @@ def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
                 raise ValueError(f&#34;Node &#39;{n}&#39; in assumptions is not in circuit&#34;)
         add_assumptions(formula, variables, assumptions)
 
-    if engine == &#34;cadical&#34;:
-        solver = Cadical(bootstrap_with=formula)
-    elif engine == &#34;glucose&#34;:
-        solver = Glucose4(bootstrap_with=formula, incr=True)
-    elif engine == &#34;lingeling&#34;:
-        solver = Lingeling(bootstrap_with=formula)
-    else:
-        raise ValueError(f&#34;unsupported solver: {engine}&#34;)
+    if not solver_args:
+        solver_args = {}
+    solver = solver_cls(bootstrap_with=formula, **solver_args)
     return solver, variables
 
 
@@ -416,7 +425,14 @@ def approx_model_count(
         with open(log_file, &#34;w+&#34;) if log_file else tempfile.NamedTemporaryFile(
             prefix=f&#34;circuitgraph_approxmc_{c.name}_log&#34;, mode=&#34;w+&#34;
         ) as f:
-            subprocess.run(cmd, stdout=f, stderr=f, check=True, text=True)
+            subprocess.run(
+                cmd,
+                stdout=f,
+                stderr=f,
+                check=True,
+                encoding=&#34;utf8&#34;,
+                universal_newlines=True,
+            )
             f.seek(0)
             result = f.read()
 
@@ -654,7 +670,14 @@ DIMACS format supported by approxmc with xor clauses.</dd>
         with open(log_file, &#34;w+&#34;) if log_file else tempfile.NamedTemporaryFile(
             prefix=f&#34;circuitgraph_approxmc_{c.name}_log&#34;, mode=&#34;w+&#34;
         ) as f:
-            subprocess.run(cmd, stdout=f, stderr=f, check=True, text=True)
+            subprocess.run(
+                cmd,
+                stdout=f,
+                stderr=f,
+                check=True,
+                encoding=&#34;utf8&#34;,
+                universal_newlines=True,
+            )
             f.seek(0)
             result = f.read()
 
@@ -793,7 +816,7 @@ DIMACS format supported by approxmc with xor clauses.</dd>
 </details>
 </dd>
 <dt id="circuitgraph.sat.construct_solver"><code class="name flex">
-<span>def <span class="ident">construct_solver</span></span>(<span>c, assumptions=None, engine='cadical')</span>
+<span>def <span class="ident">construct_solver</span></span>(<span>c, assumptions=None, solver_cls=None, solver_args=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Construct a SAT solver instance with the given circuit and assumptions.</p>
@@ -803,10 +826,16 @@ DIMACS format supported by approxmc with xor clauses.</dd>
 <dd>Circuit to encode.</dd>
 <dt><strong><code>assumptions</code></strong> :&ensp;<code>dict</code> of <code>str:int</code></dt>
 <dd>Assumptions to add to solver.</dd>
+<dt><strong><code>solver_cls</code></strong> :&ensp;<code>pysat.Solver</code></dt>
+<dd>The class of solver to use. If None, <code>Cadical</code> is used.</dd>
+<dt><strong><code>solver_args</code></strong> :&ensp;<code>dict</code> of <code>str:Any</code></dt>
+<dd>Arguments to pass into the solver constructor. For <code>Glucose</code>
+solvers, this should include <code>'incr': True</code> to set incremental
+mode.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><strong><code>solver</code></strong> :&ensp;<code>pysat.Cadical</code></dt>
+<dt><strong><code>solver</code></strong> :&ensp;<code>pysat.Solver</code></dt>
 <dd>SAT solver instance.</dd>
 <dt><strong><code>variables</code></strong> :&ensp;<code>pysat.IDPool</code></dt>
 <dd>Solver variable mapping.</dd>
@@ -815,7 +844,7 @@ DIMACS format supported by approxmc with xor clauses.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def construct_solver(c, assumptions=None, engine=&#34;cadical&#34;):
+<pre><code class="python">def construct_solver(c, assumptions=None, solver_cls=None, solver_args=None):
     &#34;&#34;&#34;
     Construct a SAT solver instance with the given circuit and assumptions.
 
@@ -825,21 +854,35 @@ DIMACS format supported by approxmc with xor clauses.</dd>
             Circuit to encode.
     assumptions : dict of str:int
             Assumptions to add to solver.
+    solver_cls : pysat.Solver
+            The class of solver to use. If None, `Cadical` is used.
+    solver_args : dict of str:Any
+            Arguments to pass into the solver constructor. For `Glucose`
+            solvers, this should include `&#39;incr&#39;: True` to set incremental
+            mode.
 
     Returns
     -------
-    solver : pysat.Cadical
+    solver : pysat.Solver
             SAT solver instance.
     variables : pysat.IDPool
             Solver variable mapping.
 
     &#34;&#34;&#34;
-    try:
-        from pysat.solvers import Cadical, Glucose4, Lingeling
-    except ImportError as e:
-        raise ImportError(
-            &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
-        ) from e
+    if not solver_cls:
+        try:
+            from pysat.solvers import Cadical153
+
+            solver_cls = Cadical153
+        except ImportError:
+            try:
+                from pysat.solvers import Cadical
+
+                solver_cls = Cadical
+            except ImportError as e:
+                raise ImportError(
+                    &#34;Install &#39;python-sat&#39; to use satisfiability functionality&#34;
+                ) from e
 
     formula, variables = cnf(c)
     if assumptions:
@@ -848,14 +891,9 @@ DIMACS format supported by approxmc with xor clauses.</dd>
                 raise ValueError(f&#34;Node &#39;{n}&#39; in assumptions is not in circuit&#34;)
         add_assumptions(formula, variables, assumptions)
 
-    if engine == &#34;cadical&#34;:
-        solver = Cadical(bootstrap_with=formula)
-    elif engine == &#34;glucose&#34;:
-        solver = Glucose4(bootstrap_with=formula, incr=True)
-    elif engine == &#34;lingeling&#34;:
-        solver = Lingeling(bootstrap_with=formula)
-    else:
-        raise ValueError(f&#34;unsupported solver: {engine}&#34;)
+    if not solver_args:
+        solver_args = {}
+    solver = solver_cls(bootstrap_with=formula, **solver_args)
     return solver, variables</code></pre>
 </details>
 </dd>

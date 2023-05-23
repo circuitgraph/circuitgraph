@@ -440,6 +440,41 @@ def syn(
     return cg.io.verilog_to_circuit(output_netlist, c.name, fast=fast_parsing)
 
 
+def aig(c):
+    &#34;&#34;&#34;
+    Transform a circuit into and and-inverter graph.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to transform to an AIG.
+
+    Returns
+    -------
+    Circuit
+            The AIG circuit.
+
+    &#34;&#34;&#34;
+    with NamedTemporaryFile(
+        prefix=&#34;circuitgraph_aig_input&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
+    ) as tmp_in:
+        cg.to_file(c, tmp_in.name)
+        with NamedTemporaryFile(
+            prefix=&#34;circuitgraph_aig_output&#34;, suffix=&#34;.v&#34;, mode=&#34;r&#34;
+        ) as tmp_out:
+            execute = (
+                f&#34;read_verilog {tmp_in.name}; aigmap; &#34;
+                &#34;opt; &#34;
+                f&#34;write_verilog -noattr {tmp_out.name}&#34;
+            )
+            subprocess.run(
+                [&#34;yosys&#34;, &#34;-p&#34;, execute], stdout=subprocess.DEVNULL, check=True
+            )
+            c = cg.from_file(tmp_out.name)
+    # c = remove_bufs(c)
+    return c
+
+
 def ternary(c):
     &#34;&#34;&#34;
     Encode the circuit with ternary values.
@@ -525,7 +560,7 @@ def ternary(c):
             t.add(
                 mapping[n],
                 &#34;or&#34;,
-                fanin=(mapping[p] for p in c.fanin(n)),
+                fanin=[mapping[p] for p in c.fanin(n)],
                 output=c.is_output(n),
                 add_connected_nodes=True,
                 allow_redefinition=True,
@@ -885,7 +920,7 @@ def limit_fanin(c, k):
     c : Circuit
             Input circuit.
     k : str
-            Maximum fanin. (k &gt; 2)
+            Maximum fanin. (k &gt;= 2)
 
     Returns
     -------
@@ -894,7 +929,7 @@ def limit_fanin(c, k):
 
     &#34;&#34;&#34;
     if k &lt; 2:
-        raise ValueError(&#34;maximum fanin, k, must be &gt; 2&#34;)
+        raise ValueError(f&#34;&#39;k&#39; must be &gt;= 2, not &#39;{k}&#39;&#34;)
 
     gatemap = {
         &#34;and&#34;: &#34;and&#34;,
@@ -918,6 +953,46 @@ def limit_fanin(c, k):
                 gatemap[ck.type(n)],
                 fanin=[f0, f1],
                 fanout=n,
+                uid=True,
+            )
+            i += 1
+
+    return ck
+
+
+def limit_fanout(c, k):
+    &#34;&#34;&#34;
+    Reduce the maximum fanout of circuit gates to k.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    k : str
+            Maximum fanout. (k &gt;= 2)
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+
+    &#34;&#34;&#34;
+    if k &lt; 2:
+        raise ValueError(f&#34;&#39;k&#39; must be &gt;= 2, not &#39;{k}&#39;&#34;)
+
+    ck = c.copy()
+    for n in ck.nodes():
+        i = 0
+        while len(ck.fanout(n)) &gt; k:
+            fo = ck.fanout(n)
+            f0 = fo.pop()
+            f1 = fo.pop()
+            ck.disconnect(n, [f0, f1])
+            ck.add(
+                f&#34;{n}_limit_fanout_{i}&#34;,
+                &#34;buf&#34;,
+                fanin=n,
+                fanout=[f0, f1],
                 uid=True,
             )
             i += 1
@@ -1154,7 +1229,72 @@ def supergates(c, construct_supercircuit=False):
     sorted_supergate_circuits = []
     for node in nx.topological_sort(g):
         sorted_supergate_circuits.append(minimal_supergate_circuits[node])
-    return sorted_supergate_circuits</code></pre>
+    return sorted_supergate_circuits
+
+
+def insert_registers(
+    c,
+    num_stages,
+    ff=cg.generic_flop,
+    d_port=&#34;d&#34;,
+    q_port=&#34;q&#34;,
+    other_flop_io={&#34;clk&#34;: &#34;clk&#34;},
+    q_suffix=&#34;_cg_insert_reg_q_&#34;,
+):
+    &#34;&#34;&#34;
+    Insert pipeline registers into a combinational design.
+
+    Parameters
+    ----------
+    c: circuitgraph.Circuit
+            The circuit to insert registers into.
+    num_stages: int
+            The number of stages to add.
+    ff: circuitgraph.BlackBox
+            The flip flop blackbox to use.
+    d_port: str
+            The d port on the flip flop blackbox.
+    q_port: str
+            The q port on the flip flop blackbox.
+    other_flop_io: dict of str:str
+            Other io to connect on the flop (e.g. clk, rst ports).
+            Dict maps circuit nodes to flop ports. If a node is
+            present in the dict but not in the circuit, it will be
+            added as an input.
+    q_suffix: str
+            Inserted q nodes are named with the suffix `{q_suffix}{i}` where
+            `i` is the level the flop is inserted at.
+
+    Returns
+    -------
+    circuitgraph.Circuit
+            The circuit with added registers.
+
+    &#34;&#34;&#34;
+    c_reg = c.copy()
+    nodes_at_depths = []
+    max_depth = 0
+    for n in c_reg:
+        depth = c_reg.fanin_depth(n)
+        while depth &gt;= len(nodes_at_depths):
+            nodes_at_depths.append([])
+        nodes_at_depths[depth].append(n)
+        if depth &gt; max_depth:
+            max_depth = depth
+
+    depth_inc = round(max_depth / (num_stages + 1))
+    for n in other_flop_io:
+        if n not in c_reg:
+            c_reg.add(n, &#34;input&#34;)
+    for i in range(depth_inc, max_depth, depth_inc):
+        for n in nodes_at_depths[i]:
+            fanout = c_reg.fanout(n)
+            c_reg.disconnect(n, fanout)
+            q = c_reg.add(f&#34;{n}{q_suffix}{i}&#34;, &#34;buf&#34;, uid=True, fanout=fanout)
+            conns = {d_port: n, q_port: q}
+            conns.update(other_flop_io)
+            c_reg.add_blackbox(ff, f&#34;ff_{n}&#34;, conns)
+    return c_reg</code></pre>
 </details>
 </section>
 <section>
@@ -1289,6 +1429,160 @@ def supergates(c, construct_supercircuit=False):
     return acyc</code></pre>
 </details>
 </dd>
+<dt id="circuitgraph.tx.aig"><code class="name flex">
+<span>def <span class="ident">aig</span></span>(<span>c)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Transform a circuit into and and-inverter graph.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>The circuit to transform to an AIG.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>The AIG circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def aig(c):
+    &#34;&#34;&#34;
+    Transform a circuit into and and-inverter graph.
+
+    Parameters
+    ----------
+    c: Circuit
+            The circuit to transform to an AIG.
+
+    Returns
+    -------
+    Circuit
+            The AIG circuit.
+
+    &#34;&#34;&#34;
+    with NamedTemporaryFile(
+        prefix=&#34;circuitgraph_aig_input&#34;, suffix=&#34;.v&#34;, mode=&#34;w&#34;
+    ) as tmp_in:
+        cg.to_file(c, tmp_in.name)
+        with NamedTemporaryFile(
+            prefix=&#34;circuitgraph_aig_output&#34;, suffix=&#34;.v&#34;, mode=&#34;r&#34;
+        ) as tmp_out:
+            execute = (
+                f&#34;read_verilog {tmp_in.name}; aigmap; &#34;
+                &#34;opt; &#34;
+                f&#34;write_verilog -noattr {tmp_out.name}&#34;
+            )
+            subprocess.run(
+                [&#34;yosys&#34;, &#34;-p&#34;, execute], stdout=subprocess.DEVNULL, check=True
+            )
+            c = cg.from_file(tmp_out.name)
+    # c = remove_bufs(c)
+    return c</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.insert_registers"><code class="name flex">
+<span>def <span class="ident">insert_registers</span></span>(<span>c, num_stages, ff=&lt;circuitgraph.circuit.BlackBox object&gt;, d_port='d', q_port='q', other_flop_io={'clk': 'clk'}, q_suffix='_cg_insert_reg_q_')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Insert pipeline registers into a combinational design.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>circuitgraph.Circuit</code></dt>
+<dd>The circuit to insert registers into.</dd>
+<dt><strong><code>num_stages</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of stages to add.</dd>
+<dt><strong><code>ff</code></strong> :&ensp;<code>circuitgraph.BlackBox</code></dt>
+<dd>The flip flop blackbox to use.</dd>
+<dt><strong><code>d_port</code></strong> :&ensp;<code>str</code></dt>
+<dd>The d port on the flip flop blackbox.</dd>
+<dt><strong><code>q_port</code></strong> :&ensp;<code>str</code></dt>
+<dd>The q port on the flip flop blackbox.</dd>
+<dt><strong><code>other_flop_io</code></strong> :&ensp;<code>dict</code> of <code>str:str</code></dt>
+<dd>Other io to connect on the flop (e.g. clk, rst ports).
+Dict maps circuit nodes to flop ports. If a node is
+present in the dict but not in the circuit, it will be
+added as an input.</dd>
+<dt><strong><code>q_suffix</code></strong> :&ensp;<code>str</code></dt>
+<dd>Inserted q nodes are named with the suffix <code>{q_suffix}{i}</code> where
+<code>i</code> is the level the flop is inserted at.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>circuitgraph.Circuit</code></dt>
+<dd>The circuit with added registers.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def insert_registers(
+    c,
+    num_stages,
+    ff=cg.generic_flop,
+    d_port=&#34;d&#34;,
+    q_port=&#34;q&#34;,
+    other_flop_io={&#34;clk&#34;: &#34;clk&#34;},
+    q_suffix=&#34;_cg_insert_reg_q_&#34;,
+):
+    &#34;&#34;&#34;
+    Insert pipeline registers into a combinational design.
+
+    Parameters
+    ----------
+    c: circuitgraph.Circuit
+            The circuit to insert registers into.
+    num_stages: int
+            The number of stages to add.
+    ff: circuitgraph.BlackBox
+            The flip flop blackbox to use.
+    d_port: str
+            The d port on the flip flop blackbox.
+    q_port: str
+            The q port on the flip flop blackbox.
+    other_flop_io: dict of str:str
+            Other io to connect on the flop (e.g. clk, rst ports).
+            Dict maps circuit nodes to flop ports. If a node is
+            present in the dict but not in the circuit, it will be
+            added as an input.
+    q_suffix: str
+            Inserted q nodes are named with the suffix `{q_suffix}{i}` where
+            `i` is the level the flop is inserted at.
+
+    Returns
+    -------
+    circuitgraph.Circuit
+            The circuit with added registers.
+
+    &#34;&#34;&#34;
+    c_reg = c.copy()
+    nodes_at_depths = []
+    max_depth = 0
+    for n in c_reg:
+        depth = c_reg.fanin_depth(n)
+        while depth &gt;= len(nodes_at_depths):
+            nodes_at_depths.append([])
+        nodes_at_depths[depth].append(n)
+        if depth &gt; max_depth:
+            max_depth = depth
+
+    depth_inc = round(max_depth / (num_stages + 1))
+    for n in other_flop_io:
+        if n not in c_reg:
+            c_reg.add(n, &#34;input&#34;)
+    for i in range(depth_inc, max_depth, depth_inc):
+        for n in nodes_at_depths[i]:
+            fanout = c_reg.fanout(n)
+            c_reg.disconnect(n, fanout)
+            q = c_reg.add(f&#34;{n}{q_suffix}{i}&#34;, &#34;buf&#34;, uid=True, fanout=fanout)
+            conns = {d_port: n, q_port: q}
+            conns.update(other_flop_io)
+            c_reg.add_blackbox(ff, f&#34;ff_{n}&#34;, conns)
+    return c_reg</code></pre>
+</details>
+</dd>
 <dt id="circuitgraph.tx.limit_fanin"><code class="name flex">
 <span>def <span class="ident">limit_fanin</span></span>(<span>c, k)</span>
 </code></dt>
@@ -1299,7 +1593,7 @@ def supergates(c, construct_supercircuit=False):
 <dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
 <dd>Input circuit.</dd>
 <dt><strong><code>k</code></strong> :&ensp;<code>str</code></dt>
-<dd>Maximum fanin. (k &gt; 2)</dd>
+<dd>Maximum fanin. (k &gt;= 2)</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1319,7 +1613,7 @@ def supergates(c, construct_supercircuit=False):
     c : Circuit
             Input circuit.
     k : str
-            Maximum fanin. (k &gt; 2)
+            Maximum fanin. (k &gt;= 2)
 
     Returns
     -------
@@ -1328,7 +1622,7 @@ def supergates(c, construct_supercircuit=False):
 
     &#34;&#34;&#34;
     if k &lt; 2:
-        raise ValueError(&#34;maximum fanin, k, must be &gt; 2&#34;)
+        raise ValueError(f&#34;&#39;k&#39; must be &gt;= 2, not &#39;{k}&#39;&#34;)
 
     gatemap = {
         &#34;and&#34;: &#34;and&#34;,
@@ -1352,6 +1646,67 @@ def supergates(c, construct_supercircuit=False):
                 gatemap[ck.type(n)],
                 fanin=[f0, f1],
                 fanout=n,
+                uid=True,
+            )
+            i += 1
+
+    return ck</code></pre>
+</details>
+</dd>
+<dt id="circuitgraph.tx.limit_fanout"><code class="name flex">
+<span>def <span class="ident">limit_fanout</span></span>(<span>c, k)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Reduce the maximum fanout of circuit gates to k.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>c</code></strong> :&ensp;<code>Circuit</code></dt>
+<dd>Input circuit.</dd>
+<dt><strong><code>k</code></strong> :&ensp;<code>str</code></dt>
+<dd>Maximum fanout. (k &gt;= 2)</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Circuit</code></dt>
+<dd>Output circuit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def limit_fanout(c, k):
+    &#34;&#34;&#34;
+    Reduce the maximum fanout of circuit gates to k.
+
+    Parameters
+    ----------
+    c : Circuit
+            Input circuit.
+    k : str
+            Maximum fanout. (k &gt;= 2)
+
+    Returns
+    -------
+    Circuit
+            Output circuit.
+
+    &#34;&#34;&#34;
+    if k &lt; 2:
+        raise ValueError(f&#34;&#39;k&#39; must be &gt;= 2, not &#39;{k}&#39;&#34;)
+
+    ck = c.copy()
+    for n in ck.nodes():
+        i = 0
+        while len(ck.fanout(n)) &gt; k:
+            fo = ck.fanout(n)
+            f0 = fo.pop()
+            f1 = fo.pop()
+            ck.disconnect(n, [f0, f1])
+            ck.add(
+                f&#34;{n}_limit_fanout_{i}&#34;,
+                &#34;buf&#34;,
+                fanin=n,
+                fanout=[f0, f1],
                 uid=True,
             )
             i += 1
@@ -2566,7 +2921,7 @@ net names.</dd>
             t.add(
                 mapping[n],
                 &#34;or&#34;,
-                fanin=(mapping[p] for p in c.fanin(n)),
+                fanin=[mapping[p] for p in c.fanin(n)],
                 output=c.is_output(n),
                 add_connected_nodes=True,
                 allow_redefinition=True,
@@ -2702,7 +3057,10 @@ circuit io. The lists are in order of the unroll iterations.</dd>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="circuitgraph.tx.acyclic_unroll" href="#circuitgraph.tx.acyclic_unroll">acyclic_unroll</a></code></li>
+<li><code><a title="circuitgraph.tx.aig" href="#circuitgraph.tx.aig">aig</a></code></li>
+<li><code><a title="circuitgraph.tx.insert_registers" href="#circuitgraph.tx.insert_registers">insert_registers</a></code></li>
 <li><code><a title="circuitgraph.tx.limit_fanin" href="#circuitgraph.tx.limit_fanin">limit_fanin</a></code></li>
+<li><code><a title="circuitgraph.tx.limit_fanout" href="#circuitgraph.tx.limit_fanout">limit_fanout</a></code></li>
 <li><code><a title="circuitgraph.tx.miter" href="#circuitgraph.tx.miter">miter</a></code></li>
 <li><code><a title="circuitgraph.tx.relabel" href="#circuitgraph.tx.relabel">relabel</a></code></li>
 <li><code><a title="circuitgraph.tx.sensitivity_transform" href="#circuitgraph.tx.sensitivity_transform">sensitivity_transform</a></code></li>
