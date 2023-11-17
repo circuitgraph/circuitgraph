@@ -21,9 +21,9 @@ list_of_ports: "(" port ("," port)* ")"
 
 
 // 2. Declarations
-input_declaration: "input" list_of_variables ";"
+input_declaration: "input" [range] list_of_variables ";"
 
-output_declaration: "output" list_of_variables ";"
+output_declaration: "output" [range] list_of_variables ";"
 
 net_declaration: "wire" list_of_variables ";"
 
@@ -33,6 +33,7 @@ list_of_variables: IDENTIFIER ("," IDENTIFIER)*
 
 list_of_assignments: assignment ("," assignment)*
 
+range: "[" INT ":" INT "]"
 
 // 3. Primitive Instances
 // These are merged with module instantiations
@@ -116,6 +117,7 @@ not_gate: ( "!" | "~" ) primary
 
 IDENTIFIER: CNAME
           | ESCAPED_IDENTIFIER
+          | CNAME "[" INT "]"
 
 
 // Lark
@@ -127,6 +129,7 @@ MULTILINE_COMMENT: /\/\*(\*(?!\/)|[^*])*\*\//
 %import common.CNAME
 %import common.ESCAPED_STRING
 %import common.WS
+%import common.INT
 
 %ignore WS
 %ignore COMMENT

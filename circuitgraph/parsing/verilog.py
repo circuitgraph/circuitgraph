@@ -203,13 +203,27 @@ class _VerilogCircuitGraphTransformer(Transformer):
 
     # 2. Declarations
     def input_declaration(self, list_of_variables):
-        [list_of_variables] = list_of_variables
+        r = list_of_variables[0]
+        l=list_of_variables[1]
+        if r:
+            self.io.remove(l[0])
+            list_of_variables = [f'''{l[0]}[{i}]''' for i in range(int(r.children[1]), int(r.children[0]) + 1)]
+            self.io.update(list_of_variables)
+        else:
+            list_of_variables= l
         self.inputs.update(list_of_variables)
         for variable in list_of_variables:
             self.add_node(variable, "input")
 
     def output_declaration(self, list_of_variables):
-        [list_of_variables] = list_of_variables
+        r = list_of_variables[0]
+        l = list_of_variables[1]
+        if r:
+            self.io.remove(l[0])
+            list_of_variables = [f'''{l[0]}[{i}]''' for i in range(int(r.children[1]), int(r.children[0]) + 1)]
+            self.io.update(list_of_variables)
+        else:
+            list_of_variables = l
         self.outputs.update(list_of_variables)
 
     def net_declaration(self, list_of_variables):
